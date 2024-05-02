@@ -1,0 +1,12 @@
+DEBUG = True
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': '<TEST>',
+        'USER': '<TEST>',
+        'PASSWORD': '<TEST_PWD>',
+        'HOST': 'localhost',
+        'PORT': 5432,
+    }
+}
