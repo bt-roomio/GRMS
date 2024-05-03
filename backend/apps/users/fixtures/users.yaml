@@ -1,0 +1,9 @@
+# USERS
+-
+    model: "users.User"
+    pk: "da16dcfd-b885-4966-84db-c3e26ff50afc"
+    fields:
+        email: "admin@gmail.com"
+        first_name: "Angelina"
+        last_name: "Jolie"
+        password: "pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU=" # password

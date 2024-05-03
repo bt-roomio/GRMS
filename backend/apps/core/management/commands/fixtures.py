@@ -9,5 +9,6 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         call_command(
-            'loaddata'
+            'loaddata',
+            'users'
         )

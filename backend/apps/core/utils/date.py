@@ -1,5 +1,6 @@
+import time
 from calendar import monthrange
-from datetime import date
+from datetime import date, datetime
 
 from django.utils import timezone
 
@@ -37,3 +38,7 @@ def add_months(source_date, extra):
 
 def get_weekday(date):
     return f"{date.weekday() + 1}_{date.strftime('%A').lower()}"
+
+
+def datetime_unix(date_time: datetime):
+    return time.mktime(date_time.timetuple())
