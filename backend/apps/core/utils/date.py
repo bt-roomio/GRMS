@@ -42,3 +42,7 @@ def get_weekday(date):
 
 def datetime_unix(date_time: datetime):
     return time.mktime(date_time.timetuple())
+
+
+def unix_datetime(timestamp: int):
+    return datetime.fromtimestamp(timestamp)

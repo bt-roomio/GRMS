@@ -1,7 +1,9 @@
 import time
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from core.fields.unix_timestamp import UnixTimeStampField
 from core.models import BaseModel
 from users.querysets.user import UsersManager
 from users.utils import tokens
@@ -13,12 +15,12 @@ class User(AbstractUser, BaseModel):
     additional_info = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=255, blank=True, null=True)
     date_joined = models.BigIntegerField(default=time.time, editable=False)
-    last_login = models.BigIntegerField(default=time.time, blank=True, null=True)
+    last_login = UnixTimeStampField(default=time.time, blank=True, null=True)
+    tenant = models.ForeignKey('main.Tenant', on_delete=models.CASCADE, null=True, blank=True)
 
     # enabled = models.BooleanField(blank=True, null=True)
     # reset_token = models.CharField(unique=True, max_length=255, blank=True, null=True)
     # activate_token = models.CharField(unique=True, max_length=255, blank=True, null=True)
-    # tenant_id = models.UUIDField(blank=True, null=True)
     # customer_id = models.UUIDField(blank=True, null=True)
 
     username = None
@@ -35,7 +37,7 @@ class User(AbstractUser, BaseModel):
 class ResetPassword(BaseModel):
     key = models.CharField(max_length=40, unique=True)
     user = models.ForeignKey(User, models.CASCADE)
-    expires_at = models.BigIntegerField(default=expires_hour)
+    expires_at = UnixTimeStampField(default=expires_hour)
 
     def save(self, *args, **kwargs):
         if not self.key:

@@ -24,9 +24,9 @@ class GetResetLinkView(CreateAPIView):
         if not user:
             raise ValidationError({'email': ['There is not user with this email.']})
 
-        reset = ResetPassword.objects.create(user=user)
+        ResetPassword.objects.create(user=user)
         if not settings.DEBUG:
-            send_reset_link_email(self.request, reset, user)
+            send_reset_link_email(self.request, user)
 
 
 class ResetPasswordView(GenericAPIView):
