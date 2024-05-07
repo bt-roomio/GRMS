@@ -1,0 +1,7 @@
+-
+    model: "main.Tenant"
+    pk: "da16dcf3-b885-4966-84db-c3e26ff50aab"
+    fields:
+        tenant_profile_id: "da16dcf1-b885-4966-84db-c3e26ff50aad"
+        region: "General"
+        title: "Tenant"

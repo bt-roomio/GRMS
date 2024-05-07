@@ -1,11 +1,11 @@
 from django.db import models
-from django.db.models import CASCADE, DO_NOTHING
+from django.db.models import CASCADE
 
 from core.models import BaseModel
 
 
 class Tenant(BaseModel):
-    tenant_profile = models.ForeignKey('main.TenantProfile', DO_NOTHING)
+    tenant_profile = models.ForeignKey('main.TenantProfile', CASCADE)
     additional_info = models.CharField(blank=True, null=True)
     address = models.CharField(blank=True, null=True)
     address2 = models.CharField(blank=True, null=True)
@@ -23,12 +23,12 @@ class Tenant(BaseModel):
 
 
 class TenantProfile(BaseModel):
-    name = models.CharField(unique=True, max_length=255, blank=True, null=True)
-    profile_data = models.JSONField(blank=True, null=True)
-    description = models.CharField(blank=True, null=True)
-    is_default = models.BooleanField(blank=True, null=True)
-    isolated_tb_core = models.BooleanField(blank=True, null=True)
-    isolated_tb_rule_engine = models.BooleanField(blank=True, null=True)
+    name = models.CharField(max_length=255, unique=True)
+    profile_data = models.JSONField(default=dict)
+    description = models.TextField(null=True, blank=True)
+    is_default = models.BooleanField(default=False)
+    isolated_tb_core = models.BooleanField(default=False)
+    isolated_tb_rule_engine = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'main_tenant_profile'
@@ -36,8 +36,8 @@ class TenantProfile(BaseModel):
 
 class AdminSettings(BaseModel):
     tenant = models.ForeignKey('main.Tenant', CASCADE)
-    json_value = models.JSONField(blank=True, null=True)
-    key = models.CharField(max_length=255, blank=True, null=True)
+    key = models.CharField(max_length=255)
+    json_value = models.JSONField(default=dict)
 
     class Meta:
         db_table = 'main_admin_settings'

@@ -1,0 +1,11 @@
+-
+    model: "main.TenantProfile"
+    pk: "da16dcf1-b885-4966-84db-c3e26ff50aad"
+    fields:
+        name: "Default"
+
+-
+    model: "main.TenantProfile"
+    pk: "da16dcfd-b885-4966-84db-c3e26ff50aac"
+    fields:
+        name: "Isolated TB Rule Engine"

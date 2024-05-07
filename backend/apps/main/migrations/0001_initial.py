@@ -41,12 +41,12 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.fields.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
-                ('name', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('profile_data', models.JSONField(blank=True, null=True)),
-                ('description', models.CharField(blank=True, null=True)),
-                ('is_default', models.BooleanField(blank=True, null=True)),
-                ('isolated_tb_core', models.BooleanField(blank=True, null=True)),
-                ('isolated_tb_rule_engine', models.BooleanField(blank=True, null=True)),
+                ('name', models.CharField(max_length=255, unique=True)),
+                ('profile_data', models.JSONField(default=dict)),
+                ('description', models.TextField(null=True, blank=True)),
+                ('is_default', models.BooleanField(default=False)),
+                ('isolated_tb_core', models.BooleanField(default=False)),
+                ('isolated_tb_rule_engine', models.BooleanField(default=False)),
             ],
             options={
                 'db_table': 'main_tenant_profile',
@@ -57,8 +57,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.fields.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
-                ('json_value', models.JSONField(blank=True, null=True)),
-                ('key', models.CharField(blank=True, max_length=255, null=True)),
+                ('json_value', models.JSONField(default=dict)),
+                ('key', models.CharField(max_length=255)),
                 ('tenant', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='main.tenant')),
             ],
             options={
@@ -68,6 +68,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='tenant',
             name='tenant_profile',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='main.tenantprofile'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='main.tenantprofile'),
         ),
     ]

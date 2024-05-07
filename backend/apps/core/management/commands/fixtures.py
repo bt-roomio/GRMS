@@ -10,5 +10,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         call_command(
             'loaddata',
-            'users'
+            'users',
+            'tenant',
+            'tenant_profile',
         )
