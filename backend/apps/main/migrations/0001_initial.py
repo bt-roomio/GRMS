@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.fields.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
-                ('additional_info', models.CharField(blank=True, null=True)),
+                ('additional_info', models.JSONField(default=dict)),
                 ('address', models.CharField(blank=True, null=True)),
                 ('address2', models.CharField(blank=True, null=True)),
                 ('city', models.CharField(blank=True, max_length=255, null=True)),

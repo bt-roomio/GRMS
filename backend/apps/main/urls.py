@@ -1,7 +1,9 @@
 from django.urls import path
 
-from main.views.change_email_config import ChangeEmailConfig
+from main.views.email_config import EmailConfigDetailView
+from main.views.general_settings import GeneralSettingsDetailView
 
 urlpatterns = [
-    path('change-email-config/', ChangeEmailConfig.as_view(), name='change-email-config')
+    path('email-config/', EmailConfigDetailView.as_view(), name='email-config-detail'),
+    path('general-settings/', GeneralSettingsDetailView.as_view(), name='general-settings-detail'),
 ]
