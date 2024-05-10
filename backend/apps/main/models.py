@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import CASCADE
 
-from core.models import BaseModel
+from core.models import BaseModel, UpdateByModel
 
 
 class Tenant(BaseModel):
@@ -43,7 +43,7 @@ class AdminSettings(BaseModel):
         db_table = 'main_admin_settings'
 
 
-class EmailConfiguration(BaseModel):
+class EmailConfiguration(BaseModel, UpdateByModel):
     email = models.EmailField()
     host = models.CharField(max_length=255)
     port = models.CharField(max_length=255)

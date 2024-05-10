@@ -21,5 +21,5 @@ class EmailConfigDetailView(APIView):
         instance = EmailConfiguration.objects.filter(tenant=request.user.tenant).first()
         serializer = EmailConfigSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant=request.user.tenant)
+        serializer.save(tenant=request.user.tenant, updated_by=request.user)
         return Response(serializer.data)
