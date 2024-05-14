@@ -49,7 +49,7 @@ class EmailConfiguration(BaseModel, UpdateByModel):
     port = models.CharField(max_length=255)
     username = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
-    use_tls = models.BooleanField(default=False)
+    use_tls = models.BooleanField(default=True)
 
     tenant = models.OneToOneField('main.Tenant', CASCADE)
 

@@ -3,7 +3,7 @@ import time
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from core.fields.unix_timestamp import UnixTimeStampField
+from core.utils.unix_timestamp import UnixTimeStampField
 from core.models import BaseModel
 from users.querysets.user import UsersManager
 from users.utils import tokens

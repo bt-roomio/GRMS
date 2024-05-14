@@ -12,8 +12,9 @@ from main.serializers.general_settings import GeneralSettingsSerializer
 class GeneralSettingsDetailView(APIView):
     def get(self, request):
         instance = get_object_or_404(Tenant, id=request.user.tenant_id)
-        data = json.loads(str(instance.additional_info)).get('general_settings', {})
-        return Response({'tenant_id': instance.id, **data})
+        serializer = GeneralSettingsSerializer(data=json.loads(instance.additional_info).get('general_settings', {}))
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
 
     @swagger_auto_schema(request_body=GeneralSettingsSerializer)
     def put(self, request):

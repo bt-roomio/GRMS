@@ -1,6 +1,5 @@
 import time
 
-from django.conf import settings
 from django.db import transaction
 from rest_framework.permissions import AllowAny
 from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404
@@ -24,8 +23,10 @@ class GetResetLinkView(CreateAPIView):
         if not user:
             raise ValidationError({'email': ['There is not user with this email.']})
 
-        ResetPassword.objects.create(user=user)
-        send_reset_link_email(self.request, user)
+        result = send_reset_link_email(self.request, user)
+        if result.get('success'):
+            ResetPassword.objects.create(user=user)
+        self.serializer_class.data = result
 
 
 class ResetPasswordView(GenericAPIView):

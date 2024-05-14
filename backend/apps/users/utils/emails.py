@@ -1,9 +1,10 @@
+from django.core.mail import send_mail
 from django.core.mail.backends.smtp import EmailBackend
 from django.template.loader import render_to_string
 from django.conf import settings
+from rest_framework.exceptions import ValidationError
 
-from main.models import AdminSettings
-from users.utils.validations import mail_fields
+from main.models import EmailConfiguration
 
 
 def send_reset_link_email(request, user):
@@ -12,15 +13,15 @@ def send_reset_link_email(request, user):
     subject = 'Reset password, %s'
 
     if user.tenant:
-        config = AdminSettings.objects.filter(tenant=user.tenant, key='mail').first()
-        if config:
-            data = config.json_value
-            host, port, from_email, password, use_tls = mail_fields(data)
-            backend = EmailBackend(
-                host=host, port=int(port), username=from_email, password=password, use_tls=use_tls, fail_silently=True)
-            user.email_user(
-                subject % data.get('mailFrom', settings.COMPANY_NAME),
-                body, from_email=settings.DEFAULT_FROM_EMAIL, html_message=body, connection=backend)
-            return
+        config = EmailConfiguration.objects.filter(tenant=user.tenant).first()
 
-    user.email_user(subject % settings.COMPANY_NAME, body, from_email=settings.DEFAULT_FROM_EMAIL, html_message=body)
+        if not config:
+            raise ValidationError({'detail': 'EmailConfiguration not found.'})
+
+        backend = EmailBackend(host=config.host, port=int(config.port), username=config.email,
+                               password=config.password, use_tls=config.use_tls, fail_silently=True)
+
+        res = send_mail(subject % config.username or settings.COMPANY_NAME, body, config.email,
+                        [user.email], html_message=body, connection=backend)
+        return {'to': user.email, 'success': bool(res)}
+    return {'to': user.email, 'success': False}

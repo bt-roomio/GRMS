@@ -4,7 +4,7 @@ import uuid
 from django.db import models
 from django.db.models import SET_NULL
 
-from core.fields.unix_timestamp import UnixTimeStampField
+from core.utils.unix_timestamp import UnixTimeStampField
 
 
 class BaseModel(models.Model):

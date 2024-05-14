@@ -9,7 +9,7 @@ class DoorLockSerializer(serializers.Serializer):
 
 
 class GeneralSettingsSerializer(serializers.Serializer):
-    lang = serializers.CharField(max_length=255)
+    lang = serializers.CharField(max_length=255, default='EN')
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)
     check_in_out = serializers.BooleanField(default=False)
@@ -20,7 +20,8 @@ class GeneralSettingsSerializer(serializers.Serializer):
     opera_integration = serializers.BooleanField(default=False)
     visionline_card_system = serializers.BooleanField(default=False)
     aperio_locks = serializers.BooleanField(default=False)
-    door_lock = DoorLockSerializer(required=False)
+    door_lock = DoorLockSerializer(default=False)
+    auto_checkout = serializers.BooleanField(default=False)
 
     def update(self, instance, validated_data):
         instance.additional_info = json.dumps({'general_settings': validated_data})
