@@ -20,7 +20,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     opera_integration = serializers.BooleanField(default=False)
     visionline_card_system = serializers.BooleanField(default=False)
     aperio_locks = serializers.BooleanField(default=False)
-    door_lock = DoorLockSerializer(default=False)
+    door_lock = DoorLockSerializer(default=dict)
     auto_checkout = serializers.BooleanField(default=False)
 
     def update(self, instance, validated_data):

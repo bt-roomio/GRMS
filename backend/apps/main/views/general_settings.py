@@ -14,7 +14,7 @@ class GeneralSettingsDetailView(APIView):
     @swagger_auto_schema(responses=GeneralSettingsSwagger)
     def get(self, request):
         instance = get_object_or_404(Tenant, id=request.user.tenant_id)
-        data = json.loads(instance.additional_info).get('general_settings', {})
+        data = json.loads(instance.additional_info or '{}').get('general_settings', {})
         serializer = GeneralSettingsSerializer(instance, data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)

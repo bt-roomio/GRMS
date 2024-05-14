@@ -6,7 +6,7 @@ from core.models import BaseModel, UpdateByModel
 
 class Tenant(BaseModel):
     tenant_profile = models.ForeignKey('main.TenantProfile', CASCADE)
-    additional_info = models.JSONField(default=dict)
+    additional_info = models.JSONField(null=True, blank=True)
     address = models.CharField(blank=True, null=True)
     address2 = models.CharField(blank=True, null=True)
     city = models.CharField(max_length=255, blank=True, null=True)
@@ -24,7 +24,7 @@ class Tenant(BaseModel):
 
 class TenantProfile(BaseModel):
     name = models.CharField(max_length=255, unique=True)
-    profile_data = models.JSONField(default=dict)
+    profile_data = models.JSONField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     is_default = models.BooleanField(default=False)
     isolated_tb_core = models.BooleanField(default=False)
@@ -37,7 +37,7 @@ class TenantProfile(BaseModel):
 class AdminSettings(BaseModel):
     tenant = models.ForeignKey('main.Tenant', CASCADE)
     key = models.CharField(max_length=255)
-    json_value = models.JSONField(default=dict)
+    json_value = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = 'main_admin_settings'

@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
-                ('additional_info', models.JSONField(default=dict)),
+                ('additional_info', models.JSONField(null=True, blank=True)),
                 ('address', models.CharField(blank=True, null=True)),
                 ('address2', models.CharField(blank=True, null=True)),
                 ('city', models.CharField(blank=True, max_length=255, null=True)),
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
                 ('name', models.CharField(max_length=255, unique=True)),
-                ('profile_data', models.JSONField(default=dict)),
+                ('profile_data', models.JSONField(null=True, blank=True)),
                 ('description', models.TextField(null=True, blank=True)),
                 ('is_default', models.BooleanField(default=False)),
                 ('isolated_tb_core', models.BooleanField(default=False)),
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
-                ('json_value', models.JSONField(default=dict)),
+                ('json_value', models.JSONField(null=True, blank=True)),
                 ('key', models.CharField(max_length=255)),
                 ('tenant', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='main.tenant')),
             ],
