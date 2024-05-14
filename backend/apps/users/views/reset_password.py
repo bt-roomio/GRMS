@@ -1,11 +1,13 @@
 import time
 
 from django.db import transaction
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from users.swagger.reset_password import ResetLinkSwagger, ResetPasswordSwagger
 from users.models import User, ResetPassword
 from users.serializers.reset_password import GetResetLinkValidator, ResetPasswordValidator
 from users.utils.emails import send_reset_link_email
@@ -14,6 +16,10 @@ from users.utils.emails import send_reset_link_email
 class GetResetLinkView(CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = GetResetLinkValidator
+
+    @swagger_auto_schema(responses=ResetLinkSwagger)
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -33,6 +39,7 @@ class ResetPasswordView(GenericAPIView):
     permission_classes = (AllowAny,)
     serializer_class = ResetPasswordValidator
 
+    @swagger_auto_schema(responses=ResetPasswordSwagger)
     def put(self, request):
         data = self.serializer_class.check(request.data)
         reset = get_object_or_404(ResetPassword, key=data.get('key'))

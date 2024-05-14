@@ -27,3 +27,6 @@ class GeneralSettingsSerializer(serializers.Serializer):
         instance.additional_info = json.dumps({'general_settings': validated_data})
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        return {'tenant_id': instance.id, **self.validated_data}
