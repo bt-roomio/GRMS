@@ -1,32 +1,32 @@
-# Используем официальный образ Node.js в качестве базы
-FROM node:latest as build-stage
+# Используем официальный образ Node.js
+FROM node:latest AS build
 
 # Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
 # Копируем файлы package.json и yarn.lock
-COPY yarn.lock package*.json ./
+COPY package.json yarn.lock ./
 
 # Устанавливаем зависимости
 RUN yarn install
 
-# Копируем остальные файлы в директорию приложения
+# Копируем все остальные файлы приложения
 COPY . .
 
 # Собираем приложение
 RUN yarn build
 
-# Создаем production-ready образ Nginx
-FROM nginx:latest
+# Отдельный этап для запуска приложения с использованием Nginx
+FROM nginx:alpine
 
-# Копируем собранные файлы из предыдущего этапа в директорию Nginx
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+# Копируем собранное приложение из предыдущего этапа
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Переносим настройки Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+# Копируем файл конфигурации nginx.conf с настройками порта
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Открываем порт 80
-EXPOSE 80
+# Открываем порт 8095 для nginx
+EXPOSE 8095
 
-# Команда для запуска Nginx внутри контейнера
+# Команда запуска nginx внутри контейнера
 CMD ["nginx", "-g", "daemon off;"]

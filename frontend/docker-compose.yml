@@ -1,16 +1,7 @@
-version: '3'
+version: '3.8'
+
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  web:
+    build: .
     ports:
-      - "8080:80"
-    restart: always
-  nginx:
-    image: nginx:latest
-    ports:
-      - "80:80"
-    depends_on:
-      - app
-    restart: always
+      - "8095:8095"
