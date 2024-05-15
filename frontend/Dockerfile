@@ -13,6 +13,7 @@ RUN yarn install
 # Копируем все остальные файлы приложения
 COPY . .
 
+ENV VITE_API_BASE_URL=http://vesna.tais.su:9000/api/v1
 # Собираем приложение
 RUN yarn build
 
