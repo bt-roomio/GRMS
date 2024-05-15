@@ -1,0 +1,15 @@
+.auth-layouts{
+  @apply flex h-dvh;
+  &__content{
+    @apply w-1/2 h-full bg-primary-600 text-white;
+  }
+  &__image{
+    @apply w-1/2 h-full flex-shrink-0 relative;
+    .ui-icon{
+      @apply absolute inset-x-36 inset-y-36;
+    }
+    img{
+      @apply w-full h-full object-cover;
+    }
+  }
+}

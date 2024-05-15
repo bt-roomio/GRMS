@@ -1,0 +1,38 @@
+.ui-select{
+  @apply w-full cursor-pointer relative flex flex-col gap-1.5;
+  label{
+    @apply text-sm block text-left;
+  }
+  &__trigger{
+    @apply flex gap-2 px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 items-center;
+    .chevron{
+      @apply stroke-gray-700 ml-auto;
+    }
+    .ui-icon{
+      @apply text-xl flex-shrink-0 w-5 h-5;
+    }
+  }
+  &__content{
+    @apply
+      z-20
+      bg-white
+      rounded-lg
+      p-2
+      border
+      border-gray-200
+      w-full
+    ;
+  }
+  &__list{
+    @apply flex flex-col w-full gap-1;
+  }
+  &__item{
+    @apply w-full flex gap-2 items-center hover:bg-gray-200 p-1 pr-3 rounded-md cursor-pointer outline-0;
+    .ui-icon{
+      @apply text-xl flex-shrink-0 w-5 h-5;
+    }
+    &.selected{
+      @apply bg-gray-200;
+    }
+  }
+}

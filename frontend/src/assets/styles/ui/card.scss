@@ -1,0 +1,35 @@
+.card{
+  @apply p-8 bg-white border border-gray-100 rounded-2xl;
+  &__content{
+
+  }
+  &__head{
+    @apply pb-5 border-b border-gray-200;
+    h3 {
+      @apply text-lg font-semibold text-gray-800;
+    }
+    p{
+      @apply text-sm text-gray-700;
+    }
+  }
+  &__list-item{
+    @apply flex py-6 border-b border-gray-200 gap-16;
+    .item-texts{
+      @apply w-[290px];
+      .title{
+        @apply text-gray-700 font-semibold
+      }
+      .description{
+        @apply text-gray-600
+      }
+    }
+    .item-actions{
+
+    }
+  }
+  &__buttons{
+    .ui-button{
+      @apply px-14;
+    }
+  }
+}

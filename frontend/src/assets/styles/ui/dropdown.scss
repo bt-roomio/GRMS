@@ -1,0 +1,28 @@
+.dropdown {
+  @apply relative inline-flex h-full;
+  &__trigger {
+    @apply w-full h-full inline-flex items-center cursor-pointer;
+  }
+  &__content {
+    @apply
+    z-20
+    bg-white
+    dark:bg-gray-700
+    shadow-md
+    dark:shadow-lg
+    rounded-lg
+    p-2
+    border
+    border-gray-200
+    ;
+  }
+  &__menu{
+    @apply flex flex-col w-full;
+    li{
+      @apply w-full flex gap-2 items-center hover:bg-gray-200 p-1 pr-3 rounded-md cursor-pointer;
+      .ui-icon{
+        @apply text-xl flex-shrink-0 w-5 h-5;
+      }
+    }
+  }
+}

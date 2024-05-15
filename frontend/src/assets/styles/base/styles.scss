@@ -1,0 +1,12 @@
+body{
+  font-family: "Inter", sans-serif;
+}
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+::-webkit-scrollbar-track {
+  @apply bg-primary-700
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-800 rounded;
+}

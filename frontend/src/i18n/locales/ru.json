@@ -1,0 +1,120 @@
+{
+  "authorization": {
+    "login": {
+      "title": "Войти в Roomio",
+      "description": "Добро пожаловать! Пожалуйста, введите свои данные.",
+      "form": {
+        "email": "Электронная почта",
+        "email_placeholder": "Введите свою электронную почту",
+        "password": "Пароль",
+        "remember_me": "Запомнить меня",
+        "forgot_password": "Забыли пароль?",
+        "sign_in": "Войти"
+      }
+    },
+    "forgot_password": {
+      "title": "Забыли пароль?",
+      "description": "Не беспокойтесь, мы вышлем вам инструкции по сбросу пароля",
+      "form": {
+        "email": "Электронная почта",
+        "email_placeholder": "Введите свою электронную почту",
+        "reset_password": "Сбросить пароль"
+      },
+      "back": "Назад к входу"
+    },
+    "reset_password": {
+      "title": "Проверьте свою электронную почту",
+      "open": "Открыть приложение почты",
+      "description": "Не получили письмо?",
+      "click_resend": "Нажмите, чтобы отправить повторно"
+    }
+  },
+  "dashboard": {
+    "menu": {
+      "dashboard": "Панель управления",
+      "rooms": "Номера",
+      "public_space": "Открытая зона",
+      "configuration": "Конфигурация",
+      "users": "Пользователи",
+      "configuration_rooms": "Номера",
+      "room_types": "Типы номеров",
+      "controllers": "Контроллеры",
+      "settings": "Настройки",
+      "access": "Доступ",
+      "backlog": "Очередь задач"
+    },
+    "settings": {
+      "title": "Настройки",
+      "save": "Сохранить",
+      "general": {
+        "title": "Общие настройки",
+        "description": "Вы можете управлять настройками номера",
+        "admin_panel_language": {
+          "title": "Язык административной панели",
+          "description": "Выберите ваш язык"
+        },
+        "controllers_sync": {
+          "title": "Синхронизация контроллеров"
+        },
+        "check_in_out": {
+          "title": "Регистрация заезда/выезда"
+        },
+        "vip_status": {
+          "title": "Статус VIP"
+        },
+        "suite_rooms_controls_sync": {
+          "title": "Синхронизация управления номерами люкс"
+        },
+        "laundry": {
+          "title": "Прачечная"
+        }
+      },
+      "alarms": {
+        "title": "Сигнализация",
+        "description": "Вы можете управлять настройками номера",
+        "bathroom": {
+          "title": "Включить сигнализацию в ванной",
+          "description": "Введите номер вашего номера"
+        },
+        "humidity": {
+          "title": "Включить сигнализацию по влажности",
+          "description": "Введите номер вашего номера"
+        }
+      },
+      "email_setup": {
+        "title": "Настройка электронной почты",
+        "description": "Вы можете управлять настройками номера",
+        "smtp_server_address": {
+          "title": "Адрес SMTP-сервера",
+          "description": "Выберите ваш язык",
+          "placeholder": "Введите адрес SMTP-сервера"
+        },
+        "smtp_username": {
+          "title": "Имя пользователя SMTP",
+          "description": "Выберите ваш язык",
+          "placeholder": "Введите имя пользователя SMTP"
+        },
+        "smtp_password": {
+          "title": "Пароль SMTP",
+          "description": "Выберите ваш язык",
+          "placeholder": "Введите пароль SMTP"
+        },
+        "smtp_port": {
+          "title": "Порт SMTP",
+          "description": "Выберите ваш язык",
+          "placeholder": "Введите порт SMTP"
+        },
+        "email_to": {
+          "title": "Адрес электронной почты для отправки",
+          "description": "Выберите ваш язык",
+          "placeholder": "Введите адрес электронной почты"
+        }
+      }
+    }
+  },
+  "toast": {
+    "save_success": "Сохранение прошло успешно",
+    "unknown_error": "Неизвестная ошибка попробуйте еще раз",
+    "authorization_success": "Авторизация прошла успешно"
+  }
+}

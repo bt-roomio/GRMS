@@ -1,0 +1,120 @@
+{
+  "authorization": {
+    "login": {
+      "title": "Kirish",
+      "description": "Xush kelibsiz! Iltimos, ma'lumotlaringizni kiriting.",
+      "form": {
+        "email": "Elektron pochta",
+        "email_placeholder": "Elektron pochtangizni kiriting",
+        "password": "Parol",
+        "remember_me": "Meni eslab qol",
+        "forgot_password": "Parolni unutdingizmi?",
+        "sign_in": "Kirish"
+      }
+    },
+    "forgot_password": {
+      "title": "Parolni unutdingizmi?",
+      "description": "Qayg'urmay, sizga qayta tiklash o'rsini yuboramiz",
+      "form": {
+        "email": "Elektron pochta",
+        "email_placeholder": "Elektron pochtangizni kiriting",
+        "reset_password": "Parolni tiklash"
+      },
+      "back": "Kirishga qaytish"
+    },
+    "reset_password": {
+      "title": "Elektron pochtangizni tekshiring",
+      "open": "Elektron pochta dasturini oching",
+      "description": "Pochtangiz kelmadimi?",
+      "click_resend": "Qaytadan yuborish uchun bosing"
+    }
+  },
+  "dashboard": {
+    "menu": {
+      "dashboard": "Boshqaruv paneli",
+      "rooms": "Xonalar",
+      "public_space": "Ommaviy joy",
+      "configuration": "Sozlash",
+      "users": "Foydalanuvchilar",
+      "configuration_rooms": "Xonalar",
+      "room_types": "Xona turlari",
+      "controllers": "Kontrollerlar",
+      "settings": "Sozlamalar",
+      "access": "Kirish",
+      "backlog": "Qoldiq"
+    },
+    "settings": {
+      "title": "Sozlamalar",
+      "save": "Saqlash",
+      "general": {
+        "title": "Asosiy sozlamalar",
+        "description": "Xona sozlamalarini boshqarishingiz mumkin",
+        "admin_panel_language": {
+          "title": "Admin panel til",
+          "description": "Tilingizni tanlang"
+        },
+        "controllers_sync": {
+          "title": "Kontrollerlar sinxronizatsiyasi"
+        },
+        "check_in_out": {
+          "title": "Kirish/Chiqish"
+        },
+        "vip_status": {
+          "title": "VIP holati"
+        },
+        "suite_rooms_controls_sync": {
+          "title": "Lux xonalar boshqaruv sinxronizatsiyasi"
+        },
+        "laundry": {
+          "title": "Kir yuvish"
+        }
+      },
+      "alarms": {
+        "title": "Signalizatsiyalar",
+        "description": "Xona sozlamalarini boshqarishingiz mumkin",
+        "bathroom": {
+          "title": "Hamomni faollashtirish",
+          "description": "Xonangizning raqamini kiriting"
+        },
+        "humidity": {
+          "title": "Namlikni faollashtirish",
+          "description": "Xonangizning raqamini kiriting"
+        }
+      },
+      "email_setup": {
+        "title": "Elektron pochta sozlamalari",
+        "description": "Xona sozlamalarini boshqarishingiz mumkin",
+        "smtp_server_address": {
+          "title": "SMTP server manzili",
+          "description": "Tilingizni tanlang",
+          "placeholder": "SMTP server manzilini kiriting"
+        },
+        "smtp_username": {
+          "title": "SMTP foydalanuvchi nomi",
+          "description": "Tilingizni tanlang",
+          "placeholder": "SMTP foydalanuvchi nomini kiriting"
+        },
+        "smtp_password": {
+          "title": "SMTP paroli",
+          "description": "Tilingizni tanlang",
+          "placeholder": "SMTP parolini kiriting"
+        },
+        "smtp_port": {
+          "title": "SMTP porti",
+          "description": "Tilingizni tanlang",
+          "placeholder": "SMTP portini kiriting"
+        },
+        "email_to": {
+          "title": "Elektron pochtaga",
+          "description": "Tilingizni tanlang",
+          "placeholder": "Elektron pochtangizni kiriting"
+        }
+      }
+    }
+  },
+  "toast": {
+    "save_success": "Saqlash muvaffaqiyatli",
+    "unknown_error": "Noma'lum xato yana urinib ko'ring",
+    "authorization_success": "Avtorizatsiya muvaffaqiyatli"
+  }
+}

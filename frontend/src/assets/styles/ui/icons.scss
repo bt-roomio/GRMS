@@ -1,0 +1,14 @@
+.ui-icon{
+  @apply inline-block;
+  svg{
+    @apply w-full h-full;
+  }
+  &--fill,
+  &--fill * {
+    fill: currentColor !important;
+  }
+  &--stroke,
+  &--stroke * {
+    stroke: currentColor !important;
+  }
+}

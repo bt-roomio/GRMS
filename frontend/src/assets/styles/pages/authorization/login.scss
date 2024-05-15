@@ -1,0 +1,29 @@
+.login-page{
+  @apply grid grid-rows-[minmax(0,_1fr),_auto] h-full;
+
+  &__content{
+    @apply w-[360px] m-auto;
+  }
+  .auth__head{
+    .title{
+      @apply text-white;
+    }
+    .description{
+      @apply text-white;
+    }
+  }
+  &__form{
+    .ui-input{
+      @apply mb-5;
+    }
+    .actions{
+      @apply flex justify-between mb-6 pt-1;
+      a{
+        @apply font-semibold;
+      }
+    }
+  }
+  &__footer{
+    @apply p-8
+  }
+}

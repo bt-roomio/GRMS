@@ -1,0 +1,120 @@
+{
+  "authorization": {
+    "login": {
+      "title": "Log in to Roomio",
+      "description": "Welcome back! Please enter your details.",
+      "form": {
+        "email": "Email",
+        "email_placeholder": "Enter your email",
+        "password": "Password",
+        "remember_me": "Remember me",
+        "forgot_password": "Forgot password?",
+        "sign_in": "Sign in"
+      }
+    },
+    "forgot_password": {
+      "title": "Forgot password?",
+      "description": "No worries, we’ll send you reset instructions",
+      "form": {
+        "email": "Email",
+        "email_placeholder": "Enter your email",
+        "reset_password": "Reset password"
+      },
+      "back": "Back to log in"
+    },
+    "reset_password": {
+      "title": "Check your email",
+      "open": "Open email app",
+      "description": "Didn’t receive the email?",
+      "click_resend": "Click to resend"
+    }
+  },
+  "dashboard": {
+    "menu": {
+      "dashboard": "Dashboard",
+      "rooms": "Rooms",
+      "public_space": "Public Space",
+      "configuration": "Configuration",
+      "users": "Users",
+      "configuration_rooms": "Rooms",
+      "room_types": "Room types",
+      "controllers": "Controllers",
+      "settings": "Settings",
+      "access": "Access",
+      "backlog": "Backlog"
+    },
+    "settings": {
+      "title": "Settings",
+      "save": "Save",
+      "general": {
+        "title": "General settings",
+        "description": "You can manage room settings",
+        "admin_panel_language": {
+          "title": "Admin Panel Language",
+          "description": "Select your language"
+        },
+        "controllers_sync": {
+          "title": "Controllers sync"
+        },
+        "check_in_out": {
+          "title": "Check in / out"
+        },
+        "vip_status": {
+          "title": "Vip status"
+        },
+        "suite_rooms_controls_sync": {
+          "title": "Suite rooms controls sync"
+        },
+        "laundry": {
+          "title": "Laundry"
+        }
+      },
+      "alarms": {
+        "title": "Alarms",
+        "description": "You can manage room settings",
+        "bathroom": {
+          "title": "Bathroom enable",
+          "description": "Enter your room number"
+        },
+        "humidity": {
+          "title": "Humidity enable",
+          "description": "Enter your room number"
+        }
+      },
+      "email_setup": {
+        "title": "Email setup",
+        "description": "You can manage room settings",
+        "smtp_server_address": {
+          "title": "SMTP Server Address",
+          "description": "Select your language",
+          "placeholder": "Enter SMTP Server"
+        },
+        "smtp_username": {
+          "title": "SMTP Username",
+          "description": "Select your language",
+          "placeholder": "Enter SMTP Username"
+        },
+        "smtp_password": {
+          "title": "SMTP Password",
+          "description": "Select your language",
+          "placeholder": "Enter SMTP Password"
+        },
+        "smtp_port": {
+          "title": "SMTP Port",
+          "description": "Select your language",
+          "placeholder": "Enter SMTP Port"
+        },
+        "email_to": {
+          "title": "Email To",
+          "description": "Select your language",
+          "placeholder": "Enter email address"
+        }
+      }
+    }
+  },
+  "toast": {
+    "save_success": "The save was successful",
+    "unknown_error": "Unknown error try again",
+    "authorization_success": "Authorization was successful"
+  }
+}

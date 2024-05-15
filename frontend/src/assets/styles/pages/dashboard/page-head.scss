@@ -1,0 +1,23 @@
+.page-head{
+  &__back{
+    @apply inline-block mb-6;
+  }
+  &__content{
+    @apply flex justify-between;
+  }
+  &__title{
+    @apply flex flex-col gap-1;
+    h1{
+      @apply text-3xl font-semibold text-gray-800;
+    }
+    p{
+      @apply text-gray-600;
+    }
+  }
+  &__action{
+    @apply flex-shrink-0;
+    .ui-button{
+
+    }
+  }
+}

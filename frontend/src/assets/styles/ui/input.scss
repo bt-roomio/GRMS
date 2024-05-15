@@ -1,0 +1,16 @@
+.ui-input{
+  @apply flex flex-col gap-1.5;
+  label{
+    @apply text-sm block text-left;
+  }
+  input{
+    @apply text-base px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 outline-0;
+    &.ui-input__invalid{
+      @apply border-error-500;
+      &::placeholder{
+        @apply text-error-500;
+
+      }
+    }
+  }
+}

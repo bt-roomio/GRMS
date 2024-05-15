@@ -1,0 +1,12 @@
+.auth__head{
+  @apply text-center mb-8;
+  .logo{
+    @apply text-4xl mb-6;
+  }
+  .title{
+    @apply text-3xl font-semibold mb-3 text-gray-900;
+  }
+  .description{
+    @apply text-base text-gray-600;
+  }
+}

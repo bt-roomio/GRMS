@@ -1,0 +1,14 @@
+.ui-button{
+  @apply h-11 rounded-lg flex justify-center items-center gap-2 border w-full font-semibold flex-shrink-0 px-4;
+
+  &.primary{
+    @apply bg-primary-700 stroke-white text-white border-primary-700;
+  }
+  &.text{
+    @apply stroke-gray-800 bg-transparent text-gray-700 border-gray-300;
+  }
+  &.secondary{
+    @apply stroke-gray-800 bg-gray-100 text-gray-700 border-gray-200;
+  }
+}
+
