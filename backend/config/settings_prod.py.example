@@ -1,3 +1,5 @@
+from .settings import *
+
 DEBUG = True
 
 DATABASES = {
@@ -10,3 +12,6 @@ DATABASES = {
         'PORT': 5432,
     }
 }
+
+STATIC_ROOT = '/static'
+MEDIA_ROOT = '/uploads
