@@ -51,5 +51,6 @@ class RoomDetailView(APIView):
     def delete(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)
         instance.active = False
-        instance.save(updated_by=request.user)
+        instance.updated_by = request.user
+        instance.save()
         return Response({}, 204)
