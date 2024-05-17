@@ -14,4 +14,5 @@ class Command(BaseCommand):
             'tenant',
             'users',
             'email_configuration',
+            'groups_permissions'
         )

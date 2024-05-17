@@ -1,0 +1,47 @@
+# Group Permissions
+- model: auth.group
+  pk: 1
+  fields:
+      name: SYS_ADMIN
+
+- model: auth.group
+  pk: 2
+  fields:
+      name: TENANT_ADMIN
+      permissions:
+          - - view_room
+            - main
+            - room
+          - - add_room
+            - main
+            - room
+          - - change_room
+            - main
+            - room
+          - - delete_room
+            - main
+            - room
+          - - view_roomtype
+            - main
+            - roomtype
+          - - add_roomtype
+            - main
+            - roomtype
+          - - change_roomtype
+            - main
+            - roomtype
+          - - delete_roomtype
+            - main
+            - roomtype
+          - - view_emailconfiguration
+            - main
+            - emailconfiguration
+          - - add_emailconfiguration
+            - main
+            - emailconfiguration
+          - - change_emailconfiguration
+            - main
+            - emailconfiguration
+          - - delete_emailconfiguration
+            - main
+            - emailconfiguration
