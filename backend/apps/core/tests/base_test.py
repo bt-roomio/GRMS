@@ -12,9 +12,9 @@ class BaseTestCase(APITestCase):
         user = authenticate(email='admin@gmail.com', password='password')
         if user:
             refresh = RefreshToken.for_user(user)
-            return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+            return f'Bearer {refresh.access_token}'
 
-        return {}
+        return ''
 
     def dump(self, response):
         print('-' * 40)

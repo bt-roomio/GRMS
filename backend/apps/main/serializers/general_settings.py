@@ -9,7 +9,7 @@ class DoorLockSerializer(serializers.Serializer):
 
 
 class GeneralSettingsSerializer(serializers.Serializer):
-    lang = serializers.CharField(max_length=255, default='EN')
+    lang = serializers.CharField(max_length=255, default='en')
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)
     check_in_out = serializers.BooleanField(default=False)

@@ -42,7 +42,7 @@ class RoomDetailView(APIView):
     @check_for_tenant
     def put(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)
-        serializer = RoomSerializer(instance, data=request.data, partial=True)
+        serializer = RoomSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(updated_by=request.user)
         return Response(serializer.data)

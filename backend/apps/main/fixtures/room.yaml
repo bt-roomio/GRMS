@@ -1,15 +1,13 @@
--
-    model: "main.Room"
-    fields:
-        room_number: 101
-        floor: 1
-        block: 1
-        tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+- model: "main.Room"
+  fields:
+      room_number: 101
+      floor: 1
+      block: 1
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
 
--
-    model: "main.Room"
-    fields:
-        room_number: 102
-        floor: 1
-        block: 1
-        tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+- model: "main.Room"
+  fields:
+      room_number: 102
+      floor: 2
+      block: 3
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
