@@ -12,7 +12,7 @@
         <p>{{description}}</p>
       </div>
       <div class="page-head__action" v-if="button !== undefined">
-        <Button :class="buttonClass ? buttonClass: 'primary'">
+        <Button @click.prevent="$emit('clickButton')" :class="buttonClass ? buttonClass: 'primary'">
           <UiIcon v-if="buttonIcon" :name="buttonIcon" filled />
           {{button}}
         </Button>

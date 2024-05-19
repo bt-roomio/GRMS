@@ -1,0 +1,44 @@
+.ui-table{
+  @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400;
+  thead{
+    @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 bg-white border-b border-gray-100;
+  }
+  th{
+    @apply px-6 py-3;
+  }
+  tbody{
+    tr{
+      @apply bg-white border-b last:border-b-0 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600;
+    }
+    td{
+      @apply px-6 py-4 last:gap-1;
+      &:last-child{
+        @apply flex items-center justify-end;
+        .ui-button{
+          @apply w-auto p-2 h-9;
+        }
+      }
+    }
+  }
+  .column{
+    @apply relative;
+  }
+  &__container{
+    @apply relative overflow-x-auto border border-gray-100 sm:rounded-xl;
+  }
+  &__search{
+    @apply px-6 py-3 flex bg-white border-b border-gray-100;
+    .ui-input{
+      @apply w-3/4;
+      input{
+        @apply rounded-l-none
+      }
+    }
+    .ui-select{
+      @apply w-1/4;
+      .ui-select__trigger{
+        @apply rounded-r-none border-r-0
+      }
+    }
+  }
+}

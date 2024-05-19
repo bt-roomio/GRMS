@@ -1,8 +1,10 @@
 <template>
   <div class="ui-select" ref="reference">
-    <label v-if="slots.label"><slot name="label"/></label>
+    <label v-if="label">{{label}}</label>
     <div class="ui-select__trigger" @click.prevent="isOpen = !isOpen">
-      <slot name="trigger"/>
+      <template v-if="slots.trigger"><slot name="trigger"/></template>
+      <template v-else-if="model">{{ model }}</template>
+      <span class="ui-select__placeholder" v-else>{{$t('dashboard.select_empty')}}</span>
       <UiIcon class="chevron" name="chevron-down" filled/>
     </div>
     <transition name="fade">
@@ -10,7 +12,7 @@
         <ul class="ui-select__list">
           <li
               :tabindex="key"
-              :class="{selected: getItem(item) === modal}"
+              :class="{selected: getItem(item) === model}"
               class="ui-select__item"
               v-for="(item, key) in data"
               :key="key"
@@ -34,7 +36,7 @@ import {flip, useFloating} from "@floating-ui/vue";
 import {onClickOutside} from "@vueuse/core";
 const isOpen = ref(false)
 const slots = defineSlots()
-const modal = defineModel()
+const model = defineModel()
 const reference = ref<HTMLElement | null>(null)
 const floating = ref<HTMLElement | null>(null)
 const {floatingStyles} = useFloating(reference, floating, {middleware: [flip()],});
@@ -46,13 +48,14 @@ const close = () => isOpen.value = false
 const getItem = (item:any) => props.modelKey ? item[props.modelKey] : item
 const emit = defineEmits(['change'])
 const props = defineProps<{
-  data: Record<string, T>[],
+  data: {[key: string]: unknown}[],
   name?: string,
+  label?: string,
   modelKey?: string,
 }>()
 
 const selected = (item:any) => {
-  modal.value = item
+  model.value = item
   emit('change', item)
   close()
 }

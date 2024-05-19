@@ -10,7 +10,7 @@
       <div class="item-action"><UiIcon name="chevron-down" filled/></div>
     </div>
     <transition name="dropdown">
-      <ul class="item-submenu overflow-hidden" v-if="item.children?.length && open">
+      <ul ref="submenu" class="item-submenu overflow-hidden" v-if="item.children?.length && open">
         <li class="sidebar__menu-item" v-for="child in item.children" :key="child.name">
           <RouterLink :to="{name: child.to}" class="item-content">
             <UiIcon class="item-icon opacity-0" name="dashboard" filled/>
@@ -25,16 +25,18 @@
 <script setup lang="ts">
 import UiIcon from "../../ui/Icon.vue";
 import {defineComponent, ref} from "vue";
-
 const open = ref(false)
-
-
+const submenu = ref<HTMLElement | null>(null)
 defineProps<{
   item: Item
 }>()
 
 defineExpose({open})
 defineComponent({name: 'MenuItem'})
+
+// onMounted(() => {
+//   console.log(submenu.value?.querySelector(`[href="${fullPath}"]`))
+// })
 </script>
 
 <style>

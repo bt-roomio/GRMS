@@ -1,12 +1,15 @@
 .tabs{
   @apply mb-6;
   &__list{
-    @apply inline-flex flex-wrap border-b-2 border-gray-200 relative;
+    @apply inline-flex flex-wrap relative;
   }
   &__item{
-    @apply p-3 cursor-pointer;
+    @apply p-3 cursor-pointer flex gap-2 border-b-2 border-gray-200;
   }
   &__line{
-    @apply border-b-2 border-primary-600 w-24 absolute top-full transition-all;
+    @apply border-b-2 border-primary-600 w-24 absolute transition-all;
+  }
+  &__badge{
+    @apply text-xs w-6 h-6 border border-gray-200 inline-flex items-center justify-center rounded-full;
   }
 }

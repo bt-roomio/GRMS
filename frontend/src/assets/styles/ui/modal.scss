@@ -1,0 +1,45 @@
+.modal{
+  @apply absolute w-full h-full top-0 left-0 z-20 flex justify-end overflow-hidden transition;
+  &.v-enter-active{
+    .modal__wrapper{
+      animation: 150ms fadeIn forwards;
+    }
+    .modal__body{
+      animation: 150ms slideInRight forwards;
+    }
+  }
+  &.v-leave-active{
+    .modal__wrapper{
+      animation: 0.3s fadeOut;
+    }
+    .modal__body{
+      animation: 0.3s slideOutRight;
+    }
+  }
+  &__wrapper{
+    @apply bg-primary-600/40 absolute top-0 left-0 w-full h-full;
+  }
+  &__body{
+    @apply bg-white w-[352px] px-4 py-6 relative overflow-auto;
+  }
+  &__head{
+    @apply border-b border-gray-200 pb-6 relative;
+    h2{
+      @apply text-lg font-semibold mb-1;
+    }
+    p{
+      @apply text-sm;
+    }
+    .ui-icon{
+      @apply w-5 h-5 absolute top-0 right-0 cursor-pointer;
+    }
+  }
+  &__content{
+    @apply py-6 border-b border-gray-200;
+  }
+  &__footer{
+    @apply flex flex-col gap-4 pt-6;
+  }
+}
+
+

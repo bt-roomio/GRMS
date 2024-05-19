@@ -1,0 +1,11 @@
+.rooms{
+  &__actions{
+    @apply flex gap-6 justify-between items-center;
+  }
+  &__buttons{
+    @apply flex flex-wrap gap-6 items-center mb-6;
+    .ui-icon{
+      @apply cursor-pointer w-5 h-5 text-xl;
+    }
+  }
+}

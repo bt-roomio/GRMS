@@ -30,6 +30,12 @@
     }
   },
   "dashboard": {
+    "main": {
+      "tabs": {
+        "overview": "Overview",
+        "energy": "Energy"
+      }
+    },
     "menu": {
       "dashboard": "Dashboard",
       "rooms": "Rooms",
@@ -110,7 +116,63 @@
           "placeholder": "Enter email address"
         }
       }
-    }
+    },
+    "configuration": {
+      "tabs": {
+        "all": "All rooms",
+        "on": "On",
+        "off": "Off",
+        "error": "Error"
+      },
+      "rooms": {
+        "title": "Rooms",
+        "subtitle": "Edit your list of rooms",
+        "add_room": "Add room",
+        "room": "Room",
+        "type": "Type",
+        "floor": "Floor",
+        "block": "Block",
+        "mac_address": "MAC address",
+        "ip_address": "IP address",
+        "status": "Status",
+        "modals": {
+          "add_new_rooms": {
+            "title": "Add new room",
+            "subtitle": "Add a new room in your hotel",
+            "choose_room_type": "Choose room type",
+            "room_number": "Room number",
+            "room_number_placeholder": "Enter room number or range",
+            "room_number_example": "Example: 567 or 456-567",
+            "room_floor_placeholder": "Enter room floor",
+            "room_block_placeholder": "Enter room block",
+            "cancel": "Cancel",
+            "mac_address": "Choose MAC address"
+          },
+          "edit_new_rooms": {
+            "title": "Edit room",
+            "subtitle": "Edit room in your hotel",
+            "save": "Save room settings"
+          },
+          "export_new_rooms": {
+            "title": "Export rooms",
+            "subtitle": "Please select the file type for export"
+          },
+          "import_new_rooms": {
+            "title": "Import rooms",
+            "subtitle": "Please upload the file with your rooms",
+            "view_example": "View an example file"
+          }
+        }
+      }
+    },
+    "file_upload": {
+      "click_to_upload": "Click to upload",
+      "or_drag_and_drop": "or drag and drop",
+      "format": "format",
+      "selected_file": "Selected file"
+    },
+    "search": "Search",
+    "select_empty": "Select from the list"
   },
   "toast": {
     "save_success": "The save was successful",
@@ -118,3 +180,9 @@
     "authorization_success": "Authorization was successful"
   }
 }
+
+
+
+
+
+

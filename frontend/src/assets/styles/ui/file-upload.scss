@@ -1,0 +1,18 @@
+.file-upload{
+  @apply flex items-center justify-center w-full;
+  label{
+    @apply flex flex-col items-center justify-center w-full h-32 border border-gray-200 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition;
+  }
+  &__content{
+    @apply flex flex-col justify-center items-center p-4;
+    .ui-icon{
+      @apply stroke-gray-600 bg-gray-100 border-[6px] border-gray-50 rounded-full w-10 h-10 text-xl p-1;
+    }
+    .top-text{
+      @apply mb-2 text-sm text-gray-500 text-center;
+    }
+    .format{
+      @apply text-xs text-gray-500 text-center;
+    }
+  }
+}

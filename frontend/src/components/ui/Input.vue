@@ -1,6 +1,6 @@
 <template>
   <div class="ui-input">
-    <label :for="id">{{ label }}</label>
+    <label v-if="label" :for="id">{{ label }}</label>
     <input
         :type="type || 'text'"
         :name="name"
@@ -9,6 +9,7 @@
         v-model="model"
         v-bind="$attrs">
     <span class="text-red-500" v-if="errors && errors.find(el => el.$property === name)">{{errors.find(el => el.$property === name)?.$message}}</span>
+    <span class="text-xs" v-if="$slots.footer"><slot name="footer"/></span>
   </div>
 </template>
 <script setup lang="ts">

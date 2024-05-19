@@ -18,15 +18,15 @@ const {t} = useI18n()
 const tabList = computed(() => [
   {
     name: t('dashboard.settings.general.title'),
-    to: 'settings-general'
+    to: {name: 'settings-general'}
   },
   {
     name: t('dashboard.settings.alarms.title'),
-    to: 'settings-alarms'
+    to: {name: 'settings-alarms'}
   },
   {
     name: t('dashboard.settings.email_setup.title'),
-    to: 'settings-email-setup'
+    to: {name: 'settings-email-setup'}
   }
 ])
 </script>

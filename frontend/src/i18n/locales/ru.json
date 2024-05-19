@@ -30,6 +30,12 @@
     }
   },
   "dashboard": {
+    "main": {
+      "tabs": {
+        "overview": "Обзор",
+        "energy": "Энергия"
+      }
+    },
     "menu": {
       "dashboard": "Панель управления",
       "rooms": "Номера",
@@ -110,7 +116,63 @@
           "placeholder": "Введите адрес электронной почты"
         }
       }
-    }
+    },
+    "configuration": {
+      "tabs": {
+        "all": "Все комнаты",
+        "on": "Включено",
+        "error": "Ошибка",
+        "off": "Выключено"
+      },
+      "rooms": {
+        "title": "Комнаты",
+        "subtitle": "Редактировать список комнат",
+        "add_room": "Добавить комнату",
+        "room": "Комната",
+        "type": "Тип",
+        "floor": "Этаж",
+        "block": "Блок",
+        "mac_address": "MAC-адрес",
+        "ip_address": "IP-адрес",
+        "status": "Статус",
+        "modals": {
+          "add_new_rooms": {
+            "title": "Добавить новую комнату",
+            "subtitle": "Добавить новую комнату в вашем отеле",
+            "choose_room_type": "Выберите тип комнаты",
+            "room_number": "Номер комнаты",
+            "room_number_placeholder": "Введите номер комнаты или диапазон",
+            "room_number_example": "Пример: 567 или 456-567",
+            "room_floor_placeholder": "Введите этаж комнаты",
+            "room_block_placeholder": "Введите блок комнаты",
+            "cancel": "Отмена",
+            "mac_address": "Выберите MAC-адрес"
+          },
+          "edit_new_rooms": {
+            "title": "Редактировать комнату",
+            "subtitle": "Редактировать комнату в вашем отеле",
+            "save": "Сохранить настройки комнаты"
+          },
+          "export_new_rooms": {
+            "title": "Экспорт комнат",
+            "subtitle": "Пожалуйста, выберите тип файла для экспорта"
+          },
+          "import_new_rooms": {
+            "title": "Импорт комнат",
+            "subtitle": "Пожалуйста, загрузите файл с вашими комнатами",
+            "view_example": "Посмотреть пример файла"
+          }
+        }
+      }
+    },
+    "file_upload": {
+      "click_to_upload": "Нажмите для загрузки",
+      "or_drag_and_drop": "или перетащите",
+      "format": "формат",
+      "selected_file": "Выбранный файл"
+    },
+    "search": "Поиск",
+    "select_empty": "Выберите из списка"
   },
   "toast": {
     "save_success": "Сохранение прошло успешно",

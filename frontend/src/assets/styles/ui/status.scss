@@ -1,0 +1,15 @@
+.ui_status{
+  @apply flex justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2;
+  &.on{
+    @apply bg-success-50 text-success-700 font-medium;
+  }
+  &.off{
+    @apply bg-error-50 text-error-700 font-medium;
+  }
+  &.error{
+    @apply bg-error-50 text-error-700 font-medium;
+  }
+  &:before{
+    @apply content-[''] block w-1.5 h-1.5 bg-current rounded-full;
+  }
+}

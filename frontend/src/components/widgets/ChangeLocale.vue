@@ -2,11 +2,11 @@
   <UiSelect
       v-model="model"
       :data="locales"
+      modelKey="code"
       @change="changeLocale"
-      model-key="code"
   >
     <template #trigger>
-      <UiIcon :name="locales.find(el => el.code === model)?.icon" filled/>
+      <UiIcon :name="locales.find(el => el.code === model)?.icon || 'en'" filled/>
       {{ locales.find(el => el.code === model)?.name }}
     </template>
     <template #item="{item}">

@@ -4,7 +4,7 @@
     @apply text-sm block text-left;
   }
   &__trigger{
-    @apply flex gap-2 px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 items-center;
+    @apply flex gap-2 px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 items-center h-10;
     .chevron{
       @apply stroke-gray-700 ml-auto;
     }
@@ -34,5 +34,8 @@
     &.selected{
       @apply bg-gray-200;
     }
+  }
+  &__placeholder{
+    @apply text-gray-400;
   }
 }

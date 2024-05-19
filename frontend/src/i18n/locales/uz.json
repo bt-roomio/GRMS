@@ -30,6 +30,12 @@
     }
   },
   "dashboard": {
+    "main": {
+      "tabs": {
+        "overview": "Umumiy koʻrinish",
+        "energy": "Energiya"
+      }
+    },
     "menu": {
       "dashboard": "Boshqaruv paneli",
       "rooms": "Xonalar",
@@ -110,7 +116,63 @@
           "placeholder": "Elektron pochtangizni kiriting"
         }
       }
-    }
+    },
+    "configuration": {
+      "tabs": {
+        "all": "Barcha xonalar",
+        "on": "Yoqilgan",
+        "off": "Oʻchirilgan",
+        "error": "Xato"
+      },
+      "rooms": {
+        "title": "Xonalar",
+        "subtitle": "Xonalar ro'yxatini tahrirlash",
+        "add_room": "Xona qo'shish",
+        "room": "Xona",
+        "type": "Tur",
+        "floor": "Qavat",
+        "block": "Blok",
+        "mac_address": "MAC manzil",
+        "ip_address": "IP manzil",
+        "status": "Holat",
+        "modals": {
+          "add_new_rooms": {
+            "title": "Yangi xona qo'shish",
+            "subtitle": "Mehmonxonangizga yangi xona qo'shing",
+            "choose_room_type": "Xona turini tanlang",
+            "room_number": "Xona raqami",
+            "room_number_placeholder": "Xona raqamini yoki diapazonni kiriting",
+            "room_number_example": "Masalan: 567 yoki 456-567",
+            "room_floor_placeholder": "Xona qavatini kiriting",
+            "room_block_placeholder": "Xona blokini kiriting",
+            "cancel": "Bekor qilish",
+            "mac_address": "MAC manzilni tanlang"
+          },
+          "edit_new_rooms": {
+            "title": "Xonani tahrirlash",
+            "subtitle": "Mehmonxonangizdagi xonani tahrirlash",
+            "save": "Xona sozlamalarini saqlash"
+          },
+          "export_new_rooms": {
+            "title": "Xonalarni eksport qilish",
+            "subtitle": "Iltimos, eksport uchun fayl turini tanlang"
+          },
+          "import_new_rooms": {
+            "title": "Xonalarni import qilish",
+            "subtitle": "Iltimos, xonalar bilan faylni yuklang",
+            "view_example": "Namuna faylini ko'rish"
+          }
+        }
+      }
+    },
+    "file_upload": {
+      "click_to_upload": "Yuklash uchun bosing",
+      "or_drag_and_drop": "yoki sudrab olib keling",
+      "format": "format",
+      "selected_file": "Tanlangan fayl"
+    },
+    "search": "Qidirish",
+    "select_empty": "Ro'yxatdan tanlang"
   },
   "toast": {
     "save_success": "Saqlash muvaffaqiyatli",

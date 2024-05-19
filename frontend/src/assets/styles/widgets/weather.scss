@@ -1,0 +1,29 @@
+.weather{
+  @apply w-full relative rounded-xl overflow-hidden mb-4;
+  &__image{
+    @apply absolute indent-0 object-cover w-full h-full bg-primary-600;
+    &:before{
+      @apply content-[''] absolute w-full h-full bg-primary-600/65;
+    }
+    img{
+      @apply w-full h-full;
+    }
+  }
+  &__content{
+    @apply flex items-center justify-between px-4 py-6 w-full relative ;
+  }
+  &__info{
+    p{
+      @apply text-white mb-2;
+    }
+    h2{
+      @apply text-white font-semibold text-xl;
+    }
+  }
+  &__detail{
+    @apply text-white font-semibold text-lg flex items-center gap-2;
+    .ui-icon{
+      @apply text-[50px] w-[50px] h-[50px];
+    }
+  }
+}
