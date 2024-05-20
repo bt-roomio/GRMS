@@ -16,7 +16,7 @@ class User(AbstractUser, BaseModel):
     phone = models.CharField(max_length=255, blank=True, null=True)
     date_joined = models.BigIntegerField(default=time.time, editable=False)
     last_login = UnixTimeStampField(default=time.time, blank=True, null=True)
-    tenant = models.ForeignKey('main.Tenant', on_delete=models.CASCADE, null=True, blank=True)
+    tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE, null=True, blank=True)
 
     # enabled = models.BooleanField(blank=True, null=True)
     # reset_token = models.CharField(unique=True, max_length=255, blank=True, null=True)
@@ -24,14 +24,14 @@ class User(AbstractUser, BaseModel):
     # customer_id = models.UUIDField(blank=True, null=True)
 
     username = None
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects = UsersManager()
 
     class Meta(AbstractUser.Meta):
-        db_table = 'users_users'
-        default_related_name = 'users'
+        db_table = "users_users"
+        default_related_name = "users"
 
 
 class ResetPassword(BaseModel):
@@ -48,4 +48,4 @@ class ResetPassword(BaseModel):
         return self.key
 
     class Meta:
-        db_table = 'users_reset_password'
+        db_table = "users_reset_password"

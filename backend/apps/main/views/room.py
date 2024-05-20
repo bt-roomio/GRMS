@@ -5,25 +5,30 @@ from rest_framework.generics import Http404, get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from main.swagger.room import RoomSwagger
-from core.utils.pagination import pagination
 from core.utils.permission import check_for_tenant
+from main.swagger.room import RoomDetailSwagger, RoomSwagger
+from core.utils.pagination import pagination
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
 
 
 class RoomListView(APIView):
-    @swagger_auto_schema(responses=RoomSwagger)
+    @swagger_auto_schema(responses=RoomSwagger, query_serializer=RoomFilterParams)
     @check_for_tenant
     def get(self, request):
         params = RoomFilterParams.check(request.GET)
-        queryset = Room.objects.by_tenant(tenant=request.user.tenant)
+        queryset = Room.objects.list(
+            tenant=request.user.tenant,
+            status=params.get("status"),
+            search=params.get("search"),
+        )
         if not queryset:
-            raise Http404('Rooms for this tenant not found!')
+            raise Http404("Rooms for this tenant not found!")
         serializer = RoomSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get('page'), params.get('size'))
+        data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
 
+    @swagger_auto_schema(responses=RoomSwagger, request_body=RoomSerializer)
     @check_for_tenant
     def post(self, request):
         serializer = RoomSerializer(data=request.data)
@@ -33,12 +38,14 @@ class RoomListView(APIView):
 
 
 class RoomDetailView(APIView):
+    @swagger_auto_schema(responses=RoomDetailSwagger)
     @check_for_tenant
     def get(self, request, pk):
         queryset = get_object_or_404(Room, id=pk, active=True)
         serializer = RoomSerializer(queryset)
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses=RoomDetailSwagger, request_body=RoomSerializer)
     @check_for_tenant
     def put(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)
@@ -47,6 +54,7 @@ class RoomDetailView(APIView):
         serializer.save(updated_by=request.user)
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses={})
     @check_for_tenant
     def delete(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)

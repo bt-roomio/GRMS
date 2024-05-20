@@ -3,7 +3,7 @@ from django.db.models import Func, IntegerField
 
 
 class NaturalOrder(Func):
-    name = 'NaturalOrder'
+    name = "NaturalOrder"
     template = "SUBSTRING(%(expressions)s FROM '^[0-9]+')::INT"
     output_field = IntegerField()
 

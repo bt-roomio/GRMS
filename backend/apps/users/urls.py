@@ -6,9 +6,9 @@ from users.views.reset_password import GetResetLinkView, ResetPasswordView
 from users.views.users import UserDetailView
 
 urlpatterns = [
-    path('user/', UserDetailView.as_view(), name='sign-in'),
-    path('access-token/', TokenObtainPairView.as_view(), name='access-token'),
-    path('refresh-token/', TokenRefreshView.as_view(), name='refresh-token'),
-    path('reset-link/', GetResetLinkView.as_view(), name='reset-link'),
-    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    path("user/", UserDetailView.as_view(), name="sign-in"),
+    path("access-token/", TokenObtainPairView.as_view(), name="access-token"),
+    path("refresh-token/", TokenRefreshView.as_view(), name="refresh-token"),
+    path("reset-link/", GetResetLinkView.as_view(), name="reset-link"),
+    path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
 ]

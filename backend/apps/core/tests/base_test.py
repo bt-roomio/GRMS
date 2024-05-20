@@ -9,15 +9,15 @@ from django.contrib.auth import authenticate
 class BaseTestCase(APITestCase):
     @property
     def bearer_token(self):
-        user = authenticate(email='admin@gmail.com', password='password')
+        user = authenticate(email="admin@gmail.com", password="password")
         if user:
             refresh = RefreshToken.for_user(user)
-            return f'Bearer {refresh.access_token}'
+            return f"Bearer {refresh.access_token}"
 
-        return ''
+        return ""
 
     def dump(self, response):
-        print('-' * 40)
-        print('Response:', response.status_code)
+        print("-" * 40)
+        print("Response:", response.status_code)
         pprint(json.loads(json.dumps(response.data)))
-        print('-' * 40)
+        print("-" * 40)

@@ -9,7 +9,7 @@ def disable_fixtures(signal_handler):
 
     @wraps(signal_handler)
     def wrapper(*args, **kwargs):
-        if kwargs.get('raw') or 'test' in sys.argv:
+        if kwargs.get("raw") or "test" in sys.argv:
             return
         signal_handler(*args, **kwargs)
 

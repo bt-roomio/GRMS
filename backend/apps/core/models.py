@@ -13,13 +13,21 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('id',)
+        ordering = ("id",)
 
 
 class UpdateByModel(models.Model):
-    updated_at = UnixTimeStampField(default=time.time, null=True, )
-    updated_by = models.ForeignKey('users.User', SET_NULL, null=True, blank=True,
-                                   related_name='updated_%(model_name)ss')
+    updated_at = UnixTimeStampField(
+        default=time.time,
+        null=True,
+    )
+    updated_by = models.ForeignKey(
+        "users.User",
+        SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_%(model_name)ss",
+    )
 
     def save(self, **kwargs):
         if self.pk:

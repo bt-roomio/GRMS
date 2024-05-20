@@ -4,15 +4,15 @@ from django.db import transaction
 
 
 class Command(BaseCommand):
-    help = 'Loads all fixtures'
+    help = "Loads all fixtures"
 
     @transaction.atomic
     def handle(self, *args, **options):
         call_command(
-            'loaddata',
-            'tenant_profile',
-            'tenant',
-            'users',
-            'email_configuration',
-            'groups_permissions'
+            "loaddata",
+            "tenant_profile",
+            "tenant",
+            "users",
+            "email_configuration",
+            "groups_permissions",
         )

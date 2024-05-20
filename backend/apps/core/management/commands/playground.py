@@ -3,9 +3,8 @@ from django.db import transaction
 
 
 class Command(BaseCommand):
-    help = 'Playground'
+    help = "Playground"
 
     @transaction.atomic
     def handle(self, *args, **options):
         pass
-

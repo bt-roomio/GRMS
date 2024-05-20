@@ -8,7 +8,12 @@ from users.serializers.user import UserSerializer
 
 
 class UserDetailView(APIView):
-    @swagger_auto_schema(responses={200: UserSerializer(), 401: 'Authentication credentials were not provided.'})
+    @swagger_auto_schema(
+        responses={
+            200: UserSerializer(),
+            401: "Authentication credentials were not provided.",
+        }
+    )
     def get(self, request):
         user = get_object_or_404(User, id=request.user.id)
         serializer = UserSerializer(user)

@@ -23,14 +23,14 @@ class GetResetLinkView(CreateAPIView):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        email = serializer.validated_data.get('email').lower()
+        email = serializer.validated_data.get("email").lower()
         user = User.objects.filter(email=email).first()
 
         if not user:
-            raise ValidationError({'email': ['There is not user with this email.']})
+            raise ValidationError({"email": ["There is not user with this email."]})
 
         result = send_reset_link_email(self.request, user)
-        if result.get('success'):
+        if result.get("success"):
             ResetPassword.objects.create(user=user)
         self.serializer_class.data = result
 
@@ -42,17 +42,17 @@ class ResetPasswordView(GenericAPIView):
     @swagger_auto_schema(responses=ResetPasswordSwagger)
     def put(self, request):
         data = self.serializer_class.check(request.data)
-        reset = get_object_or_404(ResetPassword, key=data.get('key'))
-        new_password = data.get('new_password')
-        confirm_password = data.get('confirm_password')
+        reset = get_object_or_404(ResetPassword, key=data.get("key"))
+        new_password = data.get("new_password")
+        confirm_password = data.get("confirm_password")
 
         if reset.expires_at < time.time():
-            raise ValidationError({'key': ['Reset password token has expired.']})
+            raise ValidationError({"key": ["Reset password token has expired."]})
 
         if new_password != confirm_password:
-            raise ValidationError({'password': ['Passwords do not match.']})
+            raise ValidationError({"password": ["Passwords do not match."]})
 
         reset.user.set_password(new_password)
         reset.user.save()
 
-        return Response({'message': 'Password updated.'})
+        return Response({"message": "Password updated."})

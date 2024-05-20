@@ -9,7 +9,7 @@ from main.querysets.room import RoomQuerySet
 
 
 class Tenant(BaseModel):
-    tenant_profile = models.ForeignKey('main.TenantProfile', CASCADE)
+    tenant_profile = models.ForeignKey("main.TenantProfile", CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
     address = models.CharField(null=True, blank=True)
     address2 = models.CharField(null=True, blank=True)
@@ -25,7 +25,7 @@ class Tenant(BaseModel):
     objects = TenantQuerySet.as_manager()
 
     class Meta:
-        db_table = 'main_tenant'
+        db_table = "main_tenant"
 
 
 class TenantProfile(BaseModel):
@@ -37,16 +37,16 @@ class TenantProfile(BaseModel):
     isolated_tb_rule_engine = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'main_tenant_profile'
+        db_table = "main_tenant_profile"
 
 
 class AdminSettings(BaseModel):
-    tenant = models.ForeignKey('main.Tenant', CASCADE)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
     key = models.CharField(max_length=255)
     json_value = models.JSONField(null=True, blank=True)
 
     class Meta:
-        db_table = 'main_admin_settings'
+        db_table = "main_admin_settings"
 
 
 class EmailConfiguration(BaseModel, UpdateByModel):
@@ -57,26 +57,26 @@ class EmailConfiguration(BaseModel, UpdateByModel):
     password = models.CharField(max_length=255)
     use_tls = models.BooleanField(default=True)
 
-    tenant = models.OneToOneField('main.Tenant', CASCADE)
+    tenant = models.OneToOneField("main.Tenant", CASCADE)
 
     class Meta:
-        db_table = 'main_email_configuration'
-        default_related_name = 'email_configurations'
+        db_table = "main_email_configuration"
+        default_related_name = "email_configurations"
 
 
 class Room(BaseModel, UpdateByModel):
-    Available = 'Available'
-    CheckedIn = 'CheckedIn'
-    Occupied = 'Occupied'
-    DoNotDistrub = 'DoNotDistrub'
-    MakeUpRoom = 'MakeUpRoom'
+    Available = "Available"
+    CheckedIn = "CheckedIn"
+    Occupied = "Occupied"
+    DoNotDistrub = "DoNotDistrub"
+    MakeUpRoom = "MakeUpRoom"
 
     STATUS = (
-        (Available, 'Available'),
-        (CheckedIn, 'CheckedIn'),
-        (Occupied, 'Occupied'),
-        (DoNotDistrub, 'DoNotDistrub'),
-        (MakeUpRoom, 'MakeUpRoom'),
+        (Available, "Available"),
+        (CheckedIn, "CheckedIn"),
+        (Occupied, "Occupied"),
+        (DoNotDistrub, "DoNotDistrub"),
+        (MakeUpRoom, "MakeUpRoom"),
     )
 
     room_number = models.IntegerField()
@@ -88,10 +88,10 @@ class Room(BaseModel, UpdateByModel):
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
     door_lock_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
-    device = models.ForeignKey('main.Device', CASCADE, null=True, blank=True)
-    type = models.ForeignKey('main.RoomType', CASCADE, null=True, blank=True)
-    suite = models.ForeignKey('self', CASCADE, null=True, blank=True)
-    tenant = models.ForeignKey('main.Tenant', CASCADE)
+    device = models.ForeignKey("main.Device", CASCADE, null=True, blank=True)
+    type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
+    suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
 
     objects = RoomQuerySet.as_manager()
 
@@ -99,7 +99,7 @@ class Room(BaseModel, UpdateByModel):
         return str(self.room_number)
 
     class Meta:
-        db_table = 'main_room'
+        db_table = "main_room"
 
 
 class RoomType(BaseModel):
@@ -114,13 +114,14 @@ class RoomType(BaseModel):
     vip_status_address = models.IntegerField(null=True, blank=True)
     vip_status_on_value = models.IntegerField(null=True, blank=True)
     vip_status_off_value = models.IntegerField(null=True, blank=True)
-    tenant = models.ForeignKey('main.Tenant', CASCADE)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
 
     def __str__(self):
         return self.title
 
     class Meta:
-        db_table = 'main_room_type'
+        db_table = "main_room_type"
+
 
 class Device(BaseModel):
     name = models.CharField(max_length=255)
@@ -129,4 +130,4 @@ class Device(BaseModel):
         return self.name
 
     class Meta:
-        db_table = 'main_device'
+        db_table = "main_device"

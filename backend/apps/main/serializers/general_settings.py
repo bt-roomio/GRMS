@@ -9,7 +9,7 @@ class DoorLockSerializer(serializers.Serializer):
 
 
 class GeneralSettingsSerializer(serializers.Serializer):
-    lang = serializers.CharField(max_length=255, default='en')
+    lang = serializers.CharField(max_length=255, default="en")
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)
     check_in_out = serializers.BooleanField(default=False)
@@ -24,9 +24,9 @@ class GeneralSettingsSerializer(serializers.Serializer):
     auto_checkout = serializers.BooleanField(default=False)
 
     def update(self, instance, validated_data):
-        instance.additional_info = json.dumps({'general_settings': validated_data})
+        instance.additional_info = json.dumps({"general_settings": validated_data})
         instance.save()
         return instance
 
     def to_representation(self, instance):
-        return {'tenant_id': instance.id, **self.validated_data}
+        return {"tenant_id": instance.id, **self.validated_data}

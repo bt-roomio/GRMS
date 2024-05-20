@@ -8,4 +8,4 @@ class EmailConfigSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EmailConfiguration
-        fields = ('id', 'tenant', 'email', 'host', 'username', 'password', 'port', 'use_tls')
+        fields = ("id", "tenant", "email", "host", "username", "password", "port", "use_tls")
