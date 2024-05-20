@@ -20,7 +20,9 @@ class RoomListView(APIView):
         queryset = Room.objects.list(
             tenant=request.user.tenant,
             status=params.get("status"),
-            search=params.get("search"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+            sort_by=params.get("sort_by"),
         )
         if not queryset:
             raise Http404("Rooms for this tenant not found!")

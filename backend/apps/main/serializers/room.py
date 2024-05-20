@@ -29,7 +29,19 @@ class RoomSerializer(serializers.ModelSerializer):
 
 
 class RoomFilterParams(ValidatorSerializer):
+    SORT_FIELDS = ("room_number", "floor", "block", "device", "-room_number", "-floor", "-block", "-device")
+
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
     status = serializers.ChoiceField(choices=Room.STATUS, default=Room.Available)
-    search = serializers.CharField(required=False)
+    search_field = serializers.ChoiceField(choices=("room_number", "floor", "block"), required=False)
+    search_value = serializers.CharField(required=False)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+
+    def validate(self, attrs):
+        if not "search_field" in attrs and "search_value" in attrs:
+            raise serializers.ValidationError({"search_field": "search_field is required!"})
+
+        if not "search_value" in attrs and "search_field" in attrs:
+            raise serializers.ValidationError({"search_value": "search_value is required!"})
+        return attrs
