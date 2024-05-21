@@ -2,9 +2,13 @@ import axios from "axios";
 import {useCookies} from "@vueuse/integrations/useCookies";
 import {useAuthorizationStore} from "@store/authorization";
 import router from "@/router";
+import qs from 'qs'
 const cookies = useCookies(['access_token', 'refresh_token'])
 const useApiFetch = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
+    paramsSerializer: params => {
+        return qs.stringify(params)
+    }
 });
 
 useApiFetch.interceptors.request.use(response => {

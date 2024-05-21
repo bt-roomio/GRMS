@@ -1,10 +1,13 @@
 .ui-table{
-  @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400;
+  @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative;
   thead{
     @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 bg-white border-b border-gray-100;
   }
   th{
     @apply px-6 py-3;
+    .sort-th{
+      @apply flex gap-2 items-center cursor-pointer;
+    }
   }
   tbody{
     tr{
@@ -39,6 +42,15 @@
       .ui-select__trigger{
         @apply rounded-r-none border-r-0
       }
+    }
+  }
+  &__error{
+    @apply flex-wrap;
+    .error-title{
+      @apply text-2xl font-semibold w-full text-center pt-24
+    }
+    .error-subtitle{
+      @apply text-base text-primary-700 w-full text-center pb-24
     }
   }
 }

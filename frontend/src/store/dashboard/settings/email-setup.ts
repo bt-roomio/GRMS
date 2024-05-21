@@ -4,10 +4,10 @@ import {email, minLength, required} from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import useApiFetch from "@/composables/useApiFetch.ts";
 import {toast} from "vue3-toastify";
-import i18nStore from "@/store";
+import {useI18n} from "vue-i18n";
 
 export const useEmailSetupStore = defineStore('settings-email-setup', () => {
-    const t = i18nStore()
+    const {t} = useI18n()
 
     const state = ref<IEmailSetup>({
         tenant: "",

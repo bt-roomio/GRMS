@@ -1,9 +1,9 @@
 <template>
   <div class="ui-select" ref="reference">
-    <label v-if="label">{{label}}</label>
+    <label v-if="label">{{ label }}</label>
     <div class="ui-select__trigger" @click.prevent="isOpen = !isOpen">
       <template v-if="slots.trigger"><slot name="trigger"/></template>
-      <template v-else-if="model">{{ model }}</template>
+      <template v-else-if="model">{{ (typeof model === 'object') ? model[name] : model }}</template>
       <span class="ui-select__placeholder" v-else>{{$t('dashboard.select_empty')}}</span>
       <UiIcon class="chevron" name="chevron-down" filled/>
     </div>
@@ -16,8 +16,8 @@
               class="ui-select__item"
               v-for="(item, key) in data"
               :key="key"
-              @click="selected(getItem(item))"
-              @keydown.enter="selected(getItem(item))"
+              @click="selected(item)"
+              @keydown.enter="selected(item)"
           >
             <slot v-if="slots.item" name="item" :item="item" :close="close" />
             <template v-else>
@@ -36,7 +36,7 @@ import {flip, useFloating} from "@floating-ui/vue";
 import {onClickOutside} from "@vueuse/core";
 const isOpen = ref(false)
 const slots = defineSlots()
-const model = defineModel()
+const model = defineModel<{[key: string]: unknown} | string>()
 const reference = ref<HTMLElement | null>(null)
 const floating = ref<HTMLElement | null>(null)
 const {floatingStyles} = useFloating(reference, floating, {middleware: [flip()],});
@@ -49,14 +49,14 @@ const getItem = (item:any) => props.modelKey ? item[props.modelKey] : item
 const emit = defineEmits(['change'])
 const props = defineProps<{
   data: {[key: string]: unknown}[],
-  name?: string,
+  name: string,
   label?: string,
   modelKey?: string,
 }>()
 
 const selected = (item:any) => {
-  model.value = item
-  emit('change', item)
+  model.value = getItem(item)
+  emit('change', getItem(item))
   close()
 }
 const arrowControls = (event: KeyboardEvent) => {

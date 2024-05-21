@@ -16,6 +16,7 @@
     "@vueuse/integrations": "^10.9.0",
     "axios": "^1.6.8",
     "pinia": "^2.1.7",
+    "qs": "^6.12.1",
     "universal-cookie": "^7.1.4",
     "url": "^0.11.3",
     "vue": "^3.4.21",
@@ -24,6 +25,7 @@
     "vue3-toastify": "^0.2.1"
   },
   "devDependencies": {
+    "@types/qs": "^6.9.15",
     "@vitejs/plugin-vue": "^5.0.4",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",

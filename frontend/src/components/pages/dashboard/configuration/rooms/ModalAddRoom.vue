@@ -1,11 +1,11 @@
 <template>
-  <Modal ref="add_room">
+  <Modal ref="add_room" @closed="storeConfigurationRooms.$reset()">
     <template #head>
       <h2>{{$t('dashboard.configuration.rooms.modals.add_new_rooms.title')}} </h2>
       <p>{{$t('dashboard.configuration.rooms.modals.add_new_rooms.subtitle')}}</p>
     </template>
 
-    <form class="ui-form">
+    <form class="ui-form" @submit.prevent="storeConfigurationRooms.addItem(close)">
       <UiSelect
           v-model="state.type"
           :data="data"
@@ -16,8 +16,9 @@
       <UiInput
           :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.room_number')"
           :placeholder="$t('dashboard.configuration.rooms.modals.add_new_rooms.room_number_placeholder')"
-          v-model="state.number"
-          name="number"
+          v-model="state.room_number"
+          name="room_number"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
       >
         <template #footer>{{ $t('dashboard.configuration.rooms.modals.add_new_rooms.room_number_example') }}</template>
       </UiInput>
@@ -27,16 +28,18 @@
           :placeholder="$t('dashboard.configuration.rooms.modals.add_new_rooms.room_floor_placeholder')"
           v-model="state.floor"
           name="floor"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
         />
         <UiInput
           :label="$t('dashboard.configuration.rooms.block')"
           :placeholder="$t('dashboard.configuration.rooms.modals.add_new_rooms.room_block_placeholder')"
           v-model="state.block"
           name="block"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
         />
       </div>
       <UiSelect
-          v-model="state.mac"
+          v-model="state.device"
           name="name"
           modelKey="name"
           :data="mac"
@@ -45,7 +48,7 @@
     </form>
 
     <template #footer="{close}">
-      <UiButton class="primary">
+      <UiButton class="primary" @click.prevent="storeConfigurationRooms.addItem(close)">
         <UiIcon name="plus" filled/>
         {{ $t('dashboard.configuration.rooms.add_room') }}
       </UiButton>
@@ -59,21 +62,21 @@
 import UiIcon from "@components/ui/Icon.vue";
 import Modal from "@components/ui/Modal.vue";
 import UiButton from "@components/ui/Button.vue";
-import {ref} from "vue";
 import UiSelect from "@components/ui/Select.vue";
 import UiInput from "@components/ui/Input.vue";
+import {ref} from "vue";
+import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
+import {storeToRefs} from "pinia";
 const add_room = ref<IModal | null>(null)
+const storeConfigurationRooms = useConfigurationRoomsStore()
+const {state, validation} = storeToRefs(storeConfigurationRooms)
+const close = () => {
+  add_room.value?.close()
+}
+const open = () => {
+  add_room.value?.open()
+}
 
-const close = () => add_room.value?.close()
-const open = () => add_room.value?.open()
-
-const state = ref({
-  type: '',
-  mac: '',
-  number: '',
-  floor: '',
-  block: '',
-})
 const data = ref([
   {
     name: 'Deluxe room'

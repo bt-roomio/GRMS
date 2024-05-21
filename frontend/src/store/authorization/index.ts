@@ -6,11 +6,11 @@ import {toast} from "vue3-toastify";
 import useVuelidate from "@vuelidate/core";
 import {email, minLength, required} from "@vuelidate/validators";
 import {useRouter} from "vue-router";
-import i18nStore from "@/store";
 import axios from "axios";
+import {useI18n} from "vue-i18n";
 
 export const useAuthorizationStore = defineStore('authorization', () => {
-    const t = i18nStore()
+    const {t} = useI18n()
     const cookies = useCookies(['access_token', 'refresh_token'])
     const isAuth = computed(() => (!!cookies.get('access_token') || !!cookies.get('refresh_token')))
     const {push} = useRouter()

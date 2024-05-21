@@ -177,6 +177,8 @@
   "toast": {
     "save_success": "Сохранение прошло успешно",
     "unknown_error": "Неизвестная ошибка попробуйте еще раз",
-    "authorization_success": "Авторизация прошла успешно"
+    "authorization_success": "Авторизация прошла успешно",
+    "room_add_success": "Создание комнаты прошло успешно",
+    "room_delete_success": "Удаление комнаты прошло успешно"
   }
 }

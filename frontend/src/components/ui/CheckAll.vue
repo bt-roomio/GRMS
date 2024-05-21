@@ -3,14 +3,15 @@
 </template>
 <script setup lang="ts">
 import UiCheckbox from "@components/ui/Checkbox.vue";
-import {computed} from "vue";
+import {computed, ref, watch} from "vue";
 
 const model = defineModel<ICheckAll[]>()
-const isChecked = computed({
-  get: () => model.value?.every(value => value.select),
-  set: (val) => val
-})
+const isChecked = ref(false)
+
+const checkAllChecked = computed(() => model.value?.every(value => value.select))
+
+watch(checkAllChecked, value => isChecked.value = value as boolean)
 const checkboxHandle = () => {
-  model.value = model.value?.map(item => ({ ...item, select: !isChecked.value }))
+  model.value = model.value?.map(item => ({ ...item, select: isChecked.value }))
 }
 </script>

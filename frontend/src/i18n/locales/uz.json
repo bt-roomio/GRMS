@@ -177,6 +177,8 @@
   "toast": {
     "save_success": "Saqlash muvaffaqiyatli",
     "unknown_error": "Noma'lum xato yana urinib ko'ring",
-    "authorization_success": "Avtorizatsiya muvaffaqiyatli"
+    "authorization_success": "Avtorizatsiya muvaffaqiyatli",
+    "room_add_success": "Xonani yaratish muvaffaqiyatli bo'ldi",
+    "room_delete_success": "Xonani o'chirish muvaffaqiyatli bo'ldi"
   }
 }

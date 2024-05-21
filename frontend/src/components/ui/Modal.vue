@@ -24,9 +24,16 @@ import {defineComponent, ref} from "vue";
 import UiIcon from "@components/ui/Icon.vue";
 
 const isOpen = ref(false)
+const emit = defineEmits(['closed', 'opened'])
 
-const close = () => isOpen.value = false
-const open = () => isOpen.value = true
+const close = () => {
+  isOpen.value = false
+  emit('closed')
+}
+const open = () => {
+  isOpen.value = true
+  emit('opened')
+}
 defineComponent({name: 'UiModal'})
 defineExpose({close, open})
 </script>

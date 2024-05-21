@@ -3,13 +3,13 @@
     <div class="ui-table__search" v-if="isSearchOpen">
       <UiSelect
           name="name"
-          model-key="name"
           v-model="searchType"
           :data="searchTypes"
       />
-      <UiInput name="search" :placeholder="$t('dashboard.search')" v-model="searchValue"/>
+      <UiSearch v-model="searchValue"/>
     </div>
-    <table class="ui-table">
+    <table v-if="!error?.code || !error?.msg" class="ui-table">
+      <UiLoader v-if="loading"/>
       <thead>
       <tr>
         <th
@@ -19,7 +19,14 @@
         >
           <slot v-if="$slots['header-' + i]" :name="'header-' + i" :entity="i" />
           <template v-else>
-            {{header}}
+            <template v-if="sort?.includes(i)">
+              <span class="sort-th" @click="handleSort(i)">
+                {{header}}
+                <UiIcon name="arrow-down" class="transition" :class="{'rotate-180': sortObject === '-' + i}" filled/>
+              </span>
+            </template>
+            <template v-else>{{header}}</template>
+
           </template>
         </th>
       </tr>
@@ -41,22 +48,52 @@
       </tr>
       </tbody>
     </table>
+    <table v-else class="ui-table">
+      <tbody>
+      <tr>
+        <td class="ui-table__error ">
+          <p class="error-title">Error {{error.code}}</p>
+          <p class="error-subtitle">{{error.msg}}</p>
+        </td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 <script setup lang="ts" generic="T">
-import {defineComponent} from "vue";
-import UiInput from "@components/ui/Input.vue";
+import {defineComponent, ref} from "vue";
 import UiSelect from "@components/ui/Select.vue";
+import UiIcon from "@components/ui/Icon.vue";
+import UiSearch from "@components/ui/Search.vue";
+import UiLoader from "@components/ui/Loader.vue";
+const emit = defineEmits(['sorted'])
 const searchValue = defineModel('searchValue')
-const searchType = defineModel('searchType')
+const searchType = defineModel<{[key: string]: unknown}>('searchType')
+const sortObject = ref<string | null>('')
 defineComponent({
   name: 'UiTable'
 })
-
+const handleSort = (field: string) => {
+  if (sortObject.value !== '-' + field){
+    sortObject.value = '-' + field
+    emit('sorted', {
+      sort_by: ['-' + field]
+    })
+  }else {
+    sortObject.value = field
+    emit('sorted', {
+      sort_by: [field]
+    })
+  }
+}
 defineProps<{
   headers: Record<string, T>
   searchTypes: { [key: string]: unknown; }[]
   isSearchOpen?: boolean
+  sort?: string[]
   data: Record<string, T>[]
+  error?: { code: number | null, msg: string | null}
+  loading?: boolean
 }>()
+
 </script>

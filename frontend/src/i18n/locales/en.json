@@ -177,7 +177,9 @@
   "toast": {
     "save_success": "The save was successful",
     "unknown_error": "Unknown error try again",
-    "authorization_success": "Authorization was successful"
+    "authorization_success": "Authorization was successful",
+    "room_add_success": "The creation of the room was successful",
+    "room_delete_success": "The delete of the room was successful"
   }
 }
 
