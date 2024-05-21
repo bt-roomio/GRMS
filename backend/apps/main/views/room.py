@@ -10,14 +10,13 @@ from main.swagger.room import RoomDetailSwagger, RoomSwagger
 from core.utils.pagination import pagination
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
-from main.utils.normalize_params import normalize_params
 
 
 class RoomListView(APIView):
     @swagger_auto_schema(responses=RoomSwagger, query_serializer=RoomFilterParams)
     @check_for_tenant
     def get(self, request):
-        params = RoomFilterParams.check(normalize_params(request.GET))
+        params = RoomFilterParams.check(request.GET)
         queryset = Room.objects.list(
             tenant=request.user.tenant,
             status=params.get("status"),
