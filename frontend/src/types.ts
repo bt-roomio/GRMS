@@ -27,16 +27,17 @@ interface IConfigurationRoomsData {
     select: boolean
 }
 
-interface IServerResponse {
-    results: {[key: string]: unknown }[]
+interface IServerResponse<T> {
+    results: T[]
     count: number
 }
 
 interface ISortOutput {
-    sort_by: string[];
+    sort_by: string[]
 }
 
 interface ICheckAll {
+    [key: string]: unknown
     select: boolean
 }
 

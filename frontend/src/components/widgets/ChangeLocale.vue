@@ -4,6 +4,7 @@
       :data="locales"
       modelKey="code"
       @change="changeLocale"
+      name="name"
   >
     <template #trigger>
       <UiIcon :name="locales.find(el => el.code === model)?.icon || 'en'" filled/>
@@ -19,7 +20,7 @@
 import UiIcon from "@components/ui/Icon.vue";
 import UiSelect from "@components/ui/Select.vue";
 import {ref} from "vue";
-const model = defineModel()
+const model = defineModel<{[key: string]: unknown} | string>()
 const changeLocale = (loc: string) => {
   model.value = loc
 }

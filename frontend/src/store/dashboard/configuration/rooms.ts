@@ -11,7 +11,7 @@ import useVuelidate from "@vuelidate/core";
 export const useConfigurationRoomsStore = defineStore('configuration-rooms', () => {
     const {t} = useI18n()
     const room = ref<IConfigurationRoom>()
-    const rooms = ref<IServerResponse | null>(null)
+    const rooms = ref<IServerResponse<IConfigurationRoomsData> | null>(null)
     const searchValue = ref('')
     const searchType = ref({
         name: t('dashboard.configuration.rooms.room'),
@@ -44,13 +44,13 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         error.value.code = null
         error.value.msg = null
         try {
-            const {data} = await useApiFetch<IConfigurationRoomResponse>('/main/room/', {
+            const {data} = await useApiFetch<IServerResponse<IConfigurationRoomsData>>('/main/room/', {
                 method: 'GET',
                 params,
                 transformResponse: [(data) => addFieldSelect(data)]
             })
 
-            rooms.value = data as IServerResponse
+            rooms.value = data as IServerResponse<IConfigurationRoomsData>
         }catch (e: any) {
             if ((e as AxiosError).name === "AxiosError"){
                 error.value.code = e.response.status
