@@ -1,3 +1,4 @@
+import time
 import uuid
 
 from django.db import models
@@ -125,9 +126,99 @@ class RoomType(BaseModel):
 
 class Device(BaseModel):
     name = models.CharField(max_length=255)
+    type = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    customer = models.ForeignKey("main.Customer", CASCADE)
+    device_profile = models.ForeignKey("main.DeviceProfile", CASCADE)
+    label = models.CharField(max_length=255, null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
+    device_data = models.JSONField(null=True, blank=True)
+    external_id = models.CharField(max_length=255, null=True, blank=True)
+    # firmware = models.ForeignKey("main.Firmware", CASCADE, null=True, blank=True)
+    # software = models.ForeignKey("main.Software", CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.name
 
     class Meta:
         db_table = "main_device"
+
+
+class DeviceProfile(BaseModel):
+    name = models.CharField(max_length=255)
+    type = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    image = models.CharField(max_length=1000000, blank=True, null=True)
+    transport_type = models.CharField(max_length=255, blank=True, null=True)
+    provision_type = models.CharField(max_length=255, blank=True, null=True)
+    profile_data = models.JSONField(blank=True, null=True)
+    description = models.CharField(blank=True, null=True)
+    is_default = models.BooleanField(blank=True, null=True)
+    default_queue_name = models.CharField(max_length=255, blank=True, null=True)
+    provision_device_key = models.CharField(unique=True, blank=True, null=True)
+    external_id = models.UUIDField(blank=True, null=True)
+    # firmware = models.ForeignKey("OtaPackage", models.DO_NOTHING, blank=True, null=True)
+    # software = models.ForeignKey(
+    #     "OtaPackage", models.DO_NOTHING, related_name="deviceprofile_software_set", blank=True, null=True
+    # )
+    # default_rule_chain = models.ForeignKey("RuleChain", models.DO_NOTHING, blank=True, null=True)
+    # default_dashboard = models.ForeignKey(Dashboard, models.DO_NOTHING, blank=True, null=True)
+    # default_edge_rule_chain = models.ForeignKey(
+    #     "RuleChain", models.DO_NOTHING, related_name="deviceprofile_default_edge_rule_chain_set", blank=True, null=True
+    # )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "main_device_profile"
+
+
+class AttributeKv(BaseModel):
+    CLIENT_SCOPE = "CLIENT_SCOPE"
+    SERVER_SCOPE = "SERVER_SCOPE"
+    SHARED_SCOPE = "SHARED_SCOPE"
+    ENTITY_TYPE = ((CLIENT_SCOPE, "CLIENT_SCOPE"), (SERVER_SCOPE, "SERVER_SCOPE"), (SHARED_SCOPE, "SHARED_SCOPE"))
+
+    entity_type = models.CharField(max_length=255)
+    entity = models.ForeignKey("main.Device", CASCADE)
+    attribute_type = models.CharField(max_length=255, choices=ENTITY_TYPE, default=SERVER_SCOPE)
+    attribute_key = models.CharField(max_length=255)
+    bool_v = models.BooleanField(blank=True, null=True)
+    str_v = models.CharField(max_length=255, blank=True, null=True)
+    long_v = models.BigIntegerField(blank=True, null=True)
+    dbl_v = models.FloatField(blank=True, null=True)
+    json_v = models.TextField(blank=True, null=True)
+    last_update_ts = models.BigIntegerField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            self.last_update_ts = time.time()
+        return super(AttributeKv, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return str(self.entity)
+
+    class Meta:
+        db_table = "main_attribute_kv"
+
+
+class Customer(BaseModel):
+    title = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    additional_info = models.JSONField(blank=True, null=True)
+    address = models.CharField(blank=True, null=True)
+    address2 = models.CharField(blank=True, null=True)
+    city = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=255, blank=True, null=True)
+    email = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=255, blank=True, null=True)
+    zip = models.CharField(max_length=255, blank=True, null=True)
+    external_id = models.UUIDField(blank=True, null=True)
+
+    def __str__(self):
+        return str(self.title)
+
+    class Meta:
+        db_table = "main_customer"

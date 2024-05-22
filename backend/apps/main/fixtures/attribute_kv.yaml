@@ -1,0 +1,17 @@
+- model: "main.AttributeKv"
+  pk: "c2393be6-e3fb-4dfb-a030-3c6e760218ea"
+  fields:
+      entity_type: "DEVICE"
+      entity_id: "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
+      attribute_type: "CLIENT_SCOPE"
+      attribute_key: "ip_address"
+      str_v: "192.168.10.5"
+
+- model: "main.AttributeKv"
+  pk: "3c7248af-c624-4ed2-84d0-11a105188e61"
+  fields:
+      entity_type: "DEVICE"
+      entity_id: "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
+      attribute_type: "CLIENT_SCOPE"
+      attribute_key: "mac_address"
+      str_v: "00-1B-63-84-45-E7"

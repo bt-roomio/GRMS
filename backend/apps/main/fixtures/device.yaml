@@ -1,0 +1,8 @@
+- model: "main.Device"
+  pk: "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
+  fields:
+      name: "DHT11 Demo Device"
+      type: "default"
+      customer_id: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+      device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"

@@ -15,4 +15,9 @@ class Command(BaseCommand):
             "users",
             "email_configuration",
             "groups_permissions",
+            "device_profile",
+            "customer",
+            "device",
+            "room",
+            "attribute_kv",
         )

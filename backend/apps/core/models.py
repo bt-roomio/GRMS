@@ -29,10 +29,10 @@ class UpdateByModel(models.Model):
         related_name="updated_%(model_name)ss",
     )
 
-    def save(self, **kwargs):
+    def save(self, *args, **kwargs):
         if self.pk:
             self.updated_at = time.time()
-        return super(UpdateByModel, self).save(**kwargs)
+        return super(UpdateByModel, self).save(*args, **kwargs)
 
     class Meta:
         abstract = True

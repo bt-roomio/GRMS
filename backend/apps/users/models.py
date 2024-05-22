@@ -17,11 +17,10 @@ class User(AbstractUser, BaseModel):
     date_joined = models.BigIntegerField(default=time.time, editable=False)
     last_login = UnixTimeStampField(default=time.time, blank=True, null=True)
     tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE, null=True, blank=True)
-
+    customer_id = models.ForeignKey("main.Customer", on_delete=models.CASCADE, null=True, blank=True)
     # enabled = models.BooleanField(blank=True, null=True)
     # reset_token = models.CharField(unique=True, max_length=255, blank=True, null=True)
     # activate_token = models.CharField(unique=True, max_length=255, blank=True, null=True)
-    # customer_id = models.UUIDField(blank=True, null=True)
 
     username = None
     USERNAME_FIELD = "email"

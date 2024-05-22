@@ -1,0 +1,11 @@
+- model: "main.Customer"
+  pk: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
+  fields:
+      title: "Customer 1"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.Customer"
+  pk: "d00eb1f9-da2a-4c4d-bbc7-ffaff4baddb8"
+  fields:
+      title: "Customer 2"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
