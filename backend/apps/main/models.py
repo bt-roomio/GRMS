@@ -72,7 +72,7 @@ class Room(BaseModel, UpdateByModel):
     DoNotDistrub = "DoNotDistrub"
     MakeUpRoom = "MakeUpRoom"
 
-    STATUS = (
+    STATE = (
         (Available, "Available"),
         (CheckedIn, "CheckedIn"),
         (Occupied, "Occupied"),
@@ -84,12 +84,11 @@ class Room(BaseModel, UpdateByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
-    status = models.CharField(max_length=255, choices=STATUS, default=Available)
+    state = models.CharField(max_length=255, choices=STATE, default=Available)
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
     door_lock_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
-    device = models.ForeignKey("main.Device", CASCADE, null=True, blank=True)
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
@@ -129,6 +128,8 @@ class Device(BaseModel):
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     customer = models.ForeignKey("main.Customer", CASCADE)
+    status = models.BooleanField(default=False)
+    room = models.ForeignKey("main.Room", CASCADE, "devices", null=True, blank=True)
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE)
     label = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
@@ -181,7 +182,7 @@ class AttributeKv(BaseModel):
     ENTITY_TYPE = ((CLIENT_SCOPE, "CLIENT_SCOPE"), (SERVER_SCOPE, "SERVER_SCOPE"), (SHARED_SCOPE, "SHARED_SCOPE"))
 
     entity_type = models.CharField(max_length=255)
-    entity = models.ForeignKey("main.Device", CASCADE)
+    entity = models.ForeignKey("main.Device", CASCADE, "attribute_kvs")
     attribute_type = models.CharField(max_length=255, choices=ENTITY_TYPE, default=SERVER_SCOPE)
     attribute_key = models.CharField(max_length=255)
     bool_v = models.BooleanField(blank=True, null=True)

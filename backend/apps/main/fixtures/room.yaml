@@ -1,4 +1,5 @@
 - model: "main.Room"
+  pk: "df77f910-2dcd-45cf-b6be-054c744561a7"
   fields:
       room_number: 101
       floor: 1
@@ -6,6 +7,7 @@
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
 
 - model: "main.Room"
+  pk: "ab09aa20-77b8-457a-bfc4-5dee69790241"
   fields:
       room_number: 102
       floor: 2

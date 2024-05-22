@@ -3,10 +3,16 @@ from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
 from main.models import Room, Tenant
+from main.serializers.device import DeviceSerializer
 
 
 class RoomSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["devices"] = DeviceSerializer(instance.devices, many=True).data
+        return data
 
     class Meta:
         model = Room
@@ -16,12 +22,11 @@ class RoomSerializer(serializers.ModelSerializer):
             "room_number",
             "floor",
             "block",
-            "status",
+            "state",
             "public_area_id",
             "pan_id",
             "building",
             "door_lock_id",
-            "device",
             "type",
             "suite",
             "tenant",
@@ -33,7 +38,7 @@ class RoomFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    status = serializers.ChoiceField(choices=Room.STATUS, default=Room.Available)
+    state = serializers.ChoiceField(choices=Room.STATE, default=Room.Available)
     search_field = serializers.ChoiceField(choices=("room_number", "floor", "block"), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)

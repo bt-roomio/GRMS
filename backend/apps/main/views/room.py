@@ -19,7 +19,7 @@ class RoomListView(APIView):
         params = RoomFilterParams.check(request.GET)
         queryset = Room.objects.list(
             tenant=request.user.tenant,
-            status=params.get("status"),
+            state=params.get("state"),
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),
             sort_by=params.get("sort_by"),
