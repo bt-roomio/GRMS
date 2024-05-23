@@ -45,6 +45,7 @@
           :data="mac"
           :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.mac_address')"
       />
+      <button class="sr-only" type="submit"></button>
     </form>
 
     <template #footer="{close}">

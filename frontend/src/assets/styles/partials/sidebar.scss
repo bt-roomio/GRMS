@@ -1,5 +1,5 @@
 .sidebar{
-  @apply w-[280px] bg-primary-700 h-dvh fixed top-0 left-0 z-10;
+  @apply w-[280px] bg-primary-600 h-dvh fixed top-0 left-0 z-10;
   &__content{
     @apply  flex flex-col h-full;
   }

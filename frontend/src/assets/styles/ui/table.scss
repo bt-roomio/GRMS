@@ -4,7 +4,7 @@
     @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 bg-white border-b border-gray-100;
   }
   th{
-    @apply px-6 py-3;
+    @apply px-6 py-3 whitespace-nowrap;
     .sort-th{
       @apply flex gap-2 items-center cursor-pointer;
     }

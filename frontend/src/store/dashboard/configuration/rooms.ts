@@ -4,11 +4,13 @@ import useApiFetch from "@/composables/useApiFetch.ts";
 import {toast} from "vue3-toastify";
 import {addFieldSelect} from "@utils/transform-response.ts";
 import {useI18n} from "vue-i18n";
-import {AxiosError} from "axios";
 import {required} from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
+import {useConfirm} from "@store/dashboard/useConfirm.ts";
 
 export const useConfigurationRoomsStore = defineStore('configuration-rooms', () => {
+    const confirmStore = useConfirm()
+
     const {t} = useI18n()
     const room = ref<IConfigurationRoom>()
     const rooms = ref<IServerResponse<IConfigurationRoomsData> | null>(null)
@@ -52,11 +54,12 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
 
             rooms.value = data as IServerResponse<IConfigurationRoomsData>
         }catch (e: any) {
-            if ((e as AxiosError).name === "AxiosError"){
+            if (e.response?.status){
                 error.value.code = e.response.status
                 error.value.msg = e.response.data.detail
                 rooms.value = {results: [], count: 0}
             }
+            throw e
         }finally {
             loading.value = false
         }
@@ -85,10 +88,11 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
                 state.value.device = data.device
             }
         }catch (e: any) {
-            if ((e as AxiosError).name === "AxiosError"){
+            if (e.response?.status){
                 itemError.value.code = e.response.status
                 itemError.value.msg = e.response.data.detail
             }
+            throw e
         }finally {
             itemLoading.value = false
         }
@@ -108,6 +112,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             toast.success(t('toast.room_add_success') as string);
         }catch (e: any) {
             toast.error(e.response.data.detail || t('toast.unknown_error') as string);
+            throw e
         }
     }
     const editItem = async (callback: () => void) => {
@@ -124,21 +129,31 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             await $reset()
             toast.success(t('toast.room_edit_success') as string);
         }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string);
+            toast.error(e.response.data.detail || t('toast.unknown_error') as string)
+            throw e
         }
     }
     const deleteItem = async (id: string) => {
-        try {
-            await useApiFetch<IConfigurationRoom>('/main/room/' + id, {method: 'DELETE'})
-            await getList(searchValue.value ? {
-                ...sortedData.value,
-                search_value: searchValue.value,
-                search_field: searchType.value.key,
-            }: {...sortedData.value})
-            toast.success(t('toast.room_delete_success') as string);
-        }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string);
-        }
+        await confirmStore.showConfirm({
+            subtitle: t('confirm.delete_item'),
+            callback: async (confirmed) => {
+                if (confirmed) {
+                    try {
+                        await useApiFetch<IConfigurationRoom>('/main/room/' + id, {method: 'DELETE'})
+                        await getList(searchValue.value ? {
+                            ...sortedData.value,
+                            search_value: searchValue.value,
+                            search_field: searchType.value.key,
+                        }: {...sortedData.value})
+                        toast.success(t('toast.room_delete_success') as string);
+                    }catch (e: any) {
+                        toast.error(e.response.data.detail || t('toast.unknown_error') as string);
+                        throw e
+                    }
+                }
+            }
+        })
+
     }
 
     const $reset = async () => {

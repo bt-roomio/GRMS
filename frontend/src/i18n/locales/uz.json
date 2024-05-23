@@ -174,11 +174,18 @@
     "search": "Qidirish",
     "select_empty": "Ro'yxatdan tanlang"
   },
+  "confirm": {
+    "title": "Harakatni tasdiqlang",
+    "button_cancel": "Bekor qilish",
+    "button_confirm": "Tasdiqlash",
+    "delete_item": "Ushbu elementni o'chirishga ishonchingiz komilmi?"
+  },
   "toast": {
     "save_success": "Saqlash muvaffaqiyatli",
     "unknown_error": "Noma'lum xato yana urinib ko'ring",
     "authorization_success": "Avtorizatsiya muvaffaqiyatli",
     "room_add_success": "Xonani yaratish muvaffaqiyatli bo'ldi",
+    "room_edit_success": "Xona muvaffaqiyatli tahrirlandi",
     "room_delete_success": "Xonani o'chirish muvaffaqiyatli bo'ldi"
   }
 }

@@ -174,11 +174,18 @@
     "search": "Search",
     "select_empty": "Select from the list"
   },
+  "confirm": {
+    "title": "Confirm your action",
+    "button_cancel": "Cancel",
+    "button_confirm": "Confirm",
+    "delete_item": "Are you sure you want to delete this item?"
+  },
   "toast": {
     "save_success": "The save was successful",
     "unknown_error": "Unknown error try again",
     "authorization_success": "Authorization was successful",
     "room_add_success": "The creation of the room was successful",
+    "room_edit_success": "The editing of the room was successful",
     "room_delete_success": "The delete of the room was successful"
   }
 }

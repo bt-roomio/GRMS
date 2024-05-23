@@ -1,0 +1,49 @@
+.ui-confirm{
+  @apply fixed w-full h-full top-0 left-0 z-20 transition;
+  &.v-enter-active{
+    .ui-confirm__wrapper{
+      animation: 150ms fadeIn forwards;
+    }
+    .ui-confirm__body{
+      animation: 150ms fadeIn forwards;
+    }
+  }
+  &.v-leave-active{
+    .ui-confirm__wrapper{
+      animation: 0.3s fadeOut;
+    }
+    .ui-confirm__body{
+      animation: 0.3s fadeOut;
+    }
+  }
+  &__wrapper{
+    @apply bg-primary-600/40 absolute top-0 left-0 w-full h-full
+  }
+  &__scroller{
+    @apply absolute top-0 left-0 w-full h-full overflow-auto flex justify-center p-6;
+  }
+  &__body{
+    @apply bg-white w-[352px] h-max px-4 py-6 relative rounded-xl my-auto;
+  }
+  &__head{
+    @apply border-b border-gray-200 pb-6 relative;
+    h2{
+      @apply text-lg font-semibold;
+    }
+    p{
+      @apply text-sm mt-1;
+    }
+    .ui-icon{
+      @apply w-5 h-5 absolute top-0 right-0 cursor-pointer;
+    }
+  }
+  &__content{
+    @apply py-6 border-b border-gray-200;
+  }
+  &__footer{
+    @apply flex gap-4 pt-6;
+    .ui-button{
+      @apply flex-shrink
+    }
+  }
+}

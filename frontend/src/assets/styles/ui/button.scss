@@ -1,5 +1,5 @@
 .ui-button{
-  @apply h-11 rounded-lg flex justify-center items-center gap-2 border w-full font-semibold flex-shrink-0 px-4;
+  @apply h-11 rounded-lg flex justify-center items-center gap-2 border w-full font-semibold flex-shrink-0 px-4 outline-0;
 
   &.primary{
     @apply bg-primary-700 stroke-white text-white border-primary-700;

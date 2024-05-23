@@ -90,8 +90,12 @@ const openAddRoom = () => {
   actions.value?.add_room.open()
 }
 const openEditRoom = async (id: string) => {
-  await storeConfigurationRooms.getItem(id, true)
-  actions.value?.edit_room.open()
+  try {
+    await storeConfigurationRooms.getItem(id, true)
+    actions.value?.edit_room.open()
+  }catch (e){
+    console.log(e)
+  }
 }
 
 const searchTypes = computed(() => [
