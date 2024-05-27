@@ -20,4 +20,5 @@ class Command(BaseCommand):
             "device",
             "room",
             "attribute_kv",
+            "room_type",
         )

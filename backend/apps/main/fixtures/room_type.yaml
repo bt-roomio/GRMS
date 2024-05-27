@@ -1,0 +1,11 @@
+- model: "main.RoomType"
+  pk: "deb5db89-b9cf-4aee-989d-4a7a7bdeb096"
+  fields:
+      title: "Luxury"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.RoomType"
+  pk: "d24ecc04-31ff-4b63-94be-d202b16f0c0c"
+  fields:
+      title: "Standard"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
