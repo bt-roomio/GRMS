@@ -4,7 +4,7 @@ from main.views.device import DeviceListView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.room import RoomDetailView, RoomListView
-from main.views.room_type import RoomTypeListView
+from main.views.room_type import RoomTypeListView, RoomTypeDetailView
 from main.views.widget_type import WidgetTypeListView
 
 urlpatterns = [
@@ -15,4 +15,5 @@ urlpatterns = [
     path("room-type/", RoomTypeListView.as_view(), name="room-type-list"),
     path("widget-type/", WidgetTypeListView.as_view(), name="widget-type-list"),
     path("device/", DeviceListView.as_view(), name="device-list"),
+    path("room-type/<uuid:pk>", RoomTypeDetailView.as_view(), name="room-type-detail"),
 ]
