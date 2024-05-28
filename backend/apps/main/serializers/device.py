@@ -1,15 +1,10 @@
 from rest_framework import serializers
 
+from core.utils.serializers import ValidatorSerializer
 from main.models import Device
-from main.serializers.attribute_kv import AttributeKvSimpleSerializer
 
 
 class DeviceSerializer(serializers.ModelSerializer):
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["attributes"] = AttributeKvSimpleSerializer(instance.attribute_kvs, many=True).data
-        return data
-
     class Meta:
         model = Device
         fields = (
@@ -27,3 +22,8 @@ class DeviceSerializer(serializers.ModelSerializer):
             "device_data",
             "external_id",
         )
+
+
+class DeviceFilterParams(ValidatorSerializer):
+    page = serializers.IntegerField(default=1)
+    size = serializers.IntegerField(default=50)

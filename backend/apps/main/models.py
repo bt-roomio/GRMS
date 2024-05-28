@@ -113,7 +113,7 @@ class Room(BaseModel, UpdateByModel):
 
 
 class RoomType(BaseModel):
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, unique=True)
     active = models.BooleanField(default=True)
     check_in_out_address = models.IntegerField(null=True, blank=True)
     check_in_value = models.IntegerField(null=True, blank=True)
@@ -137,7 +137,7 @@ class RoomType(BaseModel):
 
 
 class Device(BaseModel):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     customer = models.ForeignKey("main.Customer", CASCADE)

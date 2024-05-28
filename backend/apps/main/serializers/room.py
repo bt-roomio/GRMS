@@ -1,11 +1,13 @@
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import Room, Tenant
+from main.models import Room, Tenant, RoomType, Device
 
 
 class RoomSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
+    type = serializers.SlugRelatedField(queryset=RoomType.objects.all(), slug_field="title", required=False)
+    devices = serializers.SlugRelatedField(queryset=Device.objects.all(), slug_field="name", many=True, required=False)
 
     class Meta:
         model = Room
@@ -15,15 +17,16 @@ class RoomSerializer(serializers.ModelSerializer):
             "room_number",
             "floor",
             "block",
+            "type",
             "state",
             "public_area_id",
             "pan_id",
             "building",
             "door_lock_id",
-            "type",
             "suite",
             "tenant",
             "status",
+            "devices",
         )
 
 
