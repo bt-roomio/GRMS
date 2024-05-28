@@ -1,7 +1,6 @@
--
-    model: "main.Tenant"
-    pk: "28c81921-f78e-4864-87d2-cec674f19d1c"
-    fields:
-        tenant_profile_id: "da16dcf1-b885-4966-84db-c3e26ff50aad"
-        region: "General"
-        title: "Tenant"
+- model: "main.Tenant"
+  pk: "28c81921-f78e-4864-87d2-cec674f19d1c"
+  fields:
+      tenant_profile_id: "da16dcf1-b885-4966-84db-c3e26ff50aad"
+      region: "General"
+      title: "Tenant"

@@ -21,4 +21,5 @@ class Command(BaseCommand):
             "room",
             "attribute_kv",
             "room_type",
+            "widget_type",
         )

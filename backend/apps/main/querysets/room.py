@@ -1,4 +1,4 @@
-from django.db.models import Q, Prefetch
+from django.db.models import Q
 from core.querysets.base_queryset import BaseQuerySet
 
 
@@ -10,5 +10,4 @@ class RoomQuerySet(BaseQuerySet):
             query.filter(Q(**{f"{search_field}__startswith": search_value})) if search_field and search_value else query
         )
         query = query.order_by(*sort_by) if sort_by else query
-        query = query.prefetch_related("devices__attribute_kvs")
-        return query
+        return query.order_by("room_number")

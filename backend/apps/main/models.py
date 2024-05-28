@@ -1,12 +1,15 @@
 import time
-import uuid
 
 from django.db import models
 from django.db.models import CASCADE
 
+
+from main.querysets.device import DeviceQuerySet
+from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
 from core.models import BaseModel, UpdateByModel
 from main.querysets.room import RoomQuerySet
+from main.querysets.widget_type import WidgetTypeQuerySet
 
 
 class Tenant(BaseModel):
@@ -80,6 +83,10 @@ class Room(BaseModel, UpdateByModel):
         (MakeUpRoom, "MakeUpRoom"),
     )
 
+    ON = "ON"
+    OFF = "OFF"
+    STATUS = ((ON, "on"), (OFF, "off"))
+
     room_number = models.IntegerField()
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
@@ -92,6 +99,9 @@ class Room(BaseModel, UpdateByModel):
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+
+    # Helpers
+    status = models.CharField(max_length=255, choices=STATUS, default=OFF)
 
     objects = RoomQuerySet.as_manager()
 
@@ -115,9 +125,12 @@ class RoomType(BaseModel):
     vip_status_on_value = models.IntegerField(null=True, blank=True)
     vip_status_off_value = models.IntegerField(null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+    dashboard = models.ForeignKey("main.Dashboard", CASCADE, null=True, blank=True)
+
+    objects = RoomTypeQuerySet.as_manager()
 
     def __str__(self):
-        return self.title
+        return str(self.title)
 
     class Meta:
         db_table = "main_room_type"
@@ -128,18 +141,18 @@ class Device(BaseModel):
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     customer = models.ForeignKey("main.Customer", CASCADE)
+    device_profile = models.ForeignKey("main.DeviceProfile", CASCADE)
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", CASCADE, "devices", null=True, blank=True)
-    device_profile = models.ForeignKey("main.DeviceProfile", CASCADE)
     label = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
     device_data = models.JSONField(null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
-    # firmware = models.ForeignKey("main.Firmware", CASCADE, null=True, blank=True)
-    # software = models.ForeignKey("main.Software", CASCADE, null=True, blank=True)
+
+    objects = DeviceQuerySet.as_manager()
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     class Meta:
         db_table = "main_device"
@@ -158,18 +171,9 @@ class DeviceProfile(BaseModel):
     default_queue_name = models.CharField(max_length=255, blank=True, null=True)
     provision_device_key = models.CharField(unique=True, blank=True, null=True)
     external_id = models.UUIDField(blank=True, null=True)
-    # firmware = models.ForeignKey("OtaPackage", models.DO_NOTHING, blank=True, null=True)
-    # software = models.ForeignKey(
-    #     "OtaPackage", models.DO_NOTHING, related_name="deviceprofile_software_set", blank=True, null=True
-    # )
-    # default_rule_chain = models.ForeignKey("RuleChain", models.DO_NOTHING, blank=True, null=True)
-    # default_dashboard = models.ForeignKey(Dashboard, models.DO_NOTHING, blank=True, null=True)
-    # default_edge_rule_chain = models.ForeignKey(
-    #     "RuleChain", models.DO_NOTHING, related_name="deviceprofile_default_edge_rule_chain_set", blank=True, null=True
-    # )
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     class Meta:
         db_table = "main_device_profile"
@@ -223,3 +227,41 @@ class Customer(BaseModel):
 
     class Meta:
         db_table = "main_customer"
+
+
+class Dashboard(BaseModel):
+    title = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    configuration = models.JSONField(blank=True, null=True)
+    assigned_customers = models.CharField(max_length=1000000, blank=True, null=True)
+    mobile_hide = models.BooleanField(blank=True, null=True)
+    mobile_order = models.IntegerField(blank=True, null=True)
+    image = models.CharField(max_length=1000000, blank=True, null=True)
+    external_id = models.UUIDField(blank=True, null=True)
+
+    def __str__(self):
+        return str(self.title)
+
+    class Meta:
+        db_table = "main_dashboard"
+
+
+class WidgetType(BaseModel):
+    name = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    deprecated = models.BooleanField(default=False)
+    fqn = models.CharField(max_length=512, blank=True, null=True)
+    descriptor = models.CharField(max_length=1000000, blank=True, null=True)
+    image = models.CharField(max_length=1000000, blank=True, null=True)
+    description = models.CharField(max_length=1024, blank=True, null=True)
+    tags = models.TextField(blank=True, null=True)
+    external_id = models.UUIDField(blank=True, null=True)
+
+    objects = WidgetTypeQuerySet.as_manager()
+
+    def __str__(self):
+        return str(self.name)
+
+    class Meta:
+        db_table = "main_widget_type"
+        ordering = ["created_at"]

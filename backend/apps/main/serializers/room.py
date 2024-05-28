@@ -1,18 +1,11 @@
-from django.utils import choices
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
 from main.models import Room, Tenant
-from main.serializers.device import DeviceSerializer
 
 
 class RoomSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["devices"] = DeviceSerializer(instance.devices, many=True).data
-        return data
 
     class Meta:
         model = Room
@@ -30,6 +23,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "type",
             "suite",
             "tenant",
+            "status",
         )
 
 

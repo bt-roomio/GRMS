@@ -7,3 +7,22 @@
       customer_id: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
       device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
+
+- model: "main.Device"
+  pk: "a1561fb2-e031-42ce-812a-0ce84843c0f0"
+  fields:
+      name: "Raspberry Pi Demo Device"
+      type: "default"
+      additional_info:
+          {
+              "description": "Demo device that is used in Raspberry Pi GPIO control sample application",
+          }
+      device_data:
+          {
+              "configuration": { "type": "DEFAULT" },
+              "transportConfiguration": { "type": "DEFAULT" },
+          }
+      room_id: "df77f910-2dcd-45cf-b6be-054c744561a7"
+      customer_id: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+      device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
