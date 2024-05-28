@@ -4,3 +4,11 @@
       tenant_profile_id: "da16dcf1-b885-4966-84db-c3e26ff50aad"
       region: "General"
       title: "Tenant"
+
+
+- model: "main.Tenant"
+  pk: "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
+  fields:
+      tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
+      region: "UE-1"
+      title: "Tenant 2"

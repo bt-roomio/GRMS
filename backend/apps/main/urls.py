@@ -1,5 +1,6 @@
 from django.urls import path
 
+from main.views.device import DeviceListView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.room import RoomDetailView, RoomListView
@@ -13,4 +14,5 @@ urlpatterns = [
     path("room/<uuid:pk>", RoomDetailView.as_view(), name="room-detail"),
     path("room-type/", RoomTypeListView.as_view(), name="room-type-list"),
     path("widget-type/", WidgetTypeListView.as_view(), name="widget-type-list"),
+    path("device/", DeviceListView.as_view(), name="device-list"),
 ]

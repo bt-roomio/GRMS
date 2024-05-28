@@ -30,9 +30,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 ("title", models.CharField(max_length=255)),
                 ("additional_info", models.JSONField(blank=True, null=True)),
@@ -47,9 +45,7 @@ class Migration(migrations.Migration):
                 ("external_id", models.UUIDField(blank=True, null=True)),
                 (
                     "tenant",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.tenant"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
                 ),
             ],
             options={
@@ -70,11 +66,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
-                ("name", models.CharField(max_length=255)),
+                ("name", models.CharField(max_length=255, unique=True)),
                 ("type", models.CharField(max_length=255)),
                 ("status", models.BooleanField(default=False)),
                 ("label", models.CharField(blank=True, max_length=255, null=True)),
@@ -86,15 +80,11 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "customer",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.customer"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.customer"),
                 ),
                 (
                     "tenant",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.tenant"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
                 ),
             ],
             options={
@@ -115,9 +105,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 ("entity_type", models.CharField(max_length=255)),
                 (
@@ -141,9 +129,7 @@ class Migration(migrations.Migration):
                 ("last_update_ts", models.BigIntegerField(blank=True, null=True)),
                 (
                     "entity",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.device"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.device"),
                 ),
             ],
             options={
@@ -164,9 +150,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 ("name", models.CharField(max_length=255)),
                 ("type", models.CharField(max_length=255)),
@@ -193,9 +177,7 @@ class Migration(migrations.Migration):
                 ("external_id", models.UUIDField(blank=True, null=True)),
                 (
                     "tenant",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.tenant"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
                 ),
             ],
             options={
@@ -205,9 +187,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="device",
             name="device_profile",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, to="main.deviceprofile"
-            ),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.deviceprofile"),
         ),
         migrations.CreateModel(
             name="Room",
@@ -223,15 +203,11 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 (
                     "updated_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, null=True),
                 ),
                 ("room_number", models.IntegerField()),
                 ("floor", models.CharField(max_length=255)),
@@ -256,9 +232,7 @@ class Migration(migrations.Migration):
                 ("building", models.CharField(blank=True, max_length=255, null=True)),
                 (
                     "door_lock_id",
-                    models.CharField(
-                        blank=True, max_length=255, null=True, unique=True
-                    ),
+                    models.CharField(blank=True, max_length=255, null=True, unique=True),
                 ),
                 (
                     "suite",
@@ -271,9 +245,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "tenant",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.tenant"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
                 ),
                 (
                     "updated_by",
@@ -315,11 +287,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
-                ("title", models.CharField(max_length=255)),
+                ("title", models.CharField(max_length=255, unique=True)),
                 ("active", models.BooleanField(default=True)),
                 ("check_in_out_address", models.IntegerField(blank=True, null=True)),
                 ("check_in_value", models.IntegerField(blank=True, null=True)),
@@ -338,9 +308,7 @@ class Migration(migrations.Migration):
                 ("vip_status_off_value", models.IntegerField(blank=True, null=True)),
                 (
                     "tenant",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="main.tenant"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
                 ),
             ],
             options={
