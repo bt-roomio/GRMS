@@ -24,8 +24,6 @@ class RoomListView(APIView):
             search_value=params.get("search_value"),
             sort_by=params.get("sort_by"),
         )
-        if not queryset:
-            raise Http404("Rooms for this tenant not found!")
         serializer = RoomSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
