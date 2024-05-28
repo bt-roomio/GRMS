@@ -4,13 +4,13 @@
       <h2>{{$t('dashboard.configuration.rooms.modals.add_new_rooms.title')}} </h2>
       <p>{{$t('dashboard.configuration.rooms.modals.add_new_rooms.subtitle')}}</p>
     </template>
-
     <form class="ui-form" @submit.prevent="storeConfigurationRooms.addItem(close)">
       <UiSelect
+          v-if="room_types?.results"
           v-model="state.type"
-          :data="data"
-          name="name"
-          modelKey="name"
+          :data="room_types.results"
+          name="title"
+          modelKey="title"
           :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.choose_room_type')"
       />
       <UiInput
@@ -38,12 +38,13 @@
           :errors="validation?.$dirty ? validation?.$silentErrors : []"
         />
       </div>
-      <UiSelect
-          v-model="state.device"
+      <UiMultiSelect
+          v-if="devices?.results"
+          v-model="state.devices"
           name="name"
           modelKey="name"
-          :data="mac"
-          :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.mac_address')"
+          :data="devices.results"
+          :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.device')"
       />
       <button class="sr-only" type="submit"></button>
     </form>
@@ -65,12 +66,19 @@ import Modal from "@components/ui/Modal.vue";
 import UiButton from "@components/ui/Button.vue";
 import UiSelect from "@components/ui/Select.vue";
 import UiInput from "@components/ui/Input.vue";
-import {ref} from "vue";
+import {onMounted, ref} from "vue";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 import {storeToRefs} from "pinia";
+import {useConfigurationRoomTypeStore} from "@store/dashboard/configuration/room-type.ts";
+import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
+import UiMultiSelect from "@components/ui/MultiSelect.vue";
 const add_room = ref<IModal | null>(null)
 const storeConfigurationRooms = useConfigurationRoomsStore()
+const storeConfigurationRoomType = useConfigurationRoomTypeStore()
+const storeConfigurationDevice = useConfigurationDeviceStore()
 const {state, validation} = storeToRefs(storeConfigurationRooms)
+const {room_types} = storeToRefs(storeConfigurationRoomType)
+const {devices} = storeToRefs(storeConfigurationDevice)
 const close = () => {
   add_room.value?.close()
 }
@@ -78,22 +86,13 @@ const open = () => {
   add_room.value?.open()
 }
 
-const data = ref([
-  {
-    name: 'Deluxe room'
-  },
-  {
-    name: 'Standard room'
-  },
-  {
-    name: 'Superior room'
-  },
-])
-const mac = ref([
-  {name: '98:72:3С:70:51:3D'},
-  {name: '98:72:3С:70:51:2D'},
-  {name: '98:72:3С:70:51:4D'}
-])
+
+onMounted(async () => {
+  await Promise.all([
+    storeConfigurationRoomType.getList(),
+    storeConfigurationDevice.getList(),
+  ])
+})
 
 defineExpose({
   close,

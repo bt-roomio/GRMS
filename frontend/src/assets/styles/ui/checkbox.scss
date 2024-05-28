@@ -2,13 +2,13 @@
   @apply flex items-center gap-2 cursor-pointer;
   &:hover{
     .custom-checkbox{
-      @apply bg-primary-800 border-primary-600
+      @apply bg-primary-800 border-primary-600 dark:bg-gray-200 dark:border-gray-200
     }
   }
   .custom-checkbox{
-    @apply inline-flex items-center justify-center relative w-4 h-4 border border-gray-300 rounded bg-white transition-all flex-shrink-0;
+    @apply inline-flex items-center justify-center relative w-4 h-4 border border-gray-300 rounded bg-white dark:bg-gray-300 transition-all flex-shrink-0;
     .ui-icon{
-      @apply w-full h-full stroke-primary-600 opacity-0 transition-all;
+      @apply w-full h-full stroke-primary-600 dark:stroke-gray-800 opacity-0 transition-all;
     }
   }
   input{

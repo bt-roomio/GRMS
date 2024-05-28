@@ -1,7 +1,7 @@
 type IConfigurationRoom = {
     id?: any
     block: any
-    device?: any
+    devices?: any
     floor: any
     room_number: any
     type?: any

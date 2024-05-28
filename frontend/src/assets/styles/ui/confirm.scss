@@ -23,10 +23,10 @@
     @apply absolute top-0 left-0 w-full h-full overflow-auto flex justify-center p-6;
   }
   &__body{
-    @apply bg-white w-[352px] h-max px-4 py-6 relative rounded-xl my-auto;
+    @apply bg-white dark:bg-gray-700 dark:text-gray-100 w-[352px] h-max px-4 py-6 relative rounded-xl my-auto;
   }
   &__head{
-    @apply border-b border-gray-200 pb-6 relative;
+    @apply border-b border-gray-200 dark:border-gray-500 pb-6 relative;
     h2{
       @apply text-lg font-semibold;
     }
@@ -38,7 +38,7 @@
     }
   }
   &__content{
-    @apply py-6 border-b border-gray-200;
+    @apply py-6 border-b border-gray-200 dark:border-gray-500;
   }
   &__footer{
     @apply flex gap-4 pt-6;

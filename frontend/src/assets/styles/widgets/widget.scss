@@ -1,0 +1,16 @@
+//.widget__list{
+//  @apply grid grid-cols-12 gap-3;
+//}
+.widget-card{
+  @apply p-6 border border-gray-200 dark:border-gray-500 bg-white dark:bg-gray-600 rounded-xl w-full h-full;
+  justify-content: end;
+  &__head{
+    @apply flex flex-col gap-1 mb-6;
+  }
+  &__title{
+    @apply font-medium text-gray-900 dark:text-gray-200;
+  }
+  &__description{
+    @apply font-medium text-sm text-gray-600 dark:text-gray-300;
+  }
+}

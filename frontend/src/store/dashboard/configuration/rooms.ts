@@ -30,7 +30,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         room_number: null,
         floor: "",
         block: "",
-        device: "",
+        devices: [],
     })
 
     const rules = computed(() => ({
@@ -85,7 +85,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
                 state.value.room_number = data.room_number
                 state.value.floor = data.floor
                 state.value.block = data.block
-                state.value.device = data.device
+                state.value.devices = data.devices
             }
         }catch (e: any) {
             if (e.response?.status){
@@ -163,7 +163,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             room_number: null,
             floor: "",
             block: "",
-            device: "",
+            devices: "",
         }
         v$.value.$reset()
     }

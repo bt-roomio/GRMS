@@ -2,7 +2,7 @@
   <div class="sidebar__head">
     <div class="sidebar__head-logo">
       <RouterLink :to="{name: 'main'}">
-        <UiIcon name="logo-text" filled/>
+        <UiIcon name="logo-text"/>
       </RouterLink>
     </div>
     <div class="sidebar__head-burger">

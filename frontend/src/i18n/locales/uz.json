@@ -132,6 +132,7 @@
         "type": "Tur",
         "floor": "Qavat",
         "block": "Blok",
+        "devices": "Qurilmalar",
         "mac_address": "MAC manzil",
         "ip_address": "IP manzil",
         "status": "Holat",
@@ -146,7 +147,8 @@
             "room_floor_placeholder": "Xona qavatini kiriting",
             "room_block_placeholder": "Xona blokini kiriting",
             "cancel": "Bekor qilish",
-            "mac_address": "MAC manzilni tanlang"
+            "mac_address": "MAC manzilni tanlang",
+            "device": "Qurilm tanlang"
           },
           "edit_new_rooms": {
             "title": "Xonani tahrirlash",
@@ -170,6 +172,11 @@
       "or_drag_and_drop": "yoki sudrab olib keling",
       "format": "format",
       "selected_file": "Tanlangan fayl"
+    },
+    "table": {
+      "error": "Xato",
+      "no_data_title": "Sizda ma'lumot yo'q",
+      "no_data_subtitle": "Ma'lumot topilmadi yoki hali ma'lumot qo'shmagansiz"
     },
     "search": "Qidirish",
     "select_empty": "Ro'yxatdan tanlang"

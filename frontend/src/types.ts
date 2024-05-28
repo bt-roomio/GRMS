@@ -26,6 +26,10 @@ interface IConfigurationRoomsData {
     [key: string]: unknown,
     select: boolean
 }
+interface IConfigurationRoomTypeData {
+    [key: string]: unknown,
+    select: boolean
+}
 
 interface IServerResponse<T> {
     results: T[]
@@ -52,4 +56,10 @@ interface IModalEditRoom {
 interface IConfigurationRoomsActions {
     add_room: IModal
     edit_room: IModal
+}
+interface IStatisticsCard {
+    name: string
+    difference_value: string
+    difference_sign: string
+    value: string
 }

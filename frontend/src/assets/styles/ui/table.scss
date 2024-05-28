@@ -1,7 +1,7 @@
 .ui-table{
   @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative;
   thead{
-    @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 bg-white border-b border-gray-100;
+    @apply w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-200 bg-white dark:bg-gray-600 border-b border-gray-100 dark:border-gray-500;
   }
   th{
     @apply px-6 py-3 whitespace-nowrap;
@@ -11,10 +11,10 @@
   }
   tbody{
     tr{
-      @apply bg-white border-b last:border-b-0 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600;
+      @apply bg-white border-b last:border-b-0 dark:bg-gray-500 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-400;
     }
     td{
-      @apply px-6 py-4 last:gap-1;
+      @apply px-6 py-4 last:gap-1 dark:text-white;
       &:last-child{
         @apply flex items-center justify-end;
         .ui-button{
@@ -27,18 +27,18 @@
     @apply relative;
   }
   &__container{
-    @apply relative overflow-x-auto border border-gray-100 sm:rounded-xl;
+    @apply relative overflow-x-auto border border-gray-100 dark:border-gray-500 sm:rounded-xl;
   }
   &__search{
-    @apply px-6 py-3 flex bg-white border-b border-gray-100;
+    @apply px-6 py-3 flex bg-white border-b border-gray-100 dark:border-gray-500 dark:bg-gray-500;
     .ui-input{
-      @apply w-3/4;
+      @apply w-4/5;
       input{
         @apply rounded-l-none
       }
     }
     .ui-select{
-      @apply w-1/4;
+      @apply w-1/5;
       .ui-select__trigger{
         @apply rounded-r-none border-r-0
       }

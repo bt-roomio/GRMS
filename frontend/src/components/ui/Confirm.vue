@@ -1,7 +1,7 @@
 <template>
   <teleport to="body">
     <transition>
-    <div class="ui-confirm" v-if="confirm.isOpen">
+    <div class="ui-confirm" :class="cookies.get('mode')" v-if="confirm.isOpen">
       <div class="ui-confirm__wrapper"></div>
       <div class="ui-confirm__scroller">
         <div class="ui-confirm__body" ref="refConfirm">
@@ -31,6 +31,8 @@ import UiButton from "@components/ui/Button.vue";
 import {storeToRefs} from "pinia";
 import UiIcon from "@components/ui/Icon.vue";
 import {onClickOutside} from "@vueuse/core";
+import {useCookies} from "@vueuse/integrations/useCookies";
+const cookies = useCookies(['mode'])
 const refConfirm = ref(null)
 onClickOutside(refConfirm, () => {
   confirmStore.handleCancel()

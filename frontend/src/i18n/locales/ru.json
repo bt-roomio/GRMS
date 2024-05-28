@@ -132,6 +132,7 @@
         "type": "Тип",
         "floor": "Этаж",
         "block": "Блок",
+        "devices": "Устройства",
         "mac_address": "MAC-адрес",
         "ip_address": "IP-адрес",
         "status": "Статус",
@@ -146,7 +147,8 @@
             "room_floor_placeholder": "Введите этаж комнаты",
             "room_block_placeholder": "Введите блок комнаты",
             "cancel": "Отмена",
-            "mac_address": "Выберите MAC-адрес"
+            "mac_address": "Выберите MAC-адрес",
+            "device": "Выберите устройство"
           },
           "edit_new_rooms": {
             "title": "Редактировать комнату",
@@ -170,6 +172,11 @@
       "or_drag_and_drop": "или перетащите",
       "format": "формат",
       "selected_file": "Выбранный файл"
+    },
+    "table": {
+      "error": "Ошибка",
+      "no_data_title": "У вас нет данных",
+      "no_data_subtitle": "Данные не найдены или вы еще не добавили данные"
     },
     "search": "Поиск",
     "select_empty": "Выберите из списка"

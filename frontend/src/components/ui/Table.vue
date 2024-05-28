@@ -8,7 +8,7 @@
       />
       <UiSearch v-model="searchValue"/>
     </div>
-    <table v-if="!error?.code || !error?.msg" class="ui-table">
+    <table v-if="(!error?.code || !error?.msg) && isEmpty" class="ui-table">
       <UiLoader v-if="loading"/>
       <thead>
       <tr>
@@ -48,11 +48,21 @@
       </tr>
       </tbody>
     </table>
-    <table v-else class="ui-table">
+    <table v-if="(!error?.code || !error?.msg) && !isEmpty" class="ui-table">
       <tbody>
       <tr>
-        <td class="ui-table__error ">
-          <p class="error-title">Error {{error.code}}</p>
+        <td class="ui-table__error">
+          <p class="error-title">{{ $t('dashboard.table.no_data_title') }}</p>
+          <p class="error-subtitle">{{ $t('dashboard.table.no_data_subtitle') }}</p>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+    <table v-if="(error?.code || error?.msg) && !isEmpty" class="ui-table">
+      <tbody>
+      <tr>
+        <td class="ui-table__error">
+          <p class="error-title">{{ $t('dashboard.table.error') }} {{error.code}}</p>
           <p class="error-subtitle">{{error.msg}}</p>
         </td>
       </tr>
@@ -61,7 +71,7 @@
   </div>
 </template>
 <script setup lang="ts" generic="T">
-import {defineComponent, ref} from "vue";
+import {computed, defineComponent, ref} from "vue";
 import UiSelect from "@components/ui/Select.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiSearch from "@components/ui/Search.vue";
@@ -86,7 +96,7 @@ const handleSort = (field: string) => {
     })
   }
 }
-defineProps<{
+const props = defineProps<{
   headers: Record<string, T>
   searchTypes: { [key: string]: unknown; }[]
   isSearchOpen?: boolean
@@ -95,5 +105,6 @@ defineProps<{
   error?: { code: number | null, msg: string | null}
   loading?: boolean
 }>()
+const isEmpty = computed(() => !!props.data.length)
 
 </script>

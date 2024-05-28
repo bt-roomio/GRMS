@@ -14,7 +14,6 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
     };
 }
 
-
 const useApiFetch: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
     paramsSerializer: params => {
@@ -47,6 +46,11 @@ useApiFetch.interceptors.response.use(
     async (error) => {
         const authorizationStore = useAuthorizationStore();
         const { status } = error.response || {};
+        const config = error.config as CustomAxiosRequestConfig;
+        if (config?.metadata?.timer) {
+            toast.remove(config.metadata.toast as string)
+            clearTimeout(config.metadata.timer);
+        }
         if (status === 401 && error.config && !error.config.isRetry && cookies.get('refresh_token')) {
             error.config.isRetry = true;
             await authorizationStore.refreshToken()
@@ -57,11 +61,7 @@ useApiFetch.interceptors.response.use(
             await authorizationStore.deleteToken();
             await router.push({ name: 'login' });
         }
-        const config = error.config as CustomAxiosRequestConfig;
-        if (config?.metadata?.timer) {
-            toast.remove(config.metadata.toast as string)
-            clearTimeout(config.metadata.timer);
-        }
+
         if (["ERR_NETWORK", "ECONNABORTED"].includes(error.code)){
             toast.remove(config.metadata?.toast as string)
             toast.error(error.message)

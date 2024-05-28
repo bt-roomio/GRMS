@@ -4,7 +4,7 @@
     @apply text-sm block text-left;
   }
   &__trigger{
-    @apply flex gap-2 px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 items-center h-10;
+    @apply flex gap-2 px-3.5 py-1.5 border-gray-300 bg-white  border rounded-lg text-gray-700 items-center h-10;
     .chevron{
       @apply stroke-gray-700 ml-auto;
     }
@@ -24,7 +24,7 @@
     ;
   }
   &__list{
-    @apply flex flex-col w-full gap-1;
+    @apply flex flex-col w-full gap-1 dark:text-gray-800;
   }
   &__item{
     @apply w-full flex gap-2 items-center hover:bg-gray-200 p-1 pr-3 rounded-md cursor-pointer outline-0;

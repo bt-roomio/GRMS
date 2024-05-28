@@ -132,6 +132,7 @@
         "type": "Type",
         "floor": "Floor",
         "block": "Block",
+        "devices": "Devices",
         "mac_address": "MAC address",
         "ip_address": "IP address",
         "status": "Status",
@@ -146,7 +147,8 @@
             "room_floor_placeholder": "Enter room floor",
             "room_block_placeholder": "Enter room block",
             "cancel": "Cancel",
-            "mac_address": "Choose MAC address"
+            "mac_address": "Choose MAC address",
+            "device": "Choose device"
           },
           "edit_new_rooms": {
             "title": "Edit room",
@@ -170,6 +172,11 @@
       "or_drag_and_drop": "or drag and drop",
       "format": "format",
       "selected_file": "Selected file"
+    },
+    "table": {
+      "error": "Error",
+      "no_data_title": "You dont have data",
+      "no_data_subtitle": "The data has not been found or you have not added the data yet"
     },
     "search": "Search",
     "select_empty": "Select from the list"

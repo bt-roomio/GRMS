@@ -1,18 +1,32 @@
 .header{
-  @apply fixed top-0 z-10 left-[280px] border-b border-gray-200 h-[50px] w-[calc(100%_-_280px)] flex justify-between bg-white;
+  @apply fixed top-0 z-10 left-[280px] border-b border-gray-200 dark:border-gray-700 h-[50px] w-[calc(100%_-_280px)] flex justify-between bg-white dark:bg-gray-600;
   &__hotel{
-    @apply stroke-gray-800 text-gray-800 flex justify-between items-center border-r border-gray-200 px-8 h-full gap-2;
+    @apply stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex justify-between items-center border-r border-gray-200 dark:border-gray-700 px-8 h-full gap-2;
   }
   &__time{
-    @apply stroke-gray-800 text-gray-800 flex items-center px-6 h-full gap-2 mr-auto;
+    @apply stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex items-center px-6 h-full gap-2 mr-auto;
   }
   &__actions{
-    @apply flex items-center px-6 h-full gap-4;
-  }
-  &__actions-app{
-    @apply stroke-gray-800 text-gray-800 cursor-pointer flex items-center;
+    @apply flex items-center px-6 h-full gap-4 dark:text-white dark:stroke-white stroke-gray-800;
   }
   &__profile{
-    @apply border-2 border-gray-800 text-gray-800 rounded-full w-7 h-7 text-xs flex-shrink-0 flex items-center justify-center font-semibold cursor-pointer;
+    @apply
+      border-2
+      dark:border-white
+      dark:text-white
+      dark:stroke-white
+      border-gray-800
+      text-gray-800
+      rounded-full
+      w-7
+      h-7
+      text-xs
+      flex-shrink-0
+      flex
+      items-center
+      justify-center
+      font-semibold
+      cursor-pointer
+    ;
   }
 }

@@ -1,7 +1,7 @@
 <template>
   <label class="ui-checkbox">
     <slot name="left"/>
-    <input type="checkbox" v-model="model" :name="name">
+    <input type="checkbox" v-model="model" :checked="$attrs.checked as any" :name="name">
     <div class="custom-checkbox">
       <UiIcon name="check" filled/>
     </div>

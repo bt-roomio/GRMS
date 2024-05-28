@@ -5,7 +5,7 @@
   &__buttons{
     @apply flex flex-wrap gap-6 items-center mb-6;
     .ui-icon{
-      @apply cursor-pointer w-5 h-5 text-xl;
+      @apply cursor-pointer w-5 h-5 text-xl stroke-gray-800 dark:stroke-gray-200;
     }
   }
 }

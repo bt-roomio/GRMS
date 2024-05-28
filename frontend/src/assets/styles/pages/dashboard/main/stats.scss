@@ -1,0 +1,20 @@
+.stats{
+  &__head{
+    @apply flex w-full justify-between gap-4 mb-4;
+    .ui-button{
+      @apply w-auto h-10;
+    }
+  }
+  &__head-sorts{
+    @apply flex;
+    .ui-button{
+      @apply w-auto rounded-none border-l-0 first:rounded-l-lg last:rounded-r-lg first:border-l
+    }
+  }
+  &__head-period{
+    @apply mr-auto;
+  }
+  &__head-settings{
+    @apply flex gap-4;
+  }
+}

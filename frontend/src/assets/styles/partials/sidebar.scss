@@ -1,36 +1,36 @@
 .sidebar{
-  @apply w-[280px] bg-primary-600 h-dvh fixed top-0 left-0 z-10;
+  @apply w-[280px] bg-primary-600 dark:bg-gray-600 h-dvh fixed top-0 left-0 z-10;
   &__content{
     @apply  flex flex-col h-full;
   }
   &__head{
-    @apply flex bg-white justify-between items-center h-[50px] flex-shrink-0 px-4;
+    @apply flex bg-white dark:bg-gray-600 justify-between items-center h-[50px] flex-shrink-0 px-4;
   }
   &__head-logo{
-    @apply h-[33px] mb-3;
+    @apply h-[33px] mb-3 text-primary-600 dark:text-gray-25;
   }
   &__head-burger{
-    @apply flex items-center cursor-pointer;
+    @apply flex items-center cursor-pointer stroke-primary-600 dark:stroke-gray-25;
   }
   &__menu{
     @apply p-4 flex flex-col gap-1 overflow-auto;
   }
   &__menu-item{
     .item-content{
-      @apply flex justify-between px-3 py-2.5 rounded-md gap-3 text-primary-800 hover:bg-primary-800 hover:text-primary-700 cursor-pointer transition-all;
+      @apply flex justify-between px-3 py-2.5 rounded-md gap-3 text-primary-800 dark:text-white hover:bg-primary-800 hover:text-primary-700 dark:hover:bg-gray-400 dark:hover:text-white cursor-pointer transition-all;
     }
     .item-content:hover{
       .item-icon{
-        @apply stroke-primary-700;
+        @apply stroke-primary-700 dark:stroke-white;
       }
       .item-action{
-        @apply stroke-primary-700;
+        @apply stroke-primary-700 dark:stroke-white;
       }
     }
     .item-content.router-link-active.item-content{
-      @apply bg-white text-primary-700;
+      @apply bg-white dark:bg-gray-400 text-primary-700 dark:text-white;
       .item-icon{
-        @apply stroke-primary-700;
+        @apply stroke-primary-700 dark:stroke-white;
       }
       .item-action{
         @apply ml-auto flex items-center stroke-primary-700;
@@ -38,21 +38,21 @@
     }
     &:first-child{
       .item-content.router-link-active.router-link-exact-active{
-        @apply bg-white text-primary-700;
+        @apply bg-white dark:bg-gray-400 text-primary-700 dark:text-white;
         .item-icon{
-          @apply stroke-primary-700;
+          @apply stroke-primary-700 dark:stroke-white;
         }
         .item-action{
           @apply ml-auto flex items-center stroke-primary-700;
         }
       }
       .item-content.router-link-active{
-        @apply bg-transparent text-primary-800 hover:bg-primary-800 hover:text-primary-700;
+        @apply bg-transparent dark:bg-transparent text-primary-800 dark:text-white hover:bg-primary-800 hover:text-primary-700;
         .item-icon{
-          @apply stroke-primary-800;
+          @apply stroke-primary-800 dark:stroke-white;
         }
         .item-action{
-          @apply stroke-primary-800;
+          @apply stroke-primary-800 dark:stroke-white;
         }
       }
       .item-content:hover{
@@ -65,16 +65,16 @@
       }
     }
     .item-icon{
-      @apply stroke-primary-800 text-2xl;
+      @apply stroke-primary-800 text-2xl dark:stroke-white;
     }
     .item-text{
       @apply mr-auto
     }
     .item-action{
-      @apply flex items-center stroke-primary-800;
+      @apply flex items-center stroke-primary-800 dark:stroke-white;
     }
     .item-submenu{
-      @apply w-full mt-1;
+      @apply w-full mt-1 flex flex-col gap-1;
     }
   }
   &__footer{

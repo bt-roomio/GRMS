@@ -31,6 +31,12 @@
       <template #select="{entity}">
         <UiCheckbox v-model="entity.select"/>
       </template>
+      <template #devices="{entity}" >
+        <template v-if="(entity.devices as []).length">
+          <div  v-for="i in entity.devices" :key="i">{{i}}</div>
+        </template>
+        <template v-else>-</template>
+      </template>
       <template #status="{entity}">
         <UiStatus :status="entity.status as string" />
       </template>
@@ -116,12 +122,8 @@ const searchTypes = computed(() => [
     key: 'block'
   },
   {
-    name: t('dashboard.configuration.rooms.mac_address'),
-    key: 'mac_address'
-  },
-  {
-    name: t('dashboard.configuration.rooms.ip_address'),
-    key: 'device'
+    name: t('dashboard.configuration.rooms.devices'),
+    key: 'devices'
   },
 ])
 const headers = computed<IConfigurationRoomsHead>(() => ({
@@ -130,8 +132,7 @@ const headers = computed<IConfigurationRoomsHead>(() => ({
   type: t('dashboard.configuration.rooms.type'),
   floor: t('dashboard.configuration.rooms.floor'),
   block: t('dashboard.configuration.rooms.block'),
-  mac_address: t('dashboard.configuration.rooms.mac_address'),
-  device: t('dashboard.configuration.rooms.ip_address'),
+  devices: t('dashboard.configuration.rooms.devices'),
   status: t('dashboard.configuration.rooms.status'),
   actions: ''
 }))

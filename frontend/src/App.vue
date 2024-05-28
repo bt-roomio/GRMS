@@ -4,5 +4,5 @@ import UiConfirm from "@components/ui/Confirm.vue";
 
 <template>
   <UiConfirm/>
-  <RouterView />
+  <RouterView/>
 </template>
