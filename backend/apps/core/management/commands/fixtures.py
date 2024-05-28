@@ -17,8 +17,9 @@ class Command(BaseCommand):
             "groups_permissions",
             "device_profile",
             "customer",
-            "device",
             "room",
+            "device",
             "attribute_kv",
             "room_type",
+            "widget_type",
         )
