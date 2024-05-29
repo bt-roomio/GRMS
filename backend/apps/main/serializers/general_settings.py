@@ -22,6 +22,8 @@ class GeneralSettingsSerializer(serializers.Serializer):
     aperio_locks = serializers.BooleanField(default=False)
     door_lock = DoorLockSerializer(default=dict)
     auto_checkout = serializers.BooleanField(default=False)
+    bathroom_enable = serializers.BooleanField(default=False)
+    humidity_enable = serializers.BooleanField(default=False)
 
     def update(self, instance, validated_data):
         instance.additional_info = json.dumps({"general_settings": validated_data})
