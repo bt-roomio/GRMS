@@ -13,7 +13,7 @@ urlpatterns = [
     path("room/", RoomListView.as_view(), name="room-list"),
     path("room/<uuid:pk>", RoomDetailView.as_view(), name="room-detail"),
     path("room-type/", RoomTypeListView.as_view(), name="room-type-list"),
+    path("room-type/<uuid:pk>", RoomTypeDetailView.as_view(), name="room-type-detail"),
     path("widget-type/", WidgetTypeListView.as_view(), name="widget-type-list"),
     path("device/", DeviceListView.as_view(), name="device-list"),
-    path("room-type/<uuid:pk>", RoomTypeDetailView.as_view(), name="room-type-detail"),
 ]

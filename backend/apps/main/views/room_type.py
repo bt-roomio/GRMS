@@ -9,7 +9,7 @@ from main.serializers.room_type import RoomTypeSerializer, RoomTypeFilterParams
 class RoomTypeListView(APIView):
     def get(self, request):
         params = RoomTypeFilterParams.check(request.GET)
-        queryset = RoomType.objects.filter(tenant=request.user.tenant)
+        queryset = RoomType.objects.list(tenant=request.user.tenant, search=params.get("search"))
         serializer = RoomTypeSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)

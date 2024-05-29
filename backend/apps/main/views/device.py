@@ -9,7 +9,7 @@ from main.serializers.device import DeviceSerializer, DeviceFilterParams
 class DeviceListView(APIView):
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
-        queryset = Device.objects.filter(tenant=request.user.tenant)
+        queryset = Device.objects.list(tenant=request.user.tenant, search=params.get("search"))
         serializer = DeviceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
