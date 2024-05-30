@@ -132,7 +132,7 @@
         "type": "Tur",
         "floor": "Qavat",
         "block": "Blok",
-        "devices": "Qurilmalar",
+        "devices": "Qurilmalar nomi",
         "mac_address": "MAC manzil",
         "ip_address": "IP manzil",
         "status": "Holat",
@@ -179,13 +179,15 @@
       "no_data_subtitle": "Ma'lumot topilmadi yoki hali ma'lumot qo'shmagansiz"
     },
     "search": "Qidirish",
+    "search_from_the_list": "Ro'yxatdan tanlang",
     "select_empty": "Ro'yxatdan tanlang"
   },
   "confirm": {
     "title": "Harakatni tasdiqlang",
     "button_cancel": "Bekor qilish",
     "button_confirm": "Tasdiqlash",
-    "delete_item": "Ushbu elementni o'chirishga ishonchingiz komilmi?"
+    "delete_item": "Ushbu elementni o'chirishga ishonchingiz komilmi?",
+    "load_more": "Ko'proq yuklash"
   },
   "toast": {
     "save_success": "Saqlash muvaffaqiyatli",

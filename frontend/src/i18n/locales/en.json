@@ -132,7 +132,7 @@
         "type": "Type",
         "floor": "Floor",
         "block": "Block",
-        "devices": "Devices",
+        "devices": "Device name",
         "mac_address": "MAC address",
         "ip_address": "IP address",
         "status": "Status",
@@ -176,9 +176,11 @@
     "table": {
       "error": "Error",
       "no_data_title": "You dont have data",
-      "no_data_subtitle": "The data has not been found or you have not added the data yet"
+      "no_data_subtitle": "The data has not been found or you have not added the data yet",
+      "load_more": "Load more"
     },
     "search": "Search",
+    "search_from_the_list": "Select from the list",
     "select_empty": "Select from the list"
   },
   "confirm": {

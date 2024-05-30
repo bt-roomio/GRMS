@@ -7,11 +7,10 @@
     <form class="ui-form" @submit.prevent="storeConfigurationRooms.addItem(close)">
       <UiSelect
           v-if="room_types?.results"
+          v-bind="selectConfig"
           v-model="state.type"
-          :data="room_types.results"
-          name="title"
-          modelKey="title"
-          :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.choose_room_type')"
+          :options="room_types?.results.map(el => el.title)"
+          :title="$t('dashboard.configuration.rooms.modals.add_new_rooms.choose_room_type')"
       />
       <UiInput
           :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.room_number')"
@@ -38,13 +37,12 @@
           :errors="validation?.$dirty ? validation?.$silentErrors : []"
         />
       </div>
-      <UiMultiSelect
+      <UiSelect
           v-if="devices?.results"
+          v-bind="multiSelectConfig"
           v-model="state.devices"
-          name="name"
-          modelKey="name"
-          :data="devices.results"
-          :label="$t('dashboard.configuration.rooms.modals.add_new_rooms.device')"
+          :options="devices?.results.map(el => el.name)"
+          :title="$t('dashboard.configuration.rooms.modals.add_new_rooms.device')"
       />
       <button class="sr-only" type="submit"></button>
     </form>
@@ -71,7 +69,7 @@ import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.t
 import {storeToRefs} from "pinia";
 import {useConfigurationRoomTypeStore} from "@store/dashboard/configuration/room-type.ts";
 import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
-import UiMultiSelect from "@components/ui/MultiSelect.vue";
+import {multiSelectConfig, selectConfig} from "@utils/configsSelect.ts";
 const add_room = ref<IModal | null>(null)
 const storeConfigurationRooms = useConfigurationRoomsStore()
 const storeConfigurationRoomType = useConfigurationRoomTypeStore()

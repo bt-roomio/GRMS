@@ -12,6 +12,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     const confirmStore = useConfirm()
 
     const {t} = useI18n()
+    const size = ref<number>(10)
     const room = ref<IConfigurationRoom>()
     const rooms = ref<IServerResponse<IConfigurationRoomsData> | null>(null)
     const searchValue = ref('')
@@ -48,7 +49,9 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         try {
             const {data} = await useApiFetch<IServerResponse<IConfigurationRoomsData>>('/main/room/', {
                 method: 'GET',
-                params,
+                params: {
+                    ...params, size: size.value
+                },
                 transformResponse: [(data) => addFieldSelect(data)]
             })
 
@@ -71,6 +74,13 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             search_value: searchValue.value,
             search_field: searchType.value.key
         } : {...output})
+    }
+    const loadMore = async () => {
+        size.value += 10
+        await getList(searchValue.value ? {
+            search_value: searchValue.value,
+            search_field: searchType.value.key
+        } : {})
     }
     const getItem = async (id: string, isFilled: boolean) => {
         itemLoading.value = true
@@ -193,9 +203,11 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         deleteItem,
         getItem,
         editItem,
+        size,
         error,
         loading,
         sortList,
+        loadMore,
         sortedData,
         searchValue,
         searchType,

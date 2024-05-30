@@ -5,7 +5,7 @@ export default {
   darkMode: 'class',
   content: [
     "./index.html",
-    "./src/**/*.{vue,scss,css,js,ts,jsx,tsx}"
+    "./src/**/*.{vue,scss,css,js,ts,jsx,tsx,svg}"
   ],
   theme: {
     extend: {

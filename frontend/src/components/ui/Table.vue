@@ -1,13 +1,15 @@
 <template>
+  <div class="ui-table__search" v-if="isSearchOpen">
+    <UiSelect
+        name="name"
+        label="name"
+        v-bind="selectConfig"
+        v-model="searchType"
+        :options="searchTypes"
+    />
+    <UiSearch v-model="searchValue"/>
+  </div>
   <div class="ui-table__container">
-    <div class="ui-table__search" v-if="isSearchOpen">
-      <UiSelect
-          name="name"
-          v-model="searchType"
-          :data="searchTypes"
-      />
-      <UiSearch v-model="searchValue"/>
-    </div>
     <table v-if="(!error?.code || !error?.msg) && isEmpty" class="ui-table">
       <UiLoader v-if="loading"/>
       <thead>
@@ -69,6 +71,9 @@
       </tbody>
     </table>
   </div>
+  <div class="ui-table__pagination" v-if="isPagination">
+    <UiButton class="primary" @click="emits('more')">{{ $t('dashboard.table.load_more') }}</UiButton>
+  </div>
 </template>
 <script setup lang="ts" generic="T">
 import {computed, defineComponent, ref} from "vue";
@@ -76,7 +81,9 @@ import UiSelect from "@components/ui/Select.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiSearch from "@components/ui/Search.vue";
 import UiLoader from "@components/ui/Loader.vue";
-const emit = defineEmits(['sorted'])
+import {selectConfig} from "@utils/configsSelect.ts";
+import UiButton from "@components/ui/Button.vue";
+const emits = defineEmits(['sorted', 'more'])
 const searchValue = defineModel('searchValue')
 const searchType = defineModel<{[key: string]: unknown}>('searchType')
 const sortObject = ref<string | null>('')
@@ -86,12 +93,12 @@ defineComponent({
 const handleSort = (field: string) => {
   if (sortObject.value !== '-' + field){
     sortObject.value = '-' + field
-    emit('sorted', {
+    emits('sorted', {
       sort_by: ['-' + field]
     })
   }else {
     sortObject.value = field
-    emit('sorted', {
+    emits('sorted', {
       sort_by: [field]
     })
   }
@@ -104,6 +111,7 @@ const props = defineProps<{
   data: Record<string, T>[]
   error?: { code: number | null, msg: string | null}
   loading?: boolean
+  isPagination?: boolean
 }>()
 const isEmpty = computed(() => !!props.data.length)
 

@@ -15,10 +15,13 @@
     border
     border-gray-200
     dark:border-gray-600
+    w-max
     ;
   }
   &__menu{
     @apply flex flex-col w-full;
+    >label,
+    >div,
     li{
       @apply w-full flex gap-2 items-center hover:bg-gray-200 dark:hover:bg-gray-600 p-1 pr-3 rounded-md cursor-pointer dark:text-white;
       .ui-icon{

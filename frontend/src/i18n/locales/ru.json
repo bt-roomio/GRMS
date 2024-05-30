@@ -132,7 +132,7 @@
         "type": "Тип",
         "floor": "Этаж",
         "block": "Блок",
-        "devices": "Устройства",
+        "devices": "Названия устройств",
         "mac_address": "MAC-адрес",
         "ip_address": "IP-адрес",
         "status": "Статус",
@@ -176,9 +176,11 @@
     "table": {
       "error": "Ошибка",
       "no_data_title": "У вас нет данных",
-      "no_data_subtitle": "Данные не найдены или вы еще не добавили данные"
+      "no_data_subtitle": "Данные не найдены или вы еще не добавили данные",
+      "load_more": "Загрузить больше"
     },
     "search": "Поиск",
+    "search_from_the_list": "Выберите из списка",
     "select_empty": "Выберите из списка"
   },
   "confirm": {

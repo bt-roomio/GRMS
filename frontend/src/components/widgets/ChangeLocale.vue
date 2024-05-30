@@ -1,18 +1,19 @@
 <template>
   <UiSelect
-      v-model="model"
-      :data="locales"
-      modelKey="code"
+      track-by="name"
+      v-bind="selectConfig"
+      v-model="selectValue"
+      :options="locales"
+      label="name"
       @change="changeLocale"
-      name="name"
   >
-    <template #trigger>
-      <UiIcon :name="locales.find(el => el.code === model)?.icon || 'en'" filled/>
-      {{ locales.find(el => el.code === model)?.name }}
+    <template #singleLabel="{props}">
+      <UiIcon :name="(props as any).option.icon" filled/>
+      {{ (props as any).option.name }}
     </template>
-    <template #item="{item}">
-      <UiIcon :name="item.icon" filled/>
-      {{ item.name }}
+    <template #option="{props}">
+      <UiIcon :name="(props as any).option.icon" filled/>
+      {{ (props as any).option.name }}
     </template>
   </UiSelect>
 </template>
@@ -20,9 +21,10 @@
 import UiIcon from "@components/ui/Icon.vue";
 import UiSelect from "@components/ui/Select.vue";
 import {ref} from "vue";
+import {selectConfig} from "@utils/configsSelect.ts";
 const model = defineModel<{[key: string]: unknown} | string>()
-const changeLocale = (loc: string) => {
-  model.value = loc
+const changeLocale = (loc: { selectedOption: ILocales }) => {
+  model.value = loc.selectedOption.code
 }
 const locales = ref<ILocales[]>([
   {
@@ -41,4 +43,6 @@ const locales = ref<ILocales[]>([
     icon: 'ru'
   }
 ])
+const selectValue = ref(locales.value.find(el => el.code === model.value))
+
 </script>

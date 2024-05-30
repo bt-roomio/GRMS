@@ -1,5 +1,5 @@
 <template>
-  <UiInput name="search" :placeholder="$t('dashboard.search')" v-model="searchQuery"/>
+  <UiInput name="search" icon="search" icon-position="left" :placeholder="$t('dashboard.search_from_the_list')" v-model="searchQuery"/>
 </template>
 <script setup lang="ts">
 import UiInput from "@components/ui/Input.vue";

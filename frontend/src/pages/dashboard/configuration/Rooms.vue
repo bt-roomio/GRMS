@@ -11,7 +11,11 @@
     </div>
     <div class="rooms__actions">
       <Tabs :list="tabList"/>
-      <ConfigurationRoomsActions v-model:search="isSearchOpen" ref="actions"/>
+      <ConfigurationRoomsActions
+          v-model:search="isSearchOpen"
+          ref="actions"
+          @theadSort="theadSortHandle"
+      />
     </div>
     <UiTable
         :loading="loading"
@@ -20,10 +24,12 @@
         v-model:searchValue="searchValue"
         :is-search-open="isSearchOpen"
         :search-types="searchTypes"
-        :headers="headers"
+        :headers="sortedHeaders ? sortedHeaders : headers"
         :data="rooms.results"
         :sort="['room_number','floor','block','device']"
         @sorted="storeConfigurationRooms.sortList"
+        @more="moreHandle"
+        :is-pagination="rooms.count > rooms.results.length"
     >
       <template #header-select>
           <CheckAll v-model="rooms.results" />
@@ -33,7 +39,9 @@
       </template>
       <template #devices="{entity}" >
         <template v-if="(entity.devices as []).length">
-          <div  v-for="i in entity.devices" :key="i">{{i}}</div>
+          <div class="flex flex-wrap gap-1">
+            <div class="ui_badge" v-for="i in entity.devices" :key="i">{{i}}</div>
+          </div>
         </template>
         <template v-else>-</template>
       </template>
@@ -41,12 +49,15 @@
         <UiStatus :status="entity.status as string" />
       </template>
       <template #actions="{entity}">
-        <UiButton class="secondary" @click.prevent="openEditRoom(entity.id as string)">
-          <UiIcon name="edit" filled />
-        </UiButton>
-        <UiButton class="text" @click.prevent="storeConfigurationRooms.deleteItem(entity.id as string)">
-          <UiIcon name="trash" filled />
-        </UiButton>
+        <div class="ui-table__actions col-2">
+          <UiButton class="secondary" @click.prevent="openEditRoom(entity.id as string)">
+            <UiIcon name="edit" filled />
+          </UiButton>
+          <UiButton class="text" @click.prevent="storeConfigurationRooms.deleteItem(entity.id as string)">
+            <UiIcon name="trash" filled />
+          </UiButton>
+        </div>
+
       </template>
     </UiTable>
   </div>
@@ -67,7 +78,6 @@ import {storeToRefs} from "pinia";
 import {useI18n} from "vue-i18n";
 
 const {t} = useI18n()
-
 const storeConfigurationRooms = useConfigurationRoomsStore()
 const {rooms, error, searchType, searchValue, loading} = storeToRefs(storeConfigurationRooms)
 
@@ -136,4 +146,21 @@ const headers = computed<IConfigurationRoomsHead>(() => ({
   status: t('dashboard.configuration.rooms.status'),
   actions: ''
 }))
+
+const sortedHeaders = ref(null)
+const theadSortHandle = (array: string[]) => {
+  let results: any = {}
+  results.select = true
+  for (const headersKey in headers.value) {
+    if (array.includes(headers.value[headersKey] as string)){
+      results[headersKey] = headers.value[headersKey]
+    }
+  }
+  results.actions = ''
+  sortedHeaders.value = results
+}
+
+const moreHandle = async () => {
+  await storeConfigurationRooms.loadMore()
+}
 </script>

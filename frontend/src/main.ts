@@ -7,6 +7,7 @@ import {createPinia} from "pinia";
 import Vue3Toasity, { type ToastContainerOptions } from 'vue3-toastify';
 import i18n from "./i18n";
 import router from "./router";
+import {Tooltip} from "@/directives/tooltip.ts";
 
 const app = createApp(App)
 
@@ -21,4 +22,5 @@ app.use(i18n)
 
 app.use(router)
 
+app.directive('tooltip', Tooltip);
 app.mount('#app')

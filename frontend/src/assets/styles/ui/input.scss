@@ -3,14 +3,33 @@
   label{
     @apply text-sm block text-left;
   }
+  &__group{
+    @apply relative w-full;
+    .ui-icon{
+      @apply absolute stroke-gray-500 top-1/2 -translate-y-1/2 z-10;
+
+      &.left{
+        @apply left-[14px]
+      }
+      &.right{
+        @apply right-[14px]
+      }
+    }
+  }
   input{
-    @apply text-base px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 outline-0 h-10;
+    @apply text-base px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 outline-0 h-10 w-full;
     &.ui-input__invalid{
       @apply border-error-500;
       &::placeholder{
         @apply text-error-500;
 
       }
+    }
+    &.left{
+      @apply pl-[42px]
+    }
+    &.right{
+      @apply pr-[42px]
     }
   }
 }

@@ -1,5 +1,5 @@
 .modal{
-  @apply absolute w-full h-full top-0 left-0 z-20 flex justify-end overflow-hidden transition;
+  @apply fixed w-full h-full top-0 left-0 z-20 flex justify-end overflow-hidden transition;
   &.v-enter-active{
     .modal__wrapper{
       animation: 150ms fadeIn forwards;
