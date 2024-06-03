@@ -13,4 +13,4 @@ class RoomTypeSerializer(serializers.ModelSerializer):
 class RoomTypeFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search = serializers.CharField(max_length=255, required=False)
+    search = serializers.CharField(max_length=255, required=False, help_text="Search by title.")

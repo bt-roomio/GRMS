@@ -1,12 +1,15 @@
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from main.models import RoomType
 from main.serializers.room_type import RoomTypeSerializer, RoomTypeFilterParams
+from main.swagger.room_type import RoomTypeSwagger, RoomTypeDetailSwagger
 
 
 class RoomTypeListView(APIView):
+    @swagger_auto_schema(responses=RoomTypeSwagger, query_serializer=RoomTypeFilterParams)
     def get(self, request):
         params = RoomTypeFilterParams.check(request.GET)
         queryset = RoomType.objects.list(tenant=request.user.tenant, search=params.get("search"))
@@ -14,6 +17,7 @@ class RoomTypeListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
+    @swagger_auto_schema(responses=RoomTypeSwagger, request_body=RoomTypeSerializer)
     def post(self, request):
         serializer = RoomTypeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -22,11 +26,13 @@ class RoomTypeListView(APIView):
 
 
 class RoomTypeDetailView(APIView):
+    @swagger_auto_schema(responses=RoomTypeDetailSwagger)
     def get(self, request, pk):
         room_type = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         serializer = RoomTypeSerializer(room_type)
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses=RoomTypeDetailSwagger, request_body=RoomTypeSerializer)
     def put(self, request, pk):
         instance = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         serializer = RoomTypeSerializer(instance, data=request.data)
@@ -34,6 +40,7 @@ class RoomTypeDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses={})
     def delete(self, request, pk):
         instance = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         instance.delete()
