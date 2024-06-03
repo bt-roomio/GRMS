@@ -9,6 +9,12 @@ class RoomSerializer(serializers.ModelSerializer):
     type = serializers.SlugRelatedField(queryset=RoomType.objects.all(), slug_field="title", required=False)
     devices = serializers.SlugRelatedField(queryset=Device.objects.all(), slug_field="name", many=True, required=False)
 
+    def update(self, instance, data):
+        for device in data.get("devices"):
+            if device.room_id and device.room_id != instance.id:
+                raise serializers.ValidationError({"devices": "Device already assigned to a room!"})
+        return super().update(instance, data)
+
     class Meta:
         model = Room
         fields = (
