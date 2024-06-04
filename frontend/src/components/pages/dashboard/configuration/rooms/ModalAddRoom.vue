@@ -41,7 +41,8 @@
           v-if="devices?.results"
           v-bind="multiSelectConfig"
           v-model="state.devices"
-          :options="devices?.results.map(el => el.name)"
+          :options="devices?.results"
+          label="name"
           :title="$t('dashboard.configuration.rooms.modals.add_new_rooms.device')"
       />
       <button class="sr-only" type="submit"></button>
@@ -84,10 +85,9 @@ const open = () => {
   add_room.value?.open()
 }
 
-
 onMounted(async () => {
   await Promise.all([
-    storeConfigurationRoomType.getList(),
+    storeConfigurationRoomType.getList({}),
     storeConfigurationDevice.getList(),
   ])
 })

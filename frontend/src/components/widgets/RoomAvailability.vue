@@ -3,9 +3,17 @@
     <div class="widget-card__head">
       <div class="widget-card__title">Room availability</div>
       <div class="widget-card__description mb-6">Manage your team members and their account permissions here.</div>
-      <div style="width: 100%; height: 310px;">
-        <v-chart class="chart" :option="option" autoresize />
-      </div>
+    </div>
+    <div class="widget-card__actions" v-if="isSettings">
+      <UiButton class="text" @click.prevent="editWidget">
+        <UiIcon name="edit" filled />
+      </UiButton>
+      <UiButton class="text" @click.prevent="deleteWidget">
+        <UiIcon name="trash" filled />
+      </UiButton>
+    </div>
+    <div style="width: 100%; height: 310px;">
+      <v-chart class="chart" :option="option" autoresize />
     </div>
   </div>
 </template>
@@ -25,6 +33,9 @@ import {provide, computed} from 'vue';
 import {useCookies} from "@vueuse/integrations/useCookies";
 import {storeToRefs} from "pinia";
 import {useAvailabilityWidget} from "@store/dashboard/widget/configs/availability.ts";
+import UiButton from "@components/ui/Button.vue";
+import UiIcon from "@components/ui/Icon.vue";
+defineProps<{isSettings: boolean}>()
 const cookies = useCookies(['mode'])
 const storeAvailabilityWidget = useAvailabilityWidget()
 const {exampleData, exampleData2} = storeToRefs(storeAvailabilityWidget)
@@ -110,4 +121,6 @@ const option = computed(() => ({
   ]
 }));
 
+const deleteWidget = async () => {}
+const editWidget = async () => {}
 </script>

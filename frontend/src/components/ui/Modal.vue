@@ -1,5 +1,5 @@
 <template>
-  <teleport to=".dashboard__layouts">
+  <teleport to="body">
     <transition>
       <div class="modal" v-if="isOpen">
         <div class="modal__wrapper" @click.prevent="close()"></div>

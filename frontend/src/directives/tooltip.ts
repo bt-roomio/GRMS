@@ -9,7 +9,7 @@ const Tooltip = {
         tooltipBox.innerHTML = value
         tooltip.append(tooltipBox)
         el.addEventListener('mouseenter', () => {
-            document.querySelector('.dashboard__layouts')?.append(tooltip)
+            document.body?.append(tooltip)
             tooltip.style.top = y - (height + 12) + 'px'
             tooltip.style.left = x + (width / 2) + 'px'
             tooltip.style.position = 'fixed'

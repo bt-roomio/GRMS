@@ -50,7 +50,7 @@
       </tr>
       </tbody>
     </table>
-    <table v-if="(!error?.code || !error?.msg) && !isEmpty" class="ui-table">
+    <table v-else-if="(!error?.code || !error?.msg) && !isEmpty" class="ui-table">
       <tbody>
       <tr>
         <td class="ui-table__error">
@@ -60,7 +60,7 @@
       </tr>
       </tbody>
     </table>
-    <table v-if="(error?.code || error?.msg) && !isEmpty" class="ui-table">
+    <table v-else-if="(error?.code || error?.msg) && !isEmpty" class="ui-table">
       <tbody>
       <tr>
         <td class="ui-table__error">
@@ -105,7 +105,7 @@ const handleSort = (field: string) => {
 }
 const props = defineProps<{
   headers: Record<string, T>
-  searchTypes: { [key: string]: unknown; }[]
+  searchTypes?: { [key: string]: unknown | undefined; }[]
   isSearchOpen?: boolean
   sort?: string[]
   data: Record<string, T>[]

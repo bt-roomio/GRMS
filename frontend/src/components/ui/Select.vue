@@ -5,6 +5,7 @@
         v-bind="$attrs"
         v-model="model"
         @Select="(selectedOption: any) => $emit('change', {selectedOption})"
+        :open="true"
     >
       <template #option="props">
         <slot name="option" :props="props" />

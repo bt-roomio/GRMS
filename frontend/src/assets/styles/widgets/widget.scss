@@ -2,10 +2,16 @@
 //  @apply grid grid-cols-12 gap-3;
 //}
 .widget-card{
-  @apply p-6 border border-gray-200 dark:border-gray-500 bg-white dark:bg-gray-600 rounded-xl w-full h-full;
+  @apply p-6 border border-gray-200 dark:border-gray-500 bg-white dark:bg-gray-600 rounded-xl w-full h-full relative;
   justify-content: end;
   &__head{
-    @apply flex flex-col gap-1 mb-6;
+    @apply flex flex-col gap-1 mb-6 pr-16;
+  }
+  &__actions{
+    @apply absolute top-0 right-0 flex gap-1 p-3;
+    .ui-button{
+      @apply flex-shrink border-0 bg-transparent h-auto p-2;
+    }
   }
   &__title{
     @apply font-medium text-gray-900 dark:text-gray-200;

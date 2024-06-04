@@ -6,11 +6,11 @@
       <div class="ui-confirm__scroller">
         <div class="ui-confirm__body" ref="refConfirm">
           <div class="ui-confirm__head">
-            <h2>{{ confirm.title }}</h2>
-            <p v-if="confirm.subtitle">{{ confirm.subtitle }}</p>
-            <UiIcon name="x-close" @click.prevent="confirmStore.handleCancel"/>
+            <UiIcon name="featured" filled/>
+            <UiIcon class="close" name="x-close" @click.prevent="confirmStore.handleCancel" filled/>
           </div>
           <div class="ui-confirm__content" v-if="confirm.content">
+            <h2>{{ confirm.title }}</h2>
             {{confirm.content}}
           </div>
           <div class="ui-confirm__footer">

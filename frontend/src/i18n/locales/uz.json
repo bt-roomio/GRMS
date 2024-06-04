@@ -164,6 +164,35 @@
             "subtitle": "Iltimos, xonalar bilan faylni yuklang",
             "view_example": "Namuna faylini ko'rish"
           }
+        },
+        "confirm": {
+          "title": "Xonalarni o'chirishni tasdiqlang",
+          "subtitle": "'Tasdiqlash' tugmasini bosish orqali tanlangan xonalarni qayta tiklash imkoniyatisiz o'chirishni tasdiqlaysiz"
+        }
+      },
+      "room_type": {
+        "title": "Типы комнат",
+        "subtitle": "Управляйте списком типов комнат",
+        "add_room_type": "Добавить тип комнат",
+        "name": "Название",
+        "dashboard": "Панель управления",
+        "active": "Активный",
+        "modals": {
+          "add_new_room_type": {
+            "title": "Добавить тип комнаты",
+            "subtitle": "Добавьте новый тип контроллера сейчас",
+            "name_placeholder": "Введите новое имя",
+            "choose_dashboard": "Выберите панель управления"
+          },
+          "edit_new_room_type": {
+            "title": "Редактировать тип комнаты",
+            "subtitle": "Отредактируйте новый тип контроллера сейчас",
+            "save": "Сохранить тип комнаты"
+          }
+        },
+        "confirm": {
+          "title": "Подтвердите удаление типов комнат",
+          "subtitle": "Нажимая кнопку 'Подтвердить', вы подтверждаете удаление выбранных комнат без возможности восстановления"
         }
       }
     },
@@ -190,11 +219,14 @@
     "load_more": "Ko'proq yuklash"
   },
   "toast": {
-    "save_success": "Saqlash muvaffaqiyatli",
-    "unknown_error": "Noma'lum xato yana urinib ko'ring",
-    "authorization_success": "Avtorizatsiya muvaffaqiyatli",
-    "room_add_success": "Xonani yaratish muvaffaqiyatli bo'ldi",
-    "room_edit_success": "Xona muvaffaqiyatli tahrirlandi",
-    "room_delete_success": "Xonani o'chirish muvaffaqiyatli bo'ldi"
+    "save_success": "Saqlash muvaffaqiyatli amalga oshirildi",
+    "unknown_error": "Noma'lum xato, qayta urinib ko'ring",
+    "authorization_success": "Avtorizatsiya muvaffaqiyatli amalga oshirildi",
+    "room_add_success": "Xona yaratish muvaffaqiyatli amalga oshirildi",
+    "room_edit_success": "Xonani tahrirlash muvaffaqiyatli amalga oshirildi",
+    "room_delete_success": "Xonani o'chirish muvaffaqiyatli amalga oshirildi",
+    "room_type_add_success": "Xona turini yaratish muvaffaqiyatli amalga oshirildi",
+    "room_type_edit_success": "Xona turini tahrirlash muvaffaqiyatli amalga oshirildi",
+    "room_type_delete_success": "Xona turini o'chirish muvaffaqiyatli amalga oshirildi"
   }
 }

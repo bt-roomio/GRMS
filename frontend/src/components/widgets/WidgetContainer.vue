@@ -4,7 +4,7 @@
       :responsiv="true"
       v-model:layout="currentModal"
       :col-num="12"
-      :row-height="105"
+      :row-height="124"
       :is-draggable="isSettings"
       :is-resizable="isSettings"
       :vertical-compact="true"
@@ -19,7 +19,7 @@
         :h="item.h"
         :i="item.i"
     >
-        <component :is="components[item.i as keyof typeof components] "/>
+        <component :is="components[item.i as keyof typeof components] " :isSettings="isSettings" :configs="item.config || {}"/>
     </GridItem>
   </GridLayout>
 </template>
@@ -28,6 +28,7 @@ import { GridLayout, GridItem } from 'grid-layout-plus'
 import OccupancyRate from "@components/widgets/OccupancyRate.vue";
 import RoomAvailability from "@components/widgets/RoomAvailability.vue";
 import {computed, onMounted, ref, watch} from "vue";
+import Percent from "@components/widgets/Percent.vue";
 const props = defineProps<{ isSettings: boolean }>()
 const config = defineModel<IModelObj[] | null>('config')
 const layout = defineModel<IModelObj[] | null>('layout')
@@ -36,6 +37,7 @@ const isConfigs = computed(() => props.isSettings)
 const components = {
   OccupancyRate,
   RoomAvailability,
+  Percent
 };
 
 onMounted(() => {
@@ -45,5 +47,5 @@ watch(isConfigs, value => {
   currentModal.value = value ? config.value as IModelObj[] : layout.value as IModelObj[]
 })
 
-interface IModelObj { i: keyof typeof components | string, x: number, y:number, w: number, h:number, minH?: number, minW?: number }
+interface IModelObj { i: keyof typeof components | string, x: number, y:number, w: number, h:number, minH?: number, minW?: number, config?: {[key: string]: unknown}}
 </script>

@@ -164,6 +164,35 @@
             "subtitle": "Please upload the file with your rooms",
             "view_example": "View an example file"
           }
+        },
+        "confirm": {
+          "title": "Confirm deletion of rooms",
+          "subtitle": "By clicking the 'Confirm' button you confirm the deletion of the selected rooms without the possibility of restoration"
+        }
+      },
+      "room_type": {
+        "title": "Room Types",
+        "subtitle": "Manage your room types list",
+        "add_room_type": "Add room types",
+        "name": "Name",
+        "dashboard": "Dashboard",
+        "active": "Active",
+        "modals": {
+          "add_new_room_type": {
+            "title": "Add room type",
+            "subtitle": "Add a new controller type now",
+            "name_placeholder": "Enter new name",
+            "choose_dashboard": "Choose dashboard"
+          },
+          "edit_new_room_type": {
+            "title": "Edit room type",
+            "subtitle": "Edit a new controller type now",
+            "save": "Save room type"
+          }
+        },
+        "confirm": {
+          "title": "Confirm deletion of type rooms",
+          "subtitle": "By clicking the 'Confirm' button you confirm the deletion of the selected rooms without the possibility of restoration"
         }
       }
     },
@@ -195,7 +224,10 @@
     "authorization_success": "Authorization was successful",
     "room_add_success": "The creation of the room was successful",
     "room_edit_success": "The editing of the room was successful",
-    "room_delete_success": "The delete of the room was successful"
+    "room_delete_success": "The delete of the room was successful",
+    "room_type_add_success": "The creation of the room type was successful",
+    "room_type_edit_success": "The editing of the room type was successful",
+    "room_type_delete_success": "The delete of the room type was successful"
   }
 }
 

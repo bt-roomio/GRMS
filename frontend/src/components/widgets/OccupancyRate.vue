@@ -3,9 +3,17 @@
     <div class="widget-card__head">
       <div class="widget-card__title">Occupancy rate</div>
       <div class="widget-card__description mb-6">Track how your rating compares to your industry average.</div>
-      <div style="width: 100%; height: 310px;">
-        <v-chart class="chart" :option="option" autoresize />
-      </div>
+    </div>
+    <div class="widget-card__actions" v-if="isSettings">
+      <UiButton class="text" @click.prevent="editWidget">
+        <UiIcon name="edit" filled />
+      </UiButton>
+      <UiButton class="text" @click.prevent="deleteWidget">
+        <UiIcon name="trash" filled />
+      </UiButton>
+    </div>
+    <div style="width: 100%; height: 310px;">
+      <v-chart class="chart" :option="option" autoresize />
     </div>
   </div>
 </template>
@@ -24,6 +32,9 @@ import {provide, computed} from 'vue';
 import {useCookies} from "@vueuse/integrations/useCookies";
 import {useOccupancyWidget} from "@store/dashboard/widget/configs/occupancy.ts";
 import {storeToRefs} from "pinia";
+import UiButton from "@components/ui/Button.vue";
+import UiIcon from "@components/ui/Icon.vue";
+defineProps<{isSettings: boolean}>()
 const cookies = useCookies(['mode'])
 const storeOccupancyWidget = useOccupancyWidget()
 const {exampleData, exampleData2} = storeToRefs(storeOccupancyWidget)
@@ -38,8 +49,6 @@ use([
 
 provide(THEME_KEY, computed(() => cookies.get('mode') || 'light'));
 
-// name: "Wed May 29 2024 14:04:53 GMT+0500 (Узбекистан, стандартное время)"
-// value: ['2024/5/29', 22]
 const option = computed(() => ({
   backgroundColor: 'rgba(255,255,255,0)',
   legend: {
@@ -111,4 +120,6 @@ const option = computed(() => ({
   ]
 }));
 
+const deleteWidget = async () => {}
+const editWidget = async () => {}
 </script>

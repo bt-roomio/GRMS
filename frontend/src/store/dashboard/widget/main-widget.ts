@@ -9,6 +9,10 @@ export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
     const dashboardSettingsCallback = ref<(confirm: boolean) => void | Promise<void> | null>((confirm) => {console.log(confirm)})
     const dashboardSettingsConfig = ref<IWidgetSettingValue[] | null>(null)
     const sortWidgets = ref(365)
+    const state = ref<IWidgetSettingState>({
+        widget_name: 'OccupancyRate',
+        configs: null,
+    })
     const getMainDashboardSettings = async () => {
         if (!dashboardSettings.value){
             dashboardSettings.value = [
@@ -30,10 +34,59 @@ export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
         isDashboardSettings.value = false
         dashboardSettingsCallback.value(true);
     };
-
     const handleCancel = () => {
         isDashboardSettings.value = false
         dashboardSettingsCallback.value(false);
     };
-    return {dashboardSettings, dashboardSettingsConfig, isDashboardSettings, getMainDashboardSettings, setSettings, handleConfirm, handleCancel, setMainDashboardSettings, sortWidgets };
+
+    const addItem = async (callback: () => void) => {
+        const stepX = 6;
+        const stepY = 4;
+        const config = {
+            x: (((dashboardSettingsConfig.value?.length || 0) + 1) % 3) * stepX,
+            y: Math.floor(((dashboardSettingsConfig.value?.length || 0) + 1) / 3) * stepY,
+            w: 6,
+            h: 4,
+        }
+        dashboardSettingsConfig.value?.push({ i: state.value.widget_name, ...config, config: state.value?.configs || {} })
+        callback()
+    }
+
+    const getWidget = () => {
+        return [
+            {name: 'OccupancyRate'},
+            {name: 'RoomAvailability'},
+            {
+                name: 'Percent',
+                configs: {
+                    title: 'Percent',
+                    value: '20'
+                }
+            }
+        ]
+    }
+
+    const editItem = async () => {
+
+    }
+
+    const $reset = async () => {
+        state.value.widget_name = 'OccupancyRate'
+    }
+    return {
+        dashboardSettings,
+        dashboardSettingsConfig,
+        isDashboardSettings,
+        getMainDashboardSettings,
+        setSettings,
+        handleConfirm,
+        handleCancel,
+        setMainDashboardSettings,
+        addItem,
+        editItem,
+        getWidget,
+        $reset,
+        state,
+        sortWidgets
+    };
 })

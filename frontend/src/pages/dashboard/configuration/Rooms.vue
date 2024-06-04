@@ -38,9 +38,9 @@
         <UiCheckbox v-model="entity.select"/>
       </template>
       <template #devices="{entity}" >
-        <template v-if="(entity.devices as []).length">
+        <template v-if="(entity.devices as IConfigurationDevice[]).length">
           <div class="flex flex-wrap gap-1">
-            <div class="ui_badge" v-for="i in entity.devices" :key="i">{{i}}</div>
+            <div class="ui_badge" :class="i.status ? 'on': 'off'" v-for="i in (entity.devices as IConfigurationDevice[])" :key="i.id">{{i.name}}</div>
           </div>
         </template>
         <template v-else>-</template>
@@ -57,7 +57,6 @@
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
-
       </template>
     </UiTable>
   </div>
@@ -76,6 +75,8 @@ import {computed, onMounted, ref} from "vue";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 import {storeToRefs} from "pinia";
 import {useI18n} from "vue-i18n";
+import {onBeforeRouteUpdate} from "vue-router";
+import router from "@/router";
 
 const {t} = useI18n()
 const storeConfigurationRooms = useConfigurationRoomsStore()
@@ -90,16 +91,16 @@ const tabList = computed(() => [
   },
   {
     name: t('dashboard.configuration.tabs.on'),
-    to: {name: 'configuration-rooms', query: { status: 'on' }},
+    to: {name: 'configuration-rooms', query: { status: 'ON' }},
   },
   {
     name: t('dashboard.configuration.tabs.off'),
-    to: {name: 'configuration-rooms', query: { status: 'off' }},
+    to: {name: 'configuration-rooms', query: { status: 'OFF' }},
   }
 ])
 
 onMounted(async () => {
-  await storeConfigurationRooms.getList({})
+  await storeConfigurationRooms.getList(router.currentRoute.value.query)
 })
 
 const openAddRoom = () => {
@@ -163,4 +164,8 @@ const theadSortHandle = (array: string[]) => {
 const moreHandle = async () => {
   await storeConfigurationRooms.loadMore()
 }
+
+onBeforeRouteUpdate(async (to) => {
+  await storeConfigurationRooms.getList(to.query)
+})
 </script>

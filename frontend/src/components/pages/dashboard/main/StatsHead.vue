@@ -14,6 +14,9 @@
     </div>
     <div class="stats__head-settings">
       <template v-if="isDashboardSettings">
+        <UiButton class="primary" @click.prevent="openAddWidget">
+          Add widget
+        </UiButton>
         <UiButton class="text" @click.prevent="storeMainWidgetSetting.handleCancel()">
           {{ $t('confirm.button_cancel') }}
         </UiButton>
@@ -27,12 +30,16 @@
       </UiButton>
     </div>
   </div>
+  <ModalAddWidget ref="add_widget" />
 </template>
 <script setup lang="ts">
 import UiButton from "@components/ui/Button.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import {useMainWidgetSetting} from "@store/dashboard/widget/main-widget.ts";
 import {storeToRefs} from "pinia";
+import ModalAddWidget from "@components/widgets/modal/ModalAddWidget.vue";
+import {ref} from "vue";
+const add_widget = ref<IModal | null>(null)
 const storeMainWidgetSetting = useMainWidgetSetting()
 const {isDashboardSettings, sortWidgets} = storeToRefs(storeMainWidgetSetting)
 const handleSettings = () => {
@@ -43,6 +50,9 @@ const handleSettings = () => {
       }
     }
   })
+}
+const openAddWidget = () => {
+  add_widget.value?.open()
 }
 const changeSort = (val: number) => {
   sortWidgets.value = val

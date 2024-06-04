@@ -42,7 +42,8 @@
           v-if="devices?.results"
           v-bind="multiSelectConfig"
           v-model="state.devices"
-          :options="devices?.results.map(el => el.name)"
+          label="name"
+          :options="devices?.results"
           :title="$t('dashboard.configuration.rooms.modals.add_new_rooms.device')"
       />
       <button class="sr-only" type="submit"></button>

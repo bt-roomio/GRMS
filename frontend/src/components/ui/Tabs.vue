@@ -17,7 +17,8 @@
 </template>
 <script setup lang="ts">
 import {nextTick, onMounted, ref, watch} from "vue";
-import {RouteLocationRaw, useRoute} from "vue-router";
+import {RouteLocationRaw} from "vue-router";
+import router from "@/router";
 const props = defineProps<{ list: ITab[]}>()
 const tabs = ref<HTMLElement | null>(null)
 const linePosition = ref({
@@ -25,18 +26,12 @@ const linePosition = ref({
   top: 0
 })
 const lineWidth = ref(0)
-const {fullPath} = useRoute()
 const mouseEnterHandle = (event: MouseEvent) => {
   const target = event.target as HTMLElement
   setPosition(target)
 }
-const mouseLeaveHandle = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (target.hasAttribute('aria-current')){
-    setPosition(target)
-  }else {
-    setActiveLine()
-  }
+const mouseLeaveHandle = () => {
+  setActiveLine()
 }
 
 watch(props, () => {
@@ -45,7 +40,7 @@ watch(props, () => {
   })
 })
 const setActiveLine = () => {
-  const activeElement = tabs.value?.querySelector(`[href="${fullPath}"]`) as HTMLElement
+  const activeElement = tabs.value?.querySelector(`[href="${router.currentRoute.value.fullPath}"]`) as HTMLElement
   setPosition(activeElement)
 }
 

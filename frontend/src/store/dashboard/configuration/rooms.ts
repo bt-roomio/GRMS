@@ -7,10 +7,10 @@ import {useI18n} from "vue-i18n";
 import {required} from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import {useConfirm} from "@store/dashboard/useConfirm.ts";
+import router from "@/router";
 
 export const useConfigurationRoomsStore = defineStore('configuration-rooms', () => {
     const confirmStore = useConfirm()
-
     const {t} = useI18n()
     const size = ref<number>(10)
     const room = ref<IConfigurationRoom>()
@@ -35,6 +35,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     })
 
     const rules = computed(() => ({
+        type: {required},
         room_number: {required},
         floor: {required},
         block: {required},
@@ -50,7 +51,8 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             const {data} = await useApiFetch<IServerResponse<IConfigurationRoomsData>>('/main/room/', {
                 method: 'GET',
                 params: {
-                    ...params, size: size.value
+                    ...params,
+                    size: size.value
                 },
                 transformResponse: [(data) => addFieldSelect(data)]
             })
@@ -71,16 +73,18 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         sortedData.value = output
         await getList(searchValue.value ? {
             ...output,
+            ...router.currentRoute.value.query,
             search_value: searchValue.value,
             search_field: searchType.value.key
-        } : {...output})
+        } : {...output, ...router.currentRoute.value.query})
     }
     const loadMore = async () => {
         size.value += 10
         await getList(searchValue.value ? {
+            ...router.currentRoute.value.query,
             search_value: searchValue.value,
             search_field: searchType.value.key
-        } : {})
+        } : {...router.currentRoute.value.query})
     }
     const getItem = async (id: string, isFilled: boolean) => {
         itemLoading.value = true
@@ -110,51 +114,63 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     const addItem = async (callback: () => void) => {
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
+        let obj = JSON.parse(JSON.stringify(state.value))
+        obj.devices = obj.devices.map((el: any) => el.id)
         try {
-            await useApiFetch<IConfigurationRoom>('/main/room/', {method: 'POST', data: state.value})
+            await useApiFetch<IConfigurationRoom>('/main/room/', {method: 'POST', data: obj})
             await getList(searchValue.value ? {
                 ...sortedData.value,
+                ...router.currentRoute.value.query,
                 search_value: searchValue.value,
                 search_field: searchType.value.key,
-            }: {...sortedData.value})
+            }: {...sortedData.value,...router.currentRoute.value.query})
             callback()
             await $reset()
             toast.success(t('toast.room_add_success') as string);
         }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string);
+            for (const eKey in e.response.data) {
+                toast.error(e.response.data[eKey] || t('toast.unknown_error') as string);
+            }
             throw e
         }
     }
     const editItem = async (callback: () => void) => {
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
+        let obj = JSON.parse(JSON.stringify(state.value))
+        obj.devices = obj.devices.map((el: any) => el.id)
         try {
-            await useApiFetch<IConfigurationRoom>('/main/room/' + state.value.id, {method: 'PUT', data: state.value})
+            await useApiFetch<IConfigurationRoom>('/main/room/' + obj.id, {method: 'PUT', data: obj})
             await getList(searchValue.value ? {
                 ...sortedData.value,
+                ...router.currentRoute.value.query,
                 search_value: searchValue.value,
                 search_field: searchType.value.key,
-            }: {...sortedData.value})
+            }: {...sortedData.value, ...router.currentRoute.value.query})
             callback()
             await $reset()
             toast.success(t('toast.room_edit_success') as string);
         }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string)
+            for (const eKey in e.response.data) {
+                toast.error(e.response.data[eKey] || t('toast.unknown_error') as string);
+            }
             throw e
         }
     }
     const deleteItem = async (id: string) => {
         await confirmStore.showConfirm({
-            subtitle: t('confirm.delete_item'),
+            title: t('dashboard.configuration.rooms.confirm.title'),
+            content: t('dashboard.configuration.rooms.confirm.subtitle'),
             callback: async (confirmed) => {
                 if (confirmed) {
                     try {
                         await useApiFetch<IConfigurationRoom>('/main/room/' + id, {method: 'DELETE'})
                         await getList(searchValue.value ? {
                             ...sortedData.value,
+                            ...router.currentRoute.value.query,
                             search_value: searchValue.value,
                             search_field: searchType.value.key,
-                        }: {...sortedData.value})
+                        }: {...sortedData.value, ...router.currentRoute.value.query})
                         toast.success(t('toast.room_delete_success') as string);
                     }catch (e: any) {
                         toast.error(e.response.data.detail || t('toast.unknown_error') as string);
@@ -173,7 +189,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             room_number: null,
             floor: "",
             block: "",
-            devices: "",
+            devices: [],
         }
         v$.value.$reset()
     }
@@ -181,6 +197,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         if (searchValue.value) {
             await getList({
                 ...sortedData.value,
+                ...router.currentRoute.value.query,
                 search_value: searchValue.value,
                 search_field: value,
             })
@@ -190,9 +207,10 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     watch(searchValue, async value => {
         await getList(searchValue.value ? {
             ...sortedData.value,
+            ...router.currentRoute.value.query,
             search_value: value,
             search_field: searchType.value.key,
-        }: {...sortedData.value})
+        }: {...sortedData.value, ...router.currentRoute.value.query})
     })
 
     return {

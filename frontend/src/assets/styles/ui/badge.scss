@@ -1,3 +1,15 @@
 .ui_badge{
   @apply flex justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2 bg-gray-200 text-gray-700 font-medium;
+  &.off{
+    @apply bg-error-50 text-error-500;
+    &:before{
+      @apply content-[''] w-1.5 h-1.5 bg-error-500 rounded-full;
+    }
+  }
+  &.on{
+    @apply bg-success-50 text-success-500;
+    &:before{
+      @apply content-[''] w-1.5 h-1.5 bg-success-500 rounded-full;
+    }
+  }
 }

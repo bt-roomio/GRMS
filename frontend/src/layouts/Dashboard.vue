@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard__layouts" :class="cookies.get('mode')">
+  <div class="dashboard__layouts">
     <Sidebar />
     <Header />
     <div class="dashboard__layouts-content">
@@ -10,6 +10,4 @@
 <script setup lang="ts">
 import Sidebar from "../components/partials/sidebar/Index.vue";
 import Header from "../components/partials/header/Index.vue";
-import {useCookies} from "@vueuse/integrations/useCookies";
-const cookies = useCookies(['mode'])
 </script>

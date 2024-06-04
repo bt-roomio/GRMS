@@ -17,33 +17,33 @@
     }
   }
   &__wrapper{
-    @apply bg-primary-600/40 absolute top-0 left-0 w-full h-full
+    @apply bg-[#6E7785]/40 absolute top-0 left-0 w-full h-full
   }
   &__scroller{
     @apply absolute top-0 left-0 w-full h-full overflow-auto flex justify-center p-6;
   }
   &__body{
-    @apply bg-white dark:bg-gray-700 dark:text-gray-100 w-[352px] h-max px-4 py-6 relative rounded-xl my-auto;
+    @apply bg-white dark:bg-gray-700 dark:text-gray-100 w-[400px] h-max px-4 py-6 relative rounded-xl my-auto;
   }
   &__head{
-    @apply border-b border-gray-200 dark:border-gray-500 pb-6 relative;
-    h2{
-      @apply text-lg font-semibold;
-    }
-    p{
-      @apply text-sm mt-1;
-    }
-    .ui-icon{
-      @apply w-5 h-5 absolute top-0 right-0 cursor-pointer;
+    @apply pb-5 relative;
+    .close.ui-icon{
+      @apply w-5 h-5 absolute top-0 right-0 cursor-pointer stroke-gray-500;
     }
   }
   &__content{
-    @apply py-6 border-b border-gray-200 dark:border-gray-500;
+    @apply pb-8 text-gray-600 dark:text-gray-300;
+    h2{
+      @apply font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100;
+    }
   }
   &__footer{
-    @apply flex gap-4 pt-6;
+    @apply flex gap-4;
     .ui-button{
-      @apply flex-shrink
+      @apply flex-shrink;
+      &.primary{
+        @apply bg-[#729198] border-[#729198] hover:bg-[#729198]/80
+      }
     }
   }
 }
