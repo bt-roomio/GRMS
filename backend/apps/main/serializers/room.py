@@ -1,4 +1,5 @@
 from core.utils.serializers import ValidatorSerializer
+from django.utils.translation import gettext_lazy as _
 from main.models import Device, Room, RoomType, Tenant
 from rest_framework import serializers
 
@@ -54,6 +55,11 @@ class RoomFilterParams(ValidatorSerializer):
 	page = serializers.IntegerField(default=1)
 	size = serializers.IntegerField(default=50)
 	state = serializers.ChoiceField(choices=Room.STATE, default=Room.Available)
+	status = serializers.ChoiceField(
+		choices=Room.STATUS,
+		required=False,
+		error_messages={"invalid_choice": _('"{input}" is not a valid choice. Choose next: ON or OFF')},
+	)
 	search_field = serializers.ChoiceField(choices=("room_number", "floor", "block"), required=False)
 	search_value = serializers.CharField(required=False)
 	sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
