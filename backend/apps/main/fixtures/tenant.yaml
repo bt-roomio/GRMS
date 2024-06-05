@@ -5,7 +5,6 @@
       region: "General"
       title: "Tenant"
 
-
 - model: "main.Tenant"
   pk: "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
   fields:

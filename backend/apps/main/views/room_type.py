@@ -43,4 +43,4 @@ class RoomTypeDetailView(APIView):
 	def delete(self, request, pk):
 		instance = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
 		instance.delete()
-		return Response({}, status=204)
+		return Response({}, 204)

@@ -1,12 +1,10 @@
 from core.utils.pagination import pagination
 from core.utils.permission import check_for_tenant
-from django.apps.registry import partial
-from django.utils.translation.trans_null import activate
 from drf_yasg.utils import swagger_auto_schema
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
 from main.swagger.room import RoomDetailSwagger, RoomSwagger
-from rest_framework.generics import Http404, get_object_or_404
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -57,6 +55,6 @@ class RoomDetailView(APIView):
 	@swagger_auto_schema(responses={})
 	@check_for_tenant
 	def delete(self, request, pk):
-		instance = get_object_or_404(Room, id=pk, active=True)
+		instance = get_object_or_404(Room, id=pk)
 		instance.delete()
 		return Response({}, 204)

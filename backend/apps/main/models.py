@@ -249,9 +249,9 @@ class WidgetType(BaseModel):
 	tenant = models.ForeignKey("main.Tenant", CASCADE)
 	deprecated = models.BooleanField(default=False)
 	fqn = models.CharField(max_length=512, blank=True, null=True)
-	descriptor = models.CharField(max_length=1000000, blank=True, null=True)
+	descriptor = models.JSONField(blank=True, null=True)
 	image = models.CharField(max_length=1000000, blank=True, null=True)
-	description = models.CharField(max_length=1024, blank=True, null=True)
+	description = models.TextField(blank=True, null=True)
 	tags = models.TextField(blank=True, null=True)
 	external_id = models.UUIDField(blank=True, null=True)
 
@@ -263,3 +263,4 @@ class WidgetType(BaseModel):
 	class Meta:
 		db_table = "main_widget_type"
 		ordering = ["created_at"]
+		unique_together = ("name", "tenant")

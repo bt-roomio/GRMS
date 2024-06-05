@@ -1,9 +1,8 @@
 from core.utils.serializers import ValidatorSerializer
 from django.utils.translation import gettext_lazy as _
 from main.models import Device, Room, RoomType, Tenant
+from main.serializers.device import SimpleDeviceSerializer
 from rest_framework import serializers
-
-from apps.main.serializers.device import SimpleDeviceSerializer
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -65,9 +64,9 @@ class RoomFilterParams(ValidatorSerializer):
 	sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 	def validate(self, attrs):
-		if not "search_field" in attrs and "search_value" in attrs:
+		if "search_field" not in attrs and "search_value" in attrs:
 			raise serializers.ValidationError({"search_field": "search_field is required!"})
 
-		if not "search_value" in attrs and "search_field" in attrs:
+		if "search_value" not in attrs and "search_field" in attrs:
 			raise serializers.ValidationError({"search_value": "search_value is required!"})
 		return attrs
