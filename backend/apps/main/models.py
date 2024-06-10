@@ -235,7 +235,7 @@ class Dashboard(BaseModel):
     assigned_customers = models.CharField(max_length=255, blank=True, null=True)
     mobile_hide = models.BooleanField(default=False)
     mobile_order = models.IntegerField(blank=True, null=True)
-    image = models.CharField(max_length=255, blank=True, null=True)
+    image = models.ImageField(upload_to="dashboard", null=True, blank=True)
     external_id = models.UUIDField(blank=True, null=True)
 
     objects = DashboardQuerySet.as_manager()

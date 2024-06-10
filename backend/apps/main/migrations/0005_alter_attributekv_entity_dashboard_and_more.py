@@ -9,83 +9,83 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-	dependencies = [
-		("main", "0004_customer_device_attributekv_deviceprofile_and_more"),
-	]
+    dependencies = [
+        ("main", "0004_customer_device_attributekv_deviceprofile_and_more"),
+    ]
 
-	operations = [
-		migrations.AlterField(
-			model_name="attributekv",
-			name="entity",
-			field=models.ForeignKey(
-				on_delete=django.db.models.deletion.CASCADE,
-				related_name="attribute_kvs",
-				to="main.device",
-			),
-		),
-		migrations.CreateModel(
-			name="Dashboard",
-			fields=[
-				(
-					"id",
-					models.UUIDField(
-						default=uuid.uuid4,
-						editable=False,
-						primary_key=True,
-						serialize=False,
-					),
-				),
-				(
-					"created_at",
-					core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
-				),
-				("title", models.CharField(max_length=255)),
-				("configuration", models.JSONField(blank=True, null=True)),
-				(
-					"assigned_customers",
-					models.CharField(blank=True, max_length=1000000, null=True),
-				),
-				("mobile_hide", models.BooleanField(blank=True, null=True)),
-				("mobile_order", models.IntegerField(blank=True, null=True)),
-				("image", models.CharField(blank=True, max_length=1000000, null=True)),
-				("external_id", models.UUIDField(blank=True, null=True)),
-				(
-					"tenant",
-					models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
-				),
-			],
-			options={
-				"db_table": "main_dashboard",
-			},
-		),
-		migrations.AddField(
-			model_name="roomtype",
-			name="dashboard",
-			field=models.ForeignKey(
-				blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="main.dashboard"
-			),
-		),
-		migrations.CreateModel(
-			name="WidgetType",
-			fields=[
-				(
-					"id",
-					models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
-				),
-				(
-					"created_at",
-					core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
-				),
-				("name", models.CharField(max_length=255)),
-				("deprecated", models.BooleanField(default=False)),
-				("fqn", models.CharField(blank=True, max_length=512, null=True)),
-				("descriptor", models.JSONField(blank=True, null=True)),
-				("image", models.CharField(blank=True, max_length=1000000, null=True)),
-				("description", models.TextField(blank=True, null=True)),
-				("tags", models.TextField(blank=True, null=True)),
-				("external_id", models.UUIDField(blank=True, null=True)),
-				("tenant", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant")),
-			],
-			options={"db_table": "main_widget_type", "unique_together": {("name", "tenant")}},
-		),
-	]
+    operations = [
+        migrations.AlterField(
+            model_name="attributekv",
+            name="entity",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="attribute_kvs",
+                to="main.device",
+            ),
+        ),
+        migrations.CreateModel(
+            name="Dashboard",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
+                ),
+                ("title", models.CharField(max_length=255)),
+                ("configuration", models.JSONField(blank=True, null=True)),
+                (
+                    "assigned_customers",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("mobile_hide", models.BooleanField(default=False)),
+                ("mobile_order", models.IntegerField(blank=True, null=True)),
+                ("image", models.ImageField(blank=True, null=True, upload_to="dashboard")),
+                ("external_id", models.UUIDField(blank=True, null=True)),
+                (
+                    "tenant",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant"),
+                ),
+            ],
+            options={
+                "db_table": "main_dashboard",
+            },
+        ),
+        migrations.AddField(
+            model_name="roomtype",
+            name="dashboard",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="main.dashboard"
+            ),
+        ),
+        migrations.CreateModel(
+            name="WidgetType",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
+                ),
+                (
+                    "created_at",
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("deprecated", models.BooleanField(default=False)),
+                ("fqn", models.CharField(blank=True, max_length=512, null=True)),
+                ("descriptor", models.JSONField(blank=True, null=True)),
+                ("image", models.CharField(blank=True, max_length=1000000, null=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("tags", models.TextField(blank=True, null=True)),
+                ("external_id", models.UUIDField(blank=True, null=True)),
+                ("tenant", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="main.tenant")),
+            ],
+            options={"db_table": "main_widget_type", "unique_together": {("name", "tenant")}},
+        ),
+    ]
