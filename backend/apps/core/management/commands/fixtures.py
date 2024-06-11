@@ -23,4 +23,7 @@ class Command(BaseCommand):
             "room_type",
             "widget_type",
             "dashboard",
+            "ts_dictionary",
+            "ts_kv",
+            "ts_kv_latest",
         )

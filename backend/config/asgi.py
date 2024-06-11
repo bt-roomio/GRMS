@@ -7,12 +7,12 @@ from channels.security.websocket import AllowedHostsOriginValidator
 from django.urls import path
 
 from apps.users.utils.jwt_auth import JWTAuthMiddlewareStack
-from apps.main.consumer_urls import main_consumer_urls
+from apps.shuttle.router import routes
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-BASE_URLS = URLRouter([path("api/v1/", URLRouter([path("main/", main_consumer_urls)]))])
+BASE_URLS = URLRouter([path("api/ws", routes)])
 
 application = ProtocolTypeRouter(
     {

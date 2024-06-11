@@ -1,0 +1,11 @@
+- model: "shuttle.TsKvDictionary"
+  pk: 1
+  fields:
+      key: "humidity"
+      key_id: 1
+
+- model: "shuttle.TsKvDictionary"
+  pk: 2
+  fields:
+      key: "temperature"
+      key_id: 2

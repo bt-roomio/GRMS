@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "core",
     "users",
     "main",
+    "shuttle",
 ]
 
 MIDDLEWARE = [

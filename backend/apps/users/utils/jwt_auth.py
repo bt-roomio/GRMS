@@ -19,11 +19,13 @@ class JWTAuthMiddleware:
     async def __call__(self, scope, receive, send):
         close_old_connections()
         try:
+            print(self, scope, receive)
             token = parse_qs(scope["query_string"].decode("utf8"))["token"][0]
             data = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
             scope["user"] = await self.get_user(data["user_id"])
         except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError):
-            scope["user"] = AnonymousUser()
+            await send({"type": "websocket.close"})
+            return
         return await self.app(scope, receive, send)
 
     @database_sync_to_async
