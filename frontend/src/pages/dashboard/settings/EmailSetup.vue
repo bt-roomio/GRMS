@@ -76,6 +76,15 @@
             />
           </div>
         </li>
+        <li class="card__list-item">
+          <div class="item-texts">
+            <p class="title">{{ $t('dashboard.settings.email_setup.smtp_ssl.title') }}</p>
+            <p class="description">{{ $t('dashboard.settings.email_setup.smtp_ssl.description') }}</p>
+          </div>
+          <div class="item-actions">
+            <Toggle v-model="state.use_tls"/>
+          </div>
+        </li>
       </ul>
       <div class="card__buttons inline-block mt-5">
         <UiButton class="primary" @click.prevent="emailSetupStore.submit">{{ $t('dashboard.settings.save') }}</UiButton>
@@ -89,6 +98,7 @@ import UiButton from "@components/ui/Button.vue";
 import {storeToRefs} from "pinia";
 import {useEmailSetupStore} from "@store/dashboard/settings/email-setup.ts";
 import {onMounted} from "vue";
+import Toggle from "@components/ui/Toggle.vue";
 
 const emailSetupStore = useEmailSetupStore()
 const {state, validation} = storeToRefs(emailSetupStore)

@@ -88,32 +88,36 @@
         }
       },
       "email_setup": {
-        "title": "Elektron pochta sozlamalari",
+        "title": "Email sozlamalari",
         "description": "Xona sozlamalarini boshqarishingiz mumkin",
         "smtp_server_address": {
           "title": "SMTP server manzili",
-          "description": "Tilingizni tanlang",
-          "placeholder": "SMTP server manzilini kiriting"
+          "description": "SMTP server manzilingizni kiriting",
+          "placeholder": "SMTP serverni kiriting"
         },
         "smtp_username": {
           "title": "SMTP foydalanuvchi nomi",
-          "description": "Tilingizni tanlang",
+          "description": "SMTP foydalanuvchi nomingizni kiriting",
           "placeholder": "SMTP foydalanuvchi nomini kiriting"
         },
         "smtp_password": {
-          "title": "SMTP paroli",
-          "description": "Tilingizni tanlang",
-          "placeholder": "SMTP parolini kiriting"
+          "title": "SMTP parol",
+          "description": "SMTP parolni kiriting",
+          "placeholder": "SMTP parolni kiriting"
         },
         "smtp_port": {
-          "title": "SMTP porti",
-          "description": "Tilingizni tanlang",
-          "placeholder": "SMTP portini kiriting"
+          "title": "SMTP port",
+          "description": "SMTP portni kiriting",
+          "placeholder": "SMTP portni kiriting"
         },
         "email_to": {
-          "title": "Elektron pochtaga",
-          "description": "Tilingizni tanlang",
-          "placeholder": "Elektron pochtangizni kiriting"
+          "title": "Email manzili",
+          "description": "Email manzilini kiriting",
+          "placeholder": "Email manzilini kiriting"
+        },
+        "smtp_ssl": {
+          "title": "SMTP SSL ishlatish",
+          "description": "SSL ishlatishni kiriting"
         }
       }
     },

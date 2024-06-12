@@ -1,0 +1,33 @@
+.rooms-card{
+  @apply border border-gray-200 rounded-xl p-3 flex flex-col gap-1;
+  &.warning{
+    @apply bg-warning-100 border-warning-200;
+    .rooms-card__number{
+      @apply bg-warning-200 text-warning-500;
+    }
+  }
+  &.error{
+    @apply bg-error-100 border-error-200;
+    .rooms-card__number{
+      @apply bg-error-200 text-error-500;
+    }
+  }
+  &__number{
+    @apply bg-gray-200 rounded-xl px-3 py-1 inline-flex gap-1.5 items-center text-success-500 w-max;
+    p{
+      @apply text-gray-700
+    }
+    &:before{
+      @apply content-[''] block w-1.5 h-1.5 bg-current rounded-full;
+    }
+  }
+  &__type{
+    @apply text-xs text-gray-900
+  }
+  &__degree{
+    @apply font-bold text-base
+  }
+  &__actions{
+    @apply flex gap-1 py-2;
+  }
+}

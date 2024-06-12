@@ -9,7 +9,8 @@
           :id="id"
           :class="[`${inputClass || ''} input`, {'ui-input__invalid': errors && errors.find(el => el.$property === name)}, iconPosition] "
           v-model="model"
-          v-bind="$attrs">
+          v-bind="$attrs"
+      >
       <UiIcon :class="iconPosition" v-if="icon && iconPosition === 'right'" :name="icon" filled/>
     </div>
     <span class="text-red-500" v-if="errors && errors.find(el => el.$property === name)">{{errors.find(el => el.$property === name)?.$message}}</span>
@@ -20,7 +21,6 @@
 import {defineComponent} from "vue";
 import {ErrorObject} from "@vuelidate/core";
 import UiIcon from "@components/ui/Icon.vue";
-
 const model = defineModel()
 defineProps<{
   id?: string,

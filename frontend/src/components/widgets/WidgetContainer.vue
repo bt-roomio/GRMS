@@ -1,17 +1,18 @@
 <template>
   <GridLayout
-      v-if="currentModal"
+      v-if="currentModel"
       :responsiv="true"
-      v-model:layout="currentModal"
+      v-model:layout="currentModel"
       :col-num="12"
-      :row-height="124"
+      :row-height="4"
       :is-draggable="isSettings"
       :is-resizable="isSettings"
       :vertical-compact="true"
       :margin="[16, 16]"
+      :passive="true"
   >
     <GridItem
-        v-for="item in currentModal"
+        v-for="item in currentModel"
         :key="item.i"
         :x="item.x"
         :y="item.y"
@@ -19,33 +20,28 @@
         :h="item.h"
         :i="item.i"
     >
-        <component :is="components[item.i as keyof typeof components] " :isSettings="isSettings" :configs="item.config || {}"/>
+        <WidgetItem :is-settings="isSettings" :item="item" @edit="item => storeMainWidget.editItem(item)"/>
     </GridItem>
   </GridLayout>
 </template>
 <script setup lang="ts">
-import { GridLayout, GridItem } from 'grid-layout-plus'
-import OccupancyRate from "@components/widgets/OccupancyRate.vue";
-import RoomAvailability from "@components/widgets/RoomAvailability.vue";
+import {GridLayout, GridItem, Layout} from 'grid-layout-plus'
 import {computed, onMounted, ref, watch} from "vue";
-import Percent from "@components/widgets/Percent.vue";
+import WidgetItem from "@components/widgets/WidgetItem.vue";
+import {useMainWidgetSetting} from "@store/dashboard/widget/main-widget.ts";
 const props = defineProps<{ isSettings: boolean }>()
 const config = defineModel<IModelObj[] | null>('config')
 const layout = defineModel<IModelObj[] | null>('layout')
-const currentModal = ref<IModelObj[] | null>(null)
+const currentModel = ref<Layout | null>(null)
 const isConfigs = computed(() => props.isSettings)
-const components = {
-  OccupancyRate,
-  RoomAvailability,
-  Percent
-};
+const storeMainWidget = useMainWidgetSetting()
 
 onMounted(() => {
-  currentModal.value = layout.value as IModelObj[]
+  currentModel.value = layout.value as Layout
 })
 watch(isConfigs, value => {
-  currentModal.value = value ? config.value as IModelObj[] : layout.value as IModelObj[]
+  currentModel.value = value ? config.value as Layout : layout.value as Layout
 })
 
-interface IModelObj { i: keyof typeof components | string, x: number, y:number, w: number, h:number, minH?: number, minW?: number, config?: {[key: string]: unknown}}
+interface IModelObj { [key: string]: any }
 </script>

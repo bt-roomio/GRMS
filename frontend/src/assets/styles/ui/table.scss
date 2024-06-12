@@ -41,7 +41,7 @@
   &__search{
     @apply pb-6 flex gap-6;
     .ui-input{
-      @apply w-4/5;
+      @apply w-full;
     }
     .ui-select{
       @apply w-1/5;

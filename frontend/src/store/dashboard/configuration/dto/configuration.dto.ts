@@ -8,6 +8,7 @@ type IConfigurationRoom = {
 }
 interface IConfigurationRoomTypes {
     id?: string
+    type?: string | null
     title: string
     check_in_out_address?: string | null
     check_in_value?: string | null

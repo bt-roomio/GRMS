@@ -30,6 +30,7 @@ import {
 } from 'echarts/components';
 import VChart, { THEME_KEY } from 'vue-echarts';
 import {provide, computed} from 'vue';
+
 import {useCookies} from "@vueuse/integrations/useCookies";
 import {storeToRefs} from "pinia";
 import {useAvailabilityWidget} from "@store/dashboard/widget/configs/availability.ts";
@@ -113,9 +114,6 @@ const option = computed(() => ({
       color: '#CDCDCD',
       itemStyle: {
         borderRadius: [12, 12, 0, 0]
-      },
-      lineStyle: {
-        width: 1000
       }
     }
   ]

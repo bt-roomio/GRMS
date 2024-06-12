@@ -92,28 +92,32 @@
         "description": "You can manage room settings",
         "smtp_server_address": {
           "title": "SMTP Server Address",
-          "description": "Select your language",
+          "description": "Enter your SMTP Server Address",
           "placeholder": "Enter SMTP Server"
         },
         "smtp_username": {
           "title": "SMTP Username",
-          "description": "Select your language",
+          "description": "Enter your SMTP Username",
           "placeholder": "Enter SMTP Username"
         },
         "smtp_password": {
           "title": "SMTP Password",
-          "description": "Select your language",
+          "description": "Enter SMTP password",
           "placeholder": "Enter SMTP Password"
         },
         "smtp_port": {
           "title": "SMTP Port",
-          "description": "Select your language",
+          "description": "Enter SMTP Port",
           "placeholder": "Enter SMTP Port"
         },
         "email_to": {
           "title": "Email To",
-          "description": "Select your language",
+          "description": "Enter Email",
           "placeholder": "Enter email address"
+        },
+        "smtp_ssl": {
+          "title": "SMTP Use SSL",
+          "description": "Enter Use SSL"
         }
       }
     },
@@ -210,7 +214,18 @@
     },
     "search": "Search",
     "search_from_the_list": "Select from the list",
-    "select_empty": "Select from the list"
+    "select_empty": "Select from the list",
+    "rooms": {
+      "tabs": {
+        "all": "All rooms",
+        "checked_in": "Checked-In",
+        "occupied": "Occupied",
+        "do_not_disturb": "Do not disturb",
+        "available": "Available"
+      },
+      "change_list": "Change to a list",
+      "more_btn": "More rooms"
+    }
   },
   "confirm": {
     "title": "Confirm your action",

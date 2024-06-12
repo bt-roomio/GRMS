@@ -89,31 +89,35 @@
       },
       "email_setup": {
         "title": "Настройка электронной почты",
-        "description": "Вы можете управлять настройками номера",
+        "description": "Вы можете управлять настройками комнат",
         "smtp_server_address": {
-          "title": "Адрес SMTP-сервера",
-          "description": "Выберите ваш язык",
-          "placeholder": "Введите адрес SMTP-сервера"
+          "title": "Адрес SMTP сервера",
+          "description": "Введите адрес вашего SMTP сервера",
+          "placeholder": "Введите SMTP сервер"
         },
         "smtp_username": {
           "title": "Имя пользователя SMTP",
-          "description": "Выберите ваш язык",
+          "description": "Введите имя пользователя SMTP",
           "placeholder": "Введите имя пользователя SMTP"
         },
         "smtp_password": {
           "title": "Пароль SMTP",
-          "description": "Выберите ваш язык",
+          "description": "Введите пароль SMTP",
           "placeholder": "Введите пароль SMTP"
         },
         "smtp_port": {
           "title": "Порт SMTP",
-          "description": "Выберите ваш язык",
+          "description": "Введите порт SMTP",
           "placeholder": "Введите порт SMTP"
         },
         "email_to": {
-          "title": "Адрес электронной почты для отправки",
-          "description": "Выберите ваш язык",
-          "placeholder": "Введите адрес электронной почты"
+          "title": "Email получателя",
+          "description": "Введите email адрес",
+          "placeholder": "Введите email адрес"
+        },
+        "smtp_ssl": {
+          "title": "Использовать SSL для SMTP",
+          "description": "Введите использование SSL"
         }
       }
     },

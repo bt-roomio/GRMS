@@ -21,6 +21,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
         id: "",
         title: "",
         dashboards: null,
+        type: null,
     })
 
     const rules = computed(() => ({

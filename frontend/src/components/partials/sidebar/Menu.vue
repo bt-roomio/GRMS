@@ -44,6 +44,11 @@ const menu = computed<Item[]>(() => [
     children: [
       {
         icon: 'code-browser',
+        to: 'configuration-dashboard',
+        name: t('dashboard.menu.dashboard')
+      },
+      {
+        icon: 'code-browser',
         to: 'configuration-users',
         name: t('dashboard.menu.users')
       },

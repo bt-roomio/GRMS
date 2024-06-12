@@ -7,6 +7,11 @@ interface IEmailSetup {
     port: string,
     use_tls: boolean
 }
+
+interface IAlarm {
+    bathroom_enable: boolean
+    humidity_enable: boolean
+}
 interface IGeneralSetting {
     lang: string,
     timezone: number,

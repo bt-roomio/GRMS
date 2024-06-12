@@ -3,7 +3,7 @@ import {createRouter, createWebHistory} from 'vue-router'
 import Authorization from "../layouts/Authorization.vue";
 import Login from "../pages/authorization/Login.vue";
 
-import Dashboard from "../layouts/Dashboard.vue";
+import LayoutsDashboard from "../layouts/Dashboard.vue";
 import Main from "../pages/dashboard/Main.vue";
 import ForgotPassword from "../pages/authorization/ForgotPassword.vue";
 import ResetPassword from "../pages/authorization/ResetPassword.vue";
@@ -20,6 +20,7 @@ import General from "../pages/dashboard/settings/General.vue";
 import Alarms from "../pages/dashboard/settings/Alarms.vue";
 import EmailSetup from "../pages/dashboard/settings/EmailSetup.vue";
 import auth from "@router/middleware/auth.ts";
+import Dashboard from "@/pages/dashboard/configuration/Dashboard.vue";
 
 
 const router = createRouter({
@@ -27,7 +28,7 @@ const router = createRouter({
     routes: [
         {
             path: '/',
-            component: Dashboard,
+            component: LayoutsDashboard,
             children: [
                 {
                     path: '',
@@ -49,6 +50,11 @@ const router = createRouter({
                     name: 'configuration',
                     redirect: '/configuration/users',
                     children: [
+                        {
+                            path: 'dashboard',
+                            name: 'configuration-dashboard',
+                            component: Dashboard
+                        },
                         {
                             path: 'users',
                             name: 'configuration-users',

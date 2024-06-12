@@ -1,0 +1,292 @@
+{
+  "dashboard": {
+    "widgets": [
+      {
+        "i": "5a07bd0r",
+        "type": "chart",
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 22,
+        "config": {
+          "title": "Occupancy rate",
+          "description": "Track how your rating compares to your industry average.",
+          "setting": {
+            "backgroundColor": "rgba(255,255,255,0)",
+            "legend": {
+              "left": "right",
+              "data": [
+                "Occupancy", "Occupancy last year"
+              ],
+              "icon": "circle",
+              "top": 0,
+              "textStyle": {
+                "fontFamily": "Inter",
+                "fontSize": 14,
+                "fontWeight": 400
+              }
+            },
+            "tooltip": {
+              "trigger": "axis"
+            },
+            "xAxis": {
+              "type": "time",
+              "axisLine": {
+                "show": false
+              },
+              "axisTick": {
+                "show": false
+              },
+              "axisLabel": {
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "fontWeight": 400
+              }
+            },
+            "yAxis": {
+              "name": "Rooms",
+              "type": "value",
+              "nameLocation" : "middle",
+              "nameGap" : 53,
+              "nameTextStyle": {
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "fontWeight": 500
+              },
+              "axisLabel": {
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "fontWeight": 400
+              }
+            },
+            "grid": {
+              "left": "8%",
+              "right": "0%",
+              "top": "12%",
+              "bottom": "3%",
+              "containLabel": true
+            },
+            "series": [
+              {
+                "name": "Occupancy",
+                "type": "line",
+                "showSymbol": false,
+                "data": [
+                  {"name": "Thu Jun 13 2024 09:15:12 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/6/13", 25]},
+                  {"name": "Mon Jul 01 2024 18:32:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/7/1", 28]},
+                  {"name": "Fri Aug 09 2024 21:07:58 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/8/9", 30]},
+                  {"name": "Sat Sep 14 2024 11:20:03 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/9/14", 20]},
+                  {"name": "Tue Oct 22 2024 14:55:40 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/10/22", 24]},
+                  {"name": "Sun Nov 17 2024 19:10:22 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/11/17", 18]},
+                  {"name": "Wed Dec 25 2024 08:44:31 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/12/25", 15]},
+                  {"name": "Fri Jan 10 2025 22:30:47 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/1/10", 12]},
+                  {"name": "Mon Feb 24 2025 13:55:15 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/2/24", 16]},
+                  {"name": "Thu Mar 13 2025 07:45:23 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/3/13", 19]},
+                  {"name": "Sat Apr 26 2025 16:18:57 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/4/26", 21]},
+                  {"name": "Tue May 06 2025 12:33:10 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/5/6", 23]},
+                  {"name": "Fri Jun 13 2025 11:01:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/6/13", 26]},
+                  {"name": "Sun Jul 20 2025 14:44:02 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/7/20", 27]},
+                  {"name": "Wed Aug 27 2025 19:15:53 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/8/27", 29]}
+                ],
+                "color": "#292930"
+              },
+              {
+                "name": "Occupancy last year",
+                "type": "line",
+                "showSymbol": false,
+                "data": [
+                  {"name": "Thu Jun 13 2024 09:15:12 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/6/13", 47]},
+                  {"name": "Mon Jul 01 2024 18:32:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/7/1", 43]},
+                  {"name": "Fri Aug 09 2024 21:07:58 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/8/9", 40]},
+                  {"name": "Sat Sep 14 2024 11:20:03 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/9/14", 46]},
+                  {"name": "Tue Oct 22 2024 14:55:40 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/10/22", 40]},
+                  {"name": "Sun Nov 17 2024 19:10:22 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/11/17", 49]},
+                  {"name": "Wed Dec 25 2024 08:44:31 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/12/25", 44]},
+                  {"name": "Fri Jan 10 2025 22:30:47 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/1/10", 58]},
+                  {"name": "Mon Feb 24 2025 13:55:15 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/2/24", 56]},
+                  {"name": "Thu Mar 13 2025 07:45:23 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/3/13", 59]},
+                  {"name": "Sat Apr 26 2025 16:18:57 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/4/26", 51]},
+                  {"name": "Tue May 06 2025 12:33:10 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/5/6", 57]},
+                  {"name": "Fri Jun 13 2025 11:01:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/6/13", 58]},
+                  {"name": "Sun Jul 20 2025 14:44:02 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/7/20", 52]},
+                  {"name": "Wed Aug 27 2025 19:15:53 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/8/27", 74]}
+                ],
+                "color": "#8A7D76"
+              }
+            ]
+          }
+        },
+        "device": {}
+      },
+      {
+        "i": "8d807bd33",
+        "type": "chart",
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 22,
+        "config": {
+          "title": "Room availability",
+          "description": "Manage your team members and their account permissions here.",
+          "setting": {
+            "backgroundColor": "rgba(255,255,255,0)",
+            "legend": {
+              "show": false
+            },
+            "tooltip": {
+              "trigger": "axis"
+            },
+            "xAxis": {
+              "type": "time",
+              "axisLine": {
+                "show": false
+              },
+              "axisTick": {
+                "show": false
+              },
+              "axisLabel": {
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "fontWeight": 400
+              }
+            },
+            "yAxis": {
+              "name": "Rooms",
+              "type": "value",
+              "nameLocation": "middle",
+              "nameGap": 53,
+              "nameTextStyle": {
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "fontWeight": 500
+              },
+              "axisLabel": {
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "fontWeight": 400
+              }
+            },
+            "grid": {
+              "left": "8%",
+              "right": "0%",
+              "top": "12%",
+              "bottom": "3%",
+              "containLabel": true
+            },
+            "series": [
+              {
+                "name": "Availability",
+                "type": "bar",
+                "stack": "a",
+                "data": [
+                  {"name": "Thu Jun 13 2024 09:15:12 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/6/13", 25]},
+                  {"name": "Mon Jul 01 2024 18:32:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/7/1", 28]},
+                  {"name": "Fri Aug 09 2024 21:07:58 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/8/9", 30]},
+                  {"name": "Sat Sep 14 2024 11:20:03 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/9/14", 20]},
+                  {"name": "Tue Oct 22 2024 14:55:40 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/10/22", 24]},
+                  {"name": "Sun Nov 17 2024 19:10:22 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/11/17", 18]},
+                  {"name": "Wed Dec 25 2024 08:44:31 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/12/25", 15]},
+                  {"name": "Fri Jan 10 2025 22:30:47 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/1/10", 12]},
+                  {"name": "Mon Feb 24 2025 13:55:15 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/2/24", 16]},
+                  {"name": "Thu Mar 13 2025 07:45:23 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/3/13", 19]},
+                  {"name": "Sat Apr 26 2025 16:18:57 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/4/26", 21]},
+                  {"name": "Tue May 06 2025 12:33:10 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/5/6", 23]},
+                  {"name": "Fri Jun 13 2025 11:01:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/6/13", 26]},
+                  {"name": "Sun Jul 20 2025 14:44:02 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/7/20", 27]},
+                  {"name": "Wed Aug 27 2025 19:15:53 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/8/27", 29]}
+                ],
+                "color": "#606271"
+              },
+              {
+                "name": "Availability last year",
+                "type": "bar",
+                "stack": "a",
+                "data": [
+                  {"name": "Thu Jun 13 2024 09:15:12 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/6/13", 47]},
+                  {"name": "Mon Jul 01 2024 18:32:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/7/1", 43]},
+                  {"name": "Fri Aug 09 2024 21:07:58 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/8/9", 40]},
+                  {"name": "Sat Sep 14 2024 11:20:03 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/9/14", 46]},
+                  {"name": "Tue Oct 22 2024 14:55:40 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/10/22", 40]},
+                  {"name": "Sun Nov 17 2024 19:10:22 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/11/17", 49]},
+                  {"name": "Wed Dec 25 2024 08:44:31 GMT+0500 (Узбекистан, стандартное время)", "value": ["2024/12/25", 44]},
+                  {"name": "Fri Jan 10 2025 22:30:47 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/1/10", 58]},
+                  {"name": "Mon Feb 24 2025 13:55:15 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/2/24", 56]},
+                  {"name": "Thu Mar 13 2025 07:45:23 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/3/13", 59]},
+                  {"name": "Sat Apr 26 2025 16:18:57 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/4/26", 51]},
+                  {"name": "Tue May 06 2025 12:33:10 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/5/6", 57]},
+                  {"name": "Fri Jun 13 2025 11:01:45 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/6/13", 58]},
+                  {"name": "Sun Jul 20 2025 14:44:02 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/7/20", 52]},
+                  {"name": "Wed Aug 27 2025 19:15:53 GMT+0500 (Узбекистан, стандартное время)", "value": ["2025/8/27", 74]}
+                ],
+                "color": "#CDCDCD",
+                "itemStyle": {
+                  "borderRadius": [12,12,0,0]
+                }
+              }
+            ]
+          }
+        },
+        "device": {}
+      },
+      {
+        "i": "c50879f1",
+        "type": "progress-bar",
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 7,
+        "config": {
+          "title": "CPU Usage",
+          "color": "#027A48",
+          "setting": {
+            "value": "30"
+          }
+        },
+        "device_data_key": "value",
+        "device": {
+          "id": "1",
+          "name": "CPU",
+          "created_at": "2024-06-06T11:05:07.291Z",
+          "active": false,
+          "type": "default",
+          "attributes": [],
+          "telemetry": [
+            {
+              "value": "30",
+              "active": false
+            }
+          ]
+        }
+      },
+      {
+        "i": "2d07b30f",
+        "type": "progress-bar",
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 7,
+        "config": {
+          "title": "Ram Usage",
+          "color": "#B42318",
+          "setting": {
+            "value": "80"
+          }
+        },
+        "device_data_key": "value",
+        "device": {
+          "id": "2",
+          "name": "Ram",
+          "created_at": "2024-06-06T11:05:07.291Z",
+          "active": false,
+          "type": "default",
+          "attributes": [],
+          "telemetry": [
+            {
+              "value": "80"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -5,7 +5,6 @@ import router from "@/router";
 import qs from 'qs'
 import {toast} from "vue3-toastify";
 const cookies = useCookies(['access_token', 'refresh_token'])
-
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
     metadata?: {
         startTime: Date;
@@ -31,7 +30,6 @@ useApiFetch.interceptors.request.use((config: CustomAxiosRequestConfig) => {
             config.metadata.toast = toast.loading('Request is taking longer than usual') as string;
         }
     }, 2000);
-
     return config
 })
 useApiFetch.interceptors.response.use(
@@ -65,6 +63,10 @@ useApiFetch.interceptors.response.use(
         if (["ERR_NETWORK", "ECONNABORTED"].includes(error.code)){
             toast.remove(config.metadata?.toast as string)
             toast.error(error.message)
+        }
+
+        for (const eKey in error.response.data) {
+            toast.error(error.response.data[eKey]);
         }
         throw error;
     }

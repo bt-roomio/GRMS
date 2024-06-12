@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1",
+    "name": "CPU",
+    "created_at": "2024-06-06T11:05:07.291Z",
+    "active": false,
+    "type": "default",
+    "attributes": [],
+    "telemetry": [
+      {
+        "value": "30",
+        "active": false
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "name": "Ram",
+    "created_at": "2024-06-06T11:05:07.291Z",
+    "active": false,
+    "type": "default",
+    "attributes": [],
+    "telemetry": [
+      {
+        "value": "80"
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "name": "Memory",
+    "created_at": "2024-06-06T11:05:07.291Z",
+    "active": false,
+    "type": "default",
+    "attributes": [],
+    "telemetry": [
+      {
+        "value": "35"
+      }
+    ]
+  },
+  {
+    "id": "4",
+    "name": "Room",
+    "created_at": "2024-06-06T11:05:07.291Z",
+    "active": false,
+    "type": "default",
+    "attributes": [
+      {
+        "availability": "30",
+        "occupancy": "33",
+        "value": "35",
+        "date": "2024-06-06T11:05:07.291Z"
+      }
+    ]
+  }
+]

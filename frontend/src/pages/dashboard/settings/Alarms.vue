@@ -12,7 +12,7 @@
             <p class="description">{{ $t('dashboard.settings.alarms.bathroom.description') }}</p>
           </div>
           <div class="item-actions">
-            <UiToggle />
+            <UiToggle v-model="state.bathroom_enable"/>
           </div>
         </li>
         <li class="card__list-item">
@@ -21,17 +21,26 @@
             <p class="description">{{ $t('dashboard.settings.alarms.humidity.description') }}</p>
           </div>
           <div class="item-actions">
-            <UiToggle />
+            <UiToggle v-model="state.humidity_enable"/>
           </div>
         </li>
       </ul>
       <div class="card__buttons inline-block mt-5">
-        <UiButton class="primary">{{ $t('dashboard.settings.save') }}</UiButton>
+        <UiButton class="primary" @click.prevent="storeAlarm.submit()">{{ $t('dashboard.settings.save') }}</UiButton>
       </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import UiButton from "../../../components/ui/Button.vue";
-import UiToggle from "../../../components/ui/Toggle.vue";
+import UiButton from "@components/ui/Button.vue";
+import UiToggle from "@components/ui/Toggle.vue";
+import {useAlarmStore} from "@store/dashboard/settings/alarm.ts";
+import {storeToRefs} from "pinia";
+import {onMounted} from "vue";
+const storeAlarm = useAlarmStore()
+const {state} = storeToRefs(storeAlarm)
+
+onMounted(async () => {
+  await storeAlarm.getAlarm()
+})
 </script>

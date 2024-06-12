@@ -1,5 +1,5 @@
 <template>
-  <div class="occupancy-rate widget-card pl">
+  <div class="widget-card">
     <div class="widget-card__head">
       <div class="widget-card__title">Occupancy rate</div>
       <div class="widget-card__description mb-6">Track how your rating compares to your industry average.</div>

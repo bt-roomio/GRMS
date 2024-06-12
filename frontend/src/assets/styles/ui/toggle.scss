@@ -26,4 +26,11 @@
     dark:border-gray-600
     peer-checked:bg-success-500;
  }
+  &__label{
+    @apply text-sm font-medium ml-3;
+
+    &.active{
+      @apply text-success-700
+    }
+  }
 }

@@ -21,12 +21,12 @@ const tabList = computed(() => [
     to: {name: 'settings-general'}
   },
   {
-    name: t('dashboard.settings.alarms.title'),
-    to: {name: 'settings-alarms'}
-  },
-  {
     name: t('dashboard.settings.email_setup.title'),
     to: {name: 'settings-email-setup'}
+  },
+  {
+    name: t('dashboard.settings.alarms.title'),
+    to: {name: 'settings-alarms'}
   }
 ])
 </script>

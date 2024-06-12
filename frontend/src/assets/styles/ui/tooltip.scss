@@ -1,10 +1,10 @@
 .tooltip {
-  @apply filter drop-shadow-xl py-2 px-3 rounded-lg;
+  @apply filter drop-shadow-xl py-2 px-3 rounded-lg w-max absolute;
   &__box{
     @apply relative z-20 text-gray-700 dark:text-white whitespace-nowrap;
   }
-  &::before{
-    @apply content-[''] absolute top-full w-3 h-3 bg-white dark:bg-gray-600 rotate-45 -translate-x-1/2 -translate-y-1/2 left-1/2;
+  &__arrow{
+    @apply w-3 h-3 bg-white absolute;
   }
   &::after{
     @apply content-[''] absolute w-full h-full bg-white dark:bg-gray-600 top-0 left-0 rounded-lg;

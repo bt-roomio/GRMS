@@ -6,7 +6,7 @@
   &__group{
     @apply relative w-full;
     .ui-icon{
-      @apply absolute stroke-gray-500 top-1/2 -translate-y-1/2 z-10;
+      @apply absolute stroke-gray-500 top-1/2 -translate-y-1/2 z-10 w-5 h-5;
 
       &.left{
         @apply left-[14px]

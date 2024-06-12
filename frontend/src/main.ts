@@ -8,7 +8,6 @@ import Vue3Toasity, { type ToastContainerOptions } from 'vue3-toastify';
 import i18n from "./i18n";
 import router from "./router";
 import {Tooltip} from "@/directives/tooltip.ts";
-
 const app = createApp(App)
 
 const pinia = createPinia()

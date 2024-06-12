@@ -1,19 +1,19 @@
 <template>
-  <div class="page">
-    <div class="page__content">
-      <Weather/>
-      <Tabs :list="tabList"/>
-      <StatisticsCardList />
-      <PageHead title="Your overall stats" />
-      <StatsHead />
-      <WidgetContainer
-          v-if="dashboardSettings"
-          :isSettings="isDashboardSettings"
-          v-model:config="dashboardSettingsConfig"
-          v-model:layout="dashboardSettings"
-      />
+    <div class="page">
+      <div class="page__content">
+        <Weather/>
+        <Tabs :list="tabList"/>
+        <StatisticsCardList />
+        <PageHead title="Your overall stats" />
+        <StatsHead />
+        <WidgetContainer
+            v-if="dashboardSettings"
+            :isSettings="isDashboardSettings"
+            v-model:config="dashboardSettingsConfig"
+            v-model:layout="dashboardSettings"
+        />
+      </div>
     </div>
-  </div>
 </template>
 <script setup lang="ts">
 import Weather from "@components/widgets/Weather.vue";
@@ -41,8 +41,12 @@ const tabList = computed(() => [
     to: {name: 'main', query: { tab: 'energy' }},
   }
 ])
+
 onMounted(async () => {
-  await storeUser.getUser()
-  await storeMainWidgetSetting.getMainDashboardSettings()
+  await Promise.all([
+    storeUser.getUser(),
+    storeMainWidgetSetting.getMainDashboardSettings()
+  ])
+
 })
 </script>

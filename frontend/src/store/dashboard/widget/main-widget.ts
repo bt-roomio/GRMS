@@ -1,6 +1,6 @@
 import {defineStore} from "pinia";
 import {ref} from "vue";
-
+import data from "@/components/widgets/data/dashboard.json"
 
 
 export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
@@ -8,17 +8,16 @@ export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
     const isDashboardSettings = ref(false)
     const dashboardSettingsCallback = ref<(confirm: boolean) => void | Promise<void> | null>((confirm) => {console.log(confirm)})
     const dashboardSettingsConfig = ref<IWidgetSettingValue[] | null>(null)
-    const sortWidgets = ref(365)
+    const sortWidgets = ref(4)
     const state = ref<IWidgetSettingState>({
-        widget_name: 'OccupancyRate',
-        configs: null,
+        device: "",
+        device_data_key: "",
+        type: "",
+        config: {}
     })
     const getMainDashboardSettings = async () => {
         if (!dashboardSettings.value){
-            dashboardSettings.value = [
-                { i: 'OccupancyRate', x: 0, y: 0, w: 6, h: 4 },
-                { i: 'RoomAvailability', x: 6, y: 0, w: 6, h: 4 },
-            ]
+            dashboardSettings.value = data.dashboard.widgets
         }
     }
     const setMainDashboardSettings = async () => {
@@ -39,39 +38,43 @@ export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
         dashboardSettingsCallback.value(false);
     };
 
-    const addItem = async (callback: () => void) => {
-        const stepX = 6;
-        const stepY = 4;
-        const config = {
-            x: (((dashboardSettingsConfig.value?.length || 0) + 1) % 3) * stepX,
-            y: Math.floor(((dashboardSettingsConfig.value?.length || 0) + 1) / 3) * stepY,
-            w: 6,
-            h: 4,
-        }
-        dashboardSettingsConfig.value?.push({ i: state.value.widget_name, ...config, config: state.value?.configs || {} })
+    const addItem = async (state: any, callback: () => void) => {
+        console.log()
+        dashboardSettingsConfig.value?.push(
+            {
+                i: JSON.stringify(new Date().getMilliseconds()),
+                ...state.type.descriptor.config,
+                type: state.type.descriptor.type,
+                config: state.config,
+                device: state.device,
+                device_data_key: state.device_data_key
+            }
+        )
+        await $reset()
         callback()
     }
 
-    const getWidget = () => {
+    const getWidgetList = () => {
         return [
-            {name: 'OccupancyRate'},
-            {name: 'RoomAvailability'},
             {
-                name: 'Percent',
-                configs: {
-                    title: 'Percent',
-                    value: '20'
-                }
-            }
+                name: "Progress Bar",
+                type: 'progress-bar'
+            },
         ]
     }
 
-    const editItem = async () => {
-
+    const editItem = async (value:any) => {
+        state.value.device = value.device
+        state.value.type = value.type
+        state.value.config = value.config
     }
 
     const $reset = async () => {
-        state.value.widget_name = 'OccupancyRate'
+        state.value = {
+            device: "",
+            type: "",
+            config: {}
+        }
     }
     return {
         dashboardSettings,
@@ -84,7 +87,7 @@ export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
         setMainDashboardSettings,
         addItem,
         editItem,
-        getWidget,
+        getWidgetList,
         $reset,
         state,
         sortWidgets
