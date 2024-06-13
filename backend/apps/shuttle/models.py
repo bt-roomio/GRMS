@@ -1,6 +1,7 @@
 from django.db import models
 
 from core.models import BaseModel
+from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
 from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
 
@@ -24,6 +25,8 @@ class TsKv(BaseModel):
 class TsKvDictionary(models.Model):
     key = models.CharField(max_length=255)
     key_id = models.AutoField(unique=True, primary_key=True)
+
+    objects = TsKvDictionaryQuerySet.as_manager()
 
     class Meta:
         db_table = "shuttle_ts_kv_dictionary"
