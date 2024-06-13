@@ -19,6 +19,18 @@
       <template v-if="item.type === 'progress-bar'">
         <UiProgress :color="item.config.color" :value="item.device.telemetry.at(0)[item.device_data_key] as string"/>
       </template>
+      <template v-if="item.type === 'fan-speed'">
+        <FanSpeed :value="item"/>
+      </template>
+      <template v-if="item.type === 'mode'">
+        <Mode :value="item"/>
+      </template>
+      <template v-if="item.type === 'sensor'">
+        <Sensor :value="item"/>
+      </template>
+      <template v-if="item.type === 'slider'">
+        <Slider :value="item"/>
+      </template>
     </div>
   </div>
 </template>
@@ -39,6 +51,10 @@ import {
 } from 'echarts/components';
 import VChart, { THEME_KEY } from 'vue-echarts';
 import {provide, computed, ref, onMounted, nextTick} from 'vue';
+import FanSpeed from "@components/widgets/FanSpeed.vue";
+import Mode from "@components/widgets/Mode.vue";
+import Sensor from "@components/widgets/Sensor.vue";
+import Slider from "@components/widgets/Slider.vue";
 const cookies = useCookies(['mode'])
 const option = computed(() => props.item.config.setting)
 const wAndH = ref({

@@ -1,0 +1,33 @@
+.fan-speed{
+  @apply flex flex-col gap-6;
+  &__tablet{
+    @apply flex items-center gap-8 justify-center;
+  }
+  &__control{
+    @apply stroke-gray-800 dark:stroke-gray-300 cursor-pointer select-none;
+    &.disabled {
+      @apply stroke-gray-400 dark:stroke-gray-500 pointer-events-none;
+    }
+  }
+  &__dashboard{
+    @apply relative;
+  }
+  &__buttons{
+    @apply flex flex-col gap-6;
+    .ui-button.secondary{
+      @apply bg-[#CDCDCD] dark:bg-gray-400
+    }
+  }
+  &__toggles{
+    @apply w-full;
+    .ui-toggle__custom{
+      @apply bg-error-500 dark:bg-error-500;
+    }
+    ul{
+      @apply flex flex-col gap-6 w-full;
+      li{
+        @apply flex justify-between items-center w-full px-4 py-3 bg-gray-25 rounded-xl dark:bg-gray-500;
+      }
+    }
+  }
+}

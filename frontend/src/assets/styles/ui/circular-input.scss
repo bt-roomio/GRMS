@@ -1,0 +1,40 @@
+.ui-circular-input{
+  .label{
+    @apply text-gray-600 dark:text-gray-300 text-xs font-medium;
+  }
+  .rs-tooltip.rs-hover, .rs-tooltip-text.rs-edit:hover{
+    @apply border-none outline-0 text-gray-600 dark:text-gray-300 #{!important};
+  }
+  .rs-tooltip-text{
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 38px;
+    user-select: none;
+  }
+  .rs-input{
+    @apply text-gray-600 dark:text-gray-300 #{!important};
+  }
+  .rs-tooltip{
+    @apply text-gray-600 dark:text-gray-300 #{!important};
+  }
+  .rs-path  {
+    stroke: #606271 !important;
+  }
+  .rs-handle  {
+    background-color: #FFFFFF !important;
+    border: 1.5px solid #344054 !important;
+    transition: 0.3s all;
+    box-shadow: none;
+    &:active,
+    &:hover{
+      transform: scale(1.2);
+    }
+  }
+  .rs-range  {
+    stroke: #CDCDCD !important;
+    stroke-width: 5px !important;
+  }
+  .rs-border  {
+    border: 8px solid #382d5f !important;
+  }
+}

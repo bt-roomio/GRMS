@@ -1,5 +1,5 @@
 <template>
-  <div class="rooms-card">
+  <router-link :to="{name: 'room-inner', params: {id: '1'}}" class="rooms-card">
     <div class="rooms-card__number">
       <p>0022</p>
     </div>
@@ -24,7 +24,7 @@
         <UiIcon name="alert-circle" filled/>
       </UiSmallButton>
     </div>
-  </div>
+  </router-link>
 </template>
 <script setup lang="ts">
 import UiSmallButton from "@components/ui/ButtonSmall.vue";

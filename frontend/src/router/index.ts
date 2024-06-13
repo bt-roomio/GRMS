@@ -7,7 +7,7 @@ import LayoutsDashboard from "../layouts/Dashboard.vue";
 import Main from "../pages/dashboard/Main.vue";
 import ForgotPassword from "../pages/authorization/ForgotPassword.vue";
 import ResetPassword from "../pages/authorization/ResetPassword.vue";
-import Rooms from "../pages/dashboard/Rooms.vue";
+import Rooms from "../pages/dashboard/rooms/Rooms.vue";
 import ConfigurationRooms from "../pages/dashboard/configuration/Rooms.vue";
 import PublicSpace from "../pages/dashboard/PublicSpace.vue";
 import Settings from "../pages/dashboard/settings/Settings.vue";
@@ -21,6 +21,7 @@ import Alarms from "../pages/dashboard/settings/Alarms.vue";
 import EmailSetup from "../pages/dashboard/settings/EmailSetup.vue";
 import auth from "@router/middleware/auth.ts";
 import Dashboard from "@/pages/dashboard/configuration/Dashboard.vue";
+import Room from "@/pages/dashboard/rooms/Room.vue";
 
 
 const router = createRouter({
@@ -38,8 +39,21 @@ const router = createRouter({
                 {
                     path: 'rooms',
                     name: 'rooms',
-                    component: Rooms
+                    redirect: '/rooms/room-list',
+                    children: [
+                        {
+                            path: 'room-list',
+                            name: 'room-list',
+                            component: Rooms,
+                        },
+                        {
+                            path: '/rooms/room-list/:id',
+                            name: 'room-inner',
+                            component: Room
+                        }
+                    ]
                 },
+
                 {
                     path: 'public-space',
                     name: 'public-space',

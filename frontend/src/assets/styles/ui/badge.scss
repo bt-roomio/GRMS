@@ -1,5 +1,8 @@
 .ui_badge{
-  @apply flex justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2 bg-gray-200 text-gray-700 font-medium;
+  @apply flex justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2  text-gray-700;
+  .ui-icon{
+    @apply w-4 h-4 stroke-[#606271];
+  }
   &.off{
     @apply bg-error-50 text-error-500;
     &:before{

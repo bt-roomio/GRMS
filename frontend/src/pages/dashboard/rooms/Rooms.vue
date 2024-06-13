@@ -40,23 +40,23 @@ const searchValue = ref('')
 const tabList = computed(() => [
   {
     name: t('dashboard.rooms.tabs.all'),
-    to: {name: 'rooms'},
+    to: {name: 'room-list'},
   },
   {
     name: t('dashboard.rooms.tabs.checked_in'),
-    to: {name: 'rooms', query: { tab: 'checked_in' }},
+    to: {name: 'room-list', query: { tab: 'checked_in' }},
   },
   {
     name: t('dashboard.rooms.tabs.occupied'),
-    to: {name: 'rooms', query: { tab: 'occupied' }},
+    to: {name: 'room-list', query: { tab: 'occupied' }},
   },
   {
     name: t('dashboard.rooms.tabs.do_not_disturb'),
-    to: {name: 'rooms', query: { tab: 'do_not_disturb' }},
+    to: {name: 'room-list', query: { tab: 'do_not_disturb' }},
   },
   {
     name: t('dashboard.rooms.tabs.available'),
-    to: {name: 'rooms', query: { tab: 'available' }},
+    to: {name: 'room-list', query: { tab: 'available' }},
   }
 ])
 </script>

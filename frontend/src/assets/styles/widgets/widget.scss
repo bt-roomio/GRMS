@@ -14,7 +14,7 @@
     }
   }
   &__title{
-    @apply font-medium text-gray-900 dark:text-gray-200;
+    @apply font-semibold text-gray-900 dark:text-gray-200;
   }
   &__description{
     @apply font-medium text-sm text-gray-600 dark:text-gray-300;

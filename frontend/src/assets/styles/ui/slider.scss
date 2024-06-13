@@ -1,0 +1,25 @@
+@import "vue-slider-component/theme/default.css";
+.vue-slider-rail {
+  @apply bg-gray-200 rounded;
+}
+.vue-slider-process {
+  @apply bg-gray-600;
+}
+.vue-slider-dot-handle{
+  @apply border-[1.5px] border-gray-700 shadow-none;
+}
+.vue-slider-dot-handle-focus {
+  @apply shadow-none scale-110;
+}
+.vue-slider-dot-tooltip-inner {
+  @apply bg-gray-700 text-white border-gray-700
+}
+.ui-slider{
+  @apply flex items-center justify-between bg-gray-25 dark:bg-gray-500 px-4 py-3 rounded-xl gap-8;
+  &__label{
+    @apply w-48 flex-shrink-0;
+  }
+  &__indicator{
+    @apply w-full;
+  }
+}
