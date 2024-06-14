@@ -16,8 +16,8 @@
       <div v-if="item.type === 'chart'" :style="wAndH">
         <v-chart class="chart" :option="option" autoresize/>
       </div>
-      <template v-if="item.type === 'progress-bar'">
-        <UiProgress :color="item.config.color" :value="item.device.telemetry.at(0)[item.device_data_key] as string"/>
+      <template v-if="item.type === 'progress-bar' && (!(Object.keys(data).length == 0) && data[item.device_data_key])">
+        <UiProgress :color="item.config.color" :value="data[item.device_data_key].at(0).at(1).toString()"/>
       </template>
       <template v-if="item.type === 'fan-speed'">
         <FanSpeed :value="item"/>
@@ -50,11 +50,13 @@ import {
   DataZoomComponent
 } from 'echarts/components';
 import VChart, { THEME_KEY } from 'vue-echarts';
-import {provide, computed, ref, onMounted, nextTick} from 'vue';
+import {provide, computed, ref, onMounted, nextTick, onUnmounted, watch} from 'vue';
 import FanSpeed from "@components/widgets/FanSpeed.vue";
 import Mode from "@components/widgets/Mode.vue";
 import Sensor from "@components/widgets/Sensor.vue";
 import Slider from "@components/widgets/Slider.vue";
+import {useWS} from "@store/dashboard/ws";
+import {storeToRefs} from "pinia";
 const cookies = useCookies(['mode'])
 const option = computed(() => props.item.config.setting)
 const wAndH = ref({
@@ -72,13 +74,35 @@ use([
   GridComponent,
   DataZoomComponent,
 ]);
-const props = defineProps<{ isSettings: boolean, item: {[key: string]: any} }>()
 provide(THEME_KEY, computed(() => cookies.get('mode') || 'light'));
 
+const props = defineProps<{ isSettings: boolean, item: {[key: string]: any} }>()
+const storeWs = useWS()
+const {data: dataWs, status} = storeToRefs(storeWs)
+const data = ref<{[key: string]: any}>({})
+
+watch(dataWs, value => {
+  if (status.value === 'OPEN') {
+    data.value = Object.assign(data.value, value.data)
+  }
+})
 onMounted(() => {
   nextTick(() => {
     wAndH.value.width = '100%'
     wAndH.value.height = '100%'
   })
+  if (status.value === 'CLOSED'){
+    storeWs.open()
+  }else {
+    storeWs.send({
+      "type": "TIMESERIES",
+      "entityType": "DEVICE",
+      "entityId": props.item.device?.id,
+      "scope": "LATEST_TELEMETRY",
+    })
+  }
+})
+onUnmounted(() => {
+  storeWs.close()
 })
 </script>

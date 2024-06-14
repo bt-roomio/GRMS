@@ -4,7 +4,7 @@
       v-model="value"
       :min="min"
       :max="max"
-      step="0.1"
+      step="0.5"
       rangeColor="#475467"
       :tooltipFormat="tooltipFormat"
       handleSize="24"

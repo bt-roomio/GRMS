@@ -4,6 +4,9 @@
     <div class="ui-slider__indicator">
       <vue-slider v-model="value" :lazy="true" :dotSize="24" height="8px"></vue-slider>
     </div>
+    <div class="ui-slider__value">
+      {{value}}%
+    </div>
   </div>
 </template>
 <script setup lang="ts">

@@ -14,6 +14,7 @@ RUN yarn install
 COPY . .
 
 ENV VITE_API_BASE_URL=http://vesna.tais.su:9000/api/v1
+ENV VITE_WS_BASE_URL=ws://vesna.tais.su:9000/api/ws/
 # Собираем приложение
 RUN yarn build
 

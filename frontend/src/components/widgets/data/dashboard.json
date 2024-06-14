@@ -47,7 +47,7 @@
               "name": "Rooms",
               "type": "value",
               "nameLocation" : "middle",
-              "nameGap" : 53,
+              "nameGap" : 35,
               "nameTextStyle": {
                 "fontFamily": "Inter",
                 "fontSize": 12,
@@ -60,7 +60,7 @@
               }
             },
             "grid": {
-              "left": "8%",
+              "left": "6%",
               "right": "0%",
               "top": "12%",
               "bottom": "3%",
@@ -154,7 +154,7 @@
               "name": "Rooms",
               "type": "value",
               "nameLocation": "middle",
-              "nameGap": 53,
+              "nameGap": 35,
               "nameTextStyle": {
                 "fontFamily": "Inter",
                 "fontSize": 12,
@@ -167,7 +167,7 @@
               }
             },
             "grid": {
-              "left": "8%",
+              "left": "6%",
               "right": "0%",
               "top": "12%",
               "bottom": "3%",
@@ -242,9 +242,9 @@
             "value": "30"
           }
         },
-        "device_data_key": "value",
+        "device_data_key": "CPU",
         "device": {
-          "id": "1",
+          "id": "a1561fb2-e031-42ce-812a-0ce84843c0f0",
           "name": "CPU",
           "created_at": "2024-06-06T11:05:07.291Z",
           "active": false,
@@ -272,10 +272,10 @@
             "value": "80"
           }
         },
-        "device_data_key": "value",
+        "device_data_key": "temperature",
         "device": {
-          "id": "2",
-          "name": "Ram",
+          "id": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
+          "name": "temperature",
           "created_at": "2024-06-06T11:05:07.291Z",
           "active": false,
           "type": "default",

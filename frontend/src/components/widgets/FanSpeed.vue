@@ -1,8 +1,9 @@
 <template>
   <div class="fan-speed">
     <div class="fan-speed__tablet">
+      {{rangeValue}}
       <div class="fan-speed__control" :class="{disabled: rangeValue === 16}">
-        <UiIcon name="minus-circle" filled @click.prevent="rangeValue--"/>
+        <UiIcon name="minus-circle" filled @click.prevent="rangeValue -= 0.5"/>
       </div>
       <div class="fan-speed__dashboard">
         <UiCircularInput
@@ -14,7 +15,7 @@
         />
       </div>
       <div class="fan-speed__control" :class="{disabled: rangeValue === 32}">
-        <UiIcon name="plus-circle" filled @click.prevent="rangeValue++"/>
+        <UiIcon name="plus-circle" filled @click.prevent="rangeValue += 0.5"/>
       </div>
     </div>
     <div class="fan-speed__buttons">
@@ -44,6 +45,6 @@ import {ref} from "vue";
 import UiCircularInput from "@components/ui/CircularInput.vue";
 import UiButton from "@components/ui/Button.vue";
 import UiToggle from "@components/ui/Toggle.vue";
-const rangeValue = ref(23.3)
+const rangeValue = ref(23.5)
 const activeButton = ref('Medium')
 </script>

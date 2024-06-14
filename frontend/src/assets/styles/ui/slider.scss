@@ -22,4 +22,7 @@
   &__indicator{
     @apply w-full;
   }
+  &__value{
+    @apply w-12 flex-shrink-0;
+  }
 }

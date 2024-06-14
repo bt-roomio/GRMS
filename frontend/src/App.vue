@@ -2,8 +2,9 @@
 import UiConfirm from "@components/ui/Confirm.vue";
 import {useCookies} from "@vueuse/integrations/useCookies";
 import {computed, watch} from "vue";
-const cookies = useCookies(['mode'])
+const cookies = useCookies(['mode', 'access_token'])
 const hasMode = computed(() => cookies.get('mode'))
+
 watch(hasMode, value => {
   setMode(value)
 })
@@ -13,7 +14,6 @@ const setMode = (value: string) => {
   document.body.classList.add(value)
 }
 setMode(hasMode.value)
-
 </script>
 
 <template>

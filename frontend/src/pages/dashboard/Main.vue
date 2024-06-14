@@ -30,6 +30,7 @@ import {storeToRefs} from "pinia";
 const storeUser = useUserStore()
 const storeMainWidgetSetting = useMainWidgetSetting()
 const {dashboardSettings, isDashboardSettings, dashboardSettingsConfig} = storeToRefs(storeMainWidgetSetting)
+
 const {t} = useI18n()
 const tabList = computed(() => [
   {

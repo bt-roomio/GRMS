@@ -1,17 +1,11 @@
 .ui-sensor{
-  @apply border border-success-500 flex items-center justify-between p-4 rounded-xl cursor-pointer dark:bg-success-100 ;
+  @apply flex items-center justify-between p-4 rounded-xl cursor-pointer bg-gray-50;
   &__label{
     @apply text-gray-700 font-medium dark:text-success-500;
   }
   &__indicator{
     .ui_status{
-      @apply bg-transparent
-    }
-  }
-  &.off{
-    @apply border-error-500 dark:border-error-600 dark:bg-error-100;
-    .ui-sensor__label{
-      @apply dark:text-error-500
+      @apply bg-transparent before:w-2.5 before:h-2.5
     }
   }
 }
