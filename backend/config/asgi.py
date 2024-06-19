@@ -6,10 +6,10 @@ from django.core.asgi import get_asgi_application
 from channels.security.websocket import AllowedHostsOriginValidator
 from django.urls import path
 
-from apps.shuttle.consumers.shuttle import ShuttleConsumer
-
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
+
+from apps.shuttle.consumers.shuttle import ShuttleConsumer
 
 BASE_URLS = URLRouter([path("api/ws/", ShuttleConsumer.as_asgi())])
 
