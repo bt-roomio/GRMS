@@ -22,7 +22,7 @@ class ShuttleConsumer(BaseConsumer):
         for cmd in cmds:
             if cmd.get("type") == "TIMESERIES" and cmd.get("scope") == "LATEST_TELEMETRY":
                 self.tasks["TIMESERIES"] = asyncio.create_task(
-                    periodically_task(5, latest_telemetry, cmd, user, self.send_json)
+                    periodically_task(5, self, latest_telemetry, cmd, user, self.send_json)
                 )
 
             if cmd.get("type") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
