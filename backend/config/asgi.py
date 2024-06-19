@@ -6,7 +6,6 @@ from django.core.asgi import get_asgi_application
 from channels.security.websocket import AllowedHostsOriginValidator
 from django.urls import path
 
-from apps.shuttle.utils.jwt_auth import JWTAuthMiddlewareStack
 from apps.shuttle.consumers.shuttle import ShuttleConsumer
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -17,6 +16,6 @@ BASE_URLS = URLRouter([path("api/ws/", ShuttleConsumer.as_asgi())])
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
-        "websocket": AllowedHostsOriginValidator(JWTAuthMiddlewareStack(BASE_URLS)),
+        "websocket": AllowedHostsOriginValidator(BASE_URLS),
     }
 )
