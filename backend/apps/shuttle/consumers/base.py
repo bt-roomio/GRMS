@@ -23,6 +23,10 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         self.tasks = {}
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        """
+        - checking for correct json data
+        - checking for token and set user in scope
+        """
         if text_data:
             try:
                 self.data = json.loads(text_data)
@@ -31,18 +35,19 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
                 return
 
         try:
-            token = self.data.get("authCmd", {}).get("token")
-            if self.data.get("authCmd") and token:
-                data = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-                user = await get_user(data)
-                self.scope["user"] = user
+            authCmd = self.data.get("authCmd", {})
+            token = authCmd.get("token")
+            if authCmd and token:
+                checked_token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
                 self.context["authCmd"] = self.data.get("authCmd")
 
-            if not self.data.get("authCmd"):
+                self.scope["user"] = await get_user(checked_token)
+
+            if not self.context.get("authCmd"):
                 await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
                 return
 
             await self.receive_json(self.data)
-        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError):
-            await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
+        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
+            await self.send_json(response({}, 0, 401, str(err)))
             return

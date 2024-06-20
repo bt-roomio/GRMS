@@ -11,16 +11,19 @@ from jwt import InvalidSignatureError, ExpiredSignatureError, DecodeError
 async def periodically_task(seconds: int, self, func, *args):
     while True:
         try:
-            token = self.data.get("authCmd", {}).get("token")
-            print(token)
-            if self.data.get("authCmd") and token:
-                data = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            if not self.data.get("authCmd"):
+            authCmd = self.context.get("authCmd", {})
+            token = authCmd.get("token")
+
+            if not authCmd:
                 await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
                 return
+
+            if authCmd and token:
+                checked_token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
             await func(*args)
             await asyncio.sleep(seconds)
 
-        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError):
-            await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
+        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
+            await self.send_json(response({}, 0, 401, str(err)))
             return
