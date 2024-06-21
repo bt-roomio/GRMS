@@ -1,7 +1,6 @@
 import json
+
 from django.conf import settings
-
-
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.auth import database_sync_to_async
 from jwt import decode as jwt_decode
@@ -21,6 +20,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.context = {}
         self.tasks = {}
+        self.task_params = {}  # Store parameters for tasks
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
         """
@@ -43,6 +43,9 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
 
                 self.scope["user"] = await get_user(checked_token)
 
+                # Resume tasks after successful re-authentication
+                await self.resume_tasks()
+
             if not self.context.get("authCmd"):
                 await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
                 return
@@ -51,3 +54,6 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
             await self.send_json(response({}, 0, 401, str(err)))
             return
+
+    async def resume_tasks(self):
+        pass

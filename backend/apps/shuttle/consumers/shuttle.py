@@ -20,11 +20,20 @@ class ShuttleConsumer(BaseConsumer):
             return
 
         for cmd in cmds:
+            cmd_id = cmd.get("cmdId")
+            task_key = f"cmdId-{cmd_id}"
+
             if cmd.get("type") == "TIMESERIES" and cmd.get("scope") == "LATEST_TELEMETRY":
-                self.tasks[f"cmdId-{cmd.get("cmdId")}"] = asyncio.create_task(
-                    periodically_task(5, self, latest_telemetry, cmd, user, self.send_json)
-                )
+                func = lambda: periodically_task(5, self, latest_telemetry, cmd, user, self.send_json)
+                self.task_params[task_key] = func  # Store task parameters
+                self.tasks[task_key] = asyncio.create_task(func())
 
             if cmd.get("type") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
-                if self.tasks.get(f"cmdId-{cmd.get("cmdId")}"):
-                    self.tasks[f"cmdId-{cmd.get("cmdId")}"].cancel()
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+    async def resume_tasks(self):
+        for task_key, func in self.task_params.items():
+            self.tasks[task_key] = asyncio.create_task(func())
