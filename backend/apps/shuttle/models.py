@@ -1,12 +1,12 @@
 from django.db import models
 
-from core.models import BaseModel
+from core.models import BaseModel, BaseModelTs
 from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
 from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
 
 
-class TsKv(BaseModel):
+class TsKv(BaseModelTs):
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     key = models.IntegerField()
     bool_v = models.BooleanField(blank=True, null=True)
@@ -19,7 +19,7 @@ class TsKv(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "shuttle_ts_kv"
-        unique_together = ("entity", "key", "created_at")
+        unique_together = ("entity", "key", "ts")
 
 
 class TsKvDictionary(models.Model):
@@ -32,7 +32,7 @@ class TsKvDictionary(models.Model):
         db_table = "shuttle_ts_kv_dictionary"
 
 
-class TsKvLatest(BaseModel):
+class TsKvLatest(BaseModelTs):
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     key = models.IntegerField()
     bool_v = models.BooleanField(blank=True, null=True)

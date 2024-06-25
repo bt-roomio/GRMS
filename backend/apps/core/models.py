@@ -16,6 +16,15 @@ class BaseModel(models.Model):
         ordering = ("id",)
 
 
+class BaseModelTs(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ts = UnixTimeStampField(default=time.time, editable=False, null=True)
+
+    class Meta:
+        abstract = True
+        ordering = ("id",)
+
+
 class UpdateByModel(models.Model):
     updated_at = UnixTimeStampField(
         default=time.time,

@@ -1,10 +1,14 @@
+import json
 from django.core.management.base import BaseCommand
-from django.db import transaction
+
+from shuttle.models import TsKv
 
 
 class Command(BaseCommand):
     help = "Playground"
 
-    @transaction.atomic
     def handle(self, *args, **options):
-        pass
+        with open("ts_kv.json", "r") as f:
+            data = json.load(f)
+            for item in data:
+                TsKv.objects.create(**item)
