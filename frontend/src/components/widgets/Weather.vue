@@ -1,7 +1,7 @@
 <template>
   <div class="weather">
     <div class="weather__image">
-      <img src="https://source.unsplash.com/random/1200x200/?city" alt="">
+      <img src="@assets/images/weather.jpeg" alt="">
     </div>
     <div class="weather__content">
       <div class="weather__info" v-if="weatherData.country_name && weatherData.name">

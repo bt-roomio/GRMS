@@ -15,6 +15,15 @@ interface IConfigurationRoomTypes {
     check_out_value?: string | null
     dashboards?: string | null
 }
+interface IConfigurationDashboard {
+    id?: string
+    title: string | null
+    configuration: { [key: string]: any }
+    assigned_customers?: string | null
+    mobile_hide?: boolean | null
+    mobile_order?: number | null
+    external_id?: string | null
+}
 interface IConfigurationRoomTypesData {
     select: boolean,
     [key: string]: unknown,

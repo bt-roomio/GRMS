@@ -17,6 +17,12 @@
           {{button}}
         </Button>
       </div>
+      <div class="page-head__action row" v-if="buttons !== undefined">
+        <Button v-for="item in buttons" :key="item.id" @click.prevent="$emit('clickButton', item)" :class="item.class ? item.class : 'primary'">
+          <UiIcon v-if="item.icon" :name="item.icon" filled />
+          {{item.name}}
+        </Button>
+      </div>
     </div>
   </div>
 </template>
@@ -30,6 +36,7 @@ defineProps<{
   title: string,
   description?: string,
   button?: string,
+  buttons?: { [key: string]: any }[],
   buttonIcon?: string,
   buttonClass?: string | null,
   back?: string | null,

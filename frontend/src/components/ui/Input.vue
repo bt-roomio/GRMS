@@ -2,6 +2,7 @@
   <div class="ui-input">
     <label v-if="label" :for="id">{{ label }}</label>
     <div class="ui-input__group">
+      <div class="ui-input__left" v-if="$slots.left"><slot name="left"/></div>
       <UiIcon :class="iconPosition" v-if="icon && iconPosition === 'left'" :name="icon" filled/>
       <input
           :type="type || 'text'"

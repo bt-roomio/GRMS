@@ -52,7 +52,7 @@ defineComponent({name: 'MenuItem'})
     height: 0;
   }
   100% {
-    height: 176px;
+    height: 236px;
   }
 }
 </style>

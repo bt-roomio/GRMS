@@ -1,0 +1,21 @@
+.ui-input-count{
+  @apply flex flex-col gap-1.5;
+  label{
+    @apply text-sm block text-left;
+  }
+  &__group{
+    @apply relative w-full grid grid-cols-[minmax(0,_40px)_minmax(0,_1fr)_minmax(0,_40px)] gap-2;
+  }
+  .ui-button{
+    @apply h-10 px-0;
+  }
+  input{
+    @apply text-base text-center px-3.5 py-1.5 border-gray-300 border rounded-lg text-gray-700 outline-0 h-10;
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    /* display: none; <- Crashes Chrome on hover */
+    -webkit-appearance: none;
+    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+  }
+}

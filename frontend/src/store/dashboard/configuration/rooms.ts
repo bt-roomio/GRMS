@@ -16,10 +16,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     const room = ref<IConfigurationRoom>()
     const rooms = ref<IServerResponse<IConfigurationRoomsData> | null>(null)
     const searchValue = ref('')
-    const searchType = ref({
-        name: t('dashboard.configuration.rooms.room'),
-        key: 'room_number'
-    })
+    const searchType = ref('room_number')
     const itemLoading = ref(false)
     const itemError = ref({code: null, msg: null})
     const loading = ref(false)
@@ -41,7 +38,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         block: {required},
     }))
 
-    const v$ = useVuelidate(rules, state.value, {$scope: false})
+    const v$ = useVuelidate(rules, state, {$scope: false})
 
     const getList = async (params: IConfigurationRoomParams) => {
         loading.value = true
@@ -75,7 +72,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             ...output,
             ...router.currentRoute.value.query,
             search_value: searchValue.value,
-            search_field: searchType.value.key
+            search_field: searchType.value
         } : {...output, ...router.currentRoute.value.query})
     }
     const loadMore = async () => {
@@ -83,7 +80,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         await getList(searchValue.value ? {
             ...router.currentRoute.value.query,
             search_value: searchValue.value,
-            search_field: searchType.value.key
+            search_field: searchType.value
         } : {...router.currentRoute.value.query})
     }
     const getItem = async (id: string, isFilled: boolean) => {
@@ -99,7 +96,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
                 state.value.room_number = data.room_number
                 state.value.floor = data.floor
                 state.value.block = data.block
-                state.value.devices = data.devices
+                state.value.devices = data.devices.map((el: any) => el.id)
             }
         }catch (e: any) {
             if (e.response?.status){
@@ -115,14 +112,13 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
         let obj = JSON.parse(JSON.stringify(state.value))
-        obj.devices = obj.devices.map((el: any) => el.id)
         try {
             await useApiFetch<IConfigurationRoom>('/main/room/', {method: 'POST', data: obj})
             await getList(searchValue.value ? {
                 ...sortedData.value,
                 ...router.currentRoute.value.query,
                 search_value: searchValue.value,
-                search_field: searchType.value.key,
+                search_field: searchType.value,
             }: {...sortedData.value,...router.currentRoute.value.query})
             callback()
             await $reset()
@@ -138,14 +134,13 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
         let obj = JSON.parse(JSON.stringify(state.value))
-        obj.devices = obj.devices.map((el: any) => el.id)
         try {
             await useApiFetch<IConfigurationRoom>('/main/room/' + obj.id, {method: 'PUT', data: obj})
             await getList(searchValue.value ? {
                 ...sortedData.value,
                 ...router.currentRoute.value.query,
                 search_value: searchValue.value,
-                search_field: searchType.value.key,
+                search_field: searchType.value,
             }: {...sortedData.value, ...router.currentRoute.value.query})
             callback()
             await $reset()
@@ -169,7 +164,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
                             ...sortedData.value,
                             ...router.currentRoute.value.query,
                             search_value: searchValue.value,
-                            search_field: searchType.value.key,
+                            search_field: searchType.value,
                         }: {...sortedData.value, ...router.currentRoute.value.query})
                         toast.success(t('toast.room_delete_success') as string);
                     }catch (e: any) {
@@ -209,7 +204,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             ...sortedData.value,
             ...router.currentRoute.value.query,
             search_value: value,
-            search_field: searchType.value.key,
+            search_field: searchType.value,
         }: {...sortedData.value, ...router.currentRoute.value.query})
     })
 

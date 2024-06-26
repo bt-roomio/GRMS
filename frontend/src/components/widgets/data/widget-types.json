@@ -1,0 +1,18 @@
+[
+    {
+        "icon": "settings",
+        "config_file": "system-mode",
+        "default_config": {
+            "title": "System mode",
+            "subtitle": "Select one of the operating modes",
+            "controls": []
+        },
+        "dashboard_config": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 39
+        }
+    }
+
+]

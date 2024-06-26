@@ -4,7 +4,7 @@
     @apply relative z-20 text-gray-700 dark:text-white whitespace-nowrap;
   }
   &__arrow{
-    @apply w-3 h-3 bg-white absolute;
+    @apply w-3 h-3 bg-white dark:bg-gray-600 absolute;
   }
   &::after{
     @apply content-[''] absolute w-full h-full bg-white dark:bg-gray-600 top-0 left-0 rounded-lg;

@@ -20,10 +20,10 @@
     @apply bg-primary-600/40 absolute top-0 left-0 w-full h-full;
   }
   &__body{
-    @apply bg-white dark:bg-gray-600 dark:text-gray-100 w-[352px] px-4 py-6 relative overflow-auto;
+    @apply bg-white dark:bg-gray-600 dark:text-gray-100 w-[406px] px-4 py-6 relative overflow-auto;
   }
   &__head{
-    @apply border-b border-gray-200 dark:border-gray-500 pb-6 relative;
+    @apply border-b-[3px] border-[#EAECF0] dark:border-gray-500 pb-6 relative -mx-4 px-4;
     h2{
       @apply text-lg font-semibold mb-1;
     }
@@ -31,11 +31,23 @@
       @apply text-sm;
     }
     .ui-icon{
-      @apply w-5 h-5 absolute top-0 right-0 cursor-pointer;
+      @apply w-5 h-5 absolute top-0 right-4 cursor-pointer;
+    }
+  }
+  &__card{
+    @apply bg-gray-50 p-4 rounded-xl hover:bg-gray-100 transition mb-2 dark:bg-gray-500;
+  }
+  &__actions{
+    @apply flex flex-row gap-4;
+    .ui-button{
+      @apply py-1 px-2 h-6 border-none text-xs text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600;
+      .ui-icon{
+        @apply w-4 h-4;
+      }
     }
   }
   &__content{
-    @apply py-6 border-b border-gray-200 dark:border-gray-500;
+    @apply py-6 dark:border-gray-500;
   }
   &__footer{
     @apply flex flex-col gap-4 pt-6;

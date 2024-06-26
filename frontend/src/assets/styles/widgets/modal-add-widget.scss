@@ -1,0 +1,29 @@
+.modal-add-widget{
+  h3{
+    @apply text-sm font-semibold flex justify-between;
+    .ui-icon{
+      @apply w-5 h-5 stroke-primary-700 cursor-pointer;
+    }
+  }
+  &__list{
+    @apply flex flex-col gap-2;
+  }
+  &__item{
+    @apply px-5 py-3 bg-gray-50 dark:bg-gray-500 dark:hover:bg-gray-700 hover:bg-primary-800 flex gap-4 transition cursor-pointer rounded-xl;
+    .item__icon{
+      @apply flex items-center;
+      .ui-icon{
+        @apply w-8 h-8 stroke-gray-800 flex-shrink-0 dark:stroke-gray-200;
+      }
+    }
+    .item__info{
+      @apply flex flex-col gap-0.5;
+      p{
+        @apply font-semibold;
+      }
+      span{
+        @apply text-xs;
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import {defineStore, storeToRefs} from "pinia";
 import {computed} from "vue";
-import {useMainWidgetSetting} from "@store/dashboard/widget/main-widget.ts";
+import {useMainWidgetSetting} from "@store/dashboard/widget/widget.ts";
 export const useAvailabilityWidget = defineStore('availability-widget', () => {
         const storeMainWidgetSetting = useMainWidgetSetting()
         const {sortWidgets} = storeToRefs(storeMainWidgetSetting)

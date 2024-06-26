@@ -1,21 +1,13 @@
 <template>
   <div class="sensor">
     <ul>
-      <li>
-        <UiSensorItem>Room sensor</UiSensorItem>
-      </li>
-      <li>
-        <UiSensorItem>M sensor</UiSensorItem>
-      </li>
-      <li>
-        <UiSensorItem>WS sensor</UiSensorItem>
-      </li>
-      <li>
-        <UiSensorItem>Bath alarm</UiSensorItem>
+      <li  v-for="(item, key) in values" :key="key">
+        <UiSensorItem>{{ item.title || '&nbsp;' }}</UiSensorItem>
       </li>
     </ul>
   </div>
 </template>
 <script setup lang="ts">
 import UiSensorItem from "@components/ui/SensorItem.vue";
+defineProps(['values'])
 </script>

@@ -18,8 +18,8 @@
   }
   &__action{
     @apply flex-shrink-0;
-    .ui-button{
-
+    &.row{
+      @apply flex gap-3 flex-shrink;
     }
   }
 }

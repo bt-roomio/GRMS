@@ -3,7 +3,7 @@ import {ref} from "vue";
 import data from "@/components/widgets/data/dashboard.json"
 
 
-export const useMainWidgetSetting = defineStore('main-widget-setting', () => {
+export const useMainWidgetSetting = defineStore('widget-setting', () => {
     const dashboardSettings = ref<IWidgetSettingValue[] | null>(null)
     const isDashboardSettings = ref(false)
     const dashboardSettingsCallback = ref<(confirm: boolean) => void | Promise<void> | null>((confirm) => {console.log(confirm)})

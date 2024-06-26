@@ -37,6 +37,11 @@
   }
   &__container{
     @apply relative overflow-x-auto border border-gray-100 dark:border-gray-500 sm:rounded-xl;
+    &.pointer{
+      td{
+        @apply cursor-pointer;
+      }
+    }
   }
   &__search{
     @apply pb-6 flex gap-6;
@@ -45,6 +50,9 @@
     }
     .ui-select{
       @apply w-1/5;
+      .multiselect{
+       @apply h-10
+      }
     }
   }
   &__error{

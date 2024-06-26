@@ -158,7 +158,7 @@
 
 "@interactjs/types@1.10.27":
   version "1.10.27"
-  resolved "https://registry.yarnpkg.com/@interactjs/types/-/types-1.10.27.tgz#10afd71cef2498e2b5192cf0d46f937d8ceb767f"
+  resolved "https://registry.npmjs.org/@interactjs/types/-/types-1.10.27.tgz"
   integrity sha512-BUdv0cvs4H5ODuwft2Xp4eL8Vmi3LcihK42z0Ft/FbVJZoRioBsxH+LlsBdK4tAie7PqlKGy+1oyOncu1nQ6eA==
 
 "@intlify/core-base@9.13.1":
@@ -228,7 +228,7 @@
 
 "@juggle/resize-observer@^3.4.0":
   version "3.4.0"
-  resolved "https://registry.yarnpkg.com/@juggle/resize-observer/-/resize-observer-3.4.0.tgz#08d6c5e20cf7e4cc02fd181c4b0c225cd31dbb60"
+  resolved "https://registry.npmjs.org/@juggle/resize-observer/-/resize-observer-3.4.0.tgz"
   integrity sha512-dfLbk+PwWvFzSxwk3n5ySL0hfBog779o8h68wK/7/APo/7cgyWp5jcXockbxdk5kFRkbeXWm4Fbi9FrdN381sA==
 
 "@nodelib/fs.scandir@2.1.5":
@@ -359,7 +359,7 @@
 
 "@vexip-ui/hooks@^2.4.0":
   version "2.5.0"
-  resolved "https://registry.yarnpkg.com/@vexip-ui/hooks/-/hooks-2.5.0.tgz#fa17d83c8f8b71871df1d22ad17db88d7bbe5300"
+  resolved "https://registry.npmjs.org/@vexip-ui/hooks/-/hooks-2.5.0.tgz"
   integrity sha512-T3ikfvkXkm6Et6tnh872GcdMpdEMKgZ9m4sggrddVwW1AvzZTGCY00pW5J64VfAW2Ite8AnSunCrqO1OpiempA==
   dependencies:
     "@floating-ui/dom" "^1.5.3"
@@ -368,12 +368,12 @@
 
 "@vexip-ui/utils@2.15.0":
   version "2.15.0"
-  resolved "https://registry.yarnpkg.com/@vexip-ui/utils/-/utils-2.15.0.tgz#8080e6de96dc0d14aa313bd53b522321eaf94083"
+  resolved "https://registry.npmjs.org/@vexip-ui/utils/-/utils-2.15.0.tgz"
   integrity sha512-8YPWShNmlAs9PAhKfUbixinpYR37WfwarJyZFS2h+zTSRqGIEmIBCikrdnA3m0Oh8U4r5G0D6v5P26mXlZnIbw==
 
 "@vexip-ui/utils@^2.13.0":
   version "2.16.0"
-  resolved "https://registry.yarnpkg.com/@vexip-ui/utils/-/utils-2.16.0.tgz#c34b7f15214f8376fab678f1843952e59ac6ac6e"
+  resolved "https://registry.npmjs.org/@vexip-ui/utils/-/utils-2.16.0.tgz"
   integrity sha512-AMiMs9fF8C2Ya3mvoV/W5isaNg/qjTH1zQ8aDsn1VZ5v5Hcf7Nw1D7WjXAhm20dJ23GbSbLaAwUA9wCncRCPRw==
 
 "@vitejs/plugin-vue@^5.0.4":
@@ -499,6 +499,11 @@
   version "3.4.26"
   resolved "https://registry.npmjs.org/@vue/shared/-/shared-3.4.26.tgz"
   integrity sha512-Fg4zwR0GNnjzodMt3KRy2AWGMKQXByl56+4HjN87soxLNU9P5xcJkstAlIeEF3cU6UYOzmJl1tV0dVPGIljCnQ==
+
+"@vueform/multiselect@^2.6.8":
+  version "2.6.8"
+  resolved "https://registry.npmjs.org/@vueform/multiselect/-/multiselect-2.6.8.tgz"
+  integrity sha512-vu1bkFkViuLbrtSfyWgw11ecNPK7mlBDFe5X9WdsZj3gri3PiZ3OvlfJ920Ebysf7rgiN/+mHJDY2/Y1ITnGEg==
 
 "@vuelidate/core@^2.0.3":
   version "2.0.3"
@@ -770,7 +775,7 @@ eastasianwidth@^0.2.0:
 
 echarts@^5.5.0:
   version "5.5.0"
-  resolved "https://registry.yarnpkg.com/echarts/-/echarts-5.5.0.tgz#c13945a7f3acdd67c134d8a9ac67e917830113ac"
+  resolved "https://registry.npmjs.org/echarts/-/echarts-5.5.0.tgz"
   integrity sha512-rNYnNCzqDAPCr4m/fqyUFv7fD9qIsd50S6GDFgO1DxZhncCsNsG7IfUlAlvZe5oSEQxtsjnHiUuppzccry93Xw==
   dependencies:
     tslib "2.3.0"
@@ -954,7 +959,7 @@ gopd@^1.0.1:
 
 grid-layout-plus@^1.0.5:
   version "1.0.5"
-  resolved "https://registry.yarnpkg.com/grid-layout-plus/-/grid-layout-plus-1.0.5.tgz#2d4fc4a629fd98c85cf5fc93b09efc9e511f6c30"
+  resolved "https://registry.npmjs.org/grid-layout-plus/-/grid-layout-plus-1.0.5.tgz"
   integrity sha512-5EUNN4soj4k/yiFw3Y6u9PLRyOrDu/uBUaVLZ9MsoPWicSLRIin+EBnF8SUKnA9mjIhrDdYRG7sJSbdaXCHdPg==
   dependencies:
     "@vexip-ui/hooks" "^2.4.0"
@@ -997,7 +1002,7 @@ immutable@^4.0.0:
 
 interactjs@^1.10.26:
   version "1.10.27"
-  resolved "https://registry.yarnpkg.com/interactjs/-/interactjs-1.10.27.tgz#16499aba4987a5ccfdaddca7d1ba7bb1118e14d0"
+  resolved "https://registry.npmjs.org/interactjs/-/interactjs-1.10.27.tgz"
   integrity sha512-y/8RcCftGAF24gSp76X2JS3XpHiUvDQyhF8i7ujemBz77hwiHDuJzftHx7thY8cxGogwGiPJ+o97kWB6eAXnsA==
   dependencies:
     "@interactjs/types" "1.10.27"
@@ -1059,7 +1064,7 @@ jiti@^1.21.0:
 
 "jquery@>= 1.10.2":
   version "3.7.1"
-  resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.7.1.tgz#083ef98927c9a6a74d05a6af02806566d16274de"
+  resolved "https://registry.npmjs.org/jquery/-/jquery-3.7.1.tgz"
   integrity sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==
 
 lilconfig@^2.1.0:
@@ -1324,7 +1329,7 @@ readdirp@~3.6.0:
 
 resize-detector@^0.3.0:
   version "0.3.0"
-  resolved "https://registry.yarnpkg.com/resize-detector/-/resize-detector-0.3.0.tgz#fe495112e184695500a8f51e0389f15774cb1cfc"
+  resolved "https://registry.npmjs.org/resize-detector/-/resize-detector-0.3.0.tgz"
   integrity sha512-R/tCuvuOHQ8o2boRP6vgx8hXCCy87H1eY9V5imBYeVNyNVpuL9ciReSccLj2gDcax9+2weXy3bc8Vv+NRXeEvQ==
 
 resolve@^1.1.7, resolve@^1.22.2:
@@ -1368,7 +1373,7 @@ rollup@^4.13.0:
 
 round-slider@^1.6.1:
   version "1.6.1"
-  resolved "https://registry.yarnpkg.com/round-slider/-/round-slider-1.6.1.tgz#a5426be35d00ea3cea3905fdc0d0d00daf1356b3"
+  resolved "https://registry.npmjs.org/round-slider/-/round-slider-1.6.1.tgz"
   integrity sha512-yRVcksg/wUP6TUWoNrnGRkbvfWuir73+ZgVhYBQaMHXwq2Z2c2MyVZav6p0voIqMZNPbELuYF0UFkg+5d5dNgg==
   dependencies:
     jquery ">= 1.10.2"
@@ -1562,7 +1567,7 @@ ts-interface-checker@^0.1.9:
 
 tslib@2.3.0:
   version "2.3.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.3.0.tgz#803b8cdab3e12ba581a4ca41c8839bbb0dacb09e"
+  resolved "https://registry.npmjs.org/tslib/-/tslib-2.3.0.tgz"
   integrity sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==
 
 typescript@^5.2.2:
@@ -1622,7 +1627,7 @@ vue-demi@^0.13.11:
 
 vue-echarts@^6.7.2:
   version "6.7.2"
-  resolved "https://registry.yarnpkg.com/vue-echarts/-/vue-echarts-6.7.2.tgz#66f3d9dcd9535f1d39a20f890b870a3e5c6598a8"
+  resolved "https://registry.npmjs.org/vue-echarts/-/vue-echarts-6.7.2.tgz"
   integrity sha512-SG8Vmszhx24KjtySsk361DogZLRkPCyLhgoyh7iN1eH3WGJ0kyl3k0g4QiSJqK0+F1Ej0HDopq4A5OGcBlAwzw==
   dependencies:
     resize-detector "^0.3.0"
@@ -1637,11 +1642,6 @@ vue-i18n@9:
     "@intlify/shared" "9.13.1"
     "@vue/devtools-api" "^6.5.0"
 
-vue-multiselect@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/vue-multiselect/-/vue-multiselect-3.0.0.tgz#b1e779b9adf054a6941669c99bc97a0209fceac3"
-  integrity sha512-uupKdINgz7j83lQToCL7KkgQQxvG43el++hsR39YT9pCe1DwzUGmKzPxjVP6rqskXed5P6DtUASYAlCliW740Q==
-
 vue-router@4:
   version "4.3.2"
   resolved "https://registry.npmjs.org/vue-router/-/vue-router-4.3.2.tgz"
@@ -1651,7 +1651,7 @@ vue-router@4:
 
 vue-slider-component@^4.1.0-beta.7:
   version "4.1.0-beta.7"
-  resolved "https://registry.yarnpkg.com/vue-slider-component/-/vue-slider-component-4.1.0-beta.7.tgz#f6aaac2557df8b9d5460482e2576a009d0ed2dae"
+  resolved "https://registry.npmjs.org/vue-slider-component/-/vue-slider-component-4.1.0-beta.7.tgz"
   integrity sha512-Qb7K920ZG7PoQswoF6Ias+i3W2rd3k4fpk04JUl82kEUcN86Yg6et7bVSKWt/7VpQe8a5IT3BqCKSCOZ7AJgCA==
 
 vue-template-compiler@^2.7.14:
@@ -1664,7 +1664,7 @@ vue-template-compiler@^2.7.14:
 
 vue-three-round-slider@^1.2.7:
   version "1.2.7"
-  resolved "https://registry.yarnpkg.com/vue-three-round-slider/-/vue-three-round-slider-1.2.7.tgz#4c0ddfe3985ae545ab0fe9b5f5cff90458d773a9"
+  resolved "https://registry.npmjs.org/vue-three-round-slider/-/vue-three-round-slider-1.2.7.tgz"
   integrity sha512-sYXvvYieuQ6859PZPcm0dq4YgXKZM/P83NmQMt1DbxrU/3gq7lkqvzzTecKdCfjNAkiKZfSSf53RLRjZal+HkQ==
   dependencies:
     round-slider "^1.6.1"
@@ -1731,7 +1731,7 @@ yaml@^2.3.4:
 
 zrender@5.5.0:
   version "5.5.0"
-  resolved "https://registry.yarnpkg.com/zrender/-/zrender-5.5.0.tgz#54d0d6c4eda81a96d9f60a9cd74dc48ea026bc1e"
+  resolved "https://registry.npmjs.org/zrender/-/zrender-5.5.0.tgz"
   integrity sha512-O3MilSi/9mwoovx77m6ROZM7sXShR/O/JIanvzTwjN3FORfLSr81PsUGd7jlaYOeds9d8tw82oP44+3YucVo+w==
   dependencies:
     tslib "2.3.0"

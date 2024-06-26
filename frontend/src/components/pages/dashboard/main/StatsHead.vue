@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import UiButton from "@components/ui/Button.vue";
 import UiIcon from "@components/ui/Icon.vue";
-import {useMainWidgetSetting} from "@store/dashboard/widget/main-widget.ts";
+import {useMainWidgetSetting} from "@store/dashboard/widget/widget.ts";
 import {storeToRefs} from "pinia";
 import ModalAddWidget from "@components/widgets/modal/ModalAddWidget.vue";
 import {ref} from "vue";

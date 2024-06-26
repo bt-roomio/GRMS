@@ -1,5 +1,5 @@
 <template>
-  <div class="page" v-if="room_types">
+  <div class="page" v-if="dashboards">
     <div class="page__content">
       <PageHead
           :title="$t('dashboard.menu.dashboard')"
@@ -13,27 +13,29 @@
         :loading="loading"
         :error="error"
         :headers="headers"
-        :data="room_types.results"
+        :data="dashboards.results"
         :sort="['title','dashboard']"
-        @sorted="storeConfigurationRoomType.sortList"
+        @sorted="storeConfigurationDashboard.sortList"
         @more="moreHandle"
-        :is-pagination="room_types.count > room_types.results.length"
+        :is-pagination="dashboards.count > dashboards.results.length"
+        @click="toPage"
+        pointer
     >
       <template #header-select>
-        <CheckAll v-model="room_types.results" />
+        <CheckAll v-model="dashboards.results" />
       </template>
       <template #select="{entity}">
-        <UiCheckbox v-model="entity.select"/>
+        <UiCheckbox @click.stop v-model="entity.select"/>
       </template>
       <template #active="{entity}">
           <UiStatus :status="entity.active as string ? 'Active': 'Not active'" :class="entity.active as string ? 'on': 'off'" />
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
-          <UiButton class="secondary" @click.prevent="openEditRoomType(entity.id as string)">
+          <UiButton class="secondary" @click.stop="openEditRoomType(entity.id as string)">
             <UiIcon name="edit" filled />
           </UiButton>
-          <UiButton class="text" @click.prevent="storeConfigurationRoomType.deleteItem(entity.id as string)">
+          <UiButton class="text" @click.stop="storeConfigurationDashboard.deleteItem(entity.id as string)">
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
@@ -56,13 +58,18 @@ import {storeToRefs} from "pinia";
 import {computed, onMounted, ref} from "vue";
 import {useI18n} from "vue-i18n";
 import UiStatus from "@components/ui/Status.vue";
-import ModalAddDashboard from "@components/pages/dashboard/configuration/dashboard.vue/ModalAddDashboard.vue";
-import ModalEditDashboard from "@components/pages/dashboard/configuration/dashboard.vue/ModalEditDashboard.vue";
+import ModalAddDashboard from "@components/pages/dashboard/configuration/dashboard/ModalAddDashboard.vue";
+import ModalEditDashboard from "@components/pages/dashboard/configuration/dashboard/ModalEditDashboard.vue";
+import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
+import {useRouter} from "vue-router";
+const {push} = useRouter()
 const add_dashboard = ref<IModal | null>(null)
 const edit_dashboard = ref<IModal | null>(null)
 const {t} = useI18n()
+const storeConfigurationDashboard = useConfigurationDashboardStore()
 const storeConfigurationRoomType = useConfigurationRoomTypeStore()
-const {room_types, loading, error} = storeToRefs(storeConfigurationRoomType)
+
+const {dashboards, loading, error} = storeToRefs(storeConfigurationDashboard)
 
 const headers = computed<IConfigurationRoomsHead>(() => ({
   select: true,
@@ -77,16 +84,22 @@ const openAddDashboard = () => {
 }
 const openEditRoomType = async (id: string) => {
   try {
-    await storeConfigurationRoomType.getItem(id, true)
+    await storeConfigurationDashboard.getItem(id, true)
     edit_dashboard.value?.open()
   }catch (e){
     console.log(e)
   }
 }
 onMounted(async () => {
-  await storeConfigurationRoomType.getList({})
+  await Promise.all([
+    storeConfigurationDashboard.getList({}),
+    storeConfigurationRoomType.getList({})
+  ])
 })
 const moreHandle = async () => {
-  await storeConfigurationRoomType.loadMore()
+  await storeConfigurationDashboard.loadMore()
+}
+const toPage = async (entity: any) => {
+  await push({name: 'configuration-dashboard-inner', params: {id: entity.id}})
 }
 </script>

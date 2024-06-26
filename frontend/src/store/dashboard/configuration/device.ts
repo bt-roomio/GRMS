@@ -12,7 +12,6 @@ export const useConfigurationDeviceStore = defineStore('configuration-device', (
             const {data} = await useApiFetch<IServerResponse<IConfigurationDevice>>('/main/device/', {
                 method: 'GET',
             })
-
             devices.value = data as IServerResponse<IConfigurationDevice>
         }catch (e: any) {
             throw e

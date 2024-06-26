@@ -12,7 +12,7 @@
             <slot />
           </div>
           <div class="modal__footer">
-            <slot name="footer" :close="close"/>
+            <slot name="footer" :close="close" :closeWithoutEvents="closeWithoutEvents"/>
           </div>
         </div>
       </div>
@@ -20,7 +20,7 @@
   </teleport>
 </template>
 <script setup lang="ts">
-import {defineComponent, ref} from "vue";
+import {defineComponent, nextTick, ref} from "vue";
 import UiIcon from "@components/ui/Icon.vue";
 
 const isOpen = ref(false)
@@ -28,12 +28,19 @@ const emit = defineEmits(['closed', 'opened'])
 
 const close = () => {
   isOpen.value = false
-  emit('closed')
+  nextTick(() => {
+    emit('closed')
+  })
+}
+const closeWithoutEvents = () => {
+  isOpen.value = false
 }
 const open = () => {
   isOpen.value = true
-  emit('opened')
+  nextTick(() => {
+    emit('opened')
+  })
 }
 defineComponent({name: 'UiModal'})
-defineExpose({close, open})
+defineExpose({close, open, closeWithoutEvents})
 </script>

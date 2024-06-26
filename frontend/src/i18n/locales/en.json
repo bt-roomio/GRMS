@@ -242,7 +242,10 @@
     "room_delete_success": "The delete of the room was successful",
     "room_type_add_success": "The creation of the room type was successful",
     "room_type_edit_success": "The editing of the room type was successful",
-    "room_type_delete_success": "The delete of the room type was successful"
+    "room_type_delete_success": "The delete of the room type was successful",
+    "dashboard_add_success": "The creation of the dashboard was successful",
+    "dashboard_edit_success": "The editing of the dashboard was successful",
+    "dashboard_delete_success": "The delete of the dashboard was successful"
   }
 }
 

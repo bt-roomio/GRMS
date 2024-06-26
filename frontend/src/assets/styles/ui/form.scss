@@ -1,10 +1,13 @@
 .ui-form{
-  @apply flex flex-col gap-6;
+  @apply flex flex-col gap-4;
 
   &__row{
     @apply grid gap-4 w-full justify-between;
     &.col-2{
       @apply grid-cols-2
     }
+  }
+  hr{
+    @apply border-t-[3px] border-gray-300
   }
 }

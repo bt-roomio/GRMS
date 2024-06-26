@@ -1,43 +1,40 @@
 <template>
-  <Modal ref="add_widget" @closed="storeMainWidgetSetting.$reset()">
-    <template #head>
-      <h2>{{$t('dashboard.configuration.room_type.modals.add_new_room_type.title')}} </h2>
-      <p>{{$t('dashboard.configuration.room_type.modals.add_new_room_type.subtitle')}}</p>
+  <Modal ref="add_widget" @closed="cancelModal()">
+    <template #head v-if="isEdit">
+      <h2>Edit new widget</h2>
+      <p>Select the widget you want to add</p>
     </template>
-    <form class="ui-form" @submit.prevent="storeMainWidgetSetting.addItem(state, close)">
-      <UiSelect
-          v-bind="selectConfig"
-          v-model="state.device"
-          label="name"
-          :options="devices"
-          title="Choose device"
-      />
-      <UiSelect
-          v-if="state.device"
-          v-bind="selectConfig"
-          v-model="state.device_data_key"
-          :options="Object.keys(state.device.telemetry.at(0))"
-          title="Choose device data key"
-      />
-      <UiSelect
-          v-bind="selectConfig"
-          v-model="state.type"
-          label="name"
-          :options="widgetTypes?.results"
-          title="Choose widget type"
-          @change="changeSelectHandle"
-      />
+    <template #head v-else>
+      <h2>Add new widget</h2>
+      <p>Select the widget you want to add</p>
+    </template>
+    <div class="modal-add-widget">
       <template v-if="selectedComponent">
-        <component :is="selectedComponent" @input="changeComponentSettings"/>
+        <component ref="currentComponent" :is="selectedComponent"/>
       </template>
-    </form>
-
-    <template #footer="{close}">
-      <UiButton class="primary" @click.prevent="storeMainWidgetSetting.addItem(state, close)">
+      <template v-else>
+        <div class="ui-form">
+          <h3>Choose widget type</h3>
+          <div class="modal-add-widget__list">
+            <div class="modal-add-widget__item" v-for="item in widgetTypes?.results" :key="item.id" @click.prevent="selectWidgetTypeHandle(JSON.parse(JSON.stringify(item)))">
+              <div class="item__icon">
+                <UiIcon :name="item.descriptor?.icon" filled/>
+              </div>
+              <div class="item__info">
+                <p>{{item.name}}</p>
+                <span>{{item.description}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+    <template #footer="{close, closeWithoutEvents}" v-if="selectedComponent && isEdit">
+      <UiButton class="primary" @click.prevent="closeWithoutEvents(); storeConfigurationDashboard.handleConfirmWidget()">
         <UiIcon name="plus" filled/>
-        Add widget
+        Edit widget
       </UiButton>
-      <UiButton class="text" @click.prevent="close()">
+      <UiButton class="text" @click.prevent="close(); storeConfigurationDashboard.handleCancelWidget()">
         {{ $t('dashboard.configuration.rooms.modals.add_new_rooms.cancel') }}
       </UiButton>
     </template>
@@ -47,47 +44,45 @@
 import UiIcon from "@components/ui/Icon.vue";
 import Modal from "@components/ui/Modal.vue";
 import UiButton from "@components/ui/Button.vue";
-import UiSelect from "@components/ui/Select.vue";
-import devices from "@components/widgets/data/devices.json"
-import {DefineComponent, onMounted, ref, shallowRef} from "vue";
+import {onMounted, ref} from "vue";
 import {storeToRefs} from "pinia";
-import {selectConfig} from "@utils/configsSelect.ts";
-import {useMainWidgetSetting} from "@store/dashboard/widget/main-widget.ts";
 import {useWidgetType} from "@store/dashboard/widget/widget-type.ts";
+import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 const add_widget = ref<IModal | null>(null)
-const storeMainWidgetSetting = useMainWidgetSetting()
 const storeWidgetType = useWidgetType()
+const storeConfigurationDashboard = useConfigurationDashboardStore()
+const {isEdit, selectedComponent} = storeToRefs(storeConfigurationDashboard)
 const {widgetTypes} = storeToRefs(storeWidgetType)
-const {state} = storeToRefs(storeMainWidgetSetting)
-const selectedComponent = shallowRef<DefineComponent | null>(null)
+const currentComponent = ref<{[key: string]: any} | null>(null)
 const close = () => {
   add_widget.value?.close()
 }
 const open = () => {
   add_widget.value?.open()
 }
-const componentImport = import.meta.glob('../settings/**.vue');
-
-const changeSelectHandle = async (value: {selectedOption: { [key: string]: any }}) => {
-  const type = value.selectedOption.descriptor.type
-  const importFunction = componentImport[`../settings/${type}.vue`];
-
-  if (importFunction) {
-    const componentModule = await importFunction() as {default: DefineComponent};
-    selectedComponent.value = componentModule.default;
-  } else {
-    console.error(`Component ../settings/${type}.vue not found`);
-    selectedComponent.value = null;
-  }
+const selectWidgetTypeHandle = async (value: IWidgetType) => {
+  const key = storeConfigurationDashboard.addWidget(value, {isEdit: false, key: 0})
+  await storeConfigurationDashboard.setEditWidget(value, {
+    callback: (confirm) => {
+      if (!confirm){
+        storeConfigurationDashboard.deleteWidget((key as number) - 1)
+      }else {
+        storeConfigurationDashboard.saveWidget((key as number) - 1)
+      }
+      storeConfigurationDashboard.clearEditWidget()
+    }
+  })
 }
 
-const changeComponentSettings = (value: any) => {
-  state.value.config = value
+
+const cancelModal = async () => {
+  storeConfigurationDashboard.handleCancelWidget()
 }
 
 onMounted(async () => {
   await storeWidgetType.getWidgetTypes()
 })
+
 
 defineExpose({
   close,

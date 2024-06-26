@@ -3,6 +3,9 @@
   .ui-toggle__custom{
     @apply bg-error-500 dark:bg-error-500;
   }
+  .peer:checked ~ .ui-toggle__custom{
+    @apply dark:bg-success-500
+  }
   ul{
     @apply flex flex-col gap-6 w-full;
     li{

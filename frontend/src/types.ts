@@ -1,7 +1,7 @@
 
 interface ILocales {
     name: string
-    code: string
+    value: string
     icon: string
 }
 
@@ -42,10 +42,15 @@ interface ISortOutput {
 
 interface ICheckAll {
     [key: string]: unknown
-    select: boolean
+    select?: boolean
 }
 
-interface IModal {close: () => void, open: () => void}
+interface IModal {
+    closeWithoutEvents: () => void,
+    close: () => void,
+    open: () => void,
+    [key: string]: any
+}
 
 interface IModalAddRoom {
     add_room: IModal

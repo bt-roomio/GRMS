@@ -6,7 +6,7 @@
       @apply content-[''] absolute w-full h-full bg-primary-600/65;
     }
     img{
-      @apply w-full h-full;
+      @apply w-full h-full object-cover;
     }
   }
   &__content{

@@ -1,48 +1,47 @@
 <template>
-  <UiSelect
-      track-by="name"
-      v-bind="selectConfig"
-      v-model="selectValue"
-      :options="locales"
-      label="name"
-      @change="changeLocale"
-  >
-    <template #singleLabel="{props}">
-      <UiIcon :name="(props as any).option.icon" filled/>
-      {{ (props as any).option.name }}
-    </template>
-    <template #option="{props}">
-      <UiIcon :name="(props as any).option.icon" filled/>
-      {{ (props as any).option.name }}
-    </template>
-  </UiSelect>
+  <div class="change-locale w-max">
+    <Multiselect
+        v-model="model"
+        label="name"
+        :value-prop="'value'"
+        :options="locales"
+        :canClear="false"
+    >
+      <template #option="{option}">
+        <UiIcon :name="(option as any).icon" filled/>
+        {{ (option as any).name }}
+      </template>
+      <template #singlelabel="{value}">
+        <div class="multiselect-option">
+          <UiIcon :name="(value as any).icon" filled/>
+          {{ (value as any).name }}
+        </div>
+        <div class="mx-auto"></div>
+      </template>
+    </Multiselect>
+  </div>
 </template>
 <script setup lang="ts">
-import UiIcon from "@components/ui/Icon.vue";
-import UiSelect from "@components/ui/Select.vue";
 import {ref} from "vue";
-import {selectConfig} from "@utils/configsSelect.ts";
+import Multiselect from "@vueform/multiselect";
+import UiIcon from "@components/ui/Icon.vue";
 const model = defineModel<{[key: string]: unknown} | string>()
-const changeLocale = (loc: { selectedOption: ILocales }) => {
-  model.value = loc.selectedOption.code
-}
+
 const locales = ref<ILocales[]>([
   {
     name: 'English',
-    code: 'en',
+    value: 'en',
     icon: 'us'
   },
   {
     name: 'O‘zbekcha',
-    code: 'uz',
+    value: 'uz',
     icon: 'uz'
   },
   {
     name: 'Русский',
-    code: 'ru',
+    value: 'ru',
     icon: 'ru'
   }
 ])
-const selectValue = ref(locales.value.find(el => el.code === model.value))
-
 </script>

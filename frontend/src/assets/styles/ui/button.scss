@@ -1,5 +1,5 @@
 .ui-button{
-  @apply h-11 rounded-lg flex justify-center items-center gap-2 border w-full font-semibold flex-shrink-0 px-4 outline-0 dark:text-white dark:stroke-white;
+  @apply h-11 rounded-lg flex justify-center items-center gap-2 border font-semibold flex-shrink-0 px-4 outline-0 dark:text-white dark:stroke-white;
 
   &.primary{
     @apply bg-primary-700 stroke-white text-white border-primary-700 dark:bg-gray-800;
@@ -8,7 +8,13 @@
     @apply bg-transparent text-gray-700 border-gray-300 dark:stroke-gray-300 stroke-gray-800 dark:border-gray-500 dark:text-gray-100 hover:bg-gray-50 dark:bg-opacity-10;
   }
   &.secondary{
-    @apply stroke-gray-800 bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-500 dark:stroke-gray-300 dark:border-gray-500 dark:text-gray-100;
+    @apply stroke-gray-800 bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700 dark:stroke-gray-300 dark:border-gray-500 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600;
+  }
+  .ui-icon{
+    @apply stroke-current;
+  }
+  &.delete{
+    @apply hover:text-error-500;
   }
 }
 

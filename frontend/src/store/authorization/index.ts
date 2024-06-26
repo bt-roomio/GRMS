@@ -33,7 +33,7 @@ export const useAuthorizationStore = defineStore('authorization', () => {
         }
     }))
 
-    const v$ = useVuelidate(rules, state.value)
+    const v$ = useVuelidate(rules, state, {$scope: false})
     const login = async (args: IAuthorization) => {
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
@@ -62,6 +62,7 @@ export const useAuthorizationStore = defineStore('authorization', () => {
                 }
             })
             await setToken(data, true)
+            return data
         }catch (e: any) {
             await logout()
             throw e

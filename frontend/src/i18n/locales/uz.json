@@ -175,28 +175,28 @@
         }
       },
       "room_type": {
-        "title": "Типы комнат",
-        "subtitle": "Управляйте списком типов комнат",
-        "add_room_type": "Добавить тип комнат",
-        "name": "Название",
-        "dashboard": "Панель управления",
-        "active": "Активный",
+        "title": "Xona turlari",
+        "subtitle": "Xona turlari ro'yxatini boshqarish",
+        "add_room_type": "Xona turini qo'shish",
+        "name": "Nomi",
+        "dashboard": "Boshqaruv paneli",
+        "active": "Faol",
         "modals": {
           "add_new_room_type": {
-            "title": "Добавить тип комнаты",
-            "subtitle": "Добавьте новый тип контроллера сейчас",
-            "name_placeholder": "Введите новое имя",
-            "choose_dashboard": "Выберите панель управления"
+            "title": "Xona turi qo'shish",
+            "subtitle": "Yangi kontroller turini hozir qo'shing",
+            "name_placeholder": "Yangi nom kiriting",
+            "choose_dashboard": "Boshqaruv panelini tanlang"
           },
           "edit_new_room_type": {
-            "title": "Редактировать тип комнаты",
-            "subtitle": "Отредактируйте новый тип контроллера сейчас",
-            "save": "Сохранить тип комнаты"
+            "title": "Xona turini tahrirlash",
+            "subtitle": "Yangi kontroller turini hozir tahrirlang",
+            "save": "Xona turini saqlash"
           }
         },
         "confirm": {
-          "title": "Подтвердите удаление типов комнат",
-          "subtitle": "Нажимая кнопку 'Подтвердить', вы подтверждаете удаление выбранных комнат без возможности восстановления"
+          "title": "Xona turlarini o'chirishni tasdiqlang",
+          "subtitle": "'Tasdiqlash' tugmasini bosish orqali tanlangan xonalarni qayta tiklash imkoniyatisiz o'chirishni tasdiqlaysiz"
         }
       }
     },
@@ -231,6 +231,9 @@
     "room_delete_success": "Xonani o'chirish muvaffaqiyatli amalga oshirildi",
     "room_type_add_success": "Xona turini yaratish muvaffaqiyatli amalga oshirildi",
     "room_type_edit_success": "Xona turini tahrirlash muvaffaqiyatli amalga oshirildi",
-    "room_type_delete_success": "Xona turini o'chirish muvaffaqiyatli amalga oshirildi"
+    "room_type_delete_success": "Xona turini o'chirish muvaffaqiyatli amalga oshirildi",
+    "dashboard_add_success": "Boshqaruv paneli yaratish muvaffaqiyatli amalga oshirildi",
+    "dashboard_edit_success": "Boshqaruv paneli tahrirlash muvaffaqiyatli amalga oshirildi",
+    "dashboard_delete_success": "Boshqaruv paneli o'chirish muvaffaqiyatli amalga oshirildi"
   }
 }

@@ -1,15 +1,17 @@
 <template>
   <div class="ui-table__search" v-if="isSearchOpen">
-    <UiSelect
-        name="name"
-        label="name"
-        v-bind="selectConfig"
-        v-model="searchType"
-        :options="searchTypes"
-    />
+    <div class="ui-select">
+      <Multiselect
+          v-model="searchType"
+          label="name"
+          :value-prop="'key'"
+          :options="searchTypes"
+          :canClear="false"
+      />
+    </div>
     <UiSearch v-model="searchValue"/>
   </div>
-  <div class="ui-table__container">
+  <div :class="{pointer}" class="ui-table__container">
     <table v-if="(!error?.code || !error?.msg) && isEmpty" class="ui-table">
       <UiLoader v-if="loading"/>
       <thead>
@@ -37,6 +39,7 @@
       <tr
           v-for="(entity, index) in data"
           :key="`entity-${index}`"
+          @click.prevent="clickTrHandle(entity)"
       >
         <td
             v-for="([key], i) in Object.entries(headers)"
@@ -77,15 +80,14 @@
 </template>
 <script setup lang="ts" generic="T">
 import {computed, defineComponent, ref} from "vue";
-import UiSelect from "@components/ui/Select.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiSearch from "@components/ui/Search.vue";
 import UiLoader from "@components/ui/Loader.vue";
-import {selectConfig} from "@utils/configsSelect.ts";
 import UiButton from "@components/ui/Button.vue";
-const emits = defineEmits(['sorted', 'more'])
+import Multiselect from "@vueform/multiselect";
+const emits = defineEmits(['sorted', 'more', 'click'])
 const searchValue = defineModel('searchValue')
-const searchType = defineModel<{[key: string]: unknown}>('searchType')
+const searchType = defineModel<string>('searchType')
 const sortObject = ref<string | null>('')
 defineComponent({
   name: 'UiTable'
@@ -112,7 +114,11 @@ const props = defineProps<{
   error?: { code: number | null, msg: string | null}
   loading?: boolean
   isPagination?: boolean
+  pointer?: boolean
 }>()
 const isEmpty = computed(() => !!props.data.length)
 
+const clickTrHandle = (entity: any) => {
+  emits('click', entity)
+}
 </script>

@@ -28,7 +28,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
         title: {required},
     }))
 
-    const v$ = useVuelidate(rules, state.value, {$scope: false})
+    const v$ = useVuelidate(rules, state, {$scope: false})
 
     const getList = async (params: IConfigurationRoomParams) => {
         error.value.code = null
@@ -65,7 +65,6 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
             await $reset()
             toast.success(t('toast.room_type_add_success') as string);
         }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string);
             throw e
         }
     }
@@ -79,7 +78,6 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
             await $reset()
             toast.success(t('toast.room_type_edit_success') as string);
         }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string)
             throw e
         }
     }
@@ -106,7 +104,6 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
                         await getList(sortedData.value)
                         toast.success(t('toast.room_type_delete_success') as string);
                     }catch (e: any) {
-                        toast.error(e.response.data.detail || t('toast.unknown_error') as string);
                         throw e
                     }
                 }

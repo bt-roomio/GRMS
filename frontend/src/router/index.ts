@@ -22,6 +22,7 @@ import EmailSetup from "../pages/dashboard/settings/EmailSetup.vue";
 import auth from "@router/middleware/auth.ts";
 import Dashboard from "@/pages/dashboard/configuration/Dashboard.vue";
 import Room from "@/pages/dashboard/rooms/Room.vue";
+import DashboardInner from "@/pages/dashboard/configuration/DashboardInner.vue";
 
 
 const router = createRouter({
@@ -68,6 +69,11 @@ const router = createRouter({
                             path: 'dashboard',
                             name: 'configuration-dashboard',
                             component: Dashboard
+                        },
+                        {
+                            path: 'dashboard/:id',
+                            name: 'configuration-dashboard-inner',
+                            component: DashboardInner
                         },
                         {
                             path: 'users',
