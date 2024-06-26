@@ -1,5 +1,3 @@
-import time
-
 from core.models import BaseModel, UpdateByModel
 from django.db import models
 from django.db.models import CASCADE, SET_NULL
@@ -176,35 +174,6 @@ class DeviceProfile(BaseModel):
 
     class Meta:
         db_table = "main_device_profile"
-
-
-class AttributeKv(BaseModel):
-    CLIENT_SCOPE = "CLIENT_SCOPE"
-    SERVER_SCOPE = "SERVER_SCOPE"
-    SHARED_SCOPE = "SHARED_SCOPE"
-    ENTITY_TYPE = ((CLIENT_SCOPE, "CLIENT_SCOPE"), (SERVER_SCOPE, "SERVER_SCOPE"), (SHARED_SCOPE, "SHARED_SCOPE"))
-
-    entity_type = models.CharField(max_length=255)
-    entity = models.ForeignKey("main.Device", CASCADE, "attribute_kvs")
-    attribute_type = models.CharField(max_length=255, choices=ENTITY_TYPE, default=SERVER_SCOPE)
-    attribute_key = models.CharField(max_length=255)
-    bool_v = models.BooleanField(blank=True, null=True)
-    str_v = models.CharField(max_length=255, blank=True, null=True)
-    long_v = models.BigIntegerField(blank=True, null=True)
-    dbl_v = models.FloatField(blank=True, null=True)
-    json_v = models.TextField(blank=True, null=True)
-    last_update_ts = models.BigIntegerField(blank=True, null=True)
-
-    def save(self, *args, **kwargs):
-        if self.pk:
-            self.last_update_ts = time.time()
-        return super(AttributeKv, self).save(*args, **kwargs)
-
-    def __str__(self):
-        return str(self.entity)
-
-    class Meta:
-        db_table = "main_attribute_kv"
 
 
 class Customer(BaseModel):

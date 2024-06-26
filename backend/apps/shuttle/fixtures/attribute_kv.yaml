@@ -1,4 +1,4 @@
-- model: "main.AttributeKv"
+- model: "shuttle.AttributeKv"
   pk: "c2393be6-e3fb-4dfb-a030-3c6e760218ea"
   fields:
       entity_type: "DEVICE"
@@ -7,7 +7,7 @@
       attribute_key: "ip_address"
       str_v: "192.168.10.5"
 
-- model: "main.AttributeKv"
+- model: "shuttle.AttributeKv"
   pk: "3c7248af-c624-4ed2-84d0-11a105188e61"
   fields:
       entity_type: "DEVICE"

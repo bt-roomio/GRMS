@@ -12,6 +12,7 @@ urlpatterns = [
                 *doc_path,
                 path("users/", include(("users.urls", "users"), namespace="users")),
                 path("main/", include(("main.urls", "main"), namespace="main")),
+                path("shuttle/", include(("shuttle.urls", "shuttle"), namespace="shuttle")),
             ]
         ),
     ),
