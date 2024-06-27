@@ -144,7 +144,16 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
                 }
             }
         })
-
+    }
+    const copyItem = async (item: any) => {
+        try {
+            const stateObj = JSON.parse(JSON.stringify(item))
+            stateObj.title = stateObj.title + ` (Copy)`
+            await useApiFetch('/main/dashboard/', {method: 'POST', data: stateObj})
+            await getList(sortedData.value)
+        }catch (e) {
+            throw e
+        }
     }
     const searchItems = async (val: string) => {
         await getList({})
@@ -328,6 +337,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         addItem,
         editItem,
         deleteItem,
+        copyItem,
         searchItems,
         $reset,
         sortList,

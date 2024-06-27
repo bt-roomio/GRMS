@@ -25,7 +25,7 @@
           placeholder="Room temperature"
       />
       <div class="ui-multiselect">
-        <label for="">Type</label>
+        <label>Type</label>
         <Multiselect
             v-model="editWidget.descriptor.default_config.type"
             :options="types"
@@ -47,7 +47,7 @@
       </h3>
       <template v-for="(item, key) in editWidget?.descriptor.default_config?.controls" :key="key">
         <div class="ui-multiselect">
-          <label for="">Tag</label>
+          <label>Tag</label>
           <Multiselect
               v-model="item.tag"
               :options="tags"
@@ -76,6 +76,28 @@
               name="max"
           />
         </div>
+        <template v-if="editWidget?.descriptor.default_config.type === 'Sensor'">
+          <div class="ui-multiselect">
+            <label>Unit</label>
+            <Multiselect
+                v-model="item.unit"
+                :options="units"
+                :canClear="false"
+                :canDeselect="false"
+                :caret="true"
+                :searchable="true"
+                placeholder="Write the unit"
+            />
+          </div>
+          <UiInput
+              v-if="item.unit === 'Integer'"
+              label="Precision level"
+              :name="`precision-${key}`"
+              v-model="item.precision"
+              placeholder="Write the precision"
+              type="number"
+          />
+        </template>
         <div class="modal__actions">
           <UiButton class="delete" @click.prevent="deleteControl(key)">
             <UiIcon name="trash" filled/>
@@ -113,7 +135,7 @@ const {editWidget} = storeToRefs(storeConfigurationDashboard)
 const storeConfigurationDevice = useConfigurationDeviceStore()
 const {devices} = storeToRefs(storeConfigurationDevice)
 
-
+const units = ref(['Boolean', 'Integer'])
 const tags = ref([
   'DND',
   'MUR',
@@ -146,6 +168,13 @@ const addControls = () => {
       min: 0,
       max: 100
     })
+  } else if (editWidget.value?.descriptor?.default_config?.type === 'Sensor'){
+    editWidget.value?.descriptor?.default_config?.controls.push({
+      tag: '',
+      title: '',
+      unit: 'Boolean',
+      precision: 0
+    })
   } else {
     editWidget.value?.descriptor?.default_config?.controls.push({
       tag: '',
@@ -168,6 +197,14 @@ const changeTypeHandle = (value: string) => {
         tag: '',
         title: '',
         min: 0,
+        max: 100
+      })
+    } else if (value === 'Sensor'){
+      editWidget.value.descriptor.default_config.controls = []
+      editWidget.value.descriptor.default_config.controls.push({
+        tag: '',
+        title: '',
+        unit: 'Boolean',
         max: 100
       })
     } else {

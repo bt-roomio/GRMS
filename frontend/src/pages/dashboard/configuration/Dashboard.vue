@@ -35,6 +35,9 @@
           <UiButton class="secondary" @click.stop="openEditRoomType(entity.id as string)">
             <UiIcon name="edit" filled />
           </UiButton>
+          <UiButton class="text" @click.stop="storeConfigurationDashboard.copyItem(entity)">
+            <UiIcon name="copy" filled />
+          </UiButton>
           <UiButton class="text" @click.stop="storeConfigurationDashboard.deleteItem(entity.id as string)">
             <UiIcon name="trash" filled />
           </UiButton>

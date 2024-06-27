@@ -100,5 +100,6 @@ const clickButtonsHandle = (evt: any) => {
 }
 onUnmounted(() => {
   dashboard.value = null
+  storeConfigurationDashboard.$reset()
 })
 </script>
