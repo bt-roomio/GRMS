@@ -14,15 +14,24 @@
 .vue-slider-dot-tooltip-inner {
   @apply bg-gray-700 text-white border-gray-700
 }
+.slider{
+  @apply table border-collapse ;
+}
 .ui-slider{
-  @apply flex items-center justify-between bg-gray-25 dark:bg-gray-500 px-4 py-3 rounded-xl gap-8;
+  @apply table-row border-b-[16px] last:border-b-0 border-white ;
   &__label{
-    @apply w-48 flex-shrink-0;
+    @apply content-center table-cell;
+    span{
+      @apply bg-gray-50 dark:bg-gray-500 block p-4 whitespace-nowrap rounded-l-xl;
+    }
   }
   &__indicator{
-    @apply w-full;
+    @apply content-center w-full table-cell px-4 bg-gray-50 dark:bg-gray-500;
   }
   &__value{
-    @apply w-12 flex-shrink-0;
+    @apply content-center table-cell;
+    span{
+      @apply bg-gray-50 dark:bg-gray-500 block p-4 whitespace-nowrap rounded-r-xl w-16;
+    }
   }
 }

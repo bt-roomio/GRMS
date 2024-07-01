@@ -12,4 +12,19 @@
   &:before{
     @apply content-[''] block w-1.5 h-1.5 bg-current rounded-full;
   }
+  &.available {
+    @apply text-success-500 bg-success-50;
+  }
+  &.checkedin {
+    @apply text-blue-500 bg-blue-50;
+  }
+  &.occupied {
+    @apply text-orange-500 bg-orange-50;
+  }
+  &.donotdisturb {
+    @apply text-red-500 bg-red-50;
+  }
+  &.makeuproom {
+    @apply text-yellow-500 bg-yellow-50;
+  }
 }

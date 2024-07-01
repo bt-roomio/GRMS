@@ -12,7 +12,10 @@
     <div>
       <UiIcon name="download" v-tooltip="$t('dashboard.configuration.rooms.modals.import_new_rooms.title')" @click.prevent="openImportRoom" filled/>
     </div>
-    <div>
+    <div v-if="isTable" @click.prevent="isTable = !isTable">
+      <UiIcon name="dots-grid" v-tooltip="$t('dashboard.rooms.change_grid')" filled/>
+    </div>
+    <div v-else @click.prevent="isTable = !isTable">
       <UiIcon name="list" v-tooltip="$t('dashboard.rooms.change_list')" filled/>
     </div>
   </div>
@@ -27,6 +30,7 @@ import ModalImportRooms from "@components/pages/dashboard/configuration/rooms/Mo
 const export_room = ref<IModal | null>(null)
 const import_room = ref<IModal | null>(null)
 const search = defineModel('search')
+const isTable = defineModel('isTable')
 const emits = defineEmits(['theadSort'])
 const openExportRoom = () => export_room.value?.open()
 const openImportRoom = () => import_room.value?.open()

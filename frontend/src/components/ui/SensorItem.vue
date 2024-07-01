@@ -14,8 +14,8 @@ const model = defineModel<Boolean | Number>()
 const props = defineProps(['unit', 'precision'])
 const getValueWithPrecision = computed(() => {
   if (typeof model.value === 'number'){
-    let formattedNumber = parseFloat(model.value.toFixed(props.precision));
-    let power = Math.pow(10, props.precision);
+    let formattedNumber = parseFloat(model.value.toFixed(props.precision || 0));
+    let power = Math.pow(10, props.precision || 0);
     formattedNumber = Math.ceil(formattedNumber * power) / power;
     return formattedNumber
   }else {

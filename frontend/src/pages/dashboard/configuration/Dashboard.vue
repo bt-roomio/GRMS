@@ -42,7 +42,6 @@
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
-
       </template>
     </UiTable>
     <ModalAddDashboard ref="add_dashboard"/>

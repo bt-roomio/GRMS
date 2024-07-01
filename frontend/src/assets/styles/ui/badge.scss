@@ -1,18 +1,28 @@
 .ui_badge{
-  @apply flex justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2  text-gray-700;
+  @apply flex bg-gray-100 justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2  text-gray-700;
   .ui-icon{
     @apply w-4 h-4 stroke-[#606271];
   }
   &.off{
-    @apply bg-error-50 text-error-500;
-    &:before{
-      @apply content-[''] w-1.5 h-1.5 bg-error-500 rounded-full;
+    @apply bg-error-100 text-error-500;
+    .ui-icon{
+      @apply stroke-error-500
+    }
+    &.dot{
+      &:before{
+        @apply content-[''] w-1.5 h-1.5 bg-error-500 rounded-full;
+      }
     }
   }
   &.on{
-    @apply bg-success-50 text-success-500;
-    &:before{
-      @apply content-[''] w-1.5 h-1.5 bg-success-500 rounded-full;
+    @apply bg-success-100 text-success-500;
+    .ui-icon{
+      @apply stroke-success-500
+    }
+    &.dot{
+      &:before{
+        @apply content-[''] w-1.5 h-1.5 bg-success-500 rounded-full;
+      }
     }
   }
 }

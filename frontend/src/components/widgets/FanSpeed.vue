@@ -1,36 +1,37 @@
 <template>
   <div class="fan-speed">
     <div class="fan-speed__tablet">
-      {{rangeValue}}
-      <div class="fan-speed__control" :class="{disabled: rangeValue === 16}">
-        <UiIcon name="minus-circle" filled @click.prevent="rangeValue -= 0.5"/>
+      <div class="fan-speed__control" :class="{disabled: rangeValue === value.min}">
+        <UiIcon name="minus-circle-control" filled @click.prevent="minus"/>
       </div>
       <div class="fan-speed__dashboard">
         <UiCircularInput
             v-model="rangeValue"
-            :diameter="200"
-            temperature_type="°C"
-            :min="16"
-            :max="32"
+            :temperature_type="units[value.unit]"
+            :min="value.min"
+            :max="value.max"
         />
       </div>
-      <div class="fan-speed__control" :class="{disabled: rangeValue === 32}">
-        <UiIcon name="plus-circle" filled @click.prevent="rangeValue += 0.5"/>
+      <div class="fan-speed__control" :class="{disabled: rangeValue === value.max}">
+        <UiIcon name="plus-circle-control" filled @click.prevent="plus"/>
       </div>
     </div>
-    <div class="fan-speed__buttons">
-      <UiButton :class="activeButton === 'Low' ? 'primary': 'secondary'" @click.prevent="activeButton = 'Low'">Low</UiButton>
-      <UiButton :class="activeButton === 'Medium' ? 'primary': 'secondary'" @click.prevent="activeButton = 'Medium'">Medium</UiButton>
-      <UiButton :class="activeButton === 'High' ? 'primary': 'secondary'" @click.prevent="activeButton = 'High'">High</UiButton>
-      <UiButton :class="activeButton === 'Off' ? 'primary': 'secondary'" @click.prevent="activeButton = 'Off'">Off</UiButton>
+    <div class="fan-speed__buttons" :class="{'col-2': value.controls_type !== 'line'}" v-if="value.controls.length">
+      <UiButton
+          v-for="item in value.controls"
+          :class="activeButton === item.value ? 'primary': 'secondary'"
+          @click.prevent="activeButton = item.value"
+      >
+        {{ item.power_level_name || 'The name of the power level should be here' }}
+      </UiButton>
     </div>
     <div class="fan-speed__toggles">
       <ul>
-        <li>
+        <li v-if="value.master_off">
           Master Off
           <UiToggle/>
         </li>
-        <li>
+        <li v-if="value.fan_valve">
           Fan Valve
           <UiToggle/>
         </li>
@@ -41,10 +42,27 @@
 </template>
 <script setup lang="ts">
 import UiIcon from "@components/ui/Icon.vue";
-import {ref} from "vue";
+import {computed, ref} from "vue";
 import UiCircularInput from "@components/ui/CircularInput.vue";
 import UiButton from "@components/ui/Button.vue";
 import UiToggle from "@components/ui/Toggle.vue";
-const rangeValue = ref(23.5)
-const activeButton = ref('Medium')
+const props = defineProps(['value'])
+const rangeValue = ref(props.value.default_temperature)
+const activeButton = ref('0')
+const plus = () => {
+  if (rangeValue.value !== undefined) {
+    rangeValue.value += 0.5;
+  }
+}
+const minus = () => {
+  if (rangeValue.value !== undefined && rangeValue.value > 0) {
+    rangeValue.value -= 0.5;
+  }
+}
+
+const units = computed(() => ({
+  "Celsius": '°C',
+  "Fahrenheit": '°F',
+}) as  {[key: string]: any})
+
 </script>

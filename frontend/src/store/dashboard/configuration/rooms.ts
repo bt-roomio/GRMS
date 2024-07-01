@@ -14,7 +14,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     const {t} = useI18n()
     const size = ref<number>(10)
     const room = ref<IConfigurationRoom>()
-    const rooms = ref<IServerResponse<IConfigurationRoomsData> | null>(null)
+    const rooms = ref<IServerResponse<IConfigurationRoom>>({results: [], count: 0})
     const searchValue = ref('')
     const searchType = ref('room_number')
     const itemLoading = ref(false)
@@ -45,7 +45,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         error.value.code = null
         error.value.msg = null
         try {
-            const {data} = await useApiFetch<IServerResponse<IConfigurationRoomsData>>('/main/room/', {
+            const {data} = await useApiFetch<IServerResponse<IConfigurationRoom>>('/main/room/', {
                 method: 'GET',
                 params: {
                     ...params,
@@ -54,7 +54,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
                 transformResponse: [(data) => addFieldSelect(data)]
             })
 
-            rooms.value = data as IServerResponse<IConfigurationRoomsData>
+            rooms.value = data
         }catch (e: any) {
             if (e.response?.status){
                 error.value.code = e.response.status
@@ -211,6 +211,8 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     return {
         state,
         rooms,
+        room,
+        itemLoading,
         getList,
         addItem,
         deleteItem,

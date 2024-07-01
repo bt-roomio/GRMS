@@ -1,8 +1,18 @@
 <template>
   <div class="widget-card" v-if="item">
     <div class="widget-card__head">
-      <div class="widget-card__title" v-if="item.descriptor.default_config.title">{{ item.descriptor.default_config.title }}</div>
-      <div class="widget-card__description" v-if="item.descriptor.default_config.subtitle">{{ item.descriptor.default_config.subtitle }}</div>
+      <div
+          class="widget-card__title"
+          v-if="item.descriptor.default_config.title || isCurrentEdit"
+      >
+        {{ item.descriptor.default_config.title || (isCurrentEdit ? 'There should be a title here' : '') }}
+      </div>
+      <div
+          class="widget-card__description"
+          v-if="item.descriptor.default_config.subtitle || isCurrentEdit"
+      >
+        {{ item.descriptor.default_config.subtitle || (isCurrentEdit ? 'There should be a subtitle here' : '') }}
+      </div>
     </div>
     <div class="widget-card__actions" v-if="isSettings">
       <UiButton class="text" @click.prevent="$emit('edit', item)">
@@ -16,20 +26,22 @@
       <div v-if="item.type === 'chart'" :style="wAndH">
         <v-chart class="chart" :option="option" autoresize/>
       </div>
-      <template v-if="item.type === 'progress-bar'">
-        <UiProgress :color="item.config.color" :value="getValueProgress(data?.data, item.device_data_key)"/>
+      <template v-if="item.fqn === 'progress_bar'">
+        <UiProgress :value="item.descriptor.default_config"/>
       </template>
-      <template v-if="item.type === 'fan-speed'">
-        <FanSpeed :value="item"/>
+      <template v-if="item.fqn === 'system_mode'">
+        <template v-if="item.descriptor.default_config.type === 'Toggle'">
+          <Mode :values="item.descriptor.default_config.controls"/>
+        </template>
+        <template v-if="item.descriptor.default_config.type === 'Sensor'">
+          <Sensor :values="item.descriptor.default_config.controls"/>
+        </template>
+        <template v-if="item.descriptor.default_config.type === 'Slider'">
+          <Slider :values="item.descriptor.default_config.controls"/>
+        </template>
       </template>
-      <template v-if="item.descriptor.default_config.type === 'Toggle'">
-        <Mode :values="item.descriptor.default_config.controls"/>
-      </template>
-      <template v-if="item.descriptor.default_config.type === 'Sensor'">
-        <Sensor :values="item.descriptor.default_config.controls"/>
-      </template>
-      <template v-if="item.descriptor.default_config.type === 'Slider'">
-        <Slider :values="item.descriptor.default_config.controls"/>
+      <template v-if="item.fqn === 'room_temperature'">
+        <FanSpeed :value="item.descriptor.default_config"/>
       </template>
     </div>
   </div>
@@ -57,9 +69,11 @@ import Sensor from "@components/widgets/Sensor.vue";
 import Slider from "@components/widgets/Slider.vue";
 import {useWS} from "@store/dashboard/ws";
 import {storeToRefs} from "pinia";
+import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 const cookies = useCookies(['mode'])
 const option = computed(() => props.item.config.setting)
-
+const storeConfigurationDashboard = useConfigurationDashboardStore()
+const {editWidget} = storeToRefs(storeConfigurationDashboard)
 const wAndH = ref({
   width: '10px',
   height: '10px'
@@ -82,17 +96,17 @@ const storeWs = useWS()
 const {send, unSubscription} = storeWs
 const {state} = storeToRefs(storeWs)
 const data = computed(() => state.value.events.get(props.item.device?.id))
-
+const isCurrentEdit = computed(() => JSON.stringify(props.item) === JSON.stringify(editWidget.value))
 onMounted(() => {
   nextTick(() => {
     wAndH.value.width = '100%'
     wAndH.value.height = '100%'
   })
-  if (props.item?.device?.id){
+  if (props.item?.descriptor?.default_config.entityId){
     send({
       "type": "TIMESERIES",
-      "entityType": "DEVICE",
-      "entityId": props.item.device?.id,
+      "entityType": props.item?.descriptor?.default_config.entityType,
+      "entityId": props.item?.descriptor?.default_config.entityId,
       "scope": "LATEST_TELEMETRY",
     })
   }
@@ -103,8 +117,4 @@ onUnmounted(() => {
     unSubscription(data.value.subscriptionId)
   }
 })
-
-const getValueProgress = (data: any, field: string) => {
-  return data ? (data[field]?.at(0).at(1) || 0).toString() : '0'
-}
 </script>

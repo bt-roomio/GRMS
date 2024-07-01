@@ -223,7 +223,18 @@
         "do_not_disturb": "Do not disturb",
         "available": "Available"
       },
+      "table": {
+        "room_number": "Room",
+        "floor": "Floor",
+        "block": "Block",
+        "type": "Room type",
+        "temp": "Temp",
+        "system_mode": "System mode",
+        "indicators": "Indicators",
+        "status": "Status"
+      },
       "change_list": "Change to a list",
+      "change_grid": "Change to a grid",
       "more_btn": "More rooms"
     }
   },

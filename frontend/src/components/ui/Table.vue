@@ -30,7 +30,6 @@
               </span>
             </template>
             <template v-else>{{header}}</template>
-
           </template>
         </th>
       </tr>
@@ -45,7 +44,7 @@
             v-for="([key], i) in Object.entries(headers)"
             :key="`${key}-${i}`"
         >
-          <slot v-if="$slots[key]" :name="key" :entity="entity" />
+          <slot v-if="$slots[key]" :name="key" :entity="entity as {[key: string]: any}" />
           <template v-else>
             {{entity[key] || '-'}}
           </template>
@@ -110,13 +109,13 @@ const props = defineProps<{
   searchTypes?: { [key: string]: unknown | undefined; }[]
   isSearchOpen?: boolean
   sort?: string[]
-  data: Record<string, T>[]
+  data: Record<string, T>[] | undefined
   error?: { code: number | null, msg: string | null}
   loading?: boolean
   isPagination?: boolean
   pointer?: boolean
 }>()
-const isEmpty = computed(() => !!props.data.length)
+const isEmpty = computed(() => !!props.data?.length)
 
 const clickTrHandle = (entity: any) => {
   emits('click', entity)

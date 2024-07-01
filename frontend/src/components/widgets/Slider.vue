@@ -1,10 +1,6 @@
 <template>
-  <div class="sensor">
-    <ul>
-      <li  v-for="(item, key) in values" :key="key">
-        <UiSliderItem :args="{min: item.min, max: item.max}">{{ item.title || '&nbsp;' }}</UiSliderItem>
-      </li>
-    </ul>
+  <div class="slider">
+    <UiSliderItem v-for="(item, key) in values" :key="key" :args="{min: item.min, max: item.max}">{{ item.title || 'There should be a title here' }}</UiSliderItem>
   </div>
 </template>
 <script setup lang="ts">

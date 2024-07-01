@@ -1,11 +1,11 @@
 .loader {
-  @apply select-none pointer-events-none w-full h-full absolute top-0 left-0 bg-white/60 flex items-center justify-center;
+  @apply select-none pointer-events-none w-full h-full absolute top-0 left-0 bg-white/60 flex items-center justify-center rounded-xl;
   &__spin{
     @apply w-12 h-12 rounded-full relative animate-spin;
 
     &:after,
     &:before{
-      @apply content-[''] w-full h-full absolute inset-0 rounded-full border-4 border-gray-100 bg-white/60;
+      @apply content-[''] w-full h-full absolute inset-0 rounded-full border-4 border-gray-100;
       animation: prixClipFix 2s linear infinite ;
     }
     &:after{

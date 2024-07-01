@@ -1,4 +1,7 @@
 .rooms{
+  &__content{
+    @apply relative;
+  }
   &__actions{
     @apply flex gap-6 justify-between items-center;
   }

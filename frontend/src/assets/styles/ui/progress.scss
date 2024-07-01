@@ -3,4 +3,7 @@
   >div{
     @apply h-2.5 rounded-full;
   }
+  &__value{
+    @apply whitespace-nowrap;
+  }
 }

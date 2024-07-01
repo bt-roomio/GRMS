@@ -2,7 +2,7 @@
   <div class="sensor">
     <ul>
       <li  v-for="(item, key) in values" :key="key">
-        <UiSensorItem :unit="item.unit" :model-value="123.1237862187638" :precision="item.precision">{{ item.title || '&nbsp;' }}</UiSensorItem>
+        <UiSensorItem :unit="item.unit" :model-value="123.1237862187638" :precision="item.precision">{{ item.title || 'There should be a title here' }}</UiSensorItem>
       </li>
     </ul>
   </div>

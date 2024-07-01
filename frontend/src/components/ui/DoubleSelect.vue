@@ -1,8 +1,8 @@
 <template>
-  <div class="ui-input-select">
+  <div class="ui-double-select">
     <label v-if="label" :for="id">{{ label }}</label>
-    <div class="ui-input-select__group">
-      <div class="ui-input-select__left">
+    <div class="ui-double-select__group">
+      <div class="ui-double-select__left">
         <Multiselect
             v-model="modelSelect"
             :options="selectOptions"
@@ -10,7 +10,15 @@
             :canDeselect="false"
         />
       </div>
-      <UiInput name="input-select" v-model="model" v-bind="args"/>
+      <Multiselect
+          v-model="model"
+          :options="options"
+          :canClear="false"
+          :canDeselect="false"
+          :caret="false"
+          :searchable="true"
+          v-bind="args"
+      />
     </div>
     <span class="text-red-500" v-if="errors && errors.find(el => el.$property === name)">{{errors.find(el => el.$property === name)?.$message}}</span>
     <span class="text-xs" v-if="$slots.footer"><slot name="footer"/></span>
@@ -20,7 +28,6 @@
 import {defineComponent} from "vue";
 import {ErrorObject} from "@vuelidate/core";
 import Multiselect from "@vueform/multiselect";
-import UiInput from "@components/ui/Input.vue";
 const model = defineModel()
 const modelSelect = defineModel('select')
 defineProps<{
@@ -29,9 +36,10 @@ defineProps<{
   errors?: ErrorObject[],
   label?: string,
   selectOptions: any
+  options: any,
   args?: any
 }>()
 defineComponent({
-  name: 'UiInputSelect',
+  name: 'UiDoubleSelect',
 })
 </script>

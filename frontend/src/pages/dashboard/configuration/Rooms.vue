@@ -121,20 +121,12 @@ const searchTypes = computed(() => [
     key: 'room_number'
   },
   {
-    name: t('dashboard.configuration.rooms.type'),
-    key: 'type'
-  },
-  {
     name: t('dashboard.configuration.rooms.floor'),
     key: 'floor'
   },
   {
     name: t('dashboard.configuration.rooms.block'),
     key: 'block'
-  },
-  {
-    name: t('dashboard.configuration.rooms.devices'),
-    key: 'devices'
   },
 ])
 const headers = computed<IConfigurationRoomsHead>(() => ({

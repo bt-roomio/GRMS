@@ -11,6 +11,9 @@
   &__head{
     @apply flex flex-col gap-1 mb-6 pr-16;
   }
+  &__content{
+    @apply flex flex-col justify-end;
+  }
   &__actions{
     @apply absolute top-0 right-0 flex gap-1 p-3;
     .ui-button{
