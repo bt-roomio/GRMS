@@ -19,6 +19,8 @@
         :w="item.w"
         :h="item.h"
         :i="item.i"
+        :min-h="item.minH"
+        :min-w="item.minW"
     >
       <Teleport to="#app" :disabled="!isCurrentWidgetEdit[key]">
         <WidgetItem

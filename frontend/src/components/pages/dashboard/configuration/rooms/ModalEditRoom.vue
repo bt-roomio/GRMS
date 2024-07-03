@@ -47,6 +47,8 @@
               :loading="!devices?.results"
               mode="tags"
               :close-on-select="false"
+              :caret="false"
+              :can-clear="false"
               :searchable="true"
               label="name"
               :valueProp="'id'"

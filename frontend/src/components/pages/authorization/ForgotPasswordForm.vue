@@ -22,7 +22,6 @@ const state = ref({
   email: '',
 })
 const submitHandle = () => {
-  console.log(state.value)
   router.push({name: 'reset-password'})
 }
 </script>

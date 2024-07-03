@@ -1,19 +1,19 @@
 <template>
-  <form>
-    <div class="modal__card" v-if="editWidget?.descriptor.default_config">
+  <form v-if="editWidget?.descriptor.default_config">
+    <div class="modal__card">
       <div class="ui-form">
-        <h3>General</h3>
+        <h3>{{$t('dashboard.widget.form.general')}}</h3>
         <UiInput
-            label="Title"
+            :label="$t('dashboard.widget.form.title')"
             name="title"
             v-model="editWidget.descriptor.default_config.title"
-            placeholder="Write the title"
+            :placeholder="$t('dashboard.widget.form.title_placeholder')"
         />
         <UiInput
-            label="Subtitle"
+            :label="$t('dashboard.widget.form.subtitle')"
             name="subtitle"
             v-model="editWidget.descriptor.default_config.subtitle"
-            placeholder="Write the subtitle"
+            :placeholder="$t('dashboard.widget.form.subtitle_placeholder')"
         />
         <UiDoubleSelect
             v-model="editWidget.descriptor.default_config.entityId"
@@ -21,12 +21,12 @@
             :options="devices?.results"
             :args="{valueProp: 'id', label: 'name'}"
             :select-options="['Device', 'Alias']"
-            label="Datasource"
-            name="subtitle"
-            placeholder="Room temperature"
+            :label="$t('dashboard.widget.form.datasource')"
+            name="datasource"
+            :placeholder="$t('dashboard.widget.form.room_temperature')"
         />
         <div class="ui-multiselect">
-          <label>Type</label>
+          <label>{{ $t('dashboard.widget.form.type') }}</label>
           <Multiselect
               v-model="editWidget.descriptor.default_config.type"
               :options="types"
@@ -40,15 +40,15 @@
         </div>
       </div>
     </div>
-    <div class="modal__card" v-if="editWidget?.descriptor.default_config">
+    <div class="modal__card">
       <div class="ui-form">
         <h3>
-          Settings values
+          {{ $t('dashboard.widget.form.settings_values') }}
           <UiIcon name="plus-circle" filled @click="addControls"/>
         </h3>
         <template v-for="(item, key) in editWidget?.descriptor.default_config?.controls" :key="key">
           <div class="ui-multiselect">
-            <label>Tag</label>
+            <label>{{ $t('dashboard.widget.form.tag') }}</label>
             <Multiselect
                 v-model="item.tag"
                 :options="tags"
@@ -56,30 +56,30 @@
                 :canDeselect="false"
                 :caret="false"
                 :searchable="true"
-                placeholder="Write the tag"
+                :placeholder="$t('dashboard.widget.form.tag_placeholder')"
             />
           </div>
           <UiInput
-              label="Title Name"
+              :label="$t('dashboard.widget.form.title_name')"
               :name="`title-${key}`"
               v-model="item.title"
-              placeholder="Write the title"
+              :placeholder="$t('dashboard.widget.form.title_placeholder')"
           />
           <div class="ui-form__row col-2" v-if="item.min !== undefined && item.max !== undefined">
             <UiInputCount
-                label="Min value"
+                :label="$t('dashboard.widget.form.min_value')"
                 v-model="item.min"
                 name="min"
             />
             <UiInputCount
-                label="Max value"
+                :label="$t('dashboard.widget.form.max_value')"
                 v-model="item.max"
                 name="max"
             />
           </div>
           <template v-if="editWidget?.descriptor.default_config.type === 'Sensor'">
             <div class="ui-multiselect">
-              <label>Unit</label>
+              <label>{{$t('dashboard.widget.form.unit')}}</label>
               <Multiselect
                   v-model="item.unit"
                   :options="units"
@@ -87,26 +87,26 @@
                   :canDeselect="false"
                   :caret="true"
                   :searchable="true"
-                  placeholder="Write the unit"
+                  :placeholder="$t('dashboard.widget.form.unit_placeholder')"
               />
             </div>
             <UiInput
                 v-if="item.unit === 'Integer'"
-                label="Precision level"
+                :label="$t('dashboard.widget.form.precision_level')"
                 :name="`precision-${key}`"
                 v-model="item.precision"
-                placeholder="Write the precision"
+                :placeholder="$t('dashboard.widget.form.precision_placeholder')"
                 type="number"
             />
           </template>
           <div class="modal__actions">
             <UiButton class="delete" @click.prevent="deleteControl(key)">
               <UiIcon name="trash" filled/>
-              Delete
+              {{$t('dashboard.widget.form.delete')}}
             </UiButton>
             <UiButton @click.prevent="copyControl(item)">
               <UiIcon name="copy" filled/>
-              Copy
+              {{$t('dashboard.widget.form.copy')}}
             </UiButton>
           </div>
           <hr>
@@ -114,7 +114,7 @@
         <div class="modal__actions justify-center">
           <UiButton @click.prevent="addControls">
             <UiIcon name="plus-circle" filled/>
-            Add
+            {{$t('dashboard.widget.form.add')}}
           </UiButton>
         </div>
       </div>

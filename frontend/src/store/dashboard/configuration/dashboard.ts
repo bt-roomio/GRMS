@@ -8,9 +8,11 @@ import {toast} from "vue3-toastify";
 import {useI18n} from "vue-i18n";
 import {useConfirm} from "@store/dashboard/useConfirm.ts";
 import {Layout} from "grid-layout-plus";
+import useMainStore from "@/store";
 
 export const useConfigurationDashboardStore = defineStore('configuration-dashboard', () => {
 
+    const mainStore = useMainStore()
     const confirmStore = useConfirm()
     const {t} = useI18n()
 
@@ -188,11 +190,11 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
             if (dashboard.value && !dashboard.value?.configuration){
                 dashboard.value.configuration = {widgets: []}
             }
-            readModel.value = dashboard.value?.configuration.widgets.map((el: any, key: number) => {
+            readModel.value = dashboard.value?.configuration.widgets.map((el: any) => {
                 return {
+                    ...el.descriptor.dashboard_config,
                     id: el.id,
-                    i: el.id + key,
-                    ...el.descriptor.dashboard_config
+                    i: mainStore.generateRandomString(12),
                 }
             })
             readWidgets.value = dashboard.value?.configuration.widgets

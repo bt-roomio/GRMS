@@ -1,8 +1,8 @@
 <template>
   <Modal ref="edit_room_type" @closed="storeConfigurationDashboard.$reset()">
     <template #head>
-      <h2>Edit new dashboard</h2>
-      <p>Edit a new room in your hotel</p>
+      <h2>{{$t('dashboard.configuration.dashboard.modal.edit_title')}}</h2>
+      <p>{{$t('dashboard.configuration.dashboard.modal.edit_subtitle')}}</p>
     </template>
     <div class="modal__card">
       <form class="ui-form" @submit.prevent="storeConfigurationDashboard.addItem(close)">
@@ -21,7 +21,7 @@
 
     <template #footer="{close}">
       <UiButton class="primary" @click.prevent="storeConfigurationDashboard.editItem(close)">
-        Save dashboard
+        {{$t('dashboard.configuration.dashboard.modal.edit_button')}}
       </UiButton>
       <UiButton class="text" @click.prevent="close()">
         {{ $t('dashboard.configuration.rooms.modals.add_new_rooms.cancel') }}

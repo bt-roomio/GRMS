@@ -28,6 +28,7 @@ import {storeToRefs} from "pinia";
 import PageHead from "@components/pages/dashboard/PageHead.vue";
 import WidgetContainer from "@components/widgets/WidgetContainer.vue";
 import ModalAddWidget from "@components/widgets/modal/ModalAddWidget.vue";
+import {useI18n} from "vue-i18n";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
 const {
   dashboard,
@@ -35,6 +36,7 @@ const {
   viewModel,
   viewWidgets,
 } = storeToRefs(storeConfigurationDashboard)
+const {t} = useI18n()
 const {params} = useRoute()
 const add_widget = ref<IModal | null>(null)
 
@@ -43,8 +45,8 @@ const buttons = computed(() => {
     {icon: 'settings', id: 'settings', class: 'text'},
     {icon: 'check', id: 'save', class: 'text'},
     {icon: 'x-close', id: 'cancel', class: 'text delete'},
-    {name: 'Add alias', icon: 'plus', id: 'add-alias', class: 'text'},
-    {name: 'Add  widget', icon: 'plus', id: 'add-widget'},
+    {name: t('dashboard.widget.form.add_alias'), icon: 'plus', id: 'add-alias', class: 'text'},
+    {name: t('dashboard.widget.form.add_widget'), icon: 'plus', id: 'add-widget'},
   ]
   if (!isSettings.value) {
     objs = objs.filter(el => !(['add-alias', 'add-widget', 'save', 'cancel'].includes(el.id)))

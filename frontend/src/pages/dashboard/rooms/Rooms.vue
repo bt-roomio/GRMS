@@ -2,8 +2,8 @@
   <div class="page">
     <div class="page__content">
       <PageHead
-          title="Rooms"
-          description="Track and manage your room list"
+          :title="$t('dashboard.menu.rooms')"
+          :description="$t('dashboard.rooms.subtitle')"
           button=""
           button-icon="list"
           button-class="text"

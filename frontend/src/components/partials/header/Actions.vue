@@ -22,7 +22,7 @@
         <ul class="dropdown__menu">
           <li @click.prevent="authorizationStore.logout()">
             <UiIcon name="log-in" class="stroke-primary-600" filled/>
-            Logout
+            {{ $t('authorization.login.form.sign_out') }}
           </li>
         </ul>
       </template>

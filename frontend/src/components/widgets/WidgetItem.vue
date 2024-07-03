@@ -5,13 +5,13 @@
           class="widget-card__title"
           v-if="item.descriptor.default_config.title || isCurrentEdit"
       >
-        {{ item.descriptor.default_config.title || (isCurrentEdit ? 'There should be a title here' : '') }}
+        {{ item.descriptor.default_config.title || (isCurrentEdit ? $t('dashboard.widget.form.title_empty') : '') }}
       </div>
       <div
           class="widget-card__description"
           v-if="item.descriptor.default_config.subtitle || isCurrentEdit"
       >
-        {{ item.descriptor.default_config.subtitle || (isCurrentEdit ? 'There should be a subtitle here' : '') }}
+        {{ item.descriptor.default_config.subtitle || (isCurrentEdit ? $t('dashboard.widget.form.subtitle_empty') : '') }}
       </div>
     </div>
     <div class="widget-card__actions" v-if="isSettings">
@@ -110,6 +110,13 @@ onMounted(() => {
       "scope": "LATEST_TELEMETRY",
     })
   }
+  send({
+    "type": "ATTRIBUTES",
+    "entityType": "DEVICE",
+    "entityId": "a1561fb2-e031-42ce-812a-0ce84843c0f0",
+    "scope": "CLIENT_SCOPE",
+    "cmdId": 2
+  })
 })
 
 onUnmounted(() => {

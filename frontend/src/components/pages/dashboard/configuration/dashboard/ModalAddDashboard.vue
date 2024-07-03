@@ -1,8 +1,8 @@
 <template>
   <Modal ref="modal" @closed="storeConfigurationDashboard.$reset()">
     <template #head>
-      <h2>Add new dashboard </h2>
-      <p>Add a new room in your hotel</p>
+      <h2>{{$t('dashboard.configuration.dashboard.modal.add_title')}}</h2>
+      <p>{{$t('dashboard.configuration.dashboard.modal.add_subtitle')}}</p>
     </template>
     <div class="modal__card">
       <form class="ui-form" @submit.prevent="storeConfigurationDashboard.addItem(close)">
@@ -19,11 +19,10 @@
       </form>
     </div>
 
-
     <template #footer="{close}">
       <UiButton class="primary" @click.prevent="storeConfigurationDashboard.addItem(close)">
         <UiIcon name="plus" filled/>
-        Add dashboard
+        {{$t('dashboard.configuration.dashboard.modal.add_button')}}
       </UiButton>
       <UiButton class="text" @click.prevent="close()">
         {{ $t('dashboard.configuration.rooms.modals.add_new_rooms.cancel') }}

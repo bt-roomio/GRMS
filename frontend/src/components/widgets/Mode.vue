@@ -2,7 +2,7 @@
   <div class="mode">
     <ul>
       <li v-for="(item, key) in values" :key="key">
-        {{ item.title || 'There should be a title here' }}
+        {{ item.title || $t('dashboard.widget.form.title_empty') }}
         <UiToggle :model-value="true"/>
       </li>
     </ul>

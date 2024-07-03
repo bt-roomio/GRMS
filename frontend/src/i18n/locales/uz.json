@@ -9,7 +9,8 @@
         "password": "Parol",
         "remember_me": "Meni eslab qol",
         "forgot_password": "Parolni unutdingizmi?",
-        "sign_in": "Kirish"
+        "sign_in": "Kirish",
+        "sign_out": "Chiqish"
       }
     },
     "forgot_password": {
@@ -34,6 +35,13 @@
       "tabs": {
         "overview": "Umumiy koʻrinish",
         "energy": "Energiya"
+      },
+      "stats": {
+        "today": "Bugun",
+        "one_week": "7 kun",
+        "one_month": "30 kun",
+        "one_year": "1 yil",
+        "choose_period": "Davrni tanlang"
       }
     },
     "menu": {
@@ -198,6 +206,17 @@
           "title": "Xona turlarini o'chirishni tasdiqlang",
           "subtitle": "'Tasdiqlash' tugmasini bosish orqali tanlangan xonalarni qayta tiklash imkoniyatisiz o'chirishni tasdiqlaysiz"
         }
+      },
+      "dashboard": {
+        "subtitle": "Boshqaruv paneli ro'yxatini tahrirlash",
+        "modal": {
+          "add_title": "Yangi boshqaruv panelini qo'shish",
+          "add_subtitle": "Mehmonxonangizga yangi xona qo'shing",
+          "add_button": "Boshqaruv panelini qo'shish",
+          "edit_title": "Yangi boshqaruv panelini tahrirlash",
+          "edit_subtitle": "Mehmonxonangizdagi yangi xonani tahrirlash",
+          "edit_button": "Boshqaruv panelini saqlash"
+        }
       }
     },
     "file_upload": {
@@ -209,18 +228,92 @@
     "table": {
       "error": "Xato",
       "no_data_title": "Sizda ma'lumot yo'q",
-      "no_data_subtitle": "Ma'lumot topilmadi yoki hali ma'lumot qo'shmagansiz"
+      "no_data_subtitle": "Ma'lumot topilmadi yoki hali ma'lumot qo'shmagansiz",
+      "load_more": "Ko'proq yuklash"
     },
     "search": "Qidirish",
     "search_from_the_list": "Ro'yxatdan tanlang",
-    "select_empty": "Ro'yxatdan tanlang"
+    "select_empty": "Ro'yxatdan tanlang",
+    "rooms": {
+      "tabs": {
+        "all": "Barcha xonalar",
+        "checked_in": "Ro'yxatdan o'tgan",
+        "occupied": "Band",
+        "do_not_disturb": "Bezovta qilmaslik",
+        "available": "Mavjud"
+      },
+      "table": {
+        "room_number": "Xona",
+        "floor": "Qavat",
+        "block": "Blok",
+        "type": "Xona turi",
+        "temp": "Harorat",
+        "system_mode": "Tizim rejimi",
+        "indicators": "Ko'rsatkichlar",
+        "status": "Holat"
+      },
+      "subtitle": "Xonalar ro'yxatini kuzatish va boshqarish",
+      "change_list": "Ro'yxatga o'tish",
+      "change_grid": "Panoga o'tish",
+      "more_btn": "Ko'proq xonalar",
+      "back_to_rooms": "Xonalarga qaytish"
+    },
+    "widget": {
+      "modal": {
+        "edit_title": "Yangi vidjetni tahrirlash",
+        "edit_subtitle": "Qo'shmoqchi bo'lgan vidjetni tanlang",
+        "add_title": "Yangi vidjet qo'shish",
+        "add_subtitle": "Qo'shmoqchi bo'lgan vidjetni tanlang",
+        "edit_button": "Vidjetni tahrirlash",
+        "choose_widget_type": "Vidjet turini tanlang"
+      },
+      "form": {
+        "add_alias": "Taxallus qo'shish",
+        "add_widget": "Vidjet qo'shish",
+        "general": "Umumiy",
+        "title": "Sarlavha",
+        "title_placeholder": "Sarlavhani yozing",
+        "subtitle": "Taglavha",
+        "subtitle_placeholder": "Taglavhani yozing",
+        "datasource": "Ma'lumot manbasi",
+        "room_temperature": "Xona harorati",
+        "unit": "O'lchov birligi",
+        "unit_placeholder": "O'lchov birligini yozing",
+        "min_value": "Minimal qiymat",
+        "max_value": "Maksimal qiymat",
+        "min_temperature": "Minimal harorat",
+        "max_temperature": "Maksimal harorat",
+        "color": "Rang",
+        "type": "Tur",
+        "settings_values": "Sozlamalar qiymatlari",
+        "tag": "Teg",
+        "tag_placeholder": "Tegni yozing",
+        "title_name": "Sarlavha nomi",
+        "precision_level": "Aniqlik darajasi",
+        "precision_placeholder": "Aniqlikni yozing",
+        "delete": "O'chirish",
+        "copy": "Nusxa olish",
+        "add": "Qo'shish",
+        "temperature_settings": "Harorat sozlamalari",
+        "default_temperature": "Standart harorat",
+        "fan_speed_level": "Ventilyator tezligi darajasi",
+        "power_level_name": "Quvvat darajasi nomi",
+        "power_level_name_placeholder": "Daraja nomini yozing",
+        "value": "Qiymat",
+        "additional_settings": "Qo'shimcha sozlamalar",
+        "master_off": "Asosiy o'chirish",
+        "fan_valve": "Ventilyator valfi",
+        "power_level_empty": "Quvvat darajasi nomi bu yerda bo'lishi kerak",
+        "title_empty": "Bu yerda sarlavha bo'lishi kerak",
+        "subtitle_empty": "Bu yerda taglavha bo'lishi kerak"
+      }
+    }
   },
   "confirm": {
     "title": "Harakatni tasdiqlang",
     "button_cancel": "Bekor qilish",
     "button_confirm": "Tasdiqlash",
-    "delete_item": "Ushbu elementni o'chirishga ishonchingiz komilmi?",
-    "load_more": "Ko'proq yuklash"
+    "delete_item": "Ushbu elementni o'chirishga ishonchingiz komilmi?"
   },
   "toast": {
     "save_success": "Saqlash muvaffaqiyatli amalga oshirildi",

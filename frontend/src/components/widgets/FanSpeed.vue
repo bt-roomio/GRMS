@@ -22,17 +22,17 @@
           :class="activeButton === item.value ? 'primary': 'secondary'"
           @click.prevent="activeButton = item.value"
       >
-        {{ item.power_level_name || 'The name of the power level should be here' }}
+        {{ item.power_level_name || $t('dashboard.widget.form.power_level_empty') }}
       </UiButton>
     </div>
     <div class="fan-speed__toggles">
       <ul>
         <li v-if="value.master_off">
-          Master Off
+          {{ $t('dashboard.widget.form.master_off') }}
           <UiToggle/>
         </li>
         <li v-if="value.fan_valve">
-          Fan Valve
+          {{ $t('dashboard.widget.form.fan_valve') }}
           <UiToggle/>
         </li>
       </ul>

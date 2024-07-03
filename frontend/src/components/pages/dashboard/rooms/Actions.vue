@@ -4,9 +4,6 @@
       <UiIcon name="search" v-tooltip="$t('dashboard.search')" filled @click.prevent="search = !search"/>
     </div>
     <div>
-      <UiIcon name="filter-lines" v-tooltip="'Filter lines'" filled/>
-    </div>
-    <div>
       <UiIcon name="download" v-tooltip="$t('dashboard.configuration.rooms.modals.export_new_rooms.title')" class="rotate-180" filled @click.prevent="openExportRoom"/>
     </div>
     <div>

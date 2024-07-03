@@ -9,7 +9,8 @@
         "password": "Password",
         "remember_me": "Remember me",
         "forgot_password": "Forgot password?",
-        "sign_in": "Sign in"
+        "sign_in": "Sign in",
+        "sign_out": "Logout"
       }
     },
     "forgot_password": {
@@ -34,6 +35,13 @@
       "tabs": {
         "overview": "Overview",
         "energy": "Energy"
+      },
+      "stats": {
+        "today": "Today",
+        "one_week": "7 days",
+        "one_month": "30 days",
+        "one_year": "1 year",
+        "choose_period": "Choose period"
       }
     },
     "menu": {
@@ -198,6 +206,17 @@
           "title": "Confirm deletion of type rooms",
           "subtitle": "By clicking the 'Confirm' button you confirm the deletion of the selected rooms without the possibility of restoration"
         }
+      },
+      "dashboard": {
+        "subtitle": "Edit your dashboard list",
+        "modal": {
+          "add_title": "Add new dashboard",
+          "add_subtitle": "Add a new room in your hotel",
+          "add_button": "Add dashboard",
+          "edit_title": "Edit new dashboard",
+          "edit_subtitle": "Edit a new room in your hotel",
+          "edit_button": "Save dashboard"
+        }
       }
     },
     "file_upload": {
@@ -233,9 +252,61 @@
         "indicators": "Indicators",
         "status": "Status"
       },
+      "subtitle": "Track and manage your room list",
       "change_list": "Change to a list",
       "change_grid": "Change to a grid",
-      "more_btn": "More rooms"
+      "more_btn": "More rooms",
+      "back_to_rooms": "Back to rooms"
+    },
+    "widget": {
+      "modal": {
+        "edit_title": "Edit new widget",
+        "edit_subtitle": "Select the widget you want to add",
+        "add_title": "Add new widget",
+        "add_subtitle": "Select the widget you want to add",
+        "edit_button": "Edit widget",
+        "choose_widget_type": "Choose widget type"
+      },
+      "form": {
+        "add_alias": "Add alias",
+        "add_widget": "Add widget",
+        "general": "General",
+        "title": "Title",
+        "title_placeholder": "Write the title",
+        "subtitle": "Subtitle",
+        "subtitle_placeholder": "Write the subtitle",
+        "datasource": "Datasource",
+        "room_temperature": "Room temperature",
+        "unit": "Unit",
+        "unit_placeholder": "Write the unit",
+        "min_value": "Min value",
+        "max_value": "Max value",
+        "min_temperature": "Min temperature",
+        "max_temperature": "Max temperature",
+        "color": "Color",
+        "type": "Type",
+        "settings_values": "Settings values",
+        "tag": "Tag",
+        "tag_placeholder": "Write the tag",
+        "title_name": "Title Name",
+        "precision_level": "Precision level",
+        "precision_placeholder": "Write the precision",
+        "delete": "Delete",
+        "copy": "Copy",
+        "add": "Add",
+        "temperature_settings": "Temperature settings",
+        "default_temperature": "Default temperature",
+        "fan_speed_level": "Fan Speed level",
+        "power_level_name": "Power Level name",
+        "power_level_name_placeholder": "Write the level name",
+        "value": "Value",
+        "additional_settings": "Additional settings",
+        "master_off": "Master OFF",
+        "fan_valve": "Fan Valve",
+        "power_level_empty": "The name of the power level should be here",
+        "title_empty": "There should be a title here",
+        "subtitle_empty": "There should be a subtitle here"
+      }
     }
   },
   "confirm": {

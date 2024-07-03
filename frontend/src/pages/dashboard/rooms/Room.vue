@@ -6,8 +6,8 @@
       <PageHead
           v-if="room"
           back-to="/rooms/room-list"
-          back="Back to rooms"
-          :title="`Room ${room.room_number}, floor ${room.floor}, block ${room.block}`"
+          :back="$t('dashboard.rooms.back_to_rooms')"
+          :title="`${$t('dashboard.rooms.table.room_number')} ${room.room_number}, ${$t('dashboard.rooms.table.floor')} ${room.floor}, ${$t('dashboard.rooms.table.block')} ${room.block}`"
       />
       <RoomActions :item="room"/>
       <Tabs :list="tabList"/>

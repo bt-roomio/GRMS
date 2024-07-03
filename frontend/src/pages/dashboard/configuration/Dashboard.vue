@@ -3,8 +3,8 @@
     <div class="page__content">
       <PageHead
           :title="$t('dashboard.menu.dashboard')"
-          :description="'Edit your dashboard list'"
-          :button="'Add  dashboard'"
+          :description="$t('dashboard.configuration.dashboard.subtitle')"
+          :button="$t('dashboard.configuration.dashboard.modal.add_button')"
           button-icon="plus"
           @click-button="openAddDashboard"
       />

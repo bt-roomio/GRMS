@@ -18,7 +18,7 @@
           pointer
       >
         <template #room_number="{entity}">
-          <UiBadge >{{entity.room_number}}</UiBadge>
+          <UiBadge>{{entity.room_number}}</UiBadge>
         </template>
         <template #temp="{entity}">
           <span class="font-semibold">{{entity.temp || 0 + '°C'}}</span>

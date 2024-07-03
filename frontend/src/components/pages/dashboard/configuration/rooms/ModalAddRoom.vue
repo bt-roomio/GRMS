@@ -47,6 +47,8 @@
               mode="tags"
               :close-on-select="false"
               :searchable="true"
+              :caret="false"
+              :can-clear="false"
               label="name"
               :valueProp="'id'"
               v-model="state.devices"

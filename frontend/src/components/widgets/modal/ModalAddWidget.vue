@@ -1,12 +1,12 @@
 <template>
   <Modal ref="add_widget" @closed="cancelModal()">
     <template #head v-if="isEdit">
-      <h2>Edit new widget</h2>
-      <p>Select the widget you want to add</p>
+      <h2>{{$t('dashboard.widget.modal.edit_title')}}</h2>
+      <p>{{$t('dashboard.widget.modal.edit_subtitle')}}</p>
     </template>
     <template #head v-else>
-      <h2>Add new widget</h2>
-      <p>Select the widget you want to add</p>
+      <h2>{{$t('dashboard.widget.modal.add_title')}}</h2>
+      <p>{{$t('dashboard.widget.modal.add_subtitle')}}</p>
     </template>
     <div class="modal-add-widget">
       <template v-if="selectedComponent">
@@ -14,7 +14,7 @@
       </template>
       <template v-else>
         <div class="ui-form">
-          <h3>Choose widget type</h3>
+          <h3>{{$t('dashboard.widget.modal.choose_widget_type')}}</h3>
           <div class="modal-add-widget__list">
             <div class="modal-add-widget__item" v-for="item in widgetTypes?.results" :key="item.id" @click.prevent="selectWidgetTypeHandle(JSON.parse(JSON.stringify(item)))">
               <div class="item__icon">
@@ -32,7 +32,7 @@
     <template #footer="{close, closeWithoutEvents}" v-if="selectedComponent && isEdit">
       <UiButton class="primary" @click.prevent="closeWithoutEvents(); storeConfigurationDashboard.handleConfirmWidget()">
         <UiIcon name="plus" filled/>
-        Edit widget
+        {{$t('dashboard.widget.modal.edit_button')}}
       </UiButton>
       <UiButton class="text" @click.prevent="close(); storeConfigurationDashboard.handleCancelWidget()">
         {{ $t('dashboard.configuration.rooms.modals.add_new_rooms.cancel') }}

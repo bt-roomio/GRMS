@@ -1,19 +1,19 @@
 <template>
   <form v-if="editWidget?.descriptor.default_config">
-    <div class="modal__card" >
+    <div class="modal__card">
       <div class="ui-form">
-        <h3>General</h3>
+        <h3>{{$t('dashboard.widget.form.general')}}</h3>
         <UiInput
-            label="Title"
+            :label="$t('dashboard.widget.form.title')"
             name="title"
             v-model="editWidget.descriptor.default_config.title"
-            placeholder="Write the title"
+            :placeholder="$t('dashboard.widget.form.title_placeholder')"
         />
         <UiInput
-            label="Subtitle"
+            :label="$t('dashboard.widget.form.subtitle')"
             name="subtitle"
             v-model="editWidget.descriptor.default_config.subtitle"
-            placeholder="Write the subtitle"
+            :placeholder="$t('dashboard.widget.form.subtitle_placeholder')"
         />
         <UiDoubleSelect
             v-model="editWidget.descriptor.default_config.entityId"
@@ -21,16 +21,16 @@
             :options="devices?.results"
             :args="{valueProp: 'id', label: 'name'}"
             :select-options="['Device', 'Alias']"
-            label="Datasource"
-            name="subtitle"
-            placeholder="Room temperature"
+            :label="$t('dashboard.widget.form.datasource')"
+            name="datasource"
+            :placeholder="$t('dashboard.widget.form.room_temperature')"
         />
       </div>
     </div>
     <div class="modal__card">
       <div class="ui-form">
         <div class="ui-multiselect" v-if="editWidget?.descriptor.default_config.unit !== 'Custom Units'">
-          <label>Unit</label>
+          <label>{{ $t('dashboard.widget.form.unit') }}</label>
           <Multiselect
               v-model="editWidget.descriptor.default_config.unit"
               :options="units"
@@ -38,7 +38,7 @@
               :canDeselect="false"
               :caret="true"
               :searchable="true"
-              placeholder="Write the unit"
+              :placeholder="$t('dashboard.widget.form.unit_placeholder')"
           />
         </div>
         <UiInputSelect
@@ -46,28 +46,27 @@
             v-model="editWidget.descriptor.default_config.unit_value"
             v-model:select="editWidget.descriptor.default_config.unit"
             :select-options="units"
-            :args="{placeholder: 'Write the unit'}"
-            label="Unit"
+            :args="{placeholder: $t('dashboard.widget.form.unit_placeholder')}"
+            :label="$t('dashboard.widget.form.unit')"
             name="unit"
         />
         <div class="ui-form__row col-2">
           <UiInputCount
-              label="Min value"
+              :label="$t('dashboard.widget.form.min_value')"
               v-model="editWidget.descriptor.default_config.min"
               name="min"
           />
           <UiInputCount
-              label="Max value"
+              :label="$t('dashboard.widget.form.max_value')"
               v-model="editWidget.descriptor.default_config.max"
               name="max"
           />
         </div>
         <UiInput
-            label="Color"
+            :label="$t('dashboard.widget.form.color')"
             name="color"
             type="color"
             v-model="editWidget.descriptor.default_config.color"
-            placeholder="Select the color"
         />
       </div>
     </div>
