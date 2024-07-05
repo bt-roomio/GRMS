@@ -16,8 +16,8 @@ async def latest_telemetry(cmd, user, send_json):
         ts_kv_dict = await get_ts_kv_dict(d.key)
         field_value = get_non_null_field(d)
         field = field_value[0]
-        result["data"][ts_kv_dict.key] = [[d.created_at, field_value[1]]]
-        latest_values[ts_kv_dict.key] = d.created_at
+        result["data"][ts_kv_dict.key] = [[d.ts, field_value[1]]]
+        latest_values[ts_kv_dict.key] = d.ts
         result["latestValues"] = latest_values
 
         await fake_change_telemetry(d.id, field)  # This is just for testing purposes
