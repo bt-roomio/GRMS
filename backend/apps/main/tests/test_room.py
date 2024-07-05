@@ -12,11 +12,11 @@ class RoomTest(BaseTestCase):
         response = self.client.get(reverse("main:room-list"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["room_number"], 101)
-        self.assertEqual(response.data["results"][0]["floor"], "1")
-        self.assertEqual(response.data["results"][0]["block"], "1")
+        self.assertEqual(response.data["results"][0]["floor"], 1)
+        self.assertEqual(response.data["results"][0]["block"], 1)
         self.assertEqual(response.data["results"][1]["room_number"], 102)
-        self.assertEqual(response.data["results"][1]["floor"], "2")
-        self.assertEqual(response.data["results"][1]["block"], "3")
+        self.assertEqual(response.data["results"][1]["floor"], 2)
+        self.assertEqual(response.data["results"][1]["block"], 3)
 
     def test_create(self):
         response = self.client.post(reverse("main:room-list"), {"room_number": 94, "floor": "3", "block": 3})

@@ -85,8 +85,8 @@ class Room(BaseModel, UpdateByModel):
     STATUS = ((ON, "on"), (OFF, "off"))
 
     room_number = models.IntegerField()
-    floor = models.CharField(max_length=255)
-    block = models.CharField(max_length=255)
+    floor = models.IntegerField()
+    block = models.IntegerField()
     active = models.BooleanField(default=True)
     state = models.CharField(max_length=255, choices=STATE, default=Available)
     public_area_id = models.IntegerField(null=True, blank=True)

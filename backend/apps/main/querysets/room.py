@@ -10,13 +10,6 @@ class RoomQuerySet(BaseQuerySet):
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__startswith": search_value}))
 
-        if sort_by:
-            for item in sort_by:
-                try:
-                    query = query.extra(select={item: f"CAST(substring({item} FROM '^[0-9]+') AS INTEGER)"}).order_by(
-                        item
-                    )
-                except Exception as err:
-                    raise err
+        query = query.order_by(*sort_by) if sort_by else query
         query = query.filter(status=status) if status else query
         return query
