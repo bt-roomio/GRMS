@@ -3,9 +3,11 @@
   fields:
       title: "Luxury"
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+      dashboard_id: "e91dd3e9-d109-4924-b82d-95262d4ceece"
 
 - model: "main.RoomType"
   pk: "d24ecc04-31ff-4b63-94be-d202b16f0c0c"
   fields:
       title: "Standard"
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+      dashboard_id: "01b4ac29-32bd-4c5b-b42f-7a709d1ba68f"

@@ -3,6 +3,21 @@ from main.models import Dashboard
 from rest_framework import serializers
 
 
+class SimpleDashboardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dashboard
+        fields = (
+            "id",
+            "title",
+            "configuration",
+            "assigned_customers",
+            "mobile_hide",
+            "mobile_order",
+            "image",
+            "external_id",
+        )
+
+
 class DashboardSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
