@@ -19,6 +19,7 @@ class Command(BaseCommand):
             "customer",
             "room",
             "device",
+            "device_credentials",
             "attribute_kv",
             "room_type",
             "widget_type",
