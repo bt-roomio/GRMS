@@ -10,6 +10,16 @@ class RoomQuerySet(BaseQuerySet):
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__startswith": search_value}))
 
-        query = query.order_by(*sort_by) if sort_by else query
+        if sort_by:
+            for item in sort_by:
+                dash = "-" if item.startswith("-") else ""
+                item = item.replace("-", "")
+                try:
+                    query = query.extra(
+                        select={f"{item}_as_int": f"CAST(substring({item} FROM '^[0-9]+') AS INTEGER)"}
+                    ).order_by(f"{dash}{item}_as_int")
+                except Exception:
+                    pass
         query = query.filter(status=status) if status else query
+
         return query
