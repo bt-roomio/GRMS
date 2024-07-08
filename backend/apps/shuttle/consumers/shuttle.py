@@ -1,10 +1,10 @@
 import asyncio
 
-
 from shuttle.consumers.aggregations.attribute_kv import attribute_kv
 from shuttle.consumers.base import BaseConsumer
 from shuttle.consumers.latest_telemetry import latest_telemetry
 from shuttle.consumers.ts_kv_history import history_telemetery
+from shuttle.models import AttributeKv
 from shuttle.utils.periodically_task import periodically_task
 from shuttle.utils.response import response
 
@@ -43,11 +43,14 @@ class ShuttleConsumer(BaseConsumer):
 
             if (
                 cmd.get("type") == "ATTRIBUTES"
-                and cmd.get("scope") == "SHARED_SCOPE"
                 and cmd.get("entityType") == "DEVICE"
                 and cmd.get("entityId")
                 and cmd.get("cmdId")
             ):
+                if cmd.get("scope") not in [item[0] for item in AttributeKv.ENTITY_TYPE]:
+                    await self.send_json(response({}, 0, 1, "Incorrect scope!"))  # write msg for error
+                    return
+
                 func = lambda: periodically_task(2, self, attribute_kv, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
