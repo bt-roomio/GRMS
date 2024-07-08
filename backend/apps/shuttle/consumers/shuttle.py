@@ -51,7 +51,7 @@ class ShuttleConsumer(BaseConsumer):
                     await self.send_json(response({}, 0, 1, "Incorrect scope!"))  # write msg for error
                     return
 
-                func = lambda: periodically_task(2, self, attribute_kv, cmd, user, self.send_json)
+                func = lambda: periodically_task(5, self, attribute_kv, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 

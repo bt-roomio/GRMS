@@ -12,8 +12,8 @@ async def attribute_kv(cmd, user, send_json):
     for attribute in attributes:
         field, value = get_non_null_field(attribute)
         ts = attribute.created_at
-        result["data"][field] = [[ts, value]]
-        latest_values[field] = ts
+        result["data"][attribute.attribute_key] = [[ts, value]]
+        latest_values[attribute.attribute_key] = ts
         result["latestValues"] = latest_values
 
     await send_json(result)
