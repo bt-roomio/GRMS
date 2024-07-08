@@ -1,6 +1,7 @@
 import asyncio
 
 
+from shuttle.consumers.aggregations.attribute_kv import attribute_kv
 from shuttle.consumers.base import BaseConsumer
 from shuttle.consumers.latest_telemetry import latest_telemetry
 from shuttle.consumers.ts_kv_history import history_telemetery
@@ -39,6 +40,17 @@ class ShuttleConsumer(BaseConsumer):
             if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
                 result = await history_telemetery(cmd, user, self.send_json)
                 await self.send_json(result)
+
+            if (
+                cmd.get("type") == "ATTRIBUTES"
+                and cmd.get("scope") == "SHARED_SCOPE"
+                and cmd.get("entityType") == "DEVICE"
+                and cmd.get("entityId")
+                and cmd.get("cmdId")
+            ):
+                func = lambda: periodically_task(2, self, attribute_kv, cmd, user, self.send_json)
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
 
     async def resume_tasks(self):
         for task_key, func in self.task_params.items():

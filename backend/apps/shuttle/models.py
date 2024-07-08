@@ -62,7 +62,7 @@ class AttributeKv(BaseModel):
     attribute_type = models.CharField(max_length=255, choices=ENTITY_TYPE, default=SERVER_SCOPE)
     attribute_key = models.CharField(max_length=255)
     bool_v = models.BooleanField(blank=True, null=True)
-    str_v = models.CharField(max_length=255, blank=True, null=True)
+    str_v = models.CharField(max_length=10000000, blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.TextField(blank=True, null=True)
@@ -76,7 +76,7 @@ class AttributeKv(BaseModel):
         return super(AttributeKv, self).save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.entity)
+        return str(self.attribute_key)
 
     class Meta:
         db_table = "shuttle_attribute_kv"

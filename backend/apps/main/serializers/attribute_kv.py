@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from main.models import AttributeKv
+from shuttle.models import AttributeKv
 
 
 class AttributeKvSimpleSerializer(serializers.ModelSerializer):
