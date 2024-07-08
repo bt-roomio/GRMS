@@ -8,7 +8,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -43,9 +42,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "created_at",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 ("entity_type", models.CharField(max_length=255)),
                 (
@@ -62,7 +59,7 @@ class Migration(migrations.Migration):
                 ),
                 ("attribute_key", models.CharField(max_length=255)),
                 ("bool_v", models.BooleanField(blank=True, null=True)),
-                ("str_v", models.CharField(blank=True, max_length=255, null=True)),
+                ("str_v", models.CharField(blank=True, max_length=10000000, null=True)),
                 ("long_v", models.BigIntegerField(blank=True, null=True)),
                 ("dbl_v", models.FloatField(blank=True, null=True)),
                 ("json_v", models.TextField(blank=True, null=True)),
@@ -94,9 +91,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "ts",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 ("key", models.IntegerField()),
                 ("bool_v", models.BooleanField(blank=True, null=True)),
@@ -106,9 +101,7 @@ class Migration(migrations.Migration):
                 ("json_v", models.JSONField(blank=True, null=True)),
                 (
                     "entity",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="main.device"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to="main.device"),
                 ),
             ],
             options={
@@ -132,9 +125,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "ts",
-                    core.utils.unix_timestamp.UnixTimeStampField(
-                        default=time.time, editable=False, null=True
-                    ),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
                 ),
                 ("key", models.IntegerField()),
                 ("bool_v", models.BooleanField(blank=True, null=True)),
@@ -144,9 +135,7 @@ class Migration(migrations.Migration):
                 ("json_v", models.JSONField(blank=True, null=True)),
                 (
                     "entity",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="main.device"
-                    ),
+                    models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to="main.device"),
                 ),
             ],
             options={
