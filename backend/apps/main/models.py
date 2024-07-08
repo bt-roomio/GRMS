@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import CASCADE, SET_NULL
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
+from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
@@ -153,6 +154,18 @@ class Device(BaseModel):
 
     class Meta:
         db_table = "main_device"
+
+
+class DeviceCredentials(BaseModel):
+    credentials_id = models.CharField(unique=True, blank=True, null=True)
+    credentials_type = models.CharField(max_length=255, blank=True, null=True)
+    credentials_value = models.CharField(blank=True, null=True)
+    device = models.OneToOneField("main.Device", CASCADE, blank=True, null=True)
+
+    objects = DeviceCredentialsQuerySet.as_manager()
+
+    class Meta:
+        db_table = "main_device_credentials"
 
 
 class DeviceProfile(BaseModel):
