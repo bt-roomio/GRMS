@@ -40,7 +40,7 @@ class RoomDetailView(APIView):
     @check_for_tenant
     def get(self, request, pk):
         queryset = get_object_or_404(Room, id=pk, active=True)
-        serializer = RoomSerializer(queryset)
+        serializer = RoomSerializer(queryset, context={"detail": True})
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=RoomDetailSwagger, request_body=RoomSerializer)
