@@ -5,7 +5,7 @@ from rest_framework import serializers
 class DeviceSimpleCredentialsSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["isGateway"] = instance.additional_info and "gateway" in instance.additional_info
+        data["isGateway"] = instance.additional_info and instance.additional_info.get("gateway") or False
         return data
 
     class Meta:
