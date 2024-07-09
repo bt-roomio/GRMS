@@ -48,12 +48,18 @@ class ShuttleConsumer(BaseConsumer):
                 and cmd.get("cmdId")
             ):
                 if cmd.get("scope") not in [item[0] for item in AttributeKv.ENTITY_TYPE]:
-                    await self.send_json(response({}, 0, 1, "Incorrect scope!"))  # write msg for error
+                    await self.send_json(response({}, 0, 1, "Incorrect scope!"))
                     return
 
                 func = lambda: periodically_task(5, self, attribute_kv, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
+
+            if cmd.get("type") == "ATTRIBUTES_UNSUBSCRIBE" and cmd.get("entityId") and cmd.get("cmdId"):
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
 
     async def resume_tasks(self):
         for task_key, func in self.task_params.items():
