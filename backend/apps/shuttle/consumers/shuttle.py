@@ -26,7 +26,7 @@ class ShuttleConsumer(BaseConsumer):
             cmd_id = cmd.get("cmdId")
             task_key = f"cmdId-{cmd_id}"
 
-            if cmd.get("type") == "TIMESERIES" and cmd.get("scope") == "LATEST_TELEMETRY":
+            if cmd.get("type") == "TIMESERIES" and cmd.get("scope") == "LATEST_TELEMETRY" and cmd.get("DEVICE"):
                 func = lambda: periodically_task(5, self, latest_telemetry, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
