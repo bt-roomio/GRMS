@@ -10,6 +10,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         call_command(
             "loaddata",
+            "groups_permissions",
             "tenant_profile",
             "tenant",
             "users",
