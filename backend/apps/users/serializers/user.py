@@ -6,6 +6,7 @@ from users.models import User
 class UserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        data["authority"] = [group.name for group in instance.groups.all()]
         return data
 
     class Meta:

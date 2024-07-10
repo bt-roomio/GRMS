@@ -15,9 +15,6 @@ def query_debugger(func):
         end = time.perf_counter()
 
         end_queries = len(connection.queries)
-        # print(('-' * 30), 'SQL', ('-' * 30), )
-        # for query in connection.queries:
-        #     pprint(query.get(request))
         print(
             ("-" * 30),
             "Info",

@@ -1,5 +1,6 @@
-from drf_yasg.utils import swagger_auto_schema
+from core.utils.permission import IsTenantAndSysAdmin
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.models import User
@@ -12,8 +13,6 @@ class UserListView(APIView):
             return Response({"error": "You are not allowed to view this page"}, 403)
 
         users = User.objects.prefetch_related("groups").filter(tenant_id=request.user.tenant_id)
-        for user in users:
-            print(user.groups.all())
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
@@ -28,13 +27,33 @@ class UserListView(APIView):
 
 
 class UserDetailView(APIView):
-    @swagger_auto_schema(
-        responses={
-            200: UserSerializer(),
-            401: "Authentication credentials were not provided.",
-        }
-    )
-    def get(self, request):
-        user = get_object_or_404(User, id=request.user.id)
-        serializer = UserSerializer(user)
+    def get_permissions(self):
+        if self.request.method == "DELETE":
+            return [IsTenantAndSysAdmin()]
+        return [IsAuthenticated()]
+
+    def get(self, request, pk):
+        if "SYS_ADMIN" in [request.user.groups.all()]:
+            instance = get_object_or_404(User, id=pk)
+        else:
+            instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
+        serializer = UserSerializer(instance)
         return Response(serializer.data)
+
+    def put(self, request, pk):
+        if "SYS_ADMIN" in [request.user.groups.all()]:
+            instance = get_object_or_404(User, id=pk)
+        else:
+            instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
+        serializer = UserSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        if "SYS_ADMIN" in [request.user.groups.all()]:
+            instance = get_object_or_404(User, id=pk)
+        else:
+            instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
+        instance.delete()
+        return Response({"message": "User deleted"}, 204)
