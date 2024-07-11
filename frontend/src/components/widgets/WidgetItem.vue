@@ -27,17 +27,17 @@
         <v-chart class="chart" :option="option" autoresize/>
       </div>
       <template v-if="item.fqn === 'progress_bar'">
-        <UiProgress :value="item.descriptor.default_config"/>
+        <Progress :value="item.descriptor.default_config"/>
       </template>
       <template v-if="item.fqn === 'system_mode'">
         <template v-if="item.descriptor.default_config.type === 'Toggle'">
-          <Mode :values="item.descriptor.default_config.controls"/>
+          <Mode :values="item.descriptor.default_config"/>
         </template>
         <template v-if="item.descriptor.default_config.type === 'Sensor'">
-          <Sensor :values="item.descriptor.default_config.controls"/>
+          <Sensor :values="item.descriptor.default_config"/>
         </template>
         <template v-if="item.descriptor.default_config.type === 'Slider'">
-          <Slider :values="item.descriptor.default_config.controls"/>
+          <Slider :values="item.descriptor.default_config"/>
         </template>
       </template>
       <template v-if="item.fqn === 'room_temperature'">
@@ -51,7 +51,6 @@ import UiButton from "@components/ui/Button.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import {BarChart, LineChart} from "echarts/charts";
 import {useCookies} from "@vueuse/integrations/useCookies";
-import UiProgress from "@components/ui/Progress.vue";
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import {
@@ -67,9 +66,11 @@ import FanSpeed from "@components/widgets/FanSpeed.vue";
 import Mode from "@components/widgets/Mode.vue";
 import Sensor from "@components/widgets/Sensor.vue";
 import Slider from "@components/widgets/Slider.vue";
-import {useWS} from "@store/dashboard/ws";
 import {storeToRefs} from "pinia";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
+import Progress from "@components/widgets/Progress.vue";
+import {useWS} from "@store/dashboard/ws";
+const {send} = useWS()
 const cookies = useCookies(['mode'])
 const option = computed(() => props.item.config.setting)
 const storeConfigurationDashboard = useConfigurationDashboardStore()
@@ -92,36 +93,35 @@ use([
 provide(THEME_KEY, computed(() => cookies.get('mode') || 'light'));
 
 const props = defineProps<{ isSettings: boolean, item: {[key: string]: any} }>()
-const storeWs = useWS()
-const {send, unSubscription} = storeWs
-const {state} = storeToRefs(storeWs)
-const data = computed(() => state.value.events.get(props.item.device?.id))
+// const storeWs = useWS()
+// const {state} = storeToRefs(storeWs)
+// const {send} = storeWs
 const isCurrentEdit = computed(() => JSON.stringify(props.item) === JSON.stringify(editWidget.value))
 onMounted(() => {
   nextTick(() => {
     wAndH.value.width = '100%'
     wAndH.value.height = '100%'
   })
-  if (props.item?.descriptor?.default_config.entityId){
-    send({
-      "type": "TIMESERIES",
-      "entityType": props.item?.descriptor?.default_config.entityType,
-      "entityId": props.item?.descriptor?.default_config.entityId,
-      "scope": "LATEST_TELEMETRY",
-    })
+  if (props.item.descriptor.default_config.ws_args){
+    send(props.item.descriptor.default_config.ws_args)
   }
-  send({
-    "type": "ATTRIBUTES",
-    "entityType": "DEVICE",
-    "entityId": "a1561fb2-e031-42ce-812a-0ce84843c0f0",
-    "scope": "CLIENT_SCOPE",
-    "cmdId": 2
-  })
 })
 
+// watch(entityId, (value, oldValue) => {
+//   if (value !== oldValue){
+//
+//
+//
+//
+//
+//
+//
+//   }
+// })
+// SHARED_ATTRIBUTES CLIENT_SCOPE SERVER_SCOPE
 onUnmounted(() => {
-  if (data.value){
-    unSubscription(data.value.subscriptionId)
-  }
+  // if (data.value){
+  //   unSubscription(data.value.subscriptionId)
+  // }
 })
 </script>

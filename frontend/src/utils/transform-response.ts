@@ -6,4 +6,12 @@ const addFieldSelect = (data: string) => {
     })
     return response
 }
-export {addFieldSelect}
+const addFieldSelectArray = (data: string) => {
+    let response = JSON.parse(data)
+    response = response?.map((el: any) => {
+        el.select = false
+        return el
+    })
+    return response
+}
+export {addFieldSelect, addFieldSelectArray}

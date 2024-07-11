@@ -8,8 +8,12 @@
             "icon": "settings",
             "config_file": "system-mode",
             "default_config": {
-                "entityType": "Device",
-                "entityId": "",
+                "ws_args": {
+                    "scope": "CLIENT_SCOPE",
+                    "entityType": "DEVICE",
+                    "type": "ATTRIBUTES",
+                    "entityId": ""
+                },
                 "type": "Toggle",
                 "title": "",
                 "subtitle": "",
@@ -20,7 +24,7 @@
                 "y": 0,
                 "w": 6,
                 "h": 10,
-                "minH": 10,
+                "minH": 8,
                 "minW": 4
             }
         },
@@ -38,8 +42,13 @@
             "icon": "progress-bar",
             "config_file": "progress-bar",
             "default_config": {
-                "entityType": "Device",
-                "entityId": "",
+                "ws_args": {
+                    "scope": "CLIENT_SCOPE",
+                    "entityType": "DEVICE",
+                    "type": "ATTRIBUTES",
+                    "entityId": ""
+                },
+                "tag": "",
                 "title": "",
                 "subtitle": "",
                 "unit": "Percent",
@@ -52,7 +61,7 @@
                 "y": 0,
                 "w": 6,
                 "h": 10,
-                "minH": 10,
+                "minH": 8,
                 "minW": 4
             }
         },
@@ -70,8 +79,12 @@
             "icon": "temperature",
             "config_file": "temperature",
             "default_config": {
-                "entityType": "Device",
-                "entityId": "",
+                "ws_args": {
+                    "scope": "CLIENT_SCOPE",
+                    "entityType": "DEVICE",
+                    "type": "ATTRIBUTES",
+                    "entityId": ""
+                },
                 "title": "",
                 "subtitle": "",
                 "tag": "",
@@ -83,7 +96,9 @@
                 "max": 30,
                 "controls": [],
                 "master_off": false,
-                "fan_valve": false
+                "master_off_tag": "",
+                "fan_valve": false,
+                "fan_valve_tag": ""
             },
             "dashboard_config": {
                 "x": 0,

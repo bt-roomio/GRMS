@@ -14,13 +14,21 @@
           icon="help-circle"
           icon-position="right"
       />
-<!--      <UiSelect-->
-<!--          v-if="dashboards?.results"-->
-<!--          v-bind="multiSelectConfig"-->
-<!--          v-model="state.dashboards"-->
-<!--          :options="dashboards?.results.map(el => el.name)"-->
-<!--          :title="$t('dashboard.configuration.room_type.modals.add_new_room_type.choose_dashboard')"-->
-<!--      />-->
+      <div class="ui-multiselect">
+        <label>{{$t('dashboard.configuration.room_type.modals.add_new_room_type.choose_dashboard')}}</label>
+        <Multiselect
+            v-model="state.dashboard"
+            :options="dashboards?.results"
+            label="title"
+            :value-prop="'id'"
+            :canClear="false"
+            :canDeselect="false"
+            :caret="false"
+            :searchable="true"
+            :loading="loading"
+            :placeholder="$t('dashboard.search_from_the_list')"
+        />
+      </div>
       <button class="sr-only" type="submit"></button>
     </form>
 
@@ -43,9 +51,13 @@ import UiInput from "@components/ui/Input.vue";
 import {ref} from "vue";
 import {storeToRefs} from "pinia";
 import {useConfigurationRoomTypeStore} from "@store/dashboard/configuration/room-type.ts";
+import Multiselect from "@vueform/multiselect";
+import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 const add_room_type = ref<IModal | null>(null)
 const storeConfigurationRoomType = useConfigurationRoomTypeStore()
+const storeConfigurationDashboard = useConfigurationDashboardStore()
 const {state, validation} = storeToRefs(storeConfigurationRoomType)
+const {dashboards, loading} = storeToRefs(storeConfigurationDashboard)
 const close = () => {
   add_room_type.value?.close()
 }

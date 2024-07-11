@@ -11,7 +11,6 @@
 <script setup lang="ts">
 import {defineComponent} from "vue";
 import UiIcon from "./Icon.vue";
-
 const model = defineModel()
 
 defineProps<{

@@ -32,11 +32,12 @@ import {onBeforeRouteUpdate} from "vue-router";
 import {useI18n} from "vue-i18n";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 import RoomContent from "@components/pages/dashboard/rooms/RoomContent.vue";
+import {storeToRefs} from "pinia";
 const isSearchOpen = ref(false)
 const isTable = ref(false)
 const {t} = useI18n()
 const storeConfigurationRooms = useConfigurationRoomsStore()
-
+const {sortedData} = storeToRefs(storeConfigurationRooms)
 const tabList = computed(() => [
   {
     name: t('dashboard.rooms.tabs.all'),
@@ -66,6 +67,7 @@ const tabList = computed(() => [
 
 
 onMounted(async () => {
+  sortedData.value = {sort_by: ['block', 'floor']}
   await storeConfigurationRooms.getList({sort_by: ['block', 'floor']})
 })
 onBeforeRouteUpdate(async (to) => {

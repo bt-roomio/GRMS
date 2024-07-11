@@ -37,5 +37,15 @@
     &.right{
       @apply pr-[42px]
     }
+
+    & + .ui-button {
+      @apply rounded-l-none border-l-0;
+    }
+    &.has-next-button{
+      @apply rounded-r-none;
+    }
+  }
+  .ui-button{
+    @apply h-10
   }
 }

@@ -1,9 +1,37 @@
 <template>
   <div class="slider">
-    <UiSliderItem v-for="(item, key) in values" :key="key" :args="{min: item.min, max: item.max}">{{ item.title || $t('dashboard.widget.form.title_empty') }}</UiSliderItem>
+    <UiSliderItem
+        v-for="(item, key) in values.controls"
+        :key="key"
+        :args="{min: item.min, max: item.max}"
+        :model-value="getSliderValue(item.tag)"
+        @change="changeSlider($event, item.tag)"
+    >
+      {{ item.title || $t('dashboard.widget.form.title_empty') }}
+    </UiSliderItem>
   </div>
 </template>
 <script setup lang="ts">
 import UiSliderItem from "@components/ui/SlliderItem.vue";
-defineProps(['values'])
+import {useWS} from "@store/dashboard/ws";
+import {storeToRefs} from "pinia";
+import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
+const storeConfigurationDevice = useConfigurationDeviceStore()
+const storeWs = useWS()
+const {state} = storeToRefs(storeWs)
+const props = defineProps(['values'])
+const getSliderValue = (tag: string) => {
+  const { entityId, scope } = props.values.ws_args || {};
+  const eventKey = `${entityId}_${scope}`;
+  return state.value.events?.get(eventKey)?.data?.[tag]?.[0]?.[1] || 0;
+}
+
+const changeSlider = async (value: any, tag: string) => {
+  const { entityId, scope } = props.values.ws_args || {};
+  if (entityId && scope) {
+    let obj: any = {};
+    obj[tag] = value;
+    await storeConfigurationDevice.setAttr(entityId, scope, obj);
+  }
+}
 </script>

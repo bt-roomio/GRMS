@@ -2,7 +2,6 @@
   <div class="page">
     <div class="page__content">
       <UiLoader v-if="itemLoading"/>
-
       <PageHead
           v-if="room"
           back-to="/rooms/room-list"
@@ -58,8 +57,10 @@ const tabList = computed(() => [
 
 onMounted(async () => {
   await storeConfigurationRooms.getItem(params.id as string, false)
-  await storeConfigurationDashboard.getItem('e91dd3e9-d109-4924-b82d-95262d4ceece' as string, false),
-  await storeConfigurationDashboard.getDashboardInnerHelpers()
+  if (room.value?.type.dashboard){
+    await storeConfigurationDashboard.getItem(room.value?.type.dashboard.id as string, false)
+    await storeConfigurationDashboard.getDashboardInnerHelpers()
+  }
 })
 // const dashboardSettings = ref([
 //   {

@@ -1,13 +1,11 @@
 <template>
   <div class="sensor">
-    <ul>
-      <li  v-for="(item, key) in values" :key="key">
-        <UiSensorItem :unit="item.unit" :model-value="123.1237862187638" :precision="item.precision">{{ item.title || $t('dashboard.widget.form.title_empty') }}</UiSensorItem>
-      </li>
-    </ul>
+    <div class="sensor__list">
+      <SensorItem v-for="(item, key) in values.controls" :entity-id="values.ws_args?.entityId" :scope="values.ws_args?.scope" :key="key" :item="item" />
+    </div>
   </div>
 </template>
 <script setup lang="ts">
-import UiSensorItem from "@components/ui/SensorItem.vue";
+import SensorItem from "@components/widgets/SensorItem.vue";
 defineProps(['values'])
 </script>

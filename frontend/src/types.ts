@@ -7,8 +7,9 @@ interface ILocales {
 
 interface ITab {
     name: string
-    to: unknown
+    to?: unknown
     badge?: string
+    hash?: string
 }
 
 interface Item {
@@ -61,6 +62,11 @@ interface IModalEditRoom {
 interface IConfigurationRoomsActions {
     add_room: IModal
     edit_room: IModal
+}
+interface IConfigurationUsersActions {
+    add_user: IModal
+    add_role: IModal
+    edit_user: IModal
 }
 interface IStatisticsCard {
     name: string

@@ -52,6 +52,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
     const isEdit = ref(false)
     const widgetCallback = ref<(confirm: boolean) => void | Promise<void> | null>((confirm) => {console.log(confirm)})
     const selectedComponent = shallowRef<DefineComponent | null>(null)
+    const tags = ref(new Map<string, any>())
 
     // Dashboard state for create
 
@@ -119,7 +120,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
     }
     const getItem = async (id: string, isFilled: boolean) => {
         try {
-            const {data} = await useApiFetch<IConfigurationDashboard>('/main/dashboard/' + id, {method: 'GET'})
+            const {data} = await useApiFetch<IConfigurationDashboard>(`/main/dashboard/${id}`, {method: 'GET'})
             dashboard.value = data
             if (isFilled) {
                 state.value.id = data.id
@@ -332,6 +333,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         isEdit,
         widgetCallback,
         selectedComponent,
+        tags,
         state,
         validation: v$,
         getList,

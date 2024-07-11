@@ -6,7 +6,7 @@ type IConfigurationRoom = {
     state?: any
     floor: any
     room_number: any
-    type: any
+    type: IConfigurationRoomTypes | any
 }
 interface IConfigurationRoomTypes {
     id?: string
@@ -15,7 +15,7 @@ interface IConfigurationRoomTypes {
     check_in_out_address?: string | null
     check_in_value?: string | null
     check_out_value?: string | null
-    dashboards?: string | null
+    dashboard?: {[key: string]: unknown} | null
 }
 interface IConfigurationDashboard {
     id?: string
@@ -27,8 +27,8 @@ interface IConfigurationDashboard {
     external_id?: string | null
 }
 interface IConfigurationRoomTypesData {
-    select: boolean,
-    [key: string]: unknown,
+    select?: boolean,
+    [key: string]: any,
 }
 type IConfigurationDevice = {
     id?: string

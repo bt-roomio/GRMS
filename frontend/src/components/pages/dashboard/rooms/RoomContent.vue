@@ -54,6 +54,9 @@
         <p class="error-title">{{ $t('dashboard.table.no_data_title') }}</p>
         <p class="error-subtitle">{{ $t('dashboard.table.no_data_subtitle') }}</p>
       </div>
+      <div class="ui-table__pagination" v-if="rooms.count > rooms.results.length">
+        <UiButton class="primary" @click="moreHandle">{{ $t('dashboard.table.load_more') }}</UiButton>
+      </div>
     </template>
   </div>
 
@@ -73,6 +76,7 @@ import UiIcon from "@components/ui/Icon.vue";
 import UiBadge from "@components/ui/Badge.vue";
 import UiLoader from "@components/ui/Loader.vue";
 import {useRouter} from "vue-router";
+import UiButton from "@components/ui/Button.vue";
 defineProps(['isTable', 'isSearchOpen'])
 const {t} = useI18n()
 const {push} = useRouter()

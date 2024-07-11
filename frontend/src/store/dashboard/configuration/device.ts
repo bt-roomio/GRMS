@@ -1,6 +1,7 @@
 import {defineStore} from "pinia";
 import {ref} from "vue";
 import useApiFetch from "@/composables/useApiFetch.ts";
+import devicesAttrsJson from "@components/widgets/data/devices-attrs.json";
 
 export const useConfigurationDeviceStore = defineStore('configuration-device', () => {
     const devices = ref<IServerResponse<IConfigurationDevice> | null>(null)
@@ -29,12 +30,25 @@ export const useConfigurationDeviceStore = defineStore('configuration-device', (
             devices.value = results as IServerResponse<IConfigurationDevice>
         }
     }
-
+    const setDeviceAttrs = async () => {
+        devicesAttrsJson.map(async e => {
+            await useApiFetch(e[0] as string, {method: 'POST', data: e[1]})
+        })
+    }
+    const setAttr = async (deviceId: string, scope: string, args: any) => {
+        try {
+            await useApiFetch(`/shuttle/attributes/${deviceId}/${scope}/`, {method: 'POST', data: args})
+        }catch (e) {
+            throw e
+        }
+    }
 
     return {
         devices,
         loading,
         getList,
         searchItems,
+        setDeviceAttrs,
+        setAttr
     }
 })

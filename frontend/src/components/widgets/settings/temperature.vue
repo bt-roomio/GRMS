@@ -1,32 +1,6 @@
 <template>
   <form v-if="editWidget?.descriptor.default_config">
-    <div class="modal__card">
-      <div class="ui-form">
-        <h3>{{$t('dashboard.widget.form.general')}}</h3>
-        <UiInput
-            :label="$t('dashboard.widget.form.title')"
-            name="title"
-            v-model="editWidget.descriptor.default_config.title"
-            :placeholder="$t('dashboard.widget.form.title_placeholder')"
-        />
-        <UiInput
-            :label="$t('dashboard.widget.form.subtitle')"
-            name="subtitle"
-            v-model="editWidget.descriptor.default_config.subtitle"
-            :placeholder="$t('dashboard.widget.form.subtitle_placeholder')"
-        />
-        <UiDoubleSelect
-            v-model="editWidget.descriptor.default_config.entityId"
-            v-model:select="editWidget.descriptor.default_config.entityType"
-            :options="devices?.results"
-            :args="{valueProp: 'id', label: 'name'}"
-            :select-options="['Device', 'Alias']"
-            :label="$t('dashboard.widget.form.datasource')"
-            name="datasource"
-            :placeholder="$t('dashboard.widget.form.room_temperature')"
-        />
-      </div>
-    </div>
+    <General/>
     <div class="modal__card">
       <div class="ui-form">
         <h3>{{$t('dashboard.widget.form.temperature_settings')}}</h3>
@@ -34,7 +8,8 @@
           <label>{{$t('dashboard.widget.form.tag')}}</label>
           <Multiselect
               v-model="editWidget.descriptor.default_config.tag"
-              :options="tags"
+              :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
               :canClear="false"
               :canDeselect="false"
               :caret="false"
@@ -93,7 +68,8 @@
           <label>{{ $t('dashboard.widget.form.tag') }}</label>
           <Multiselect
               v-model="editWidget.descriptor.default_config.fan_tag"
-              :options="tags"
+              :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
               :canClear="false"
               :canDeselect="false"
               :caret="false"
@@ -141,6 +117,34 @@
       <div class="ui-form">
         <h3>{{ $t('dashboard.widget.form.additional_settings') }}</h3>
         <div class="ui-form__row col-2">
+          <div class="ui-multiselect">
+            <label>{{ $t('dashboard.widget.form.tag') }}</label>
+            <Multiselect
+                v-model="editWidget.descriptor.default_config.master_off_tag"
+                :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+                :disabled="(!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope) || !editWidget.descriptor.default_config.master_off)"
+                :canClear="false"
+                :canDeselect="false"
+                :caret="false"
+                :searchable="true"
+                :placeholder="$t('dashboard.widget.form.tag_placeholder')"
+            />
+          </div>
+          <div class="ui-multiselect">
+            <label>{{ $t('dashboard.widget.form.tag') }}</label>
+            <Multiselect
+                v-model="editWidget.descriptor.default_config.fan_valve_tag"
+                :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+                :disabled="(!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope) || !editWidget.descriptor.default_config.fan_valve)"
+                :canClear="false"
+                :canDeselect="false"
+                :caret="false"
+                :searchable="true"
+                :placeholder="$t('dashboard.widget.form.tag_placeholder')"
+            />
+          </div>
+        </div>
+        <div class="ui-form__row col-2">
           <UiCheckbox v-model="editWidget.descriptor.default_config.master_off">{{ $t('dashboard.widget.form.master_off') }}</UiCheckbox>
           <UiCheckbox v-model="editWidget.descriptor.default_config.fan_valve">{{ $t('dashboard.widget.form.fan_valve') }}</UiCheckbox>
         </div>
@@ -154,18 +158,19 @@ import {useConfigurationDashboardStore} from "@store/dashboard/configuration/das
 import {storeToRefs} from "pinia";
 import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 import Multiselect from "@vueform/multiselect";
-import {onMounted, ref} from "vue";
+import {onMounted, ref, watch} from "vue";
 import UiInputCount from "@components/ui/InputCount.vue";
-import UiDoubleSelect from "@components/ui/DoubleSelect.vue";
 import UiCheckbox from "@components/ui/Checkbox.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiButton from "@components/ui/Button.vue";
+import General from "@components/widgets/settings/general.vue";
+import {useWS} from "@store/dashboard/ws";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
 const {editWidget} = storeToRefs(storeConfigurationDashboard)
 const storeConfigurationDevice = useConfigurationDeviceStore()
-const {devices} = storeToRefs(storeConfigurationDevice)
 const units = ref(['Celsius', 'Fahrenheit'])
-
+const storeWs = useWS()
+const {state} = storeToRefs(storeWs)
 const addControls = () => {
   editWidget.value?.descriptor?.default_config?.controls.push({
     power_level_name: '',
@@ -186,23 +191,22 @@ onMounted(async () => {
   await storeConfigurationDevice.getList()
 })
 
-const tags = ref([
-  'DND',
-  'MUR',
-  'Door contact',
-  'Door open',
-  'Main Relay',
-  'Check-In',
-  'Balcony scenario',
-  'Room sensor',
-  'M sensor',
-  'WC sensor',
-  'Bath alarm',
-  'Main light',
-  'Spot light',
-  'Balcony light',
-  'Bed Left light',
-  'Spot light',
-  'Dressing light',
-])
+watch(state, (value) => {
+  const entityId = editWidget.value?.descriptor?.default_config?.ws_args.entityId;
+  const scope = editWidget.value?.descriptor?.default_config?.ws_args.scope;
+  const attrs = entityId ? value.attrs.get(entityId + '_' + scope) : null;
+  if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.tag))) {
+    editWidget.value.descriptor.default_config.tag = '';
+  }
+  if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.fan_tag))) {
+    editWidget.value.descriptor.default_config.fan_tag = '';
+  }
+  if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.master_off_tag))) {
+    editWidget.value.descriptor.default_config.master_off_tag = '';
+  }
+  if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.fan_valve_tag))) {
+    editWidget.value.descriptor.default_config.fan_valve_tag = '';
+  }
+
+}, { deep: true });
 </script>

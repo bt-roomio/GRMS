@@ -35,7 +35,7 @@
           <CheckAll v-model="rooms.results" />
       </template>
       <template #select="{entity}">
-        <UiCheckbox v-model="entity.select"/>
+        <UiCheckbox @click.stop v-model="entity.select"/>
       </template>
       <template #devices="{entity}" >
         <template v-if="(entity.devices as IConfigurationDevice[]).length">

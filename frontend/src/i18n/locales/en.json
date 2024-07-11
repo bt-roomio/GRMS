@@ -217,6 +217,54 @@
           "edit_subtitle": "Edit a new room in your hotel",
           "edit_button": "Save dashboard"
         }
+      },
+      "users": {
+        "title": "Users",
+        "subtitle": "Track and manage your users",
+        "button": "Add User",
+        "button_save": "Save User",
+        "button_role": "Add Role",
+        "tabs": {
+          "all": "All users",
+          "admin": "Admin",
+          "manager": "Manager"
+        },
+        "modal": {
+          "add_user_title": "Add new user",
+          "add_user_subtitle": "Add a new user in system",
+          "edit_user_title": "Edit user",
+          "edit_user_subtitle": "Edit user in system",
+          "add_role_title": "Add new role",
+          "add_role_subtitle": "Create a new role",
+          "add_role_button": "Add new role",
+          "contacts_from": "Or add contacts from",
+          "send_invite": "Send Invite",
+          "choose_settings_permissions": "Choose settings permissions"
+        },
+        "form": {
+          "email_address": "Email address",
+          "email_address_placeholder": "Enter email address",
+          "active_user": "Active user",
+          "user_role": "User role",
+          "user_role_name": "Users role name",
+          "user_role_name_placeholder": "Enter new role name",
+          "phone": "Phone",
+          "name": "Name",
+          "first_name": "First Name",
+          "last_name": "Last Name",
+          "card_enc_id": "Card enc. ID",
+          "type": "Type",
+          "status": "Status",
+          "name_placeholder": "Enter name",
+          "password": "Password",
+          "password_placeholder": "Enter password",
+          "generate": "Generate",
+          "sent_new_password": "Sent new password for user"
+        },
+        "confirm": {
+          "title": "Confirm deletion of user",
+          "subtitle": "By clicking the 'Confirm' button you confirm the deletion of the selected user without the possibility of restoration"
+        }
       }
     },
     "file_upload": {
@@ -327,7 +375,10 @@
     "room_type_delete_success": "The delete of the room type was successful",
     "dashboard_add_success": "The creation of the dashboard was successful",
     "dashboard_edit_success": "The editing of the dashboard was successful",
-    "dashboard_delete_success": "The delete of the dashboard was successful"
+    "dashboard_delete_success": "The delete of the dashboard was successful",
+    "user_add_success": "The creation of the user was successful",
+    "user_edit_success": "The editing of the user was successful",
+    "user_delete_success": "The delete of the user was successful"
   }
 }
 

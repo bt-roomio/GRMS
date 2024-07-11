@@ -76,8 +76,8 @@ const {dashboards, loading, error} = storeToRefs(storeConfigurationDashboard)
 const headers = computed<IConfigurationRoomsHead>(() => ({
   select: true,
   title: t('dashboard.configuration.room_type.name'),
-  dashboard: t('dashboard.configuration.room_type.title'),
-  active: '',
+  // dashboard: t('dashboard.configuration.room_type.title'),
+  // active: '',
   actions: ''
 }))
 

@@ -24,7 +24,7 @@
       </div>
       <RouterLink to="/forgot-password">{{ $t('authorization.login.form.forgot_password') }}</RouterLink>
     </div>
-    <UiButton class="primary" @click.prevent="submit()">{{ $t('authorization.login.form.sign_in') }}</UiButton>
+    <UiButton class="primary w-full" @click.prevent="submit()">{{ $t('authorization.login.form.sign_in') }}</UiButton>
   </form>
 </template>
 <script setup lang="ts">

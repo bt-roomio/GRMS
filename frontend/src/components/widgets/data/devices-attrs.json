@@ -1,0 +1,27 @@
+[
+  ["/shuttle/attributes/a1561fb2-e031-42ce-812a-0ce84843c0f0/SHARED_SCOPE/", {
+    "temp": 25,
+    "fan": "auto",
+    "master_off": false,
+    "fan_valve": false
+  }],
+  ["/shuttle/attributes/47aef21b-6cc9-4ec5-8573-1a6f491940c0/SHARED_SCOPE/", {
+    "dnd": false,
+    "mur": false,
+    "door_contact": false,
+    "door_open": false,
+    "main_relay": false,
+    "check_in": false,
+    "balcony_scenario": false,
+    "room_sensor": false,
+    "m_sensor": false,
+    "wc_sensor": false,
+    "bath_alarm": false,
+    "fan": "auto",
+    "main_light": 12,
+    "spot_light": 14,
+    "balcony_light": 11,
+    "bed_left_light": 17,
+    "dressing_light": 15
+  }]
+]

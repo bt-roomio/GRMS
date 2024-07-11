@@ -4,7 +4,7 @@
       <p>{{ item.room_number }}</p>
     </div>
     <div class="rooms-card__type">
-      {{ item.type }}
+      {{ item.type || '-' }}
     </div>
     <div class="rooms-card__degree">
       23,8 °C

@@ -1,34 +1,21 @@
 <template>
   <form v-if="editWidget?.descriptor.default_config">
+    <General/>
     <div class="modal__card">
       <div class="ui-form">
-        <h3>{{$t('dashboard.widget.form.general')}}</h3>
-        <UiInput
-            :label="$t('dashboard.widget.form.title')"
-            name="title"
-            v-model="editWidget.descriptor.default_config.title"
-            :placeholder="$t('dashboard.widget.form.title_placeholder')"
-        />
-        <UiInput
-            :label="$t('dashboard.widget.form.subtitle')"
-            name="subtitle"
-            v-model="editWidget.descriptor.default_config.subtitle"
-            :placeholder="$t('dashboard.widget.form.subtitle_placeholder')"
-        />
-        <UiDoubleSelect
-            v-model="editWidget.descriptor.default_config.entityId"
-            v-model:select="editWidget.descriptor.default_config.entityType"
-            :options="devices?.results"
-            :args="{valueProp: 'id', label: 'name'}"
-            :select-options="['Device', 'Alias']"
-            :label="$t('dashboard.widget.form.datasource')"
-            name="datasource"
-            :placeholder="$t('dashboard.widget.form.room_temperature')"
-        />
-      </div>
-    </div>
-    <div class="modal__card">
-      <div class="ui-form">
+        <div class="ui-multiselect">
+          <label>{{$t('dashboard.widget.form.tag')}}</label>
+          <Multiselect
+              v-model="editWidget.descriptor.default_config.tag"
+              :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :canClear="false"
+              :canDeselect="false"
+              :caret="false"
+              :searchable="true"
+              :placeholder="$t('dashboard.widget.form.tag_placeholder')"
+              :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+          />
+        </div>
         <div class="ui-multiselect" v-if="editWidget?.descriptor.default_config.unit !== 'Custom Units'">
           <label>{{ $t('dashboard.widget.form.unit') }}</label>
           <Multiselect
@@ -79,16 +66,27 @@ import {storeToRefs} from "pinia";
 import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 import UiInputSelect from "@components/ui/InputSelect.vue";
 import Multiselect from "@vueform/multiselect";
-import {onMounted, ref} from "vue";
+import {onMounted, ref, watch} from "vue";
 import UiInputCount from "@components/ui/InputCount.vue";
-import UiDoubleSelect from "@components/ui/DoubleSelect.vue";
+import {useWS} from "@store/dashboard/ws";
+import General from "@components/widgets/settings/general.vue";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
 const {editWidget} = storeToRefs(storeConfigurationDashboard)
 const storeConfigurationDevice = useConfigurationDeviceStore()
-const {devices} = storeToRefs(storeConfigurationDevice)
+const storeWs = useWS()
+const {state} = storeToRefs(storeWs)
 const units = ref(['Percent', 'Bytes', 'Kilobytes', 'Megabytes', 'Gigabytes', 'Time (seconds)', 'Time (minutes)', 'Time (hours)', 'Custom Units'])
-
 onMounted(async () => {
   await storeConfigurationDevice.getList()
 })
+watch(state, (value) => {
+  const entityId = editWidget.value?.descriptor?.default_config?.ws_args.entityId;
+  const scope = editWidget.value?.descriptor?.default_config?.ws_args.scope;
+  const attrs = entityId ? value.attrs.get(entityId + '_' + scope) : null;
+  if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.tag))) {
+    editWidget.value.descriptor.default_config.tag = '';
+  }
+
+}, { deep: true });
+
 </script>

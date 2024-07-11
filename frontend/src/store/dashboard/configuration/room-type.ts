@@ -20,8 +20,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
     const state = ref<IConfigurationRoomTypes>({
         id: "",
         title: "",
-        dashboards: null,
-        type: null,
+        dashboard: null,
     })
 
     const rules = computed(() => ({
@@ -125,7 +124,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
         state.value = {
             id: "",
             title: "",
-            dashboards: "",
+            dashboard: null,
         }
         v$.value.$reset()
     }

@@ -1,13 +1,35 @@
 .ui-form{
-  @apply flex flex-col gap-4;
-
+  @apply flex flex-col gap-4 transition-all duration-1000;
+  h3{
+    @apply text-xs font-semibold text-gray-500;
+  }
   &__row{
     @apply grid gap-4 w-full justify-between;
     &.col-2{
       @apply grid-cols-2
     }
+    &.col-2-auto{
+      @apply grid-cols-[minmax(0,_auto)_minmax(0,_1fr)]
+    }
   }
   hr{
     @apply border-t-[3px] border-gray-300
   }
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.25s ease-out;
+}
+
+.slide-up-enter-from {
+  position: absolute;
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.slide-up-leave-to {
+  position: absolute;
+  opacity: 0;
+  transform: translateX(-100%);
 }

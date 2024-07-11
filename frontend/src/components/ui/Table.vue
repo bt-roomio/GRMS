@@ -53,6 +53,7 @@
       </tbody>
     </table>
     <table v-else-if="(!error?.code || !error?.msg) && !isEmpty" class="ui-table">
+      <UiLoader v-if="loading"/>
       <tbody>
       <tr>
         <td class="ui-table__error">

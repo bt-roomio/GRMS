@@ -8,7 +8,7 @@
         autocomplete="user-email"
         v-model="state.email"
     />
-    <UiButton class="primary" @click.prevent="submitHandle">{{ $t('authorization.forgot_password.form.reset_password') }}</UiButton>
+    <UiButton class="primary w-full" @click.prevent="submitHandle">{{ $t('authorization.forgot_password.form.reset_password') }}</UiButton>
   </form>
 </template>
 <script setup lang="ts">

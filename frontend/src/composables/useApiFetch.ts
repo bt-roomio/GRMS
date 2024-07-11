@@ -110,9 +110,12 @@ useApiFetch.interceptors.response.use(
             toast.remove(config.metadata?.toast as string);
             toast.error(error.message);
         }
-
-        for (const eKey in error.response.data) {
-            toast.error(error.response.data[eKey]);
+        if (typeof error.response.data === 'object'){
+            for (const eKey in error.response.data) {
+                toast.error(error.response.data[eKey]);
+            }
+        }else {
+            toast.error(error.response.statusText);
         }
 
         throw error;

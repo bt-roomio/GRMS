@@ -6,7 +6,7 @@
           :title="$t('authorization.reset_password.title')"
       />
       <UiButton
-          class="primary"
+          class="primary w-full"
           @click.prevent="openMail"
       >{{$t('authorization.reset_password.open')}}</UiButton>
       <RouterLink class="forgot-password__resend" to="/auth/login">

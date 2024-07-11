@@ -20,7 +20,7 @@
     @apply bg-primary-600/40 absolute top-0 left-0 w-full h-full;
   }
   &__body{
-    @apply bg-white dark:bg-gray-600 dark:text-gray-100 w-[406px] px-4 py-6 relative overflow-auto;
+    @apply flex flex-col h-full bg-white dark:bg-gray-600 dark:text-gray-100 w-[406px] px-4 py-6 relative overflow-auto;
   }
   &__head{
     @apply border-b-[3px] border-[#EAECF0] dark:border-gray-500 pb-6 relative -mx-4 px-4;
@@ -50,7 +50,7 @@
     @apply py-6 dark:border-gray-500;
   }
   &__footer{
-    @apply flex flex-col gap-4 pt-6;
+    @apply flex flex-col gap-4 pt-6 mt-auto;
   }
 }
 

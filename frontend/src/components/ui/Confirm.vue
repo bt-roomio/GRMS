@@ -14,8 +14,8 @@
             {{confirm.content}}
           </div>
           <div class="ui-confirm__footer">
-            <UiButton :class="confirm.buttons?.cancel.class" @click="confirmStore.handleCancel">{{ confirm.buttons?.cancel.text }}</UiButton>
-            <UiButton :class="confirm.buttons?.confirm.class" @click="confirmStore.handleConfirm">{{ confirm.buttons?.confirm.text }}</UiButton>
+            <UiButton class="w-full" :class="confirm.buttons?.cancel.class" @click="confirmStore.handleCancel">{{ confirm.buttons?.cancel.text }}</UiButton>
+            <UiButton class="w-full" :class="confirm.buttons?.confirm.class" @click="confirmStore.handleConfirm">{{ confirm.buttons?.confirm.text }}</UiButton>
           </div>
         </div>
       </div>

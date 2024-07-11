@@ -1,30 +1,8 @@
 <template>
   <form v-if="editWidget?.descriptor.default_config">
+    <General/>
     <div class="modal__card">
       <div class="ui-form">
-        <h3>{{$t('dashboard.widget.form.general')}}</h3>
-        <UiInput
-            :label="$t('dashboard.widget.form.title')"
-            name="title"
-            v-model="editWidget.descriptor.default_config.title"
-            :placeholder="$t('dashboard.widget.form.title_placeholder')"
-        />
-        <UiInput
-            :label="$t('dashboard.widget.form.subtitle')"
-            name="subtitle"
-            v-model="editWidget.descriptor.default_config.subtitle"
-            :placeholder="$t('dashboard.widget.form.subtitle_placeholder')"
-        />
-        <UiDoubleSelect
-            v-model="editWidget.descriptor.default_config.entityId"
-            v-model:select="editWidget.descriptor.default_config.entityType"
-            :options="devices?.results"
-            :args="{valueProp: 'id', label: 'name'}"
-            :select-options="['Device', 'Alias']"
-            :label="$t('dashboard.widget.form.datasource')"
-            name="datasource"
-            :placeholder="$t('dashboard.widget.form.room_temperature')"
-        />
         <div class="ui-multiselect">
           <label>{{ $t('dashboard.widget.form.type') }}</label>
           <Multiselect
@@ -51,12 +29,13 @@
             <label>{{ $t('dashboard.widget.form.tag') }}</label>
             <Multiselect
                 v-model="item.tag"
-                :options="tags"
+                :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
                 :canClear="false"
                 :canDeselect="false"
                 :caret="false"
                 :searchable="true"
                 :placeholder="$t('dashboard.widget.form.tag_placeholder')"
+                :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
             />
           </div>
           <UiInput
@@ -123,45 +102,42 @@
 </template>
 <script setup lang="ts">
 import UiInput from "@components/ui/Input.vue";
-import {onMounted, ref} from "vue";
+import {onMounted, ref, watch} from "vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiButton from "@components/ui/Button.vue";
-import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 import {storeToRefs} from "pinia";
 import Multiselect from "@vueform/multiselect";
 import UiInputCount from "@components/ui/InputCount.vue";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
-import UiDoubleSelect from "@components/ui/DoubleSelect.vue";
+import General from "@components/widgets/settings/general.vue";
+import {useWS} from "@store/dashboard/ws";
+import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
-const {editWidget} = storeToRefs(storeConfigurationDashboard)
 const storeConfigurationDevice = useConfigurationDeviceStore()
-const {devices} = storeToRefs(storeConfigurationDevice)
+const {editWidget} = storeToRefs(storeConfigurationDashboard)
+const storeWs = useWS()
+const {state} = storeToRefs(storeWs)
+const units = ref(['String', 'Boolean', 'Integer'])
 
-const units = ref(['Boolean', 'Integer'])
-const tags = ref([
-  'DND',
-  'MUR',
-  'Door contact',
-  'Door open',
-  'Main Relay',
-  'Check-In',
-  'Balcony scenario',
-  'Room sensor',
-  'M sensor',
-  'WC sensor',
-  'Bath alarm',
-  'Main light',
-  'Spot light',
-  'Balcony light',
-  'Bed Left light',
-  'Spot light',
-  'Dressing light',
-])
 const types = ref([
   'Toggle',
   'Slider',
   'Sensor',
 ])
+watch(state, (value) => {
+  const entityId = editWidget.value?.descriptor?.default_config?.ws_args.entityId;
+  const scope = editWidget.value?.descriptor?.default_config?.ws_args.scope;
+  const attrs = entityId ? value.attrs.get(entityId + '_' + scope) : null;
+
+  if (editWidget.value?.descriptor?.default_config?.controls) {
+    editWidget.value.descriptor.default_config.controls.forEach((control: any) => {
+      if (!attrs || !attrs.includes(control.tag)) {
+        control.tag = '';
+      }
+    });
+  }
+}, { deep: true });
+
 const addControls = () => {
   if (editWidget.value?.descriptor?.default_config?.type === 'Slider') {
     editWidget.value?.descriptor?.default_config?.controls.push({

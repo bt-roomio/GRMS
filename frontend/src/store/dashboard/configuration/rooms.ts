@@ -78,6 +78,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     const loadMore = async () => {
         size.value += 10
         await getList(searchValue.value ? {
+            ...sortedData.value,
             ...router.currentRoute.value.query,
             search_value: searchValue.value,
             search_field: searchType.value

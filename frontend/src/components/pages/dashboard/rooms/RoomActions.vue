@@ -1,7 +1,7 @@
 <template>
   <div class="flex gap-4 mb-6" v-if="item">
     <UiStatus :status="item.state" class="on h-8"/>
-    <UiBadge class="bg-gray-200 font-medium h-8">{{ item.type }}</UiBadge>
+    <UiBadge class="bg-gray-200 font-medium h-8" v-if="item.type">{{ item.type.title }}</UiBadge>
     <UiBadge class="bg-warning-200 font-bold h-8">23,8 °C</UiBadge>
     <UiBadge class="bg-gray-200 font-medium h-8">
       <UiIcon name="wind" filled/>

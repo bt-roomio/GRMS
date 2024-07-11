@@ -20,7 +20,6 @@ import Weather from "@components/widgets/Weather.vue";
 import Tabs from "@components/ui/Tabs.vue";
 import {computed, onMounted} from "vue";
 import {useI18n} from "vue-i18n";
-import {useUserStore} from "@store/dashboard/user";
 import StatisticsCardList from "@components/pages/dashboard/main/StatisticsCardList.vue";
 import PageHead from "@components/pages/dashboard/PageHead.vue";
 import StatsHead from "@components/pages/dashboard/main/StatsHead.vue";
@@ -32,7 +31,6 @@ const {
   viewModel,
   viewWidgets,
 } = storeToRefs(storeConfigurationDashboard)
-const storeUser = useUserStore()
 
 const {t} = useI18n()
 const tabList = computed(() => [
@@ -48,7 +46,6 @@ const tabList = computed(() => [
 
 onMounted(async () => {
   await Promise.all([
-    storeUser.getUser(),
     storeConfigurationDashboard.getItem('e91dd3e9-d109-4924-b82d-95262d4ceece' as string, false),
   ])
   await storeConfigurationDashboard.getDashboardInnerHelpers()

@@ -20,6 +20,11 @@
     input{
       @apply rounded-lg rounded-l-none border-l-0 h-10 w-full;
     }
+    &.right{
+      input{
+        @apply rounded-lg rounded-r-none border-l border-r-0 h-10 w-full;
+      }
+    }
   }
   &__left{
     .multiselect{
@@ -29,6 +34,17 @@
       }
       &.is-open {
         @apply rounded-r-none rounded-l-lg;
+      }
+    }
+  }
+  &__right{
+    .multiselect{
+      @apply relative border-l-0 border-r rounded-r-lg rounded-l-none h-10 pl-0;
+      &-single-label{
+        @apply pl-2 static pr-3;
+      }
+      &.is-open {
+        @apply rounded-l-none rounded-r-lg;
       }
     }
   }

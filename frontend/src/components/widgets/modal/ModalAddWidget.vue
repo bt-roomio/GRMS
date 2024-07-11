@@ -38,22 +38,34 @@
         {{ $t('dashboard.configuration.rooms.modals.add_new_rooms.cancel') }}
       </UiButton>
     </template>
+    <template #footer v-if="mode === 'development' && !isEdit">
+      <UiButton class="primary" @click.prevent="storeConfigurationDevice.setDeviceAttrs">SET DEVICE ATTRS</UiButton>
+      <UiButton class="primary" @click.prevent="storeWidgetType.setWidgetTypes">SET WIDGET TYPES</UiButton>
+      <UiButton class="text" @click.prevent="storeWidgetType.deleteWidgetTypes">DELETE WIDGET TYPES</UiButton>
+    </template>
   </Modal>
 </template>
 <script setup lang="ts">
 import UiIcon from "@components/ui/Icon.vue";
 import Modal from "@components/ui/Modal.vue";
 import UiButton from "@components/ui/Button.vue";
-import {onMounted, ref} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 import {storeToRefs} from "pinia";
 import {useWidgetType} from "@store/dashboard/widget/widget-type.ts";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
+import {useWS} from "@store/dashboard/ws";
+import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 const add_widget = ref<IModal | null>(null)
 const storeWidgetType = useWidgetType()
+const storeConfigurationDevice = useConfigurationDeviceStore()
 const storeConfigurationDashboard = useConfigurationDashboardStore()
-const {isEdit, selectedComponent} = storeToRefs(storeConfigurationDashboard)
+const {isEdit, selectedComponent, editWidget} = storeToRefs(storeConfigurationDashboard)
 const {widgetTypes} = storeToRefs(storeWidgetType)
 const currentComponent = ref<{[key: string]: any} | null>(null)
+const mode = computed(() => import.meta.env.MODE)
+const storeWs = useWS()
+const {send, unSubscription} = storeWs
+
 const close = () => {
   add_widget.value?.close()
 }
@@ -82,7 +94,26 @@ const cancelModal = async () => {
 onMounted(async () => {
   await storeWidgetType.getWidgetTypes()
 })
+const attrDataWs = computed(() => {
+  const wsArgs = editWidget.value?.descriptor.default_config?.ws_args;
+  if (!wsArgs) return null;
 
+  const isFilled = Object.values(wsArgs).every(arg => !!arg);
+  return isFilled ? wsArgs : null;
+});
+let previousValue = JSON.parse(JSON.stringify(attrDataWs.value));
+watch(attrDataWs, (newValue) => {
+  if (previousValue) {
+    unSubscription(previousValue)
+
+    previousValue = null
+  }
+  if (newValue) {
+    send(newValue);
+
+    previousValue = JSON.parse(JSON.stringify(newValue));
+  }
+}, { deep: true });
 
 defineExpose({
   close,

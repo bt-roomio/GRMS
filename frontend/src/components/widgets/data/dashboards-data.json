@@ -1,0 +1,290 @@
+[
+  {
+    "id": "e91dd3e9-d109-4924-b82d-95262d4ceece",
+    "title": "Rule Engine Statistics",
+    "configuration": {
+      "widgets": [
+        {
+          "id": "d71aab99-36f3-4d51-b784-6f0d42f98319",
+          "fqn": "progress_bar",
+          "name": "Progress bar",
+          "tags": "",
+          "image": null,
+          "updatedAt": "2024-07-11T07:47:00.497Z",
+          "created_at": 1720677481,
+          "deprecated": false,
+          "descriptor": {
+            "icon": "progress-bar",
+            "type": "timeseries",
+            "config_file": "progress-bar",
+            "default_config": {
+              "max": 100,
+              "min": 0,
+              "tag": "main_light",
+              "unit": "Percent",
+              "color": "#9900ff",
+              "title": "Main light",
+              "ws_args": {
+                "type": "ATTRIBUTES",
+                "scope": "SHARED_SCOPE",
+                "entityId": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
+                "entityType": "DEVICE"
+              },
+              "subtitle": "Select one of the operating modes"
+            },
+            "dashboard_config": {
+              "h": 8,
+              "i": "d71aab99-36f3-4d51-b784-6f0d42f983190",
+              "w": 6,
+              "x": 0,
+              "y": 0,
+              "id": "d71aab99-36f3-4d51-b784-6f0d42f98319",
+              "minH": 8,
+              "minW": 4,
+              "moved": false
+            }
+          },
+          "description": "Select one of the operating modes",
+          "external_id": null
+        }
+      ]
+    },
+    "assigned_customers": null,
+    "mobile_hide": false,
+    "mobile_order": null,
+    "image": null,
+    "external_id": null,
+    "tenant": "28c81921-f78e-4864-87d2-cec674f19d1c"
+  },
+  {
+    "id": "01b4ac29-32bd-4c5b-b42f-7a709d1ba68f",
+    "title": "Thermostats",
+    "configuration": {
+      "widgets": [
+        {
+          "id": "0f6b28da-d93d-4748-9c26-4f6d63e5629e",
+          "fqn": "system_mode",
+          "name": "System mode",
+          "tags": "",
+          "image": null,
+          "updatedAt": "2024-07-11T07:01:08.439Z",
+          "created_at": 1720677481,
+          "deprecated": false,
+          "descriptor": {
+            "icon": "settings",
+            "type": "timeseries",
+            "config_file": "system-mode",
+            "default_config": {
+              "type": "Toggle",
+              "title": "System Mode",
+              "ws_args": {
+                "type": "ATTRIBUTES",
+                "scope": "SHARED_SCOPE",
+                "entityId": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
+                "entityType": "DEVICE"
+              },
+              "controls": [
+                {
+                  "tag": "dnd",
+                  "title": "DND"
+                },
+                {
+                  "tag": "mur",
+                  "title": "MUR"
+                },
+                {
+                  "tag": "door_contact",
+                  "title": "Door contact"
+                },
+                {
+                  "tag": "door_open",
+                  "title": "Door open"
+                },
+                {
+                  "tag": "main_relay",
+                  "title": "Main Relay"
+                },
+                {
+                  "tag": "check_in",
+                  "title": "Check-In"
+                },
+                {
+                  "tag": "balcony_scenario",
+                  "title": "Balcony scenario"
+                },
+                {
+                  "tag": "room_sensor",
+                  "title": "room sensor"
+                },
+                {
+                  "tag": "m_sensor",
+                  "title": "m sensor"
+                },
+                {
+                  "tag": "wc_sensor",
+                  "title": "wc sensor"
+                }
+              ],
+              "subtitle": "Select one of the operating modes"
+            },
+            "dashboard_config": {
+              "h": 42,
+              "i": "zADvzKVOlg2j",
+              "w": 6,
+              "x": 0,
+              "y": 0,
+              "id": "0f6b28da-d93d-4748-9c26-4f6d63e5629e",
+              "minH": 8,
+              "minW": 4,
+              "moved": false
+            }
+          },
+          "description": "Select one of the operating modes",
+          "external_id": null
+        },
+        {
+          "id": "0f6b28da-d93d-4748-9c26-4f6d63e5629e",
+          "fqn": "system_mode",
+          "name": "System mode",
+          "tags": "",
+          "image": null,
+          "updatedAt": "2024-07-11T07:00:04.119Z",
+          "created_at": 1720677481,
+          "deprecated": false,
+          "descriptor": {
+            "icon": "settings",
+            "type": "timeseries",
+            "config_file": "system-mode",
+            "default_config": {
+              "type": "Sensor",
+              "title": "General sensor",
+              "ws_args": {
+                "type": "ATTRIBUTES",
+                "scope": "SHARED_SCOPE",
+                "entityId": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
+                "entityType": "DEVICE"
+              },
+              "controls": [
+                {
+                  "max": 100,
+                  "tag": "room_sensor",
+                  "unit": "Boolean",
+                  "title": "Room sensor"
+                },
+                {
+                  "tag": "m_sensor",
+                  "unit": "Boolean",
+                  "title": "M sensor",
+                  "precision": 0
+                },
+                {
+                  "tag": "wc_sensor",
+                  "unit": "Boolean",
+                  "title": "WC sensor",
+                  "precision": 0
+                },
+                {
+                  "tag": "bath_alarm",
+                  "unit": "Boolean",
+                  "title": "Bath alarm",
+                  "precision": 0
+                }
+              ],
+              "subtitle": "Select one of the operating modes"
+            },
+            "dashboard_config": {
+              "h": 23,
+              "i": "8IdiRTrpfJlP",
+              "w": 6,
+              "x": 6,
+              "y": 0,
+              "id": "0f6b28da-d93d-4748-9c26-4f6d63e5629e",
+              "minH": 8,
+              "minW": 4,
+              "moved": false
+            }
+          },
+          "description": "Select one of the operating modes",
+          "external_id": null
+        },
+        {
+          "id": "0f6b28da-d93d-4748-9c26-4f6d63e5629e",
+          "fqn": "system_mode",
+          "name": "System mode",
+          "tags": "",
+          "image": null,
+          "updatedAt": "2024-07-11T07:40:36.689Z",
+          "created_at": 1720677481,
+          "deprecated": false,
+          "descriptor": {
+            "icon": "settings",
+            "type": "timeseries",
+            "config_file": "system-mode",
+            "default_config": {
+              "type": "Slider",
+              "title": "Lighting settings",
+              "ws_args": {
+                "type": "ATTRIBUTES",
+                "scope": "SHARED_SCOPE",
+                "entityId": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
+                "entityType": "DEVICE"
+              },
+              "controls": [
+                {
+                  "max": 100,
+                  "min": 0,
+                  "tag": "main_light",
+                  "title": "Main light"
+                },
+                {
+                  "max": 100,
+                  "min": 0,
+                  "tag": "spot_light",
+                  "title": "Spot light"
+                },
+                {
+                  "max": 100,
+                  "min": 0,
+                  "tag": "balcony_light",
+                  "title": "Balcony light"
+                },
+                {
+                  "max": 100,
+                  "min": 0,
+                  "tag": "bed_left_light",
+                  "title": "Bed Left light"
+                },
+                {
+                  "max": 100,
+                  "min": 0,
+                  "tag": "dressing_light",
+                  "title": "Dressing light"
+                }
+              ],
+              "subtitle": "Select one of the operating modes"
+            },
+            "dashboard_config": {
+              "h": 24,
+              "i": "4eHJO65Rh5f7",
+              "w": 6,
+              "x": 6,
+              "y": 23,
+              "id": "0f6b28da-d93d-4748-9c26-4f6d63e5629e",
+              "minH": 8,
+              "minW": 4,
+              "moved": false
+            }
+          },
+          "description": "Select one of the operating modes",
+          "external_id": null
+        }
+      ]
+    },
+    "assigned_customers": null,
+    "mobile_hide": false,
+    "mobile_order": null,
+    "image": null,
+    "external_id": null,
+    "tenant": "28c81921-f78e-4864-87d2-cec674f19d1c"
+  }
+]

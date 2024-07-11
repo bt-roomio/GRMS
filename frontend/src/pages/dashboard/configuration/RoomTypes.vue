@@ -23,10 +23,10 @@
         <CheckAll v-model="room_types.results" />
       </template>
       <template #select="{entity}">
-        <UiCheckbox v-model="entity.select"/>
+        <UiCheckbox @click.stop v-model="entity.select"/>
       </template>
-      <template #active="{entity}">
-        <UiToggle v-model="entity.active"/>
+      <template #dashboard="{entity}">
+        {{(entity as Entity).dashboard?.title || '-'}}
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
@@ -55,20 +55,20 @@ import {useConfigurationRoomTypeStore} from "@store/dashboard/configuration/room
 import {storeToRefs} from "pinia";
 import {computed, onMounted, ref} from "vue";
 import {useI18n} from "vue-i18n";
-import UiToggle from "@components/ui/Toggle.vue";
 import ModalAddRoomType from "@components/pages/dashboard/configuration/room-type/ModalAddRoomType.vue";
 import ModalEditRoomType from "@components/pages/dashboard/configuration/room-type/ModalEditRoomType.vue";
+import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 const add_room_type = ref<IModal | null>(null)
 const edit_room_type = ref<IModal | null>(null)
 const {t} = useI18n()
 const storeConfigurationRoomType = useConfigurationRoomTypeStore()
+const storeConfigurationDashboardStore = useConfigurationDashboardStore()
 const {room_types, loading, error} = storeToRefs(storeConfigurationRoomType)
 
 const headers = computed<IConfigurationRoomsHead>(() => ({
   select: true,
   title: t('dashboard.configuration.room_type.name'),
   dashboard: t('dashboard.configuration.room_type.dashboard'),
-  active: '',
   actions: ''
 }))
 
@@ -84,9 +84,25 @@ const openEditRoomType = async (id: string) => {
   }
 }
 onMounted(async () => {
-  await storeConfigurationRoomType.getList({})
+  await Promise.all([
+    storeConfigurationRoomType.getList({}),
+    storeConfigurationDashboardStore.getList({})
+  ])
 })
 const moreHandle = async () => {
   await storeConfigurationRoomType.loadMore()
+}
+
+interface Dashboard {
+  title: string;
+}
+
+interface Entity {
+  select?: boolean;
+  title?: string;
+  dashboard?: Dashboard;
+  active?: string;
+  actions?: string;
+  [key: string]: any;
 }
 </script>
