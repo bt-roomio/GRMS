@@ -1,10 +1,9 @@
 import time
 import uuid
 
+from core.utils.unix_timestamp import UnixTimeStampField
 from django.db import models
 from django.db.models import SET_NULL
-
-from core.utils.unix_timestamp import UnixTimeStampField
 
 
 class BaseModel(models.Model):
@@ -18,7 +17,7 @@ class BaseModel(models.Model):
 
 class BaseModelTs(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    ts = UnixTimeStampField(default=time.time, editable=False, null=True)
+    ts = UnixTimeStampField(default=time.time, null=True)
 
     class Meta:
         abstract = True
