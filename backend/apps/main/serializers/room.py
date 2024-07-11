@@ -56,7 +56,7 @@ class RoomFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    state = serializers.ChoiceField(choices=Room.STATE, default=Room.Available)
+    state = serializers.ChoiceField(choices=Room.STATE, required=False)
     status = serializers.ChoiceField(
         choices=Room.STATUS,
         required=False,

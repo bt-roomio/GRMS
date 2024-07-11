@@ -3,9 +3,9 @@ from django.db.models import Q
 
 
 class RoomQuerySet(BaseQuerySet):
-    def list(self, tenant, state, status=None, search_field=None, search_value=None, sort_by=None):
+    def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None):
         query = self.filter(active=True)
-        query = query.filter(state=state, tenant=tenant)
+        query = query.filter(state=state, tenant=tenant) if state else query
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__startswith": search_value}))
