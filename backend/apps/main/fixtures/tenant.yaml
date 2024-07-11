@@ -11,3 +11,9 @@
       tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
       region: "UE-1"
       title: "Tenant 2"
+
+- model: "main.Tenant"
+  pk: "5b2b6879-0791-4b14-8545-6abf61e73b68"
+  fields:
+      tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
+      title: "For Internal Purpose"

@@ -10,5 +10,10 @@
 
 - model: "shuttle.TsKvDictionary"
   fields:
-      key: "CPU"
+      key: "cpuUsage"
       key_id: 3
+
+- model: "shuttle.TsKvDictionary"
+  fields:
+      key: "memoryUsage"
+      key_id: 4

@@ -2,12 +2,26 @@
   pk: "7ae3c337-0278-42aa-8b6c-3b5989420521"
   fields:
       entity: "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
-      key: 2
+      key: 1
       long_v: 9999
 
 - model: "shuttle.TsKvLatest"
   pk: "f263b2f4-a741-4cb1-8c08-399a53acd2fc"
   fields:
       entity: "a1561fb2-e031-42ce-812a-0ce84843c0f0"
-      key: 3
+      key: 2
       long_v: 60
+
+- model: "shuttle.TsKvLatest"
+  pk: "49efc5c4-0816-463b-be75-08fc2e4fb401"
+  fields:
+      entity: "9829490d-f742-400e-8f38-aae5155e0b27"
+      key: 3
+      dbl_v: 23.2
+
+- model: "shuttle.TsKvLatest"
+  pk: "f5be23d3-0cb7-4221-b737-d8a1475010da"
+  fields:
+      entity: "9829490d-f742-400e-8f38-aae5155e0b27"
+      key: 4
+      dbl_v: 60.0

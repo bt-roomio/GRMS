@@ -1,9 +1,8 @@
-import random
 from channels.db import database_sync_to_async
-
-from shuttle.utils.get_non_null_field import get_non_null_field
 from main.models import Device
 from shuttle.models import TsKvDictionary, TsKvLatest
+from shuttle.utils.get_non_null_field import get_non_null_field
+from shuttle.utils.read_cpu_ram import get_ram_usage
 from shuttle.utils.response import response
 
 
@@ -12,15 +11,15 @@ async def latest_telemetry(cmd, user, send_json):
     latest_values = {}
 
     ts_kv_latest = await get_ts_kv_latest(cmd, user)
+    print(ts_kv_latest)
     for d in ts_kv_latest:
         ts_kv_dict = await get_ts_kv_dict(d.key)
-        field_value = get_non_null_field(d)
-        field = field_value[0]
-        result["data"][ts_kv_dict.key] = [[d.ts, field_value[1]]]
+        field, value = get_non_null_field(d)
+        # value = await fake_change_telemetry(d.id, field)  # This is just for testing purposes
+
+        result["data"][ts_kv_dict.key] = [[d.ts, value]]
         latest_values[ts_kv_dict.key] = d.ts
         result["latestValues"] = latest_values
-
-        await fake_change_telemetry(d.id, field)  # This is just for testing purposes
 
     await send_json(result)
 
@@ -28,9 +27,12 @@ async def latest_telemetry(cmd, user, send_json):
 @database_sync_to_async
 def fake_change_telemetry(id, field):
     data = TsKvLatest.objects.filter(id=id).first()
+    value = get_ram_usage()
     if data:
-        setattr(data, field, random.randint(0, 100))
+        setattr(data, field, value)
         data.save()
+        return value
+    return None
 
 
 @database_sync_to_async
@@ -40,6 +42,6 @@ def get_ts_kv_dict(key_id):
 
 @database_sync_to_async
 def get_ts_kv_latest(cmd, user):
-    device = Device.objects.filter(id=cmd.get("entityId"), tenant_id=user.tenant_id).first()
+    device = Device.objects.filter(id=cmd.get("entityId")).first()
     ts_kv_latest = TsKvLatest.objects.filter(entity_id=device.id if device else None)
     return list(ts_kv_latest)

@@ -1,9 +1,9 @@
 import asyncio
 
 from shuttle.consumers.aggregations.attribute_kv import attribute_kv
+from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
+from shuttle.consumers.aggregations.ts_kv_history import history_telemetery
 from shuttle.consumers.base import BaseConsumer
-from shuttle.consumers.latest_telemetry import latest_telemetry
-from shuttle.consumers.ts_kv_history import history_telemetery
 from shuttle.models import AttributeKv
 from shuttle.utils.periodically_task import periodically_task
 from shuttle.utils.response import response
@@ -26,7 +26,14 @@ class ShuttleConsumer(BaseConsumer):
             cmd_id = cmd.get("cmdId")
             task_key = f"cmdId-{cmd_id}"
 
-            if cmd.get("type") == "TIMESERIES" and cmd.get("scope") == "LATEST_TELEMETRY" and cmd.get("DEVICE"):
+            """
+            - Latest Telemetry
+            """
+            if (
+                cmd.get("type") == "TIMESERIES"
+                and cmd.get("scope") == "LATEST_TELEMETRY"
+                and cmd.get("entityType") == "DEVICE"
+            ):
                 func = lambda: periodically_task(5, self, latest_telemetry, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
@@ -37,10 +44,16 @@ class ShuttleConsumer(BaseConsumer):
                     del self.tasks[task_key]
                     del self.task_params[task_key]
 
+            """
+            - Entity Data
+            """
             if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
                 result = await history_telemetery(cmd, user, self.send_json)
                 await self.send_json(result)
 
+            """
+            - Attributes
+            """
             if (
                 cmd.get("type") == "ATTRIBUTES"
                 and cmd.get("entityType") == "DEVICE"
