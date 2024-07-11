@@ -1,8 +1,8 @@
 from channels.db import database_sync_to_async
+from core.utils.read_cpu_ram import get_ram_usage
 from main.models import Device
 from shuttle.models import TsKvDictionary, TsKvLatest
 from shuttle.utils.get_non_null_field import get_non_null_field
-from shuttle.utils.read_cpu_ram import get_ram_usage
 from shuttle.utils.response import response
 
 
