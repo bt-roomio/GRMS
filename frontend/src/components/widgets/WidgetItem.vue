@@ -102,8 +102,12 @@ onMounted(() => {
     wAndH.value.width = '100%'
     wAndH.value.height = '100%'
   })
-  if (props.item.descriptor.default_config.ws_args){
-    send(props.item.descriptor.default_config.ws_args)
+  const wsArgs = editWidget.value?.descriptor.default_config?.ws_args;
+  if (!wsArgs) return null;
+
+  const isFilled = Object.values(wsArgs).every(arg => !!arg);
+  if (isFilled){
+    send(wsArgs)
   }
 })
 
