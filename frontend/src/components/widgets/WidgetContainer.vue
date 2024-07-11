@@ -1,5 +1,5 @@
 <template>
-  <div class="card ui-table__error" v-if="!model?.length">
+  <div class="card ui-table__error" v-if="!model || !model?.length">
     <p class="error-title">{{ $t('dashboard.table.no_data_title') }}</p>
     <p class="error-subtitle">{{ $t('dashboard.table.no_data_subtitle') }}</p>
   </div>

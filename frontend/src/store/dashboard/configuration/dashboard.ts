@@ -52,7 +52,6 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
     const isEdit = ref(false)
     const widgetCallback = ref<(confirm: boolean) => void | Promise<void> | null>((confirm) => {console.log(confirm)})
     const selectedComponent = shallowRef<DefineComponent | null>(null)
-    const tags = ref(new Map<string, any>())
 
     // Dashboard state for create
 
@@ -169,6 +168,18 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         }
     }
     const $reset = async () => {
+        editModel.value = null
+        readModel.value = null
+        viewModel.value = null
+        editWidgets.value = null
+        readWidgets.value = null
+        viewWidgets.value = null
+        editWidget.value = null
+        readWidget.value = null
+        dashboards.value = null
+        dashboard.value = null
+        loading.value = false
+        isSettings.value = false
         state.value = {
             id: "",
             title: "",
@@ -188,7 +199,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
 
     const getDashboardInnerHelpers = async () => {
         try {
-            if (dashboard.value && !dashboard.value?.configuration){
+            if (dashboard.value && !dashboard.value?.configuration?.widgets){
                 dashboard.value.configuration = {widgets: []}
             }
             readModel.value = dashboard.value?.configuration.widgets.map((el: any) => {
@@ -333,7 +344,6 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         isEdit,
         widgetCallback,
         selectedComponent,
-        tags,
         state,
         validation: v$,
         getList,
