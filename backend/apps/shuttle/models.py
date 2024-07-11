@@ -85,3 +85,17 @@ class AttributeKv(BaseModel):
 
     class Meta:
         db_table = "shuttle_attribute_kv"
+
+
+class Relation(BaseModel):
+    from_id = models.ForeignKey("main.Device", CASCADE, "from_relations")
+    from_type = models.CharField(max_length=255)
+    to_id = models.ForeignKey("main.Device", CASCADE, "to_relations")
+    to_type = models.CharField(max_length=255)
+    relation_type_group = models.CharField(max_length=255)
+    relation_type = models.CharField(max_length=255)
+    additional_info = models.CharField(blank=True, null=True)
+
+    class Meta:
+        db_table = "shuttle_relation"
+        unique_together = (("from_id", "from_type", "relation_type_group", "relation_type", "to_id", "to_type"),)

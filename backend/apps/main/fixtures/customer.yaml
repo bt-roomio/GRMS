@@ -9,3 +9,9 @@
   fields:
       title: "Customer 2"
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.Customer"
+  pk: "0e43b252-8391-430d-807e-de64e0a63194"
+  fields:
+      title: "Fake Customer"
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
