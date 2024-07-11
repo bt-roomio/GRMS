@@ -186,6 +186,12 @@ COMPANY_NAME = os.environ.get("COMPANY_NAME", "Room.io")
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
+RABBIT_HOST = os.environ.get("RABBIT_MQ_HOST", "localhost")
+RABBIT_PORT = os.environ.get("RABBIT_MQ_PORT", 5672)
+RABBIT_TYPE = os.environ.get("RABBIT_TYPE", "rabbitMQ")
+RABBIT_LOGIN = os.environ.get("RABBIT_LOGIN", "guest")
+RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD", "guest")
+
 try:
     from .settings_dev import *
 except ImportError:

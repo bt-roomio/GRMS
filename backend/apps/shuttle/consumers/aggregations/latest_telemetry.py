@@ -11,7 +11,7 @@ async def latest_telemetry(cmd, user, send_json):
     latest_values = {}
 
     ts_kv_latest = await get_ts_kv_latest(cmd, user)
-    print(ts_kv_latest)
+
     for d in ts_kv_latest:
         ts_kv_dict = await get_ts_kv_dict(d.key)
         field, value = get_non_null_field(d)

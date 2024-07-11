@@ -1,12 +1,12 @@
 import time
-from django.db import models
-from django.db.models import CASCADE
 
 from core.models import BaseModel, BaseModelTs
+from django.db import models
+from django.db.models import CASCADE
+from shuttle.querysets.attributes import AttributeKvQuerySet
+from shuttle.querysets.ts_kv import TsKvQuerySet
 from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
 from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
-from shuttle.querysets.ts_kv import TsKvQuerySet
-from shuttle.querysets.attributes import AttributeKvQuerySet
 
 
 class TsKv(BaseModelTs):
@@ -19,6 +19,11 @@ class TsKv(BaseModelTs):
     json_v = models.JSONField(blank=True, null=True)
 
     objects = TsKvQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        if self.ts is None:
+            self.ts = time.time()
+        super(TsKv, self).save(*args, **kwargs)
 
     class Meta(BaseModel.Meta):
         db_table = "shuttle_ts_kv"
