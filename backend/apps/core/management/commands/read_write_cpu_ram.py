@@ -1,9 +1,9 @@
 import time
 
+from core.utils.read_cpu_ram import get_cpu_usage, get_ram_usage
 from django.core.management.base import BaseCommand
 from main.models import Device
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
-from shuttle.utils.read_cpu_ram import get_cpu_usage, get_ram_usage
 
 
 class Command(BaseCommand):
