@@ -71,7 +71,7 @@ import UiCheckbox from "@components/ui/Checkbox.vue";
 import UiButton from "@components/ui/Button.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiStatus from "@components/ui/Status.vue";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 import {storeToRefs} from "pinia";
 import {useI18n} from "vue-i18n";
@@ -153,6 +153,11 @@ const theadSortHandle = (array: string[]) => {
   sortedHeaders.value = results
 }
 
+watch(isSearchOpen, value => {
+  if (!value) {
+    searchValue.value = ''
+  }
+})
 const moreHandle = async () => {
   await storeConfigurationRooms.loadMore()
 }

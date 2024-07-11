@@ -288,7 +288,8 @@
         "checked_in": "Checked-In",
         "occupied": "Occupied",
         "do_not_disturb": "Do not disturb",
-        "available": "Available"
+        "available": "Available",
+        "make_up_room": "Make Up Room"
       },
       "table": {
         "room_number": "Room",

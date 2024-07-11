@@ -15,7 +15,7 @@ interface IConfigurationRoomTypes {
     check_in_out_address?: string | null
     check_in_value?: string | null
     check_out_value?: string | null
-    dashboard?: {[key: string]: unknown} | null
+    dashboard?: {[key: string]: unknown} | null | any
 }
 interface IConfigurationDashboard {
     id?: string

@@ -87,6 +87,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
             if (isFilled) {
                 state.value.id = data.id
                 state.value.title = data.title
+                state.value.dashboard = data.dashboard?.id as string || null
             }
         }catch (e: any) {
             throw e

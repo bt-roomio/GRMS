@@ -17,7 +17,7 @@
 <script setup lang="ts">
 // @ts-ignore
 import RoundSlider from 'vue-three-round-slider'
-import {ref, watch} from "vue";
+import {nextTick, ref, watch} from "vue";
 const emits = defineEmits(['change'])
 const value = defineModel()
 const props = defineProps<{temperature_type: string, min: number, max: number}>()
@@ -25,7 +25,11 @@ const roundSliderRef = ref()
 
 watch(props,() => {
   if (roundSliderRef.value) {
-    roundSliderRef.value.updateProp('model-value', parseInt(<string>value.value))
+    const oldValue = JSON.parse(JSON.stringify(value.value))
+    value.value = 0
+    nextTick(() => {
+      value.value = oldValue
+    })
   }
 });
 const tooltipFormat = (e: any) => {

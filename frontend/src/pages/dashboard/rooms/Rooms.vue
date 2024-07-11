@@ -9,7 +9,6 @@
           button-class="text"
       />
       <StatisticsCardList />
-
       <div class="rooms__actions">
         <Tabs :list="tabList"/>
         <RoomsActions
@@ -26,18 +25,19 @@
 import PageHead from "@components/pages/dashboard/PageHead.vue";
 import StatisticsCardList from "@components/pages/dashboard/main/StatisticsCardList.vue";
 import Tabs from "@components/ui/Tabs.vue";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 import RoomsActions from "@components/pages/dashboard/rooms/Actions.vue";
 import {onBeforeRouteUpdate} from "vue-router";
 import {useI18n} from "vue-i18n";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 import RoomContent from "@components/pages/dashboard/rooms/RoomContent.vue";
 import {storeToRefs} from "pinia";
+import router from "@/router";
 const isSearchOpen = ref(false)
 const isTable = ref(false)
 const {t} = useI18n()
 const storeConfigurationRooms = useConfigurationRoomsStore()
-const {sortedData} = storeToRefs(storeConfigurationRooms)
+const {sortedData, searchValue} = storeToRefs(storeConfigurationRooms)
 const tabList = computed(() => [
   {
     name: t('dashboard.rooms.tabs.all'),
@@ -60,15 +60,18 @@ const tabList = computed(() => [
     to: {name: 'room-list', query: { state: 'DoNotDistrub' }},
   },
   {
-    name: t('dashboard.rooms.tabs.available'),
+    name: t('dashboard.rooms.tabs.make_up_room'),
     to: {name: 'room-list', query: { state: 'MakeUpRoom' }},
   }
 ])
-
-
+watch(isSearchOpen, value => {
+  if (!value) {
+    searchValue.value = ''
+  }
+})
 onMounted(async () => {
   sortedData.value = {sort_by: ['block', 'floor']}
-  await storeConfigurationRooms.getList({sort_by: ['block', 'floor']})
+  await storeConfigurationRooms.getList({sort_by: ['block', 'floor'], ...router.currentRoute.value.query})
 })
 onBeforeRouteUpdate(async (to) => {
   await storeConfigurationRooms.getList({sort_by: ['block', 'floor'], ...to.query})
