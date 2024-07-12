@@ -1,11 +1,9 @@
 import asyncio
 
 from django.conf import settings
+from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
-
 from shuttle.utils.response import response
-
-from jwt import InvalidSignatureError, ExpiredSignatureError, DecodeError
 
 
 async def periodically_task(seconds: int, self, func, *args):

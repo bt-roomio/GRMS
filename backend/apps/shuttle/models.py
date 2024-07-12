@@ -4,6 +4,7 @@ from core.models import BaseModel, BaseModelTs
 from django.db import models
 from django.db.models import CASCADE
 from shuttle.querysets.attributes import AttributeKvQuerySet
+from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
 from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
 from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
@@ -95,6 +96,8 @@ class Relation(BaseModel):
     relation_type_group = models.CharField(max_length=255)
     relation_type = models.CharField(max_length=255)
     additional_info = models.CharField(blank=True, null=True)
+
+    objects = RelationQuerySet.as_manager()
 
     class Meta:
         db_table = "shuttle_relation"

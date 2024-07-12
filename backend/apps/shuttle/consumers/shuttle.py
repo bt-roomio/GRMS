@@ -34,7 +34,7 @@ class ShuttleConsumer(BaseConsumer):
                 and cmd.get("scope") == "LATEST_TELEMETRY"
                 and cmd.get("entityType") == "DEVICE"
             ):
-                func = lambda: periodically_task(5, self, latest_telemetry, cmd, user, self.send_json)
+                func = lambda: periodically_task(1, self, latest_telemetry, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
@@ -64,7 +64,7 @@ class ShuttleConsumer(BaseConsumer):
                     await self.send_json(response({}, 0, 1, "Incorrect scope!"))
                     return
 
-                func = lambda: periodically_task(5, self, attribute_kv, cmd, user, self.send_json)
+                func = lambda: periodically_task(1, self, attribute_kv, cmd, user, self.send_json)
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 

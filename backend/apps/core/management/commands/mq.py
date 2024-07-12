@@ -7,7 +7,7 @@ from core.utils.random_letter import get_random_letter
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from main.models import Device, DeviceCredentials
-from shuttle.models import AttributeKv, Relation, TsKv, TsKvDictionary
+from shuttle.models import AttributeKv, Relation, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 logger = logging.getLogger(__name__)
@@ -255,6 +255,11 @@ def save_telemetry_kv(device, data, ts):
             key=ts_kv_dict.key_id,
             ts=ts or time.time(),
             defaults={**fields, "ts": ts or time.time()},
+        )
+        TsKvLatest.objects.update_or_create(
+            entity=device,
+            key=ts_kv_dict.key_id,
+            defaults=fields,
         )
         time.sleep(0.1)
 
