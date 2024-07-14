@@ -1,24 +1,33 @@
-from core.utils.permission import IsTenantAndSysAdmin
+from core.utils.pagination import pagination
+from core.utils.permission import IsTenantAndSysAdmin, check_for_tenant
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.models import User
 from users.serializers.user import UserParams, UserSerializer
+from users.swagger.users import UserDetailSwagger, UserSwagger
 
 
 class UserListView(APIView):
+    @swagger_auto_schema(responses=UserSwagger, query_serializer=UserParams)
+    @check_for_tenant
     def get(self, request):
-        if not request.user.tenant_id:
-            return Response({"error": "You are not allowed to view this page"}, 403)
+        params = UserParams.check(request.GET)
+        queryset = User.objects.list(
+            tenant_id=request.user.tenant_id,
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+            sort_by=params.get("sort_by"),
+        )
+        serializer = UserSerializer(queryset, many=True)
+        data = pagination(queryset, serializer, params.get("page"), params.get("size"))
+        return Response(data)
 
-        users = User.objects.prefetch_related("groups").filter(tenant_id=request.user.tenant_id)
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
-
+    @swagger_auto_schema(responses=UserSwagger, request_body=UserSerializer)
+    @check_for_tenant
     def post(self, request):
-        if not request.user.tenant_id:
-            return Response({"error": "You are not allowed to view this page"}, 403)
         params = UserParams.check(request.GET)
         serializer = UserSerializer(data=request.data, context={"params": params})
         serializer.is_valid(raise_exception=True)
@@ -32,6 +41,8 @@ class UserDetailView(APIView):
             return [IsTenantAndSysAdmin()]
         return [IsAuthenticated()]
 
+    @swagger_auto_schema(responses=UserDetailSwagger)
+    @check_for_tenant
     def get(self, request, pk):
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(User, id=pk)
@@ -40,6 +51,8 @@ class UserDetailView(APIView):
         serializer = UserSerializer(instance)
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses=UserDetailSwagger, request_body=UserSerializer)
+    @check_for_tenant
     def put(self, request, pk):
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(User, id=pk)
@@ -50,6 +63,8 @@ class UserDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses={})
+    @check_for_tenant
     def delete(self, request, pk):
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(User, id=pk)

@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True)),
                 ('email', models.EmailField(max_length=254, unique=True)),
-                ('additional_info', models.TextField(blank=True, null=True)),
+                ('additional_info', models.JSONField(blank=True, null=True)),
                 ('phone', models.CharField(blank=True, max_length=255, null=True)),
                 ('date_joined', models.BigIntegerField(default=time.time, editable=False)),
                 ('last_login', core.utils.unix_timestamp.UnixTimeStampField(blank=True, default=time.time, null=True)),

@@ -1,10 +1,30 @@
 from django.contrib.auth.base_user import BaseUserManager
+from django.db.models import F, Q
 
 
 class UsersManager(BaseUserManager):
     """
     Custom user model manager that supports using email instead of username.
     """
+
+    def list(self, tenant_id, sort_by=None, search_field=None, search_value=None):
+        query = self.prefetch_related("groups").filter(tenant_id=tenant_id)
+
+        if sort_by:
+            # INFO: nulls_last() in asc or desc can't help, we need sort empty fields
+            fields = []
+            for field in sort_by:
+                dash = field.startswith("-")
+                field = field.replace("-", "")
+                query = query.exclude(first_name="") if field == "first_name" else query
+                field = F(field).desc() if dash else F(field).asc()
+                fields.append(field)
+            query = query.order_by(*fields)
+
+        if search_field and search_value:
+            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+
+        return query
 
     def create_user(self, email, password, **extra_fields):
         """

@@ -29,4 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserParams(ValidatorSerializer):
-    sendActivationMail = serializers.BooleanField(required=False)
+    SORT_FIELDS = ("first_name", "-first_name", "email", "-email")
+
+    page = serializers.IntegerField(default=1)
+    size = serializers.IntegerField(default=50)
+    send_activation_mail = serializers.BooleanField(required=False)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    search_field = serializers.ChoiceField(choices=("first_name", "email", "phone"), required=False)
+    search_value = serializers.CharField(required=False)

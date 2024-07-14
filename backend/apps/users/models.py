@@ -1,10 +1,9 @@
 import time
 
+from core.models import BaseModel
+from core.utils.unix_timestamp import UnixTimeStampField
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
-from core.utils.unix_timestamp import UnixTimeStampField
-from core.models import BaseModel
 from users.querysets.user import UsersManager
 from users.utils import tokens
 from users.utils.fields import expires_hour
@@ -12,7 +11,7 @@ from users.utils.fields import expires_hour
 
 class User(AbstractUser, BaseModel):
     email = models.EmailField(unique=True)
-    additional_info = models.TextField(blank=True, null=True)
+    additional_info = models.JSONField(blank=True, null=True)
     phone = models.CharField(max_length=255, blank=True, null=True)
     date_joined = models.BigIntegerField(default=time.time, editable=False)
     last_login = UnixTimeStampField(default=time.time, blank=True, null=True)
