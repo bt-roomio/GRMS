@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import Weather from "@components/widgets/Weather.vue";
 import Tabs from "@components/ui/Tabs.vue";
-import {computed, onMounted} from "vue";
+import {computed, onMounted, onUnmounted} from "vue";
 import {useI18n} from "vue-i18n";
 import StatisticsCardList from "@components/pages/dashboard/main/StatisticsCardList.vue";
 import PageHead from "@components/pages/dashboard/PageHead.vue";
@@ -49,5 +49,8 @@ onMounted(async () => {
     storeConfigurationDashboard.getItem('e91dd3e9-d109-4924-b82d-95262d4ceece' as string, false),
   ])
   await storeConfigurationDashboard.getDashboardInnerHelpers()
+})
+onUnmounted(() => {
+  storeConfigurationDashboard.$reset()
 })
 </script>

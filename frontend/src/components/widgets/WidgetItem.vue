@@ -70,7 +70,7 @@ import {storeToRefs} from "pinia";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 import Progress from "@components/widgets/Progress.vue";
 import {useWS} from "@store/dashboard/ws";
-const {send} = useWS()
+const {send, unSubscription} = useWS()
 const cookies = useCookies(['mode'])
 const option = computed(() => props.item.config.setting)
 const storeConfigurationDashboard = useConfigurationDashboardStore()
@@ -93,9 +93,6 @@ use([
 provide(THEME_KEY, computed(() => cookies.get('mode') || 'light'));
 
 const props = defineProps<{ isSettings: boolean, item: {[key: string]: any} }>()
-// const storeWs = useWS()
-// const {state} = storeToRefs(storeWs)
-// const {send} = storeWs
 const isCurrentEdit = computed(() => JSON.stringify(props.item) === JSON.stringify(editWidget.value))
 onMounted(() => {
   nextTick(() => {
@@ -111,21 +108,13 @@ onMounted(() => {
   }
 })
 
-// watch(entityId, (value, oldValue) => {
-//   if (value !== oldValue){
-//
-//
-//
-//
-//
-//
-//
-//   }
-// })
-// SHARED_ATTRIBUTES CLIENT_SCOPE SERVER_SCOPE
 onUnmounted(() => {
-  // if (data.value){
-  //   unSubscription(data.value.subscriptionId)
-  // }
+  const wsArgs = props.item?.descriptor.default_config?.ws_args;
+  if (!wsArgs) return null;
+
+  const isFilled = Object.values(wsArgs).every(arg => !!arg);
+  if (isFilled){
+    unSubscription(wsArgs)
+  }
 })
 </script>

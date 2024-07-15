@@ -46,7 +46,7 @@
         <template v-else>-</template>
       </template>
       <template #status="{entity}">
-        <UiStatus :status="entity.status as string" />
+        <UiStatus :gemeni="'nice'" :status="entity.status as string" />
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">

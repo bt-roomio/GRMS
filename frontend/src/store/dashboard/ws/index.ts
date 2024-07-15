@@ -9,7 +9,7 @@ export const useWS = defineStore('web-socket', () => {
         isConnected: false,
         error: null,
         isFirstRequest: true,  // Флаг для первого запроса
-        requests: new Map<number, any>(),
+        requests: new Map<string, any>(),
         events: new Map<string, any>(),
         attrs: new Map<string, any>()
     });
@@ -29,11 +29,24 @@ export const useWS = defineStore('web-socket', () => {
         }
     });
     socket.ws.value ? socket.ws.value.onmessage = async (wsMessage) => {
+        let originalRequest: any = null
+
         const data = JSON.parse(wsMessage.data);
+        state.value.requests.forEach(el => {
+            if (el.cmds.length){
+                if (el.cmds.at(0).cmdId === data.subscriptionId){
+                    originalRequest = el
+                }
+            }
+            if (el.authCmd){
+                if (el.authCmd.cmdId === data.subscriptionId){
+                    originalRequest = el
+                }
+            }
+        });
         state.value.error = data.error_code;
         if (data.error_code === 401) {
             try {
-                const originalRequest = state.value.requests.get(data.subscriptionId);
                 if (originalRequest) {
                     const tokens = await authorizationStore.refreshToken();
 
@@ -44,7 +57,6 @@ export const useWS = defineStore('web-socket', () => {
                 console.error("Token update error:", error);
             }
         } else {
-            const originalRequest = state.value.requests.get(data.subscriptionId);
             if (originalRequest && originalRequest.cmds.length) {
                 state.value.events.set(originalRequest.cmds[0].entityId + '_' + originalRequest.cmds[0].scope, data);
                 state.value.attrs.set(originalRequest.cmds[0].entityId + '_' + originalRequest.cmds[0].scope, Object.keys(data?.data));
@@ -62,8 +74,8 @@ export const useWS = defineStore('web-socket', () => {
                 cmdId
             }]
         };
-        if (!state.value.requests.has(cmdId)) {
-            state.value.requests.set(cmdId, requestObj);
+        if (!state.value.requests.has(data.entityId + '_' + data.scope)) {
+            state.value.requests.set(data.entityId + '_' + data.scope, requestObj);
             socket.send(JSON.stringify(requestObj));
         }
     };
@@ -73,7 +85,7 @@ export const useWS = defineStore('web-socket', () => {
             cmds: [],
             authCmd: { cmdId: 0, token: cookies.get('access_token') }
         }
-        state.value.requests.set(0, authObj);
+        state.value.requests.set('auth', authObj);
         socket.send(JSON.stringify(authObj));
         state.value.isFirstRequest = false;
     }

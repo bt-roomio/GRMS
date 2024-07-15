@@ -3,11 +3,11 @@
 </template>
 
 <script setup lang="ts">
-import {defineComponent} from "vue";
-
 defineProps<{
   status: string
 }>()
-
-defineComponent({name: 'UiStatus'})
+defineOptions({
+  name: 'UiStatus',
+  inheritAttrs: true
+})
 </script>

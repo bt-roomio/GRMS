@@ -23,7 +23,7 @@
 import PageHead from "@components/pages/dashboard/PageHead.vue";
 import RoomActions from "@components/pages/dashboard/rooms/RoomActions.vue";
 import Tabs from "@components/ui/Tabs.vue";
-import {computed, onMounted} from "vue";
+import {computed, onMounted, onUnmounted} from "vue";
 import {useI18n} from "vue-i18n";
 import WidgetContainer from "@components/widgets/WidgetContainer.vue";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
@@ -61,6 +61,9 @@ onMounted(async () => {
     await storeConfigurationDashboard.getItem(room.value?.type.dashboard.id as string, false)
     await storeConfigurationDashboard.getDashboardInnerHelpers()
   }
+})
+onUnmounted(() => {
+  storeConfigurationDashboard.$reset()
 })
 // const dashboardSettings = ref([
 //   {
