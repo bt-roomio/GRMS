@@ -91,7 +91,8 @@ export const useWS = defineStore('web-socket', () => {
     }
 
     const unSubscription = (obj: any) => {
-        const originalEvent = JSON.parse(JSON.stringify(state.value.events.get(obj.entityId + '_' + obj.scope)));
+        const unSubKey = obj.entityId + '_' + obj.scope
+        const originalEvent = state.value.events?.get(unSubKey) ? JSON.parse(JSON.stringify(state.value.events.get(unSubKey))) : null;
         if (!originalEvent) return
         const request = JSON.stringify({
             cmds: [{
@@ -100,7 +101,10 @@ export const useWS = defineStore('web-socket', () => {
                 cmdId: originalEvent.subscriptionId
             }]
         })
-        socket.send(request);
+        if (state.value.requests.has(unSubKey)){
+            socket.send(request);
+            state.value.requests.delete(unSubKey)
+        }
         state.value.attrs.clear()
     }
 
