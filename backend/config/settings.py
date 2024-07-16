@@ -179,11 +179,11 @@ SWAGGER_SETTINGS = {
 }
 
 FRONTEND_DOMAIN = os.environ.get("FRONTEND_DOMAIN", "http://localhost:3000")
+FRONTEND_ACTIVATION_URL = os.environ.get("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 COMPANY_NAME = os.environ.get("COMPANY_NAME", "Room.io")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 RABBIT_HOST = os.environ.get("RABBIT_MQ_HOST", "localhost")

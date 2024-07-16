@@ -1,18 +1,9 @@
 from drf_yasg import openapi
 
-ResetLinkSwagger = {
-    400: openapi.Response(
-        description="Bad request",
-        examples={
-            "application/json": {
-                "email": [
-                    "This field is required.",
-                    "There is not user with this email.",
-                    "Enter a valid email address.",
-                    "This field may not be blank.",
-                ],
-            }
-        },
+ActivationLinkSwagger = {
+    200: openapi.Response(
+        description="Return FRONTEND_DOMAIN and activation link or send email with activation link.",
+        examples={"str": ""},
     ),
 }
 

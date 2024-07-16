@@ -29,7 +29,7 @@ class UserListView(APIView):
     @check_for_tenant
     def post(self, request):
         params = UserParams.check(request.GET)
-        serializer = UserSerializer(data=request.data, context={"params": params})
+        serializer = UserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)

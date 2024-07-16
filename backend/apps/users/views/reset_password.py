@@ -1,38 +1,28 @@
 import time
 
-from django.db import transaction
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework.permissions import AllowAny
-from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404
+from django.http import HttpResponse
+from drf_yasg.utils import APIView, swagger_auto_schema
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import GenericAPIView, get_object_or_404
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-
-from users.swagger.reset_password import ResetLinkSwagger, ResetPasswordSwagger
-from users.models import User, ResetPassword
-from users.serializers.reset_password import GetResetLinkValidator, ResetPasswordValidator
+from users.models import ResetPassword, User
+from users.serializers.reset_password import ActivationLinkParams, ResetPasswordValidator
+from users.swagger.reset_password import ActivationLinkSwagger, ResetPasswordSwagger
 from users.utils.emails import send_reset_link_email
 
 
-class GetResetLinkView(CreateAPIView):
+class ActivationLinkView(APIView):
     permission_classes = (AllowAny,)
-    serializer_class = GetResetLinkValidator
 
-    @swagger_auto_schema(responses=ResetLinkSwagger)
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
-
-    @transaction.atomic
-    def perform_create(self, serializer):
-        email = serializer.validated_data.get("email").lower()
-        user = User.objects.filter(email=email).first()
-
-        if not user:
-            raise ValidationError({"email": ["There is not user with this email."]})
-
-        result = send_reset_link_email(self.request, user)
-        if result.get("success"):
-            ResetPassword.objects.create(user=user)
-        self.serializer_class.data = result
+    @swagger_auto_schema(responses=ActivationLinkSwagger, query_serializer=ActivationLinkParams)
+    def get(self, request, user_id):
+        params = ActivationLinkParams.check(request.GET)
+        user = get_object_or_404(User, pk=user_id)
+        result = send_reset_link_email(user)
+        if params.get("send_activation_mail"):
+            return HttpResponse(b"Activation link sent.")
+        return HttpResponse(result)
 
 
 class ResetPasswordView(GenericAPIView):
@@ -42,7 +32,10 @@ class ResetPasswordView(GenericAPIView):
     @swagger_auto_schema(responses=ResetPasswordSwagger)
     def put(self, request):
         data = self.serializer_class.check(request.data)
-        reset = get_object_or_404(ResetPassword, key=data.get("key"))
+        reset = ResetPassword.objects.filter(key=data.get("key")).first()
+        if not reset:
+            raise ValidationError({"key": ["Invalid reset password token."]})
+
         new_password = data.get("new_password")
         confirm_password = data.get("confirm_password")
 

@@ -1,9 +1,9 @@
+from core.utils.serializers import ValidatorSerializer
 from rest_framework import serializers
-from core.utils.serializers import BaseSerializer, ValidatorSerializer
 
 
-class GetResetLinkValidator(BaseSerializer):
-    email = serializers.EmailField(required=True, write_only=True)
+class ActivationLinkParams(ValidatorSerializer):
+    send_activation_mail = serializers.BooleanField(required=False)
 
 
 class ResetPasswordValidator(ValidatorSerializer):
