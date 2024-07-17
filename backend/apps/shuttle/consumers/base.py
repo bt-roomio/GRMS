@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from channels.auth import database_sync_to_async
@@ -18,7 +19,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = {}
-        self.tasks = {}
+        self.tasks = {}  # For storing periodically tasks
         self.task_params = {}  # Store parameters for tasks
         self.has_expired = False
 
@@ -59,5 +60,33 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(response({}, 0, 401, str(err)))
             return
 
+    async def periodically_task(self, seconds: int, func, *args):
+        while True:
+            try:
+                authCmd = self.context.get("authCmd", {})
+                token = authCmd.get("token")
+
+                if self.context.get("has_expired"):
+                    return
+
+                if not authCmd:
+                    await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
+                    return
+
+                if authCmd and token:
+                    checked_token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
+                self.context.update({"has_expired": False})
+                result = await func(*args)
+                print(result)
+                await self.send_json(result)
+                await asyncio.sleep(seconds)
+
+            except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
+                self.context.update({"has_expired": True})
+                await self.send_json(response({}, 0, 401, str(err)))
+                return
+
     async def resume_tasks(self):
-        pass
+        for task_key, func in self.task_params.items():
+            self.tasks[task_key] = asyncio.create_task(func())
