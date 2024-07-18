@@ -18,6 +18,7 @@ def get_user(data):
 class BaseConsumer(AsyncJsonWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.data = {}
         self.context = {}
         self.tasks = {}  # For storing periodically tasks
         self.task_params = {}  # Store parameters for tasks
@@ -36,9 +37,9 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
                 return
 
         try:
-            authCmd = self.data.get("authCmd", {})
-            token = authCmd.get("token")
-            if authCmd and token:
+            auth_cmd = self.data.get("authCmd", {})
+            token = auth_cmd.get("token")
+            if auth_cmd and token:
                 checked_token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
                 self.context["authCmd"] = self.data.get("authCmd")
 
@@ -63,22 +64,21 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
     async def periodically_task(self, seconds: int, func, *args):
         while True:
             try:
-                authCmd = self.context.get("authCmd", {})
-                token = authCmd.get("token")
+                auth_cmd = self.context.get("authCmd", {})
+                token = auth_cmd.get("token")
 
                 if self.context.get("has_expired"):
                     return
 
-                if not authCmd:
+                if not auth_cmd:
                     await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
                     return
 
-                if authCmd and token:
-                    checked_token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+                if auth_cmd and token:
+                    jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
 
                 self.context.update({"has_expired": False})
                 result = await func(*args)
-                print(result)
                 await self.send_json(result)
                 await asyncio.sleep(seconds)
 

@@ -8,7 +8,7 @@ from shuttle.models import AttributeKv
 from shuttle.utils.response import response
 
 
-class ShuttleConsumer(BaseConsumer):
+class ReceiverConsumer(BaseConsumer):
     async def receive_json(self, content, **kwargs):
         cmds = content.get("cmds")
         user = self.scope["user"]
@@ -38,7 +38,9 @@ class ShuttleConsumer(BaseConsumer):
                     del self.tasks[task_key]
                     del self.task_params[task_key]
 
-                func = lambda: self.periodically_task(3, latest_telemetry, cmd, user)
+                def func():
+                    return self.periodically_task(3, latest_telemetry, cmd, user)
+
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
@@ -68,7 +70,8 @@ class ShuttleConsumer(BaseConsumer):
                     await self.send_json(response({}, 0, 1, "Incorrect scope!"))
                     return
 
-                func = lambda: self.periodically_task(3, attribute_kv, cmd, user, self.send_json)
+                def func():
+                    return self.periodically_task(3, attribute_kv, cmd, user, self.send_json)
 
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
