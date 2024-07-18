@@ -25,7 +25,7 @@
 import PageHead from "@components/pages/dashboard/PageHead.vue";
 import StatisticsCardList from "@components/pages/dashboard/main/StatisticsCardList.vue";
 import Tabs from "@components/ui/Tabs.vue";
-import {computed, onMounted, ref, watch} from "vue";
+import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import RoomsActions from "@components/pages/dashboard/rooms/Actions.vue";
 import {onBeforeRouteUpdate} from "vue-router";
 import {useI18n} from "vue-i18n";
@@ -75,5 +75,8 @@ onMounted(async () => {
 })
 onBeforeRouteUpdate(async (to) => {
   await storeConfigurationRooms.getList({sort_by: ['block', 'floor'], ...to.query})
+})
+onUnmounted(() => {
+  storeConfigurationRooms.$reset()
 })
 </script>

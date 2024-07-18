@@ -2,7 +2,7 @@
   @apply grid grid-rows-[minmax(0,_1fr),_auto] h-full;
 
   &__content{
-    @apply w-[360px] m-auto;
+    @apply lg:w-[360px] m-auto;
   }
   .auth__head{
     .title{
@@ -15,6 +15,9 @@
   &__form{
     .ui-input{
       @apply mb-5;
+      label{
+        @apply text-white;
+      }
     }
     .actions{
       @apply flex justify-between mb-6 pt-1;

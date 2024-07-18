@@ -1,5 +1,5 @@
 <template>
-  <form class="login-page__form" @submit.prevent="authorizationStore.login(state)">
+  <form class="login-page__form" @submit.prevent="submit()">
     <UiInput
         name="email"
         type="email"
@@ -22,9 +22,9 @@
       <div class="remember-me">
         <UiCheckbox v-model="state.remember_me">{{ $t('authorization.login.form.remember_me') }}</UiCheckbox>
       </div>
-      <RouterLink to="/forgot-password">{{ $t('authorization.login.form.forgot_password') }}</RouterLink>
+      <RouterLink to="/password/forgot">{{ $t('authorization.login.form.forgot_password') }}</RouterLink>
     </div>
-    <UiButton class="primary w-full" @click.prevent="submit()">{{ $t('authorization.login.form.sign_in') }}</UiButton>
+    <UiButton :loading="loading" class="primary w-full" @click.prevent="submit()">{{ $t('authorization.login.form.sign_in') }}</UiButton>
   </form>
 </template>
 <script setup lang="ts">
@@ -36,20 +36,26 @@ import {storeToRefs} from "pinia";
 import {useGeneralSettingStore} from "@store/dashboard/settings/general.ts";
 import {useI18n} from "vue-i18n";
 import {useCookies} from "@vueuse/integrations/useCookies";
+import {ref} from "vue";
 const authorizationStore = useAuthorizationStore()
 const {state, validation} = storeToRefs(authorizationStore)
 const generalSettingStore = useGeneralSettingStore()
 const {state: generalState} = storeToRefs(generalSettingStore)
 const {locale} = useI18n()
 const cookies = useCookies(['locale'])
+const loading = ref(false)
 const submit = async () => {
+  loading.value = true
   try {
     await authorizationStore.login(state.value)
     await generalSettingStore.getGeneralSetting()
     locale.value = generalState.value.lang
     cookies.set('locale', generalState.value.lang, {path: '/'})
+    authorizationStore.$reset()
   }catch (e) {
     console.log(e)
+  }finally {
+    loading.value = false
   }
 }
 </script>

@@ -1,5 +1,8 @@
 .header{
-  @apply fixed top-0 z-10 left-[280px] border-b border-gray-200 dark:border-gray-700 h-[50px] w-[calc(100%_-_280px)] flex justify-between bg-white dark:bg-gray-600;
+  @apply fixed top-0 z-10 left-[280px] border-b border-gray-200 dark:border-gray-700 h-[50px] w-[calc(100%_-_280px)] flex justify-between bg-white dark:bg-gray-600 transition-all;
+  &.sidebar-close {
+    @apply left-20 w-[calc(100%_-_80px)];
+  }
   &__hotel{
     @apply stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex justify-between items-center border-r border-gray-200 dark:border-gray-700 px-8 h-full gap-2;
   }

@@ -1,0 +1,26 @@
+.Toastify{
+  &__toast{
+   @apply border
+  }
+  &__toast-body{
+    @apply flex-col items-start gap-3;
+  }
+  &__toast--success{
+    @apply bg-success-50 border-success-300;
+    .Toastify__close-button{
+      @apply text-success-500;
+    }
+    .Toastify__toast-body{
+      @apply text-success-700;
+    }
+  }
+  &__toast--error{
+    @apply bg-error-50 border-error-300;
+    .Toastify__close-button{
+      @apply text-error-500;
+    }
+    .Toastify__toast-body{
+      @apply text-error-700;
+    }
+  }
+}

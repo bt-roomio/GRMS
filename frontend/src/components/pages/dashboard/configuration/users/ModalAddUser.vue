@@ -8,36 +8,15 @@
       <h2>{{$t('dashboard.configuration.users.modal.add_user_title')}} </h2>
       <p>{{$t('dashboard.configuration.users.modal.add_user_subtitle')}}</p>
     </template>
-<!--    <Tabs class="fill" :list="list" type="hash" v-model="currentTab"/>-->
-<!--    <transition name="slide-up" >-->
-<!--      <form v-if="currentTab === 'invite'" class="ui-form">-->
-<!--        <UiInputSelect-->
-<!--            :select-position="'right'"-->
-<!--            :select-options="['Admin', 'Editor', 'User']"-->
-<!--            name="email_address"-->
-<!--            :args="{placeholder: $t('dashboard.configuration.users.form.email_address_placeholder')}"-->
-<!--            :label="$t('dashboard.configuration.users.form.email_address')"-->
-<!--        ></UiInputSelect>-->
-<!--        <h3>{{$t('dashboard.configuration.users.modal.contacts_from')}}</h3>-->
-<!--        <div class="ui-form__row items-center col-2-auto hover:bg-gray-50 rounded-lg cursor-pointer">-->
-<!--          <UiIcon class="w-10 h-10" name="microsoft-office" filled/>-->
-<!--          Microsoft office 365-->
-<!--        </div>-->
-<!--        <div class="ui-form__row items-center col-2-auto hover:bg-gray-50 rounded-lg cursor-pointer">-->
-<!--          <UiIcon class="w-10 h-10" name="gmail" filled/>-->
-<!--          Gmail-->
-<!--        </div>-->
-<!--      </form>-->
-      <form class="ui-form">
-<!--      <form v-else-if="currentTab === 'add'" class="ui-form">-->
-<!--        <UiToggle>Active user</UiToggle>-->
-        <UiInput
-            name="email"
-            :label="$t('dashboard.configuration.users.form.email_address')"
-            :placeholder="$t('dashboard.configuration.users.form.email_address_placeholder')"
-            v-model="state.email"
-            :errors="validation?.$dirty ? validation?.$silentErrors : []"
-        />
+    <form class="ui-form">
+      <UiInput
+          name="email"
+          :label="$t('dashboard.configuration.users.form.email_address')"
+          :placeholder="$t('dashboard.configuration.users.form.email_address_placeholder')"
+          v-model="state.email"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
+          :disabled="editID"
+      />
 <!--        <div class="ui-multiselect">-->
 <!--          <label>{{ $t('dashboard.configuration.users.form.user_role') }}</label>-->
 <!--          <Multiselect-->
@@ -46,45 +25,48 @@
 <!--              :canClear="false"-->
 <!--          />-->
 <!--        </div>-->
-        <UiInput
-            name="phone"
-            :label="$t('dashboard.configuration.users.form.phone')"
-            :placeholder="'+357-XX-XX-XX-XX'"
-            v-model="state.phone"
-            :errors="validation?.$dirty ? validation?.$silentErrors : []"
+      <UiInput
+          name="phone"
+          :label="$t('dashboard.configuration.users.form.phone')"
+          :placeholder="'+357-XX-XX-XX-XX'"
+          v-model="state.phone"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
+      />
+      <UiInput
+          name="first_name"
+          :label="$t('dashboard.configuration.users.form.first_name')"
+          :placeholder="$t('dashboard.configuration.users.form.name_placeholder')"
+          v-model="state.first_name"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
+      />
+      <UiInput
+          name="last_name"
+          :label="$t('dashboard.configuration.users.form.last_name')"
+          :placeholder="$t('dashboard.configuration.users.form.name_placeholder')"
+          v-model="state.last_name"
+          :errors="validation?.$dirty ? validation?.$silentErrors : []"
+      />
+      <div class="ui-multiselect" v-if="!editID">
+        <label>{{ $t('dashboard.configuration.users.form.activation_method') }}</label>
+        <Multiselect
+            v-model="invite"
+            :options="activation_methods"
+            :canClear="false"
+            :canDeselect="false"
         />
-        <UiInput
-            name="first_name"
-            :label="$t('dashboard.configuration.users.form.first_name')"
-            :placeholder="$t('dashboard.configuration.users.form.name_placeholder')"
-            v-model="state.first_name"
-            :errors="validation?.$dirty ? validation?.$silentErrors : []"
-        />
-        <UiInput
-            name="last_name"
-            :label="$t('dashboard.configuration.users.form.last_name')"
-            :placeholder="$t('dashboard.configuration.users.form.name_placeholder')"
-            v-model="state.last_name"
-            :errors="validation?.$dirty ? validation?.$silentErrors : []"
-        />
-        <UiInput
-            name="password"
-            :label="$t('dashboard.configuration.users.form.password')"
-            :placeholder="$t('dashboard.configuration.users.form.password_placeholder')"
-            v-model="state.password"
-        >
-          <UiButton @click.prevent="generatePassword" class="text">{{ $t('dashboard.configuration.users.form.generate') }}</UiButton>
-        </UiInput>
-      </form>
-<!--    </transition>-->
+      </div>
+      <div v-if="editID">
+        <h3 class="mb-2">Action with user</h3>
+        <p @click="resendHandle" class="hover:text-primary-700 cursor-pointer mb-2 font-medium">Resend activation link</p>
+        <p @click="displayHandle" class="hover:text-primary-700 cursor-pointer mb-2 font-medium">Demonstrate activation link</p>
+        <p class="hover:text-primary-700 cursor-pointer font-medium">Delete user</p>
+      </div>
+    </form>
     <template #footer="{close}">
-<!--      <UiButton v-if="currentTab === 'invite'" class="primary" @click.prevent="close()">-->
-<!--        {{$t('dashboard.configuration.users.modal.send_invite')}}-->
-<!--      </UiButton>-->
       <UiButton class="primary" @click.prevent="storeUser.editUser(close)" v-if="editID">
         {{$t('dashboard.configuration.users.button_save')}}
       </UiButton>
-      <UiButton class="primary" @click.prevent="storeUser.addUser(close)" v-else>
+      <UiButton class="primary" @click.prevent="submit" v-else>
         {{$t('dashboard.widget.form.add')}}
       </UiButton>
       <UiButton class="text" @click.prevent="close()">
@@ -92,46 +74,72 @@
       </UiButton>
     </template>
   </Modal>
+  <ModalCopyBox ref="copyBox"/>
 </template>
 <script setup lang="ts">
 import Modal from "@components/ui/Modal.vue";
 import UiButton from "@components/ui/Button.vue";
-import {onMounted, ref} from "vue";
-// import {useI18n} from "vue-i18n";
+import Multiselect from "@vueform/multiselect";
+import {computed, ref} from "vue";
+import {useI18n} from "vue-i18n";
 import UiInput from "@components/ui/Input.vue";
-import useMainStore from "@/store";
 import {useUserStore} from "@store/dashboard/user";
 import {storeToRefs} from "pinia";
-const storeMain = useMainStore()
-// const {t} = useI18n()
+import {toast} from "vue3-toastify";
+import useApiFetch from "@/composables/useApiFetch.ts";
+import ModalCopyBox from "@components/pages/dashboard/configuration/users/ModalCopyBox.vue";
+const {t} = useI18n()
 const add_user = ref<IModal | null>(null)
-// const currentTab = ref('invite')
+const copyBox = ref<IModal | null>(null)
 const storeUser = useUserStore()
 const {state, validation, editID} = storeToRefs(storeUser)
+const role = ref('Admin')
+const invite = ref('display')
+const activation_methods = computed(() => [
+  {label: t('dashboard.configuration.users.form.display_activation_link'), value: 'display'},
+  {label: t('dashboard.configuration.users.form.send_activation_mail'), value: 'mail'},
+])
 
+const submit = async () =>  {
+  const data = await storeUser.addUser(close)
+  if (invite.value === 'display'){
+    const toastId = toast.loading(t('toast.user_wait_activation_link') as string);
+    const {data: activationData} = await useApiFetch(`/users/activation-link/${data?.id}/?send_activation_mail=false`, {method: 'GET'})
+    copyBox.value?.open({
+      title: `This link is for activating the user ${data?.first_name} ${data?.last_name}`,
+      text: activationData
+    })
+    toast.remove(toastId)
+  }else if (invite.value === 'mail') {
+    await useApiFetch(`/users/activation-link/${data?.id}/?send_activation_mail=true`, {method: 'GET'})
+  }
+  toast.success(t('toast.user_add_success') as string);
+}
+const resendHandle = async () => {
+  await useApiFetch(`/users/activation-link/${editID.value}/?send_activation_mail=true`, {method: 'GET'})
+  toast.success('Success');
+}
+const displayHandle = async () => {
+  close()
+  const toastId = toast.loading(t('toast.user_wait_activation_link') as string);
+  try {
+    const {data: activationData} = await useApiFetch(`/users/activation-link/${editID.value}/?send_activation_mail=false`, {method: 'GET'})
+    copyBox.value?.open({
+      title: `This link is for activating the user ${state.value?.first_name} ${state.value?.last_name}`,
+      text: activationData
+    })
+  }catch (e) {
+    console.log(e)
+  }finally {
+    toast.remove(toastId)
+  }
+}
 const close = () => {
   add_user.value?.close()
 }
 const open = () => {
   add_user.value?.open()
 }
-const generatePassword = () => {
-  state.value.password = storeMain.generateRandomString(8)
-}
-
-onMounted(async () => {})
-
-// const list = computed(() => [
-//   {
-//     name: t('dashboard.configuration.users.modal.send_invite'),
-//     hash: 'invite'
-//   },
-//   {
-//     name: t('dashboard.configuration.users.button'),
-//     hash: 'add'
-//   }
-// ])
-
 
 defineExpose({
   close,

@@ -21,7 +21,7 @@
             :key="`${header}${i}`"
             scope="col"
         >
-          <slot v-if="$slots['header-' + i]" :name="'header-' + i" :entity="i" />
+          <slot v-if="$slots['header-' + i]" :name="'header-' + i" :entity="header" />
           <template v-else>
             <template v-if="sort?.includes(i)">
               <span class="sort-th" @click="handleSort(i)">

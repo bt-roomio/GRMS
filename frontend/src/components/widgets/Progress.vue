@@ -1,7 +1,9 @@
 <template>
-  <UiProgress
-      :config="value" :value="getProgressValue(value.tag)"
-  />
+  <div class="h-full">
+    <UiProgress
+        :config="value" :value="getProgressValue(value.tag)"
+    />
+  </div>
 </template>
 <script setup lang="ts">
 import UiProgress from "@components/ui/Progress.vue";

@@ -1,14 +1,16 @@
 <template>
-  <div class="slider">
-    <UiSliderItem
-        v-for="(item, key) in values.controls"
-        :key="key"
-        :args="{min: item.min, max: item.max}"
-        :model-value="getSliderValue(item.tag)"
-        @change="changeSlider($event, item.tag)"
-    >
-      {{ item.title || $t('dashboard.widget.form.title_empty') }}
-    </UiSliderItem>
+  <div class="slider__wrap">
+    <div class="slider">
+      <UiSliderItem
+          v-for="(item, key) in values.controls"
+          :key="key"
+          :args="{min: item.min, max: item.max}"
+          :model-value="getSliderValue(item.tag)"
+          @change="changeSlider($event, item.tag)"
+      >
+        {{ item.title || $t('dashboard.widget.form.title_empty') }}
+      </UiSliderItem>
+    </div>
   </div>
 </template>
 <script setup lang="ts">

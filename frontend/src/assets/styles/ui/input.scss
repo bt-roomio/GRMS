@@ -1,7 +1,7 @@
 .ui-input{
   @apply flex flex-col gap-1.5;
   label{
-    @apply text-sm block text-left;
+    @apply text-xs font-semibold text-gray-500 block text-left;
   }
   &__group{
     @apply relative w-full flex;

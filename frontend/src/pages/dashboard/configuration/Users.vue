@@ -4,21 +4,35 @@
       <PageHead
           :title="$t('dashboard.configuration.users.title')"
           :description="$t('dashboard.configuration.users.subtitle')"
-          :buttons="buttons"
+          :button="$t('dashboard.configuration.users.button')"
           button-icon="plus"
-          @click-button="clickButtonHandle"
+          @click-button="openModalUser"
+      />
+    </div>
+    <div class="rooms__actions">
+      <span></span>
+      <ConfigurationUsersActions
+          v-model:search="isSearchOpen"
+          ref="actions"
+          @theadSort="theadSortHandle"
       />
     </div>
     <UiTable
         :loading="loading"
         :error="error"
-        :headers="headers"
-        :data="users"
-        :sort="[]"
-        :is-pagination="false"
+        v-model:searchType="searchType"
+        v-model:searchValue="searchValue"
+        :is-search-open="isSearchOpen"
+        :search-types="searchTypes"
+        :headers="sortedHeaders ? sortedHeaders : headers"
+        :data="users.results"
+        :sort="['email', 'first_name']"
+        @sorted="storeUser.sortList"
+        @more="moreHandle"
+        :is-pagination="users.count > users.results.length"
     >
       <template #header-select>
-        <CheckAll v-model="users" />
+        <CheckAll v-model="users.results" />
       </template>
       <template #select="{entity}">
         <UiCheckbox @click.stop v-model="entity.select"/>
@@ -42,7 +56,7 @@
 </template>
 <script setup lang="ts">
 import PageHead from "@components/pages/dashboard/PageHead.vue";
-import {computed, onMounted, ref} from "vue";
+import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 import {useI18n} from "vue-i18n";
 import UiTable from "@components/ui/Table.vue";
 import CheckAll from "@components/ui/CheckAll.vue";
@@ -52,27 +66,37 @@ import UiButton from "@components/ui/Button.vue";
 import {useUserStore} from "@store/dashboard/user";
 import {storeToRefs} from "pinia";
 import ModalAddUser from "@components/pages/dashboard/configuration/users/ModalAddUser.vue";
+import ConfigurationUsersActions from "@components/pages/dashboard/configuration/users/Actions.vue";
+import {onBeforeRouteUpdate} from "vue-router";
+import router from "@/router";
 const storeUser = useUserStore()
-const {users, editID} = storeToRefs(storeUser)
+const {users, editID, searchType, searchValue, loading, error, size, user, sortedData} = storeToRefs(storeUser)
+const isSearchOpen = ref(false)
 const {t} = useI18n()
-const error = ref({code: null, msg: null})
 const modal_user = ref()
-const loading = ref(false)
-const buttons = computed(() => {
-  return [
-    // {name: t('dashboard.configuration.users.button_role'), icon: 'plus', id: 'add-role', class: 'text'},
-    {name: t('dashboard.configuration.users.button'), icon: 'plus', id: 'add-user'}
-  ]
-})
 const actions = ref<IConfigurationUsersActions | null>(null)
 const headers = computed<IConfigurationRoomsHead>(() => ({
   select: true,
   email: t('dashboard.configuration.users.form.email_address'),
-  name: t('dashboard.configuration.users.form.name'),
+  first_name: t('dashboard.configuration.users.form.first_name'),
+  last_name: t('dashboard.configuration.users.form.last_name'),
   phone: t('dashboard.configuration.users.form.phone'),
   actions: ''
 }))
-
+const searchTypes = computed(() => [
+  {
+    name: t('dashboard.configuration.users.form.first_name'),
+    key: 'first_name'
+  },
+  {
+    name: t('dashboard.configuration.users.form.email_address'),
+    key: 'email'
+  },
+  {
+    name: t('dashboard.configuration.users.form.phone'),
+    key: 'phone'
+  },
+])
 const openEditUser = async (id: string) => {
   try {
     editID.value = id
@@ -82,18 +106,46 @@ const openEditUser = async (id: string) => {
     console.log(e)
   }
 }
-const clickButtonHandle = async (evt: any) => {
-  if (evt.id === 'add-user'){
+const openModalUser = async () => {
     modal_user.value.open()
-  }else {
-    actions.value?.add_role.open()
+}
+const sortedHeaders = ref(null)
+const theadSortHandle = (array: string[]) => {
+  let results: any = {}
+  results.select = true
+  for (const headersKey in headers.value) {
+    if (array.includes(headers.value[headersKey] as string)){
+      results[headersKey] = headers.value[headersKey]
+    }
   }
+  results.actions = ''
+  sortedHeaders.value = results
 }
 
+watch(isSearchOpen, value => {
+  if (!value) {
+    searchValue.value = ''
+  }
+})
+const moreHandle = async () => {
+  await storeUser.loadMore()
+}
+
+onBeforeRouteUpdate(async (to) => {
+  await storeUser.getUsers(to.query)
+})
 onMounted(async () => {
-  loading.value = true
-  await storeUser.getUsers()
-  loading.value = false
+  await storeUser.getUsers(router.currentRoute.value.query)
+})
+onUnmounted(() => {
+  size.value = 10
+  user.value = null
+  users.value = {results: [], count: 0}
+  searchValue.value = ''
+  searchType.value = 'room_number'
+  error.value = {code: null, msg: null}
+  sortedData.value = {}
+  storeUser.$reset()
 })
 interface IUser {
   id?: string

@@ -12,7 +12,7 @@
     @apply flex flex-col gap-1 mb-6 pr-16;
   }
   &__content{
-    @apply flex flex-col justify-end;
+    @apply flex flex-col justify-end overflow-auto;
   }
   &__actions{
     @apply absolute top-0 right-0 flex gap-1 p-3;

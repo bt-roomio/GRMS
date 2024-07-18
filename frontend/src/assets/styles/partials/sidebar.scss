@@ -1,7 +1,61 @@
 .sidebar{
-  @apply w-[280px] bg-primary-600 dark:bg-gray-600 h-dvh fixed top-0 left-0 z-10;
+  @apply w-[280px] bg-primary-600 dark:bg-gray-600 h-dvh fixed top-0 left-0 z-20;
+  &.sidebar-close{
+    @apply w-20 transition-all;
+    .item-text{
+      @apply hidden;
+    }
+    .sidebar__head-logo{
+      @apply hidden;
+    }
+    .sidebar__head-burger{
+      @apply w-full justify-center stroke-gray-25 dark:stroke-white;
+    }
+    .sidebar__head{
+      @apply bg-primary-600 dark:bg-gray-600;
+    }
+    .item-submenu{
+      @apply fixed left-20 top-0 w-60 mt-0 h-full bg-white p-4 border-r;
+      .item-text{
+        @apply block text-black;
+      }
+      .ui-icon{
+        @apply opacity-100;
+      }
+      .sidebar__menu-head{
+        @apply block
+      }
+      .item-content{
+        @apply bg-transparent dark:bg-transparent;
+        .item-icon{
+          @apply stroke-primary-600 relative;
+        }
+        .item-text{
+          @apply text-primary-600;
+        }
+        &:hover{
+          @apply bg-primary-600 dark:bg-gray-400;
+          .item-icon{
+            @apply stroke-white;
+          }
+          .item-text{
+            @apply text-white;
+          }
+        }
+        &.router-link-active{
+          @apply bg-primary-600 dark:bg-gray-400;
+          .item-icon{
+            @apply stroke-white;
+          }
+          .item-text{
+            @apply text-white;
+          }
+        }
+      }
+    }
+  }
   &__content{
-    @apply  flex flex-col h-full;
+    @apply flex flex-col h-full;
   }
   &__head{
     @apply flex bg-white dark:bg-gray-600 justify-between items-center h-[50px] flex-shrink-0 px-4;
@@ -17,64 +71,79 @@
   }
   &__menu-item{
     .item-content{
-      @apply flex justify-between px-3 py-2.5 rounded-md gap-3 text-primary-800 dark:text-white hover:bg-primary-800 hover:text-primary-700 dark:hover:bg-gray-400 dark:hover:text-white cursor-pointer transition-all;
-    }
-    .item-content:hover{
+      @apply flex justify-between px-3 py-2.5 rounded-md gap-3 cursor-pointer transition-all bg-transparent dark:bg-transparent;
       .item-icon{
-        @apply stroke-primary-700 dark:stroke-white;
+        @apply stroke-white text-2xl flex-shrink-0 dark:stroke-white w-6 h-6;
+      }
+      .item-text{
+        @apply text-white mr-auto dark:text-white;
       }
       .item-action{
-        @apply stroke-primary-700 dark:stroke-white;
+        @apply flex items-center stroke-primary-800 dark:stroke-white;
+      }
+      &:hover{
+        @apply bg-gray-50 dark:bg-gray-400;
+        .item-action,
+        .item-icon{
+          @apply stroke-primary-600 dark:stroke-white;
+        }
+        .item-text{
+          @apply text-primary-600 dark:text-white;
+        }
+      }
+      &.router-link-active{
+        @apply bg-gray-50 dark:bg-gray-400;
+        .item-action,
+        .item-icon{
+          @apply stroke-primary-600 dark:stroke-white;
+        }
+        .item-text{
+          @apply text-primary-600 dark:text-white;
+        }
       }
     }
-    .item-content.router-link-active.item-content{
-      @apply bg-white dark:bg-gray-400 text-primary-700 dark:text-white;
-      .item-icon{
-        @apply stroke-primary-700 dark:stroke-white;
-      }
-      .item-action{
-        @apply ml-auto flex items-center stroke-primary-700;
-      }
-    }
+
     &:first-child{
       .item-content.router-link-active.router-link-exact-active{
-        @apply bg-white dark:bg-gray-400 text-primary-700 dark:text-white;
+        @apply bg-gray-50 dark:bg-gray-400;
+        .item-action,
         .item-icon{
-          @apply stroke-primary-700 dark:stroke-white;
+          @apply stroke-primary-600 dark:stroke-white;
         }
-        .item-action{
-          @apply ml-auto flex items-center stroke-primary-700;
+        .item-text{
+          @apply text-primary-600 dark:text-white;
         }
       }
       .item-content.router-link-active{
-        @apply bg-transparent dark:bg-transparent text-primary-800 dark:text-white hover:bg-primary-800 hover:text-primary-700;
+        @apply bg-transparent dark:bg-transparent;
+        .item-action,
         .item-icon{
-          @apply stroke-primary-800 dark:stroke-white;
+          @apply stroke-white dark:stroke-white;
         }
-        .item-action{
-          @apply stroke-primary-800 dark:stroke-white;
+        .item-text{
+          @apply text-white dark:text-white;
         }
       }
       .item-content:hover{
+        @apply bg-gray-50 dark:bg-gray-400;
+        .item-action,
         .item-icon{
-          @apply stroke-primary-700;
+          @apply stroke-primary-600;
         }
-        .item-action{
-          @apply stroke-primary-700;
+        .item-text{
+          @apply text-primary-600;
         }
       }
     }
-    .item-icon{
-      @apply stroke-primary-800 text-2xl dark:stroke-white;
-    }
-    .item-text{
-      @apply mr-auto
-    }
-    .item-action{
-      @apply flex items-center stroke-primary-800 dark:stroke-white;
-    }
+
     .item-submenu{
       @apply w-full mt-1 flex flex-col gap-1;
+      .ui-icon{
+        @apply opacity-0;
+      }
+      .sidebar__menu-head{
+        @apply hidden px-3 font-bold py-2;
+      }
     }
   }
   &__footer{

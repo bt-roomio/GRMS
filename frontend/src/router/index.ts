@@ -23,6 +23,8 @@ import auth from "@router/middleware/auth.ts";
 import Dashboard from "@/pages/dashboard/configuration/Dashboard.vue";
 import Room from "@/pages/dashboard/rooms/Room.vue";
 import DashboardInner from "@/pages/dashboard/configuration/DashboardInner.vue";
+import NewPassword from "@/pages/authorization/NewPassword.vue";
+import Default from "@/layouts/Default.vue";
 
 
 const router = createRouter({
@@ -143,15 +145,27 @@ const router = createRouter({
             }]
         },
         {
-            path: '/forgot-password',
-            name: 'forgot-password',
-            component: ForgotPassword
-        },
-        {
-            path: '/reset-password',
-            name: 'reset-password',
-            component: ResetPassword
-        },
+            path: '/password',
+            component: Default,
+            children: [
+                {
+                    path: 'forgot',
+                    name: 'forgot-password',
+                    component: ForgotPassword
+                },
+                {
+                    path: 'reset',
+                    name: 'reset-password',
+                    component: ResetPassword
+                },
+                {
+                    path: 'new',
+                    name: 'new-password',
+                    component: NewPassword
+                },
+            ]
+        }
+
     ],
     scrollBehavior() {
         return {

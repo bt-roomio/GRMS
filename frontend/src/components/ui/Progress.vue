@@ -1,5 +1,5 @@
 <template>
-  <div class="flex gap-3 items-center">
+  <div class="flex gap-3 items-center h-4">
     <div class="ui-progress" v-if="getValue !== 'not-number'">
       <div :style="`width: ${getValue >= 100 ? 100 : (getValue || 0)}%; background:${config.color};`"></div>
     </div>

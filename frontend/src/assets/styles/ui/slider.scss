@@ -15,7 +15,10 @@
   @apply bg-gray-700 text-white border-gray-700
 }
 .slider{
-  @apply table border-collapse ;
+  @apply table border-collapse;
+}
+.slider__wrap{
+  @apply h-full;
 }
 .ui-slider{
   @apply table-row border-b-[16px] last:border-b-0 border-white ;

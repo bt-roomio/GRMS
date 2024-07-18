@@ -1,5 +1,8 @@
 .dashboard__layouts{
   &-content{
-    @apply ml-[280px] mt-[50px] p-8 bg-gray-25 dark:bg-gray-700 dark:text-white min-h-[calc(100vh_-_50px)];
+    @apply ml-[280px] mt-[50px] p-8 bg-gray-25 dark:bg-gray-700 dark:text-white min-h-[calc(100vh_-_50px)] transition-all;
+    &.sidebar-close {
+      @apply ml-20;
+    }
   }
 }

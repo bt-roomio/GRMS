@@ -6,16 +6,16 @@
       <div class="ui-confirm__scroller">
         <div class="ui-confirm__body" ref="refConfirm">
           <div class="ui-confirm__head">
-            <UiIcon name="featured" filled/>
+            <UiIcon v-if="confirm.icon" :name="confirm.icon" filled/>
             <UiIcon class="close" name="x-close" @click.prevent="confirmStore.handleCancel" filled/>
           </div>
           <div class="ui-confirm__content" v-if="confirm.content">
             <h2>{{ confirm.title }}</h2>
-            {{confirm.content}}
+            <p class="break-words break-all" v-html="confirm.content"></p>
           </div>
           <div class="ui-confirm__footer">
-            <UiButton class="w-full" :class="confirm.buttons?.cancel.class" @click="confirmStore.handleCancel">{{ confirm.buttons?.cancel.text }}</UiButton>
-            <UiButton class="w-full" :class="confirm.buttons?.confirm.class" @click="confirmStore.handleConfirm">{{ confirm.buttons?.confirm.text }}</UiButton>
+            <UiButton class="w-full" v-if="confirm.buttons?.cancel" :class="confirm.buttons?.cancel?.class" @click="confirmStore.handleCancel">{{ confirm.buttons?.cancel.text }}</UiButton>
+            <UiButton class="w-full" v-if="confirm.buttons?.confirm" :class="confirm.buttons?.confirm?.class" @click="confirmStore.handleConfirm">{{ confirm.buttons?.confirm.text }}</UiButton>
           </div>
         </div>
       </div>

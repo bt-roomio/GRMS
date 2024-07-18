@@ -1,20 +1,26 @@
 import {defineStore} from "pinia";
 import useApiFetch from "@/composables/useApiFetch.ts";
-import {computed, ref} from "vue";
-import {addFieldSelectArray} from "@utils/transform-response.ts";
+import {computed, ref, watch} from "vue";
+import {addFieldSelect} from "@utils/transform-response.ts";
 import {email, minLength, required} from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import {toast} from "vue3-toastify";
 import {useI18n} from "vue-i18n";
 import {useConfirm} from "@store/dashboard/useConfirm.ts";
+import router from "@/router";
 
 export const useUserStore = defineStore('user', () => {
-    const {t} = useI18n()
     const confirmStore = useConfirm()
-    const loading = ref(false)
-    const editID = ref<string | null>(null)
+    const {t} = useI18n()
+    const size = ref<number>(10)
     const user = ref<IUser | null>(null)
-    const users = ref<IUser[]>([])
+    const users = ref<IServerResponse<IUser>>({count: 0, results: []})
+    const searchValue = ref('')
+    const searchType = ref('email')
+    const loading = ref(false)
+    const error = ref({code: null, msg: null})
+    const sortedData = ref({})
+    const editID = ref<string | null>(null)
     const state = ref({
         email: '',
         phone: '',
@@ -35,14 +41,48 @@ export const useUserStore = defineStore('user', () => {
     }))
 
     const v$ = useVuelidate(rules, state, {$scope: false})
-    const getUsers = async () => {
+    const getUsers = async (params: IParams) => {
         loading.value = true
-        const {data} = await useApiFetch<IUser[]>('/users/users/', {
-            method: 'GET',
-            transformResponse: [(data) => addFieldSelectArray(data)]
-        })
-        users.value = data
-        loading.value = false
+        error.value.code = null
+        error.value.msg = null
+        try {
+            const {data} = await useApiFetch<IServerResponse<IUser>>('/users/users/', {
+                method: 'GET',
+                params: {
+                    ...params,
+                    size: size.value
+                },
+                transformResponse: [(data) => addFieldSelect(data)]
+            })
+            users.value = data
+        } catch (e: any) {
+            if (e.response?.status) {
+                error.value.code = e.response.status
+                error.value.msg = e.response.data.detail
+                users.value = {results: [], count: 0}
+            }
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+    const sortList = async (output: ISortOutput) => {
+        sortedData.value = output
+        await getUsers(searchValue.value ? {
+            ...output,
+            ...router.currentRoute.value.query,
+            search_value: searchValue.value,
+            search_field: searchType.value
+        } : {...output, ...router.currentRoute.value.query})
+    }
+    const loadMore = async () => {
+        size.value += 10
+        await getUsers(searchValue.value ? {
+            ...sortedData.value,
+            ...router.currentRoute.value.query,
+            search_value: searchValue.value,
+            search_field: searchType.value
+        } : {...router.currentRoute.value.query})
     }
     const getUser = async (id: string, isFilled: boolean = false) => {
         const {data} = await useApiFetch<IUser>('/users/user/' + id, {method: 'GET'})
@@ -58,12 +98,17 @@ export const useUserStore = defineStore('user', () => {
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
         try {
-            await useApiFetch<IUser[]>('/users/users/', {method: 'POST', data: state.value})
-            await getUsers()
+            const {data} = await useApiFetch<IUser>('/users/users/', {method: 'POST', data: state.value})
+            await getUsers(searchValue.value ? {
+                ...sortedData.value,
+                ...router.currentRoute.value.query,
+                search_value: searchValue.value,
+                search_field: searchType.value,
+            } : {...sortedData.value, ...router.currentRoute.value.query})
             callback()
             await $reset()
-            toast.success(t('toast.user_add_success') as string);
-        }catch (e) {
+            return data
+        } catch (e) {
             throw e
         }
     }
@@ -72,11 +117,16 @@ export const useUserStore = defineStore('user', () => {
         if (!isFormCorrect) return
         try {
             await useApiFetch<IUser[]>('/users/user/' + editID.value, {method: 'PUT', data: state.value})
-            await getUsers()
+            await getUsers(searchValue.value ? {
+                ...sortedData.value,
+                ...router.currentRoute.value.query,
+                search_value: searchValue.value,
+                search_field: searchType.value,
+            } : {...sortedData.value, ...router.currentRoute.value.query})
             callback()
             await $reset()
             toast.success(t('toast.user_edit_success') as string);
-        }catch (e) {
+        } catch (e) {
             throw e
         }
     }
@@ -88,9 +138,14 @@ export const useUserStore = defineStore('user', () => {
                 if (confirmed) {
                     try {
                         await useApiFetch('/users/user/' + id, {method: 'DELETE'})
-                        await getUsers()
+                        await getUsers(searchValue.value ? {
+                            ...sortedData.value,
+                            ...router.currentRoute.value.query,
+                            search_value: searchValue.value,
+                            search_field: searchType.value,
+                        } : {...sortedData.value, ...router.currentRoute.value.query})
                         toast.success(t('toast.user_delete_success') as string);
-                    }catch (e: any) {
+                    } catch (e: any) {
                         throw e
                     }
                 }
@@ -110,5 +165,44 @@ export const useUserStore = defineStore('user', () => {
         editID.value = null
         v$.value.$reset()
     }
-    return {users, state, editID, validation: v$, getUsers, getUser, addUser, editUser, deleteUser, $reset }
+    watch(searchType, async value => {
+        if (searchValue.value) {
+            await getUsers({
+                ...sortedData.value,
+                ...router.currentRoute.value.query,
+                search_value: searchValue.value,
+                search_field: value,
+            })
+        }
+
+    })
+    watch(searchValue, async value => {
+        await getUsers(searchValue.value ? {
+            ...sortedData.value,
+            ...router.currentRoute.value.query,
+            search_value: value,
+            search_field: searchType.value,
+        } : {...sortedData.value, ...router.currentRoute.value.query})
+    })
+    return {
+        users,
+        user,
+        state,
+        editID,
+        getUsers,
+        getUser,
+        addUser,
+        editUser,
+        deleteUser,
+        size,
+        error,
+        loading,
+        sortList,
+        loadMore,
+        sortedData,
+        searchValue,
+        searchType,
+        validation: v$,
+        $reset
+   }
 })

@@ -28,6 +28,12 @@
       "open": "Open email app",
       "description": "Didn’t receive the email?",
       "click_resend": "Click to resend"
+    },
+    "new_password": {
+      "title": "Set new password",
+      "password": "Password",
+      "password_retry": "Password",
+      "save": "Save"
     }
   },
   "dashboard": {
@@ -259,7 +265,10 @@
           "password": "Password",
           "password_placeholder": "Enter password",
           "generate": "Generate",
-          "sent_new_password": "Sent new password for user"
+          "sent_new_password": "Sent new password for user",
+          "activation_method": "Activation method",
+          "display_activation_link": "Display activation link",
+          "send_activation_mail": "Send activation mail"
         },
         "confirm": {
           "title": "Confirm deletion of user",
@@ -379,7 +388,11 @@
     "dashboard_delete_success": "The delete of the dashboard was successful",
     "user_add_success": "The creation of the user was successful",
     "user_edit_success": "The editing of the user was successful",
-    "user_delete_success": "The delete of the user was successful"
+    "user_delete_success": "The delete of the user was successful",
+    "user_wait_activation_link": "Wait, the link for user activation is being generated",
+    "copy_link": "Copy link",
+    "password_updated__success": "Your password has been updated successfully",
+    "request_processed_success": "The request was processed successfully"
   }
 }
 

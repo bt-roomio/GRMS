@@ -16,8 +16,8 @@ export const useAuthorizationStore = defineStore('authorization', () => {
     const {push} = useRouter()
 
     const state = ref({
-        email: 'admin@gmail.com',
-        password: 'password',
+        email: '',
+        password: '',
         remember_me: true
     })
 
@@ -36,7 +36,9 @@ export const useAuthorizationStore = defineStore('authorization', () => {
     const v$ = useVuelidate(rules, state, {$scope: false})
     const login = async (args: IAuthorization) => {
         const isFormCorrect = await v$.value.$validate()
-        if (!isFormCorrect) return
+        if (!isFormCorrect) {
+            throw new Error('The check is invalid')
+        }
 
         try {
             const { data } = await useApiFetch('/users/access-token/', {
@@ -45,10 +47,8 @@ export const useAuthorizationStore = defineStore('authorization', () => {
             })
             await setToken(data, args.remember_me)
             await push({name: 'main'})
-
-            toast.success(t('toast.authorization_success') as string);
+            setTimeout(() => toast.success(t('toast.authorization_success') as string), 200)
         }catch (e: any) {
-            toast.error(e.response.data.detail || t('toast.unknown_error') as string);
             throw e
         }
     }
@@ -101,6 +101,13 @@ export const useAuthorizationStore = defineStore('authorization', () => {
         cookies.remove('access_token')
         cookies.remove('refresh_token')
     }
-
-    return { isAuth, login, refreshToken, logout, setToken, deleteToken, state, validation: v$ }
+    const $reset = () => {
+        state.value = {
+            email: "",
+            password: "",
+            remember_me: true,
+        }
+        v$.value.$reset()
+    }
+    return { isAuth, login, refreshToken, logout, setToken, deleteToken, state, validation: v$, $reset }
 })

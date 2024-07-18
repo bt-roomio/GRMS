@@ -9,7 +9,7 @@
           class="primary w-full"
           @click.prevent="openMail"
       >{{$t('authorization.reset_password.open')}}</UiButton>
-      <RouterLink class="forgot-password__resend" to="/auth/login">
+      <RouterLink class="forgot-password__resend" to="/password/forgot">
         {{$t('authorization.reset_password.description')}}
         <span>{{ $t('authorization.reset_password.click_resend') }}</span>
       </RouterLink>

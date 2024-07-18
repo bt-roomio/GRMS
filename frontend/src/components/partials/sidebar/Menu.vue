@@ -70,7 +70,7 @@ const menu = computed<Item[]>(() => [
     ]
   },
   {
-    icon: 'code-browser',
+    icon: 'settings',
     to: 'settings',
     name: t('dashboard.menu.settings'),
     children: []

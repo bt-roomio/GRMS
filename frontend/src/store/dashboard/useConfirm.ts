@@ -3,6 +3,7 @@ import { ref } from "vue";
 import {defineStore} from "pinia";
 
 interface IConfirmParams {
+    icon?: string
     isOpen?: boolean
     title?: string;
     subtitle?: string;
@@ -13,7 +14,7 @@ interface IConfirmParams {
 
 interface IConfirmButtons {
     cancel: IConfirmButtonsParams;
-    confirm: IConfirmButtonsParams;
+    confirm?: IConfirmButtonsParams;
 }
 
 interface IConfirmButtonsParams {
@@ -24,6 +25,7 @@ interface IConfirmButtonsParams {
 export const useConfirm = defineStore('confirm', () => {
     const { t } = useI18n();
     const confirm = ref<IConfirmParams>({
+        icon: 'featured',
         isOpen: false,
         title: t('confirm.title'),
         subtitle: '',
@@ -53,6 +55,7 @@ export const useConfirm = defineStore('confirm', () => {
 
     const showConfirm = async (params: IConfirmParams) => {
         confirm.value.isOpen = true;
+        confirm.value.icon = typeof params.icon === "string" ? params.icon : 'featured';
         confirm.value.title = params.title || t('confirm.title') || 'Confirm your action';
         confirm.value.subtitle = params.subtitle || '';
         confirm.value.content = params.content || '';

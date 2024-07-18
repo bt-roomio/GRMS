@@ -4,7 +4,6 @@
       <h2>{{$t('dashboard.configuration.rooms.modals.edit_new_rooms.title')}} </h2>
       <p>{{$t('dashboard.configuration.rooms.modals.edit_new_rooms.subtitle')}}</p>
     </template>
-    <div class="modal__card">
       <form class="ui-form" @submit.prevent="storeConfigurationRooms.editItem(close)">
         <div class="ui-multiselect">
           <label>{{ $t('dashboard.configuration.rooms.modals.add_new_rooms.choose_room_type') }}</label>
@@ -59,7 +58,6 @@
         </div>
         <button class="sr-only" type="submit"></button>
       </form>
-    </div>
 
     <template #footer="{close}">
       <UiButton class="primary" @click.prevent="storeConfigurationRooms.editItem(close)">

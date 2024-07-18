@@ -54,10 +54,9 @@ const tabList = computed(() => [
     to: {name: 'room-inner', query: { tab: 'HVAC' }},
   }
 ])
-
 onMounted(async () => {
   await storeConfigurationRooms.getItem(params.id as string, false)
-  if (room.value?.type.dashboard){
+  if (room.value?.type?.dashboard){
     await storeConfigurationDashboard.getItem(room.value?.type.dashboard.id as string, false)
     await storeConfigurationDashboard.getDashboardInnerHelpers()
   }
@@ -65,54 +64,4 @@ onMounted(async () => {
 onUnmounted(() => {
   storeConfigurationDashboard.$reset()
 })
-// const dashboardSettings = ref([
-//   {
-//     "i": "2d07b30f",
-//     "type": "fan-speed",
-//     "x": 0,
-//     "y": 0,
-//     "w": 6,
-//     "h": 39,
-//     "config": {
-//       "title": "Current Fan Speed",
-//       "description": "You can manage current Fan Speed",
-//     }
-//   },
-//   {
-//     "i": "2d0das7b30f",
-//     "type": "mode",
-//     "x": 6,
-//     "y": 0,
-//     "w": 6,
-//     "h": 32,
-//     "config": {
-//       "title": "System Mode",
-//       "description": "Select one of the operating modes",
-//     },
-//   },
-//   {
-//     "i": "2d0das72b30f",
-//     "type": "sensor",
-//     "x": 0,
-//     "y": 0,
-//     "w": 6,
-//     "h": 23,
-//     "config": {
-//       "title": "General sensor",
-//       "description": "Select one of the operating modes",
-//     },
-//   },
-//   {
-//     "i": "2d0das7asd2b30f",
-//     "type": "slider",
-//     "x": 6,
-//     "y": 0,
-//     "w": 6,
-//     "h": 42,
-//     "config": {
-//       "title": "Lighting settings",
-//       "description": "Select one of the operating modes",
-//     },
-//   }
-// ])
 </script>

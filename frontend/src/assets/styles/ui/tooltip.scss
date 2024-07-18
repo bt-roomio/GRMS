@@ -1,5 +1,5 @@
 .tooltip {
-  @apply filter drop-shadow-xl py-2 px-3 rounded-lg w-max absolute;
+  @apply filter drop-shadow-xl py-2 px-3 rounded-lg w-max absolute z-50;
   &__box{
     @apply relative z-20 text-gray-700 dark:text-white whitespace-nowrap;
   }

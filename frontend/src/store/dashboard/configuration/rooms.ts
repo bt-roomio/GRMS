@@ -13,7 +13,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
     const confirmStore = useConfirm()
     const {t} = useI18n()
     const size = ref<number>(10)
-    const room = ref<IConfigurationRoom>()
+    const room = ref<IConfigurationRoom | null>(null)
     const rooms = ref<IServerResponse<IConfigurationRoom>>({results: [], count: 0})
     const searchValue = ref('')
     const searchType = ref('room_number')
@@ -177,8 +177,15 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         })
 
     }
-
     const $reset = async () => {
+        size.value = 10
+        room.value = null
+        rooms.value = {results: [], count: 0}
+        searchValue.value = ''
+        searchType.value = 'room_number'
+        itemError.value = {code: null, msg: null}
+        error.value = {code: null, msg: null}
+        sortedData.value = {}
         state.value = {
             id: null,
             type: "",
@@ -208,7 +215,6 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             search_field: searchType.value,
         }: {...sortedData.value, ...router.currentRoute.value.query})
     })
-
     return {
         state,
         rooms,

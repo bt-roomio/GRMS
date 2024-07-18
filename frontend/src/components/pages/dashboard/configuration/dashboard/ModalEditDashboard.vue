@@ -4,7 +4,6 @@
       <h2>{{$t('dashboard.configuration.dashboard.modal.edit_title')}}</h2>
       <p>{{$t('dashboard.configuration.dashboard.modal.edit_subtitle')}}</p>
     </template>
-    <div class="modal__card">
       <form class="ui-form" @submit.prevent="storeConfigurationDashboard.addItem(close)">
         <UiInput
             :label="$t('dashboard.configuration.room_type.name')"
@@ -17,7 +16,6 @@
         />
         <button class="sr-only" type="submit"></button>
       </form>
-    </div>
 
     <template #footer="{close}">
       <UiButton class="primary" @click.prevent="storeConfigurationDashboard.editItem(close)">

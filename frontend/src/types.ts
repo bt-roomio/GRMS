@@ -49,7 +49,7 @@ interface ICheckAll {
 interface IModal {
     closeWithoutEvents: () => void,
     close: () => void,
-    open: () => void,
+    open: (args?: any) => void,
     [key: string]: any
 }
 
@@ -73,4 +73,8 @@ interface IStatisticsCard {
     difference_value: string
     difference_sign: string
     value: string
+}
+interface IParams {
+    sort_by?: string[]
+    [key: string]: unknown
 }

@@ -61,16 +61,16 @@ useApiFetch.interceptors.response.use(
         return response;
     },
     async (error) => {
-        const authorizationStore = useAuthorizationStore();
+
         const { status } = error.response || {};
         const config = error.config as CustomAxiosRequestConfig;
-
         if (config?.metadata?.timer) {
             toast.remove(config.metadata.toast as string);
             clearTimeout(config.metadata.timer);
         }
 
         if (status === 401 && !config._retry) {
+            const authorizationStore = useAuthorizationStore();
             if (cookies.get('refresh_token')) {
                 if (isRefreshing) {
                     return new Promise(function (resolve, reject) {
@@ -115,6 +115,7 @@ useApiFetch.interceptors.response.use(
                 toast.error(error.response.data[eKey]);
             }
         }else {
+            toast.remove(config.metadata?.toast as string);
             toast.error(error.response.statusText);
         }
 

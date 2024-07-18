@@ -3,25 +3,28 @@ import {arrow, offset, autoUpdate, computePosition, Placement, shift} from "@flo
 const Tooltip = {
     mounted(el: HTMLElement, binding: any) {
         const { value } = binding;
-        const floatingEl = document.createElement("div");
-        const tooltipBox = document.createElement("div");
-        const arrowEl = document.createElement('div');
-        floatingEl.classList.add('tooltip')
-        tooltipBox.classList.add('tooltip__box')
-        arrowEl.classList.add('tooltip__arrow')
-        floatingEl.appendChild(arrowEl)
-        floatingEl.appendChild(tooltipBox)
-        tooltipBox.innerText = value
-        const placements: Placement[] = ["top", "right", "bottom", "left"];
+        if (value) {
+            const floatingEl = document.createElement("div");
+            const tooltipBox = document.createElement("div");
+            const arrowEl = document.createElement('div');
+            floatingEl.classList.add('tooltip')
+            tooltipBox.classList.add('tooltip__box')
+            arrowEl.classList.add('tooltip__arrow')
+            floatingEl.appendChild(arrowEl)
+            floatingEl.appendChild(tooltipBox)
+            tooltipBox.innerText = value
+            const placements: Placement[] = ["top", "right", "bottom", "left"];
 
-        el.addEventListener('mouseenter', async () => {
-            document.body.appendChild(floatingEl);
-            runFloatingOffset(el, floatingEl, arrowEl, placements[0]);
-        });
+            el.addEventListener('mouseenter', async () => {
+                document.body.appendChild(floatingEl);
+                runFloatingOffset(el, floatingEl, arrowEl, placements[0]);
+            });
 
-        el.addEventListener('mouseleave', () => {
-            document.body.removeChild(floatingEl);
-        });
+            el.addEventListener('mouseleave', () => {
+                document.body.removeChild(floatingEl);
+            });
+        }
+
     },
     beforeUpdate() {},
     updated() {},
@@ -31,11 +34,14 @@ const Tooltip = {
 
 function runFloatingOffset(el: HTMLElement, floatingEl: HTMLElement, arrowEl: HTMLElement, placement: Placement){
     const arrowLen = arrowEl.offsetWidth;
-    const floatingOffset = Math.sqrt(2 * arrowLen ** 2) / 2;
+    const floatingOffset = (Math.sqrt(2 * arrowLen ** 2) / 2);
     autoUpdate(el, floatingEl, () => {
         computePosition(el, floatingEl, {
             placement: placement,
-            middleware: [offset(floatingOffset), arrow({ element: arrowEl }), shift()]
+            middleware: [offset(floatingOffset), arrow({ element: arrowEl }), shift({
+                padding: 22,
+            })]
+
         }).then(({ x, y, middlewareData, placement }) => {
             Object.assign(floatingEl.style, {
                 left: `${x}px`,
