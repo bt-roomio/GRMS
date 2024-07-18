@@ -7,6 +7,7 @@
           :value-prop="'key'"
           :options="searchTypes"
           :canClear="false"
+          :can-deselect="false"
       />
     </div>
     <UiSearch v-model="searchValue"/>

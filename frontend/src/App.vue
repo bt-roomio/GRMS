@@ -21,7 +21,6 @@ onUnmounted(() => {
 });
 
 watch(hasMode, value => {
-  console.log(value)
   setMode(value)
 })
 const setMode = (value: string) => {

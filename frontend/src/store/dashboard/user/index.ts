@@ -16,7 +16,7 @@ export const useUserStore = defineStore('user', () => {
     const user = ref<IUser | null>(null)
     const users = ref<IServerResponse<IUser>>({count: 0, results: []})
     const searchValue = ref('')
-    const searchType = ref('email')
+    const searchType = ref('first_name')
     const loading = ref(false)
     const error = ref({code: null, msg: null})
     const sortedData = ref({})

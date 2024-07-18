@@ -142,7 +142,7 @@ onUnmounted(() => {
   user.value = null
   users.value = {results: [], count: 0}
   searchValue.value = ''
-  searchType.value = 'room_number'
+  searchType.value = 'first_name'
   error.value = {code: null, msg: null}
   sortedData.value = {}
   storeUser.$reset()
