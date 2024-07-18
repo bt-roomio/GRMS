@@ -58,6 +58,8 @@ class EmailConfiguration(BaseModel, UpdateByModel):
     username = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
     use_tls = models.BooleanField(default=True)
+    frontend_host = models.CharField(max_length=255, null=True, blank=True)
+    frontend_port = models.CharField(max_length=100, null=True, blank=True)
 
     tenant = models.OneToOneField("main.Tenant", CASCADE)
 

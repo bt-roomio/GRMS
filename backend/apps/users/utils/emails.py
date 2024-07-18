@@ -18,7 +18,10 @@ def send_reset_link_email(user):
 
     reset_key = ResetPassword.objects.create(user=user)
 
-    url = settings.FRONTEND_ACTIVATION_URL + "?key=" + reset_key.key
+    host = config.frontend_host or "localhost"
+    port = config.frontend_port or 3000
+
+    url = f"{host}:{port}" + "/password/new/" + "?key=" + reset_key.key
     body = render_to_string("reset_password.html", {"user": user, "url": url})
     subject = "Reset password, %s"
 

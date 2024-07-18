@@ -193,6 +193,6 @@ RABBIT_LOGIN = os.environ.get("RABBIT_LOGIN", "guest")
 RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD", "guest")
 
 try:
-    from .settings_dev import *
+    from .settings_dev import *  # noqa: F403
 except ImportError:
     pass

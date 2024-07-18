@@ -1,6 +1,5 @@
-from rest_framework import serializers
-
 from main.models import EmailConfiguration, Tenant
+from rest_framework import serializers
 
 
 class EmailConfigSerializer(serializers.ModelSerializer):
@@ -8,4 +7,15 @@ class EmailConfigSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EmailConfiguration
-        fields = ("id", "tenant", "email", "host", "username", "password", "port", "use_tls")
+        fields = (
+            "id",
+            "tenant",
+            "email",
+            "host",
+            "username",
+            "password",
+            "port",
+            "use_tls",
+            "frontend_host",
+            "frontend_port",
+        )
