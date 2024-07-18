@@ -1,11 +1,34 @@
 from core.utils.serializers import ValidatorSerializer
 from django.contrib.auth.models import Group
+from drf_yasg import openapi
 from rest_framework import serializers
 from users.models import User
 
 
+class AdditionalInfoField(serializers.JSONField):
+    class Meta:
+        swagger_schema_fields = {
+            "type": openapi.TYPE_OBJECT,
+            "title": "additional_info",
+            "properties": {
+                "excluded_fields": openapi.Schema(
+                    title="additional_info",
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(type=openapi.TYPE_STRING),
+                ),
+            },
+        }
+
+
 class UserSerializer(serializers.ModelSerializer):
     groups = serializers.PrimaryKeyRelatedField(many=True, queryset=Group.objects.all())
+    additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for field in self.context.get("excluded_fields", []):
+            data.pop(field, None)
+        return data
 
     def create(self, validated_data):
         groups_data = validated_data.pop("groups")
@@ -23,7 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
             "additional_info",
             "phone",
             "created_at",
-            "tenant_id",
+            "tenant",
             "groups",
         )
 

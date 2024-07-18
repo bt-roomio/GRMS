@@ -10,6 +10,13 @@ from users.serializers.user import UserParams, UserSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
 
 
+def excluded_fields(user: User):
+    fields = user.additional_info and user.additional_info.get("excluded_fields")
+    if isinstance(fields, list):
+        return fields
+    return []
+
+
 class UserListView(APIView):
     @swagger_auto_schema(responses=UserSwagger, query_serializer=UserParams)
     @check_for_tenant
@@ -21,14 +28,13 @@ class UserListView(APIView):
             search_value=params.get("search_value"),
             sort_by=params.get("sort_by"),
         )
-        serializer = UserSerializer(queryset, many=True)
+        serializer = UserSerializer(queryset, many=True, context={"excluded_fields": excluded_fields(request.user)})
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
     @swagger_auto_schema(responses=UserSwagger, request_body=UserSerializer)
     @check_for_tenant
     def post(self, request):
-        params = UserParams.check(request.GET)
         serializer = UserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
