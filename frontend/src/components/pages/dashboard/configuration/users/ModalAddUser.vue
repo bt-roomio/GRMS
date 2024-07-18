@@ -93,7 +93,6 @@ const add_user = ref<IModal | null>(null)
 const copyBox = ref<IModal | null>(null)
 const storeUser = useUserStore()
 const {state, validation, editID} = storeToRefs(storeUser)
-const role = ref('Admin')
 const invite = ref('display')
 const activation_methods = computed(() => [
   {label: t('dashboard.configuration.users.form.display_activation_link'), value: 'display'},

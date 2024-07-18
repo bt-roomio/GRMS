@@ -23,6 +23,6 @@ import UiStatus from "@components/ui/Status.vue";
 import UiBadge from "@components/ui/Badge.vue";
 import UiIcon from "@components/ui/Icon.vue";
 defineProps<{
-  item: IConfigurationRoom | undefined
+  item: IConfigurationRoom | undefined | null
 }>()
 </script>
