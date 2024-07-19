@@ -22,7 +22,24 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         self.context = {}
         self.tasks = {}  # For storing periodically tasks
         self.task_params = {}  # Store parameters for tasks
-        self.has_expired = False
+        self.last_cmds = []
+        self.interval = settings.WS_INTERVAL
+
+    async def disconnect(self, code):
+        """
+        - Cancel all tasks
+        - Clear data, context, tasks, task_params
+        """
+        for task in self.tasks.values():
+            task.cancel()
+
+        self.data = {}
+        self.context = {}
+        self.tasks = {}
+        self.task_params = {}
+        self.last_cmds = []
+
+        await super().disconnect(code)
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
         """
@@ -61,7 +78,8 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(response({}, 0, 401, str(err)))
             return
 
-    async def periodically_task(self, seconds: int, func, *args):
+    async def periodically_task(self, func, *args):
+        index = 0
         while True:
             try:
                 auth_cmd = self.context.get("authCmd", {})
@@ -78,9 +96,19 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
                     jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
 
                 self.context.update({"has_expired": False})
+
                 result = await func(*args)
-                await self.send_json(result)
-                await asyncio.sleep(seconds)
+
+                if result not in self.last_cmds:
+                    self.last_cmds.append(result)
+                    await self.send_json(result)
+
+                index += 1
+
+                if index >= self.interval:
+                    await self.send_json(result)
+                    index = 1
+                await asyncio.sleep(1)
 
             except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
                 self.context.update({"has_expired": True})

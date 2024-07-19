@@ -32,6 +32,7 @@ class ReceiverConsumer(BaseConsumer):
                 cmd.get("type") == "TIMESERIES"
                 and cmd.get("scope") == "LATEST_TELEMETRY"
                 and cmd.get("entityType") == "DEVICE"
+                and cmd.get("entityId")
             ):
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
@@ -39,7 +40,7 @@ class ReceiverConsumer(BaseConsumer):
                     del self.task_params[task_key]
 
                 def func():
-                    return self.periodically_task(3, latest_telemetry, cmd, user)
+                    return self.periodically_task(latest_telemetry, cmd, user)
 
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
@@ -51,32 +52,26 @@ class ReceiverConsumer(BaseConsumer):
                     del self.task_params[task_key]
 
             """
-            - Entity Data
-            """
-            if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
-                result = await history_telemetery(cmd, user, self.send_json)
-                await self.send_json(result)
-
-            """
             - Attributes
             """
             if (
-                cmd.get("type") == "ATTRIBUTES"
-                and cmd.get("entityType") == "DEVICE"
+                cmd.get("entityType") == "DEVICE"
+                and cmd.get("type") == "ATTRIBUTES"
                 and cmd.get("entityId")
-                and cmd.get("cmdId")
+                and cmd.get("scope")
             ):
                 if cmd.get("scope") not in [item[0] for item in AttributeKv.ENTITY_TYPE]:
                     await self.send_json(response({}, 0, 1, "Incorrect scope!"))
                     return
 
-                def func():
-                    return self.periodically_task(3, attribute_kv, cmd, user, self.send_json)
-
+                #  If cmdId same remove from tasks and re-write cmd
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
                     del self.task_params[task_key]
+
+                def func():
+                    return self.periodically_task(attribute_kv, cmd)
 
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
@@ -86,3 +81,9 @@ class ReceiverConsumer(BaseConsumer):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
                     del self.task_params[task_key]
+            """
+            - Entity Data
+            """
+            if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
+                result = await history_telemetery(cmd, user, self.send_json)
+                await self.send_json(result)

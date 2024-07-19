@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 from users.models import ResetPassword
 
 
-def send_reset_link_email(user):
+def send_reset_link_email(user, send_activation_mail=True):
     if not user.tenant:
         raise ValidationError({"detail": "User has no tenant."})
 
@@ -22,6 +22,10 @@ def send_reset_link_email(user):
     port = config.frontend_port or 3000
 
     url = f"{host}:{port}" + "/password/new/" + "?key=" + reset_key.key
+
+    if not send_activation_mail:
+        return bytes(url, encoding="utf-8")
+
     body = render_to_string("reset_password.html", {"user": user, "url": url})
     subject = "Reset password, %s"
 
@@ -47,4 +51,4 @@ def send_reset_link_email(user):
         reset_key.delete()
         raise ValidationError({"detail": "Email configuration is not configured or is incorrect."})
 
-    return url
+    return b"Activation link sent."

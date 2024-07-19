@@ -19,10 +19,7 @@ class ActivationLinkView(APIView):
     def get(self, request, user_id):
         params = ActivationLinkParams.check(request.GET)
         user = get_object_or_404(User, pk=user_id)
-        result = send_reset_link_email(user)
-        if params.get("send_activation_mail"):
-            return HttpResponse(b"Activation link sent.")
-        return HttpResponse(result)
+        return HttpResponse(send_reset_link_email(user, params.get("send_activation_mail")))
 
 
 class ResetPasswordView(GenericAPIView):

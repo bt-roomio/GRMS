@@ -192,6 +192,9 @@ RABBIT_TYPE = os.environ.get("RABBIT_TYPE", "rabbitMQ")
 RABBIT_LOGIN = os.environ.get("RABBIT_LOGIN", "guest")
 RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD", "guest")
 
+
+WS_INTERVAL = os.environ.get("WS_INTERVAL", 5)
+
 try:
     from .settings_dev import *  # noqa: F403
 except ImportError:
