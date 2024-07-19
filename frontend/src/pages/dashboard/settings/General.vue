@@ -41,14 +41,6 @@
         </li>
         <li class="card__list-item">
           <div class="item-texts">
-            <p class="title">{{ $t('dashboard.settings.general.controllers_sync.title') }}</p>
-          </div>
-          <div class="item-actions">
-            <UiToggle v-model="state.controllers_sync"/>
-          </div>
-        </li>
-        <li class="card__list-item">
-          <div class="item-texts">
             <p class="title">{{ $t('dashboard.settings.general.suite_rooms_controls_sync.title') }}</p>
           </div>
           <div class="item-actions">

@@ -76,7 +76,7 @@
     </table>
   </div>
   <div class="ui-table__pagination" v-if="isPagination">
-    <UiButton class="primary" @click="emits('more')">{{ $t('dashboard.table.load_more') }}</UiButton>
+    <UiButton :loading="loading" class="primary" @click="emits('more')">{{ $t('dashboard.table.load_more') }}</UiButton>
   </div>
 </template>
 <script setup lang="ts" generic="T">
@@ -118,7 +118,6 @@ const props = defineProps<{
   pointer?: boolean
 }>()
 const isEmpty = computed(() => !!props.data?.length)
-
 const clickTrHandle = (entity: any) => {
   emits('click', entity)
 }

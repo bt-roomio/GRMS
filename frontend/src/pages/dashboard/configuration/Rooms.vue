@@ -14,6 +14,7 @@
       <ConfigurationRoomsActions
           v-model:search="isSearchOpen"
           ref="actions"
+          :filters="sortedHeaders ? sortedHeaders : headers"
           @theadSort="theadSortHandle"
       />
     </div>
@@ -77,11 +78,13 @@ import {storeToRefs} from "pinia";
 import {useI18n} from "vue-i18n";
 import {onBeforeRouteUpdate} from "vue-router";
 import router from "@/router";
+import {useUserStore} from "@store/dashboard/user";
 
 const {t} = useI18n()
 const storeConfigurationRooms = useConfigurationRoomsStore()
 const {rooms, error, searchType, searchValue, loading} = storeToRefs(storeConfigurationRooms)
-
+const storeUser = useUserStore()
+const { profile } = storeToRefs(storeUser)
 const actions = ref<IConfigurationRoomsActions | null>(null)
 const isSearchOpen = ref(false)
 const tabList = computed(() => [
@@ -139,8 +142,22 @@ const headers = computed<IConfigurationRoomsHead>(() => ({
   status: t('dashboard.configuration.rooms.status'),
   actions: ''
 }))
+const sortedHeaders = computed(() => {
+  const columns = profile.value?.additional_info?.[router.currentRoute.value.path]?.columnFilters || null
+  if (columns) {
+    const importantKeys = ['select', 'actions']
+    const results: any = {}
 
-const sortedHeaders = ref(null)
+    for (const headersKey in headers.value) {
+      if ([...columns, ...importantKeys].includes(headersKey as string)){
+        results[headersKey] = headers.value[headersKey]
+      }
+    }
+    return results
+  } else {
+    return null
+  }
+});
 const theadSortHandle = (array: string[]) => {
   let results: any = {}
   results.select = true
@@ -150,7 +167,8 @@ const theadSortHandle = (array: string[]) => {
     }
   }
   results.actions = ''
-  sortedHeaders.value = results
+  const key = Object.keys(results)
+  storeUser.saveUserConfiguration(router.currentRoute.value.path, { columnFilters: key });
 }
 
 watch(isSearchOpen, value => {

@@ -28,7 +28,7 @@
   <ModalImportRooms ref="import_room"/>
 </template>
 <script setup lang="ts" generic="T">
-import {defineComponent, ref} from "vue";
+import {defineComponent, onMounted, ref, watch} from "vue";
 import ModalAddRoom from "@components/pages/dashboard/configuration/rooms/ModalAddRoom.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import ModalEditRoom from "@components/pages/dashboard/configuration/rooms/ModalEditRoom.vue";
@@ -37,6 +37,7 @@ import ModalImportRooms from "@components/pages/dashboard/configuration/rooms/Mo
 import UiDropdown from "@components/ui/Dropdown.vue";
 import {useI18n} from "vue-i18n";
 import UiCheckbox from "@components/ui/Checkbox.vue";
+const props = defineProps(['filters'])
 const add_room = ref<IModal | null>(null)
 const edit_room = ref<IModal | null>(null)
 const export_room = ref<IModal | null>(null)
@@ -51,7 +52,18 @@ defineExpose({
   add_room,
   edit_room
 })
-
+onMounted(() => {
+  sortTable.value.map(el => {
+    el.active = Object.values(props.filters).includes(el.name)
+    return el
+  })
+})
+watch(props, value => {
+  sortTable.value.map(el => {
+    el.active = Object.values(value.filters).includes(el.name)
+    return el
+  })
+}, {deep: true})
 const sortTable = ref([
     {
       name: t('dashboard.configuration.rooms.room'),

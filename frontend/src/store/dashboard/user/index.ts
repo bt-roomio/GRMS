@@ -13,6 +13,7 @@ export const useUserStore = defineStore('user', () => {
     const confirmStore = useConfirm()
     const {t} = useI18n()
     const size = ref<number>(10)
+    const profile = ref<IUser | null>(null)
     const user = ref<IUser | null>(null)
     const users = ref<IServerResponse<IUser>>({count: 0, results: []})
     const searchValue = ref('')
@@ -94,6 +95,10 @@ export const useUserStore = defineStore('user', () => {
         }
         user.value = data
     }
+    const getProfile = async (id: string) => {
+        const {data} = await useApiFetch<IUser>('/users/user/' + id, {method: 'GET'})
+        profile.value = data
+    }
     const addUser = async (callback: () => void) => {
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
@@ -153,6 +158,16 @@ export const useUserStore = defineStore('user', () => {
         })
     }
 
+    const saveUserConfiguration = async (page: string, config: Record<string, any>) => {
+        if (profile.value) {
+            if (!profile.value.additional_info) {
+                profile.value.additional_info = {}
+            }
+            profile.value.additional_info[page] = config
+            await useApiFetch('/users/user/' + profile.value.id, {method: 'PUT', data: {additional_info: profile.value.additional_info}})
+        }
+    }
+
     const $reset = async () => {
         state.value = {
             email: "",
@@ -187,12 +202,15 @@ export const useUserStore = defineStore('user', () => {
     return {
         users,
         user,
+        profile,
         state,
         editID,
         getUsers,
         getUser,
+        getProfile,
         addUser,
         editUser,
+        saveUserConfiguration,
         deleteUser,
         size,
         error,

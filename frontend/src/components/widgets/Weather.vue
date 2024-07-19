@@ -4,13 +4,13 @@
       <img src="@assets/images/weather.jpeg" alt="">
     </div>
     <div class="weather__content">
-      <div class="weather__info" v-if="weatherData.country_name && weatherData.name">
+      <div class="weather__info" v-if="weatherData.country_name && weatherData.name && profile">
         <p>
           {{ weatherData.country_name }},
           {{ weatherData.name }},
           {{ new Date().toLocaleDateString('en-US', {day: 'numeric', month: "short", year: "numeric"}) }}
         </p>
-        <h2>Welcome back, Satoshi Nakamoto</h2>
+        <h2>Welcome back, {{ profile.first_name }} {{ profile.last_name }}</h2>
       </div>
       <div class="weather__info" v-else>
         <p>&nbsp;</p>
@@ -28,7 +28,7 @@ import {useWeather} from "@store/dashboard/weather";
 import {onMounted} from "vue";
 import {storeToRefs} from "pinia";
 import UiIcon from "@components/ui/Icon.vue";
-
+defineProps(['profile'])
 const storeWeather = useWeather()
 const {weatherData} = storeToRefs(storeWeather)
 

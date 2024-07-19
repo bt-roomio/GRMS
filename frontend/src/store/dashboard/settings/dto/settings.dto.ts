@@ -4,6 +4,8 @@ interface IEmailSetup {
     host: string,
     username: string,
     password: string,
+    frontend_host?: string,
+    frontend_port?: string,
     port: string,
     use_tls: boolean
 }

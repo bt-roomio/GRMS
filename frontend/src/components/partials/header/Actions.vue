@@ -39,13 +39,13 @@ const cookies = useCookies(['mode'])
 const changeMode = () => {
   if (cookies.get('mode')) {
     switch (cookies.get('mode')) {
-      case 'dark': cookies.set('mode', 'light')
+      case 'dark': cookies.set('mode', 'light', {path: '/'})
         break;
-      case 'light': cookies.set('mode', 'dark')
+      case 'light': cookies.set('mode', 'dark', {path: '/'})
         break;
     }
   }else {
-    cookies.set('mode', 'dark')
+    cookies.set('mode', 'dark', {path: '/'})
   }
 
 }

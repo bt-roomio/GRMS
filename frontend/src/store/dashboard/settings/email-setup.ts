@@ -16,6 +16,8 @@ export const useEmailSetupStore = defineStore('settings-email-setup', () => {
         username: "",
         password: "",
         port: "",
+        frontend_host: "",
+        frontend_port: "",
         use_tls: true
     })
     const rules = computed(() => ({

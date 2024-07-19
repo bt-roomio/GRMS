@@ -25,12 +25,13 @@
   <ModalAddUser ref="add_user"/>
 </template>
 <script setup lang="ts" generic="T">
-import {defineComponent, ref} from "vue";
+import {defineComponent, onMounted, ref, watch} from "vue";
 import UiIcon from "@components/ui/Icon.vue";
 import UiDropdown from "@components/ui/Dropdown.vue";
 import {useI18n} from "vue-i18n";
 import UiCheckbox from "@components/ui/Checkbox.vue";
 import ModalAddUser from "@components/pages/dashboard/configuration/users/ModalAddUser.vue";
+const props = defineProps(['filters'])
 const add_user = ref<IModal | null>(null)
 const edit_user = ref<IModal | null>(null)
 const search = defineModel('search')
@@ -41,7 +42,18 @@ defineExpose({
   add_user,
   edit_user,
 })
-
+onMounted(() => {
+  sortTable.value.map(el => {
+    el.active = Object.values(props.filters).includes(el.name)
+    return el
+  })
+})
+watch(props, value => {
+  sortTable.value.map(el => {
+    el.active = Object.values(value.filters).includes(el.name)
+    return el
+  })
+}, {deep: true})
 const sortTable = ref([
     {
       name: t('dashboard.configuration.users.form.email_address'),

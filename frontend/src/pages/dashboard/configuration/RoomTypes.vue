@@ -26,7 +26,7 @@
         <UiCheckbox @click.stop v-model="entity.select"/>
       </template>
       <template #dashboard="{entity}">
-        {{(entity as Entity).dashboard?.title || '-'}}
+        <UiBadge>{{(entity as Entity).dashboard?.title || '-'}}</UiBadge>
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
@@ -58,6 +58,7 @@ import {useI18n} from "vue-i18n";
 import ModalAddRoomType from "@components/pages/dashboard/configuration/room-type/ModalAddRoomType.vue";
 import ModalEditRoomType from "@components/pages/dashboard/configuration/room-type/ModalEditRoomType.vue";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
+import UiBadge from "@components/ui/Badge.vue";
 const add_room_type = ref<IModal | null>(null)
 const edit_room_type = ref<IModal | null>(null)
 const {t} = useI18n()

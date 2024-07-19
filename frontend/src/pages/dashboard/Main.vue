@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="page__content">
-      <Weather/>
+      <Weather :profile="profile"/>
       <Tabs :list="tabList"/>
       <StatisticsCardList/>
       <PageHead title="Your overall stats"/>
@@ -26,7 +26,10 @@ import StatsHead from "@components/pages/dashboard/main/StatsHead.vue";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 import {storeToRefs} from "pinia";
 import WidgetContainer from "@components/widgets/WidgetContainer.vue";
+import {useUserStore} from "@store/dashboard/user";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
+const storeUser = useUserStore()
+const { profile } = storeToRefs(storeUser)
 const {
   viewModel,
   viewWidgets,

@@ -8,6 +8,32 @@
       <ul class="card__list">
         <li class="card__list-item">
           <div class="item-texts">
+            <p class="title">Frontend Host</p>
+            <p class="description">{{ $t('dashboard.settings.email_setup.smtp_server_address.description') }}</p>
+          </div>
+          <div class="item-actions">
+            <UiInput
+                v-model="state.frontend_host"
+                name="frontend_host"
+                :placeholder="'Frontend Host'"
+            />
+          </div>
+        </li>
+        <li class="card__list-item">
+          <div class="item-texts">
+            <p class="title">Frontend port</p>
+            <p class="description">{{ $t('dashboard.settings.email_setup.smtp_server_address.description') }}</p>
+          </div>
+          <div class="item-actions">
+            <UiInput
+                v-model="state.frontend_port"
+                name="frontend_port"
+                :placeholder="'Frontend port'"
+            />
+          </div>
+        </li>
+        <li class="card__list-item">
+          <div class="item-texts">
             <p class="title">{{ $t('dashboard.settings.email_setup.smtp_server_address.title') }}</p>
             <p class="description">{{ $t('dashboard.settings.email_setup.smtp_server_address.description') }}</p>
           </div>
