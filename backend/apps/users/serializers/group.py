@@ -25,8 +25,10 @@ class GroupSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        user = self.context.get("request").user
         permissions = validated_data.pop("permissions")
         group = Group.objects.create(**validated_data)
+        user.groups.add(group)
         for permission in permissions:
             permission = Permission.objects.get(id=permission.id)
             group.permissions.add(permission.id)

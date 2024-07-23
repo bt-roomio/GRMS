@@ -28,7 +28,7 @@ class GroupsListView(APIView):
     )
     @check_for_tenant
     def post(self, request):
-        serializer = GroupSerializer(data=request.data)
+        serializer = GroupSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, 201)
