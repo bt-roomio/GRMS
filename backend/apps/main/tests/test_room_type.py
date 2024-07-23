@@ -3,7 +3,14 @@ from django.urls import reverse
 
 
 class RoomTypeTest(BaseTestCase):
-    fixtures = ("tenant_profile.yaml", "tenant.yaml", "users.yaml", "dashboard.yaml", "room_type.yaml")
+    fixtures = (
+        "tenant_profile.yaml",
+        "tenant.yaml",
+        "groups_permissions.yaml",
+        "users.yaml",
+        "dashboard.yaml",
+        "room_type.yaml",
+    )
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)

@@ -73,9 +73,10 @@ def callback(ch, method, properties, body):
                 device_profile_id="be17d30b-9785-4415-bfa5-e7fdaf19e37c",
             )
             if created:
-                device_credential = DeviceCredentials.objects.create(
+                DeviceCredentials.objects.create(
                     credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device
                 )
+
             Relation.objects.get_or_create(
                 from_id_id=from_id,
                 to_id_id=device.id,
@@ -127,7 +128,7 @@ def callback(ch, method, properties, body):
             if routing_key == "v1/devices/me/telemetry":
                 save_telemetry_kv(device, res, ts)
 
-    print(json.loads(body), routing_key)
+    print(json.loads(body))
 
 
 def consume():

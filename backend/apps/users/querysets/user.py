@@ -16,7 +16,9 @@ class UsersManager(BaseUserManager):
             for field in sort_by:
                 dash = field.startswith("-")
                 field = field.replace("-", "")
+
                 query = query.exclude(first_name="") if field == "first_name" else query
+
                 field = F(field).desc() if dash else F(field).asc()
                 fields.append(field)
             query = query.order_by(*fields)
