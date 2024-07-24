@@ -30,10 +30,10 @@
       "click_resend": "Click to resend"
     },
     "new_password": {
-      "title": "Yangi parol o'rnating",
-      "password": "Parol",
-      "password_retry": "Parolni qayta kiriting",
-      "save": "Saqlash"
+      "title": "Set new password",
+      "password": "Password",
+      "password_retry": "Password",
+      "save": "Save"
     }
   },
   "dashboard": {
@@ -412,33 +412,33 @@
     }
   },
   "confirm": {
-    "title": "Подтвердите ваше действие",
-    "button_cancel": "Отмена",
-    "button_confirm": "Подтвердить",
-    "delete_item": "Вы уверены, что хотите удалить этот элемент?"
+    "title": "Confirm your action",
+    "button_cancel": "Cancel",
+    "button_confirm": "Confirm",
+    "delete_item": "Are you sure you want to delete this item?"
   },
   "toast": {
-    "save_success": "Сохранение прошло успешно",
-    "unknown_error": "Неизвестная ошибка, попробуйте снова",
-    "authorization_success": "Авторизация прошла успешно",
-    "room_add_success": "Создание комнаты прошло успешно",
-    "room_edit_success": "Редактирование комнаты прошло успешно",
-    "room_delete_success": "Удаление комнаты прошло успешно",
-    "room_type_add_success": "Создание типа комнаты прошло успешно",
-    "room_type_edit_success": "Редактирование типа комнаты прошло успешно",
-    "room_type_delete_success": "Удаление типа комнаты прошло успешно",
-    "role_add_success": "Создание роли прошло успешно",
-    "role_edit_success": "Редактирование роли прошло успешно",
-    "role_delete_success": "Удаление роли прошло успешно",
-    "dashboard_add_success": "Создание панели управления прошло успешно",
-    "dashboard_edit_success": "Редактирование панели управления прошло успешно",
-    "dashboard_delete_success": "Удаление панели управления прошло успешно",
-    "user_add_success": "Создание пользователя прошло успешно",
-    "user_edit_success": "Редактирование пользователя прошло успешно",
-    "user_delete_success": "Удаление пользователя прошло успешно",
-    "user_wait_activation_link": "Подождите, генерируется ссылка для активации пользователя",
-    "copy_link": "Копировать ссылку",
-    "password_updated__success": "Ваш пароль был успешно обновлен",
-    "request_processed_success": "Запрос был успешно обработан"
+    "save_success": "The save was successful",
+    "unknown_error": "Unknown error try again",
+    "authorization_success": "Authorization was successful",
+    "room_add_success": "The creation of the room was successful",
+    "room_edit_success": "The editing of the room was successful",
+    "room_delete_success": "The delete of the room was successful",
+    "room_type_add_success": "The creation of the room type was successful",
+    "room_type_edit_success": "The editing of the room type was successful",
+    "room_type_delete_success": "The delete of the room type was successful",
+    "role_add_success": "The creation of the role was successful",
+    "role_edit_success": "The editing of the role was successful",
+    "role_delete_success": "The delete of the role was successful",
+    "dashboard_add_success": "The creation of the dashboard was successful",
+    "dashboard_edit_success": "The editing of the dashboard was successful",
+    "dashboard_delete_success": "The delete of the dashboard was successful",
+    "user_add_success": "The creation of the user was successful",
+    "user_edit_success": "The editing of the user was successful",
+    "user_delete_success": "The delete of the user was successful",
+    "user_wait_activation_link": "Wait, the link for user activation is being generated",
+    "copy_link": "Copy link",
+    "password_updated__success": "Your password has been updated successfully",
+    "request_processed_success": "The request was processed successfully"
   }
 }

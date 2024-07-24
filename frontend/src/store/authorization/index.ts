@@ -16,8 +16,8 @@ export const useAuthorizationStore = defineStore('authorization', () => {
     const {push} = useRouter()
 
     const state = ref({
-        email: '',
-        password: '',
+        email: 'admin@gmail.com',
+        password: 'password',
         remember_me: true
     })
 
@@ -107,8 +107,8 @@ export const useAuthorizationStore = defineStore('authorization', () => {
     }
     const $reset = () => {
         state.value = {
-            email: "",
-            password: "",
+            email: "admin@gmail.com",
+            password: "password",
             remember_me: true,
         }
         v$.value.$reset()
