@@ -5,7 +5,7 @@
       <p>{{$t('dashboard.configuration.rooms.modals.import_new_rooms.subtitle')}}</p>
     </template>
     <FileUpload class="mb-6" :accept="['.csv', '.xls']"/>
-    <UiButton class="secondary" @click.prevent="close()">
+    <UiButton class="secondary w-full" @click.prevent="close()">
       {{$t('dashboard.configuration.rooms.modals.import_new_rooms.view_example')}}
     </UiButton>
     <template #footer="{close}">

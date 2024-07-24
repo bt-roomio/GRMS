@@ -1,5 +1,5 @@
 .rooms-card{
-  @apply border border-gray-200 rounded-xl p-3 flex flex-col gap-1 bg-white dark:bg-gray-600 dark:border-gray-500;
+  @apply border border-gray-200 rounded-xl p-3 gap-1 bg-white dark:bg-gray-600 dark:border-gray-500 flex items-center justify-between w-full;
   &.warning{
     @apply bg-warning-100 border-warning-200;
     .rooms-card__number{
@@ -7,27 +7,27 @@
     }
   }
   &.error{
-    @apply bg-error-100 border-error-200;
-    .rooms-card__number{
-      @apply bg-error-200 text-error-500;
-    }
+    @apply bg-error-25 border-error-500 dark:bg-error-500/10;
+  }
+  &__info{
+    @apply flex flex-col gap-1;
   }
   &__number{
-    @apply bg-gray-200 dark:bg-gray-500 rounded-xl px-3 py-1 inline-flex gap-1.5 items-center text-success-500 w-max;
+    @apply inline-flex gap-1 items-center w-max;
     p{
-      @apply text-gray-700 dark:text-gray-200
+      @apply text-gray-700 dark:text-gray-200 font-bold text-sm;
     }
     &:before{
-      @apply content-[''] block w-1.5 h-1.5 bg-current rounded-full;
+      @apply content-[''] block w-1 h-3 bg-current rounded-full;
     }
     &.available {
-      @apply text-success-500;
+      @apply text-green-500;
     }
     &.checkedin {
       @apply text-blue-500;
     }
     &.occupied {
-      @apply text-orange-500;
+      @apply text-red-500;
     }
     &.donotdistrub {
       @apply text-red-500;
@@ -36,13 +36,16 @@
       @apply text-yellow-500;
     }
   }
-  &__type{
-    @apply text-xs text-gray-900 dark:text-gray-200;
-  }
   &__degree{
-    @apply font-bold text-base
+    @apply font-medium text-sm whitespace-nowrap;
   }
   &__actions{
-    @apply flex gap-1 py-2;
+    @apply flex flex-col gap-1;
+    .actions__item{
+      @apply flex gap-1.5 justify-end items-center;
+      p{
+        @apply text-xs w-7 whitespace-nowrap;
+      }
+    }
   }
 }

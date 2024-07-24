@@ -1,7 +1,7 @@
 {
   "authorization": {
     "login": {
-      "title": "Kirish",
+      "title": "Roomio'ga kirish",
       "description": "Xush kelibsiz! Iltimos, ma'lumotlaringizni kiriting.",
       "form": {
         "email": "Elektron pochta",
@@ -15,7 +15,7 @@
     },
     "forgot_password": {
       "title": "Parolni unutdingizmi?",
-      "description": "Qayg'urmay, sizga qayta tiklash o'rsini yuboramiz",
+      "description": "Xavotir olmang, biz sizga qayta o'rnatish ko'rsatmalarini yuboramiz",
       "form": {
         "email": "Elektron pochta",
         "email_placeholder": "Elektron pochtangizni kiriting",
@@ -25,15 +25,21 @@
     },
     "reset_password": {
       "title": "Elektron pochtangizni tekshiring",
-      "open": "Elektron pochta dasturini oching",
-      "description": "Pochtangiz kelmadimi?",
-      "click_resend": "Qaytadan yuborish uchun bosing"
+      "open": "Elektron pochta ilovasini ochish",
+      "description": "Xat kelmadimi?",
+      "click_resend": "Qayta yuborish uchun bosing"
+    },
+    "new_password": {
+      "title": "Yangi parol o'rnating",
+      "password": "Parol",
+      "password_retry": "Parolni qayta kiriting",
+      "save": "Saqlash"
     }
   },
   "dashboard": {
     "main": {
       "tabs": {
-        "overview": "Umumiy koʻrinish",
+        "overview": "Umumiy ko'rinish",
         "energy": "Energiya"
       },
       "stats": {
@@ -47,56 +53,57 @@
     "menu": {
       "dashboard": "Boshqaruv paneli",
       "rooms": "Xonalar",
-      "public_space": "Ommaviy joy",
-      "configuration": "Sozlash",
+      "public_space": "Umumiy joy",
+      "configuration": "Sozlamalar",
       "users": "Foydalanuvchilar",
+      "role": "Rollar",
       "configuration_rooms": "Xonalar",
       "room_types": "Xona turlari",
-      "controllers": "Kontrollerlar",
+      "controllers": "Boshqaruvchilar",
       "settings": "Sozlamalar",
       "access": "Kirish",
-      "backlog": "Qoldiq"
+      "backlog": "Bajarilmagan ishlar"
     },
     "settings": {
       "title": "Sozlamalar",
       "save": "Saqlash",
       "general": {
-        "title": "Asosiy sozlamalar",
+        "title": "Umumiy sozlamalar",
         "description": "Xona sozlamalarini boshqarishingiz mumkin",
         "admin_panel_language": {
-          "title": "Admin panel til",
+          "title": "Admin panel tili",
           "description": "Tilingizni tanlang"
         },
         "controllers_sync": {
-          "title": "Kontrollerlar sinxronizatsiyasi"
+          "title": "Boshqaruvchilar sinxronizatsiyasi"
         },
         "check_in_out": {
-          "title": "Kirish/Chiqish"
+          "title": "Kirish / Chiqish"
         },
         "vip_status": {
-          "title": "VIP holati"
+          "title": "VIP status"
         },
         "suite_rooms_controls_sync": {
-          "title": "Lux xonalar boshqaruv sinxronizatsiyasi"
+          "title": "Lyuks xonalar boshqaruvi sinxronizatsiyasi"
         },
         "laundry": {
           "title": "Kir yuvish"
         }
       },
       "alarms": {
-        "title": "Signalizatsiyalar",
+        "title": "Signallar",
         "description": "Xona sozlamalarini boshqarishingiz mumkin",
         "bathroom": {
-          "title": "Hamomni faollashtirish",
-          "description": "Xonangizning raqamini kiriting"
+          "title": "Hammom yoqish",
+          "description": "Xona raqamini kiriting"
         },
         "humidity": {
-          "title": "Namlikni faollashtirish",
-          "description": "Xonangizning raqamini kiriting"
+          "title": "Namlik yoqish",
+          "description": "Xona raqamini kiriting"
         }
       },
       "email_setup": {
-        "title": "Email sozlamalari",
+        "title": "Elektron pochta sozlamalari",
         "description": "Xona sozlamalarini boshqarishingiz mumkin",
         "smtp_server_address": {
           "title": "SMTP server manzili",
@@ -109,19 +116,19 @@
           "placeholder": "SMTP foydalanuvchi nomini kiriting"
         },
         "smtp_password": {
-          "title": "SMTP parol",
-          "description": "SMTP parolni kiriting",
-          "placeholder": "SMTP parolni kiriting"
+          "title": "SMTP paroli",
+          "description": "SMTP parolini kiriting",
+          "placeholder": "SMTP parolini kiriting"
         },
         "smtp_port": {
-          "title": "SMTP port",
-          "description": "SMTP portni kiriting",
-          "placeholder": "SMTP portni kiriting"
+          "title": "SMTP porti",
+          "description": "SMTP portini kiriting",
+          "placeholder": "SMTP portini kiriting"
         },
         "email_to": {
-          "title": "Email manzili",
-          "description": "Email manzilini kiriting",
-          "placeholder": "Email manzilini kiriting"
+          "title": "Kimga yuborish",
+          "description": "Elektron pochtani kiriting",
+          "placeholder": "Elektron pochta manzilini kiriting"
         },
         "smtp_ssl": {
           "title": "SMTP SSL ishlatish",
@@ -133,18 +140,18 @@
       "tabs": {
         "all": "Barcha xonalar",
         "on": "Yoqilgan",
-        "off": "Oʻchirilgan",
+        "off": "O'chirilgan",
         "error": "Xato"
       },
       "rooms": {
         "title": "Xonalar",
-        "subtitle": "Xonalar ro'yxatini tahrirlash",
+        "subtitle": "Xonalar ro'yxatini tahrirlang",
         "add_room": "Xona qo'shish",
         "room": "Xona",
-        "type": "Tur",
+        "type": "Turi",
         "floor": "Qavat",
         "block": "Blok",
-        "devices": "Qurilmalar nomi",
+        "devices": "Qurilma nomi",
         "mac_address": "MAC manzil",
         "ip_address": "IP manzil",
         "status": "Holat",
@@ -154,81 +161,165 @@
             "subtitle": "Mehmonxonangizga yangi xona qo'shing",
             "choose_room_type": "Xona turini tanlang",
             "room_number": "Xona raqami",
-            "room_number_placeholder": "Xona raqamini yoki diapazonni kiriting",
-            "room_number_example": "Masalan: 567 yoki 456-567",
+            "room_number_placeholder": "Xona raqami yoki diapazonni kiriting",
+            "room_number_example": "Misol: 567 yoki 456-567",
             "room_floor_placeholder": "Xona qavatini kiriting",
             "room_block_placeholder": "Xona blokini kiriting",
             "cancel": "Bekor qilish",
             "mac_address": "MAC manzilni tanlang",
-            "device": "Qurilm tanlang"
+            "device": "Qurilmani tanlang"
           },
           "edit_new_rooms": {
             "title": "Xonani tahrirlash",
-            "subtitle": "Mehmonxonangizdagi xonani tahrirlash",
+            "subtitle": "Mehmonxonangizda xonani tahrirlang",
             "save": "Xona sozlamalarini saqlash"
           },
           "export_new_rooms": {
             "title": "Xonalarni eksport qilish",
-            "subtitle": "Iltimos, eksport uchun fayl turini tanlang"
+            "subtitle": "Iltimos, eksport qilish uchun fayl turini tanlang"
           },
           "import_new_rooms": {
             "title": "Xonalarni import qilish",
-            "subtitle": "Iltimos, xonalar bilan faylni yuklang",
-            "view_example": "Namuna faylini ko'rish"
+            "subtitle": "Iltimos, xonalaringiz bilan faylni yuklang",
+            "view_example": "Namuna faylni ko'rish"
           }
         },
         "confirm": {
           "title": "Xonalarni o'chirishni tasdiqlang",
-          "subtitle": "'Tasdiqlash' tugmasini bosish orqali tanlangan xonalarni qayta tiklash imkoniyatisiz o'chirishni tasdiqlaysiz"
+          "subtitle": "'Tasdiqlash' tugmasini bosish orqali siz tanlangan xonalarni qayta tiklash imkoniyatisiz o'chirilishini tasdiqlaysiz"
         }
       },
       "room_type": {
         "title": "Xona turlari",
-        "subtitle": "Xona turlari ro'yxatini boshqarish",
+        "subtitle": "Xona turlari ro'yxatini boshqaring",
         "add_room_type": "Xona turini qo'shish",
         "name": "Nomi",
         "dashboard": "Boshqaruv paneli",
         "active": "Faol",
         "modals": {
           "add_new_room_type": {
-            "title": "Xona turi qo'shish",
-            "subtitle": "Yangi kontroller turini hozir qo'shing",
+            "title": "Xona turini qo'shish",
+            "subtitle": "Yangi boshqaruvchi turini qo'shing",
             "name_placeholder": "Yangi nom kiriting",
             "choose_dashboard": "Boshqaruv panelini tanlang"
           },
           "edit_new_room_type": {
             "title": "Xona turini tahrirlash",
-            "subtitle": "Yangi kontroller turini hozir tahrirlang",
+            "subtitle": "Yangi boshqaruvchi turini tahrirlang",
             "save": "Xona turini saqlash"
           }
         },
         "confirm": {
-          "title": "Xona turlarini o'chirishni tasdiqlang",
-          "subtitle": "'Tasdiqlash' tugmasini bosish orqali tanlangan xonalarni qayta tiklash imkoniyatisiz o'chirishni tasdiqlaysiz"
+          "title": "Xona turini o'chirishni tasdiqlang",
+          "subtitle": "'Tasdiqlash' tugmasini bosish orqali siz tanlangan xona turlarini qayta tiklash imkoniyatisiz o'chirilishini tasdiqlaysiz"
         }
       },
       "dashboard": {
-        "subtitle": "Boshqaruv paneli ro'yxatini tahrirlash",
+        "subtitle": "Boshqaruv panelingiz ro'yxatini tahrirlang",
         "modal": {
-          "add_title": "Yangi boshqaruv panelini qo'shish",
+          "add_title": "Yangi boshqaruv paneli qo'shish",
           "add_subtitle": "Mehmonxonangizga yangi xona qo'shing",
-          "add_button": "Boshqaruv panelini qo'shish",
+          "add_button": "Boshqaruv paneli qo'shish",
           "edit_title": "Yangi boshqaruv panelini tahrirlash",
-          "edit_subtitle": "Mehmonxonangizdagi yangi xonani tahrirlash",
+          "edit_subtitle": "Mehmonxonangizda yangi xonani tahrirlang",
           "edit_button": "Boshqaruv panelini saqlash"
+        }
+      },
+      "users": {
+        "title": "Foydalanuvchilar",
+        "subtitle": "Foydalanuvchilaringizni kuzatib boring va boshqaring",
+        "button": "Foydalanuvchi qo'shish",
+        "button_save": "Foydalanuvchini saqlash",
+        "button_role": "Rol qo'shish",
+        "tabs": {
+          "all": "Barcha foydalanuvchilar",
+          "admin": "Admin",
+          "manager": "Menejer"
+        },
+        "modal": {
+          "add_user_title": "Yangi foydalanuvchi qo'shish",
+          "add_user_subtitle": "Tizimga yangi foydalanuvchi qo'shing",
+          "edit_user_title": "Foydalanuvchini tahrirlash",
+          "edit_user_subtitle": "Tizimdagi foydalanuvchini tahrirlash",
+          "add_role_title": "Yangi rol qo'shish",
+          "add_role_subtitle": "Yangi rol yarating",
+          "add_role_button": "Yangi rol qo'shish",
+          "contacts_from": "Yoki kontaktlarni quyidagidan qo'shing",
+          "send_invite": "Taklif yuborish",
+          "choose_settings_permissions": "Sozlamalar ruxsatlarini tanlang"
+        },
+        "form": {
+          "email_address": "Elektron pochta manzili",
+          "email_address_placeholder": "Elektron pochta manzilini kiriting",
+          "active_user": "Faol foydalanuvchi",
+          "user_role": "Foydalanuvchi roli",
+          "user_role_name": "Foydalanuvchi roli nomi",
+          "user_role_name_placeholder": "Yangi rol nomini kiriting",
+          "phone": "Telefon",
+          "name": "Ism",
+          "first_name": "Ism",
+          "last_name": "Familiya",
+          "card_enc_id": "Karta shifr. ID",
+          "type": "Turi",
+          "status": "Holat",
+          "name_placeholder": "Ismni kiriting",
+          "password": "Parol",
+          "password_placeholder": "Parolni kiriting",
+          "generate": "Yaratish",
+          "sent_new_password": "Foydalanuvchiga yangi parol yuborildi",
+          "activation_method": "Faollashtirish usuli",
+          "display_activation_link": "Faollashtirish havolasini ko'rsatish",
+          "send_activation_mail": "Faollashtirish xatini yuborish"
+        },
+        "confirm": {
+          "title": "Foydalanuvchini o'chirishni tasdiqlang",
+          "subtitle": "'Tasdiqlash' tugmasini bosish orqali siz tanlangan foydalanuvchini qayta tiklash imkoniyatisiz o'chirilishini tasdiqlaysiz"
+        }
+      },
+      "roles": {
+        "title": "Rollar",
+        "subtitle": "Kirish darajalarini va rollarni sozlang",
+        "button": "Yangi rol qo'shish",
+        "button_save": "Rolni saqlash",
+        "table": {
+          "name": "Nomi",
+          "access": "Kirish"
+        },
+        "modal": {
+          "add_role_title": "Yangi rol qo'shish",
+          "add_role_subtitle": "Yangi rol yarating",
+          "edit_role_title": "Rolni tahrirlash",
+          "edit_role_subtitle": "Tizimdagi rolni tahrirlash",
+          "contacts_from": "Yoki kontaktlarni quyidagidan qo'shing",
+          "send_invite": "Taklif yuborish",
+          "choose_settings_permissions": "Sozlamalar ruxsatlarini tanlang"
+        },
+        "form": {
+          "name": "Rol nomi",
+          "name_placeholder": "Yangi rol nomini kiriting",
+          "choose_permissions": "Ruxsatlarni tanlang",
+          "view": "Ko'rish",
+          "edit": "Tahrirlash",
+          "delete": "O'chirish",
+          "update": "Yangilash",
+          "checked_all": "Hammasini belgilash"
+        },
+        "confirm": {
+          "title": "Rollarni o'chirishni tasdiqlang",
+          "subtitle": "'Tasdiqlash' tugmasini bosish orqali siz tanlangan rollarni o'chirishni tasdiqlaysiz"
         }
       }
     },
     "file_upload": {
       "click_to_upload": "Yuklash uchun bosing",
-      "or_drag_and_drop": "yoki sudrab olib keling",
-      "format": "format",
+      "or_drag_and_drop": "yoki sudrab tashlang",
+      "format": "formati",
       "selected_file": "Tanlangan fayl"
     },
     "table": {
       "error": "Xato",
-      "no_data_title": "Sizda ma'lumot yo'q",
-      "no_data_subtitle": "Ma'lumot topilmadi yoki hali ma'lumot qo'shmagansiz",
+      "no_data_title": "Ma'lumotlar yo'q",
+      "no_data_subtitle": "Ma'lumotlar topilmadi yoki siz hali ma'lumot qo'shmagansiz",
       "load_more": "Ko'proq yuklash"
     },
     "search": "Qidirish",
@@ -237,10 +328,11 @@
     "rooms": {
       "tabs": {
         "all": "Barcha xonalar",
-        "checked_in": "Ro'yxatdan o'tgan",
+        "checked_in": "Joylashgan",
         "occupied": "Band",
-        "do_not_disturb": "Bezovta qilmaslik",
-        "available": "Mavjud"
+        "do_not_disturb": "Bezovta qilmang",
+        "available": "Bo'sh",
+        "make_up_room": "Xonani tozalash"
       },
       "table": {
         "room_number": "Xona",
@@ -248,13 +340,19 @@
         "block": "Blok",
         "type": "Xona turi",
         "temp": "Harorat",
+        "device": "Qurilma",
+        "actions": "Harakatlar",
         "system_mode": "Tizim rejimi",
         "indicators": "Ko'rsatkichlar",
-        "status": "Holat"
+        "status": "Holat",
+        "delete_room": "Xonani o'chirish",
+        "edit_room": "Xonani tahrirlash",
+        "activate_cleaning": "Tozalashni faollashtirish",
+        "activate_dnd": "Bezovta qilmaslikni faollashtirish"
       },
-      "subtitle": "Xonalar ro'yxatini kuzatish va boshqarish",
-      "change_list": "Ro'yxatga o'tish",
-      "change_grid": "Panoga o'tish",
+      "subtitle": "Xonalar ro'yxatini kuzatib boring va boshqaring",
+      "change_list": "Ro'yxat ko'rinishiga o'tish",
+      "change_grid": "Jadval ko'rinishiga o'tish",
       "more_btn": "Ko'proq xonalar",
       "back_to_rooms": "Xonalarga qaytish"
     },
@@ -273,9 +371,9 @@
         "general": "Umumiy",
         "title": "Sarlavha",
         "title_placeholder": "Sarlavhani yozing",
-        "subtitle": "Taglavha",
-        "subtitle_placeholder": "Taglavhani yozing",
-        "datasource": "Ma'lumot manbasi",
+        "subtitle": "Qo'shimcha sarlavha",
+        "subtitle_placeholder": "Qo'shimcha sarlavhani yozing",
+        "datasource": "Ma'lumotlar manbasi",
         "room_temperature": "Xona harorati",
         "unit": "O'lchov birligi",
         "unit_placeholder": "O'lchov birligini yozing",
@@ -284,15 +382,15 @@
         "min_temperature": "Minimal harorat",
         "max_temperature": "Maksimal harorat",
         "color": "Rang",
-        "type": "Tur",
-        "settings_values": "Sozlamalar qiymatlari",
+        "type": "Turi",
+        "settings_values": "Qiymatlar sozlamalari",
         "tag": "Teg",
         "tag_placeholder": "Tegni yozing",
         "title_name": "Sarlavha nomi",
         "precision_level": "Aniqlik darajasi",
         "precision_placeholder": "Aniqlikni yozing",
         "delete": "O'chirish",
-        "copy": "Nusxa olish",
+        "copy": "Nusxalash",
         "add": "Qo'shish",
         "temperature_settings": "Harorat sozlamalari",
         "default_temperature": "Standart harorat",
@@ -301,32 +399,42 @@
         "power_level_name_placeholder": "Daraja nomini yozing",
         "value": "Qiymat",
         "additional_settings": "Qo'shimcha sozlamalar",
-        "master_off": "Asosiy o'chirish",
-        "fan_valve": "Ventilyator valfi",
-        "power_level_empty": "Quvvat darajasi nomi bu yerda bo'lishi kerak",
+        "master_off": "Umumiy o'chirish",
+        "fan_valve": "Ventilyator klapani",
+        "power_level_empty": "Bu yerda quvvat darajasi nomi bo'lishi kerak",
         "title_empty": "Bu yerda sarlavha bo'lishi kerak",
-        "subtitle_empty": "Bu yerda taglavha bo'lishi kerak"
+        "subtitle_empty": "Bu yerda qo'shimcha sarlavha bo'lishi kerak"
       }
     }
   },
   "confirm": {
-    "title": "Harakatni tasdiqlang",
+    "title": "Harakatingizni tasdiqlang",
     "button_cancel": "Bekor qilish",
     "button_confirm": "Tasdiqlash",
-    "delete_item": "Ushbu elementni o'chirishga ishonchingiz komilmi?"
+    "delete_item": "Haqiqatan ham bu elementni o'chirishni xohlaysizmi?"
   },
   "toast": {
-    "save_success": "Saqlash muvaffaqiyatli amalga oshirildi",
-    "unknown_error": "Noma'lum xato, qayta urinib ko'ring",
-    "authorization_success": "Avtorizatsiya muvaffaqiyatli amalga oshirildi",
-    "room_add_success": "Xona yaratish muvaffaqiyatli amalga oshirildi",
-    "room_edit_success": "Xonani tahrirlash muvaffaqiyatli amalga oshirildi",
-    "room_delete_success": "Xonani o'chirish muvaffaqiyatli amalga oshirildi",
-    "room_type_add_success": "Xona turini yaratish muvaffaqiyatli amalga oshirildi",
-    "room_type_edit_success": "Xona turini tahrirlash muvaffaqiyatli amalga oshirildi",
-    "room_type_delete_success": "Xona turini o'chirish muvaffaqiyatli amalga oshirildi",
-    "dashboard_add_success": "Boshqaruv paneli yaratish muvaffaqiyatli amalga oshirildi",
-    "dashboard_edit_success": "Boshqaruv paneli tahrirlash muvaffaqiyatli amalga oshirildi",
-    "dashboard_delete_success": "Boshqaruv paneli o'chirish muvaffaqiyatli amalga oshirildi"
+    "save_success": "Muvaffaqiyatli saqlandi",
+    "unknown_error": "Noma'lum xato, qaytadan urinib ko'ring",
+    "authorization_success": "Avtorizatsiya muvaffaqiyatli o'tdi",
+    "room_add_success": "Xona muvaffaqiyatli yaratildi",
+    "room_edit_success": "Xona muvaffaqiyatli tahrirlandi",
+    "room_delete_success": "Xona muvaffaqiyatli o'chirildi",
+    "room_type_add_success": "Xona turi muvaffaqiyatli yaratildi",
+    "room_type_edit_success": "Xona turi muvaffaqiyatli tahrirlandi",
+    "room_type_delete_success": "Xona turi muvaffaqiyatli o'chirildi",
+    "role_add_success": "Rol muvaffaqiyatli yaratildi",
+    "role_edit_success": "Rol muvaffaqiyatli tahrirlandi",
+    "role_delete_success": "Rol muvaffaqiyatli o'chirildi",
+    "dashboard_add_success": "Boshqaruv paneli muvaffaqiyatli yaratildi",
+    "dashboard_edit_success": "Boshqaruv paneli muvaffaqiyatli tahrirlandi",
+    "dashboard_delete_success": "Boshqaruv paneli muvaffaqiyatli o'chirildi",
+    "user_add_success": "Foydalanuvchi muvaffaqiyatli yaratildi",
+    "user_edit_success": "Foydalanuvchi muvaffaqiyatli tahrirlandi",
+    "user_delete_success": "Foydalanuvchi muvaffaqiyatli o'chirildi",
+    "user_wait_activation_link": "Kuting, foydalanuvchini faollashtirish havolasi yaratilmoqda",
+    "copy_link": "Havolani nusxalash",
+    "password_updated__success": "Parolingiz muvaffaqiyatli yangilandi",
+    "request_processed_success": "So'rov muvaffaqiyatli qayta ishlandi"
   }
 }

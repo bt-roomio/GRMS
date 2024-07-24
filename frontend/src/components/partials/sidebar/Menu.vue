@@ -27,7 +27,7 @@ const menu = computed<Item[]>(() => [
     children: []
   },
   {
-    icon: 'user-square',
+    icon: 'key',
     name: t('dashboard.menu.rooms'),
     to: 'rooms',
     children: []
@@ -43,27 +43,32 @@ const menu = computed<Item[]>(() => [
     name: t('dashboard.menu.configuration'),
     children: [
       {
-        icon: 'code-browser',
+        icon: 'dashboard',
         to: 'configuration-dashboard',
         name: t('dashboard.menu.dashboard')
       },
       {
-        icon: 'code-browser',
+        icon: 'user-square',
         to: 'configuration-users',
         name: t('dashboard.menu.users')
       },
       {
-        icon: 'code-browser',
+        icon: 'user-check',
+        to: 'configuration-roles',
+        name: t('dashboard.menu.role')
+      },
+      {
+        icon: 'key',
         to: 'configuration-rooms',
         name: t('dashboard.menu.configuration_rooms')
       },
       {
-        icon: 'code-browser',
+        icon: 'type-square',
         to: 'configuration-room-types',
         name: t('dashboard.menu.room_types')
       },
       {
-        icon: 'code-browser',
+        icon: 'cpu-chip',
         to: 'configuration-controllers',
         name: t('dashboard.menu.controllers')
       },

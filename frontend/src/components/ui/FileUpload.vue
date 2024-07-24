@@ -1,6 +1,5 @@
 <template>
   <div
-      v-bind:class="$attrs.class"
       class="file-upload"
       @drop.prevent="handleDrop"
       @dragover.prevent

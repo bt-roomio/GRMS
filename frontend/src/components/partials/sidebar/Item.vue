@@ -15,7 +15,7 @@
       </li>
       <li class="sidebar__menu-item" v-for="child in item.children" :key="child.name">
         <RouterLink :to="{name: child.to}" class="item-content">
-          <UiIcon class="item-icon" name="dashboard" filled/>
+          <UiIcon class="item-icon" :name="child.icon" filled/>
           <div class="item-text">{{ child.name }}</div>
         </RouterLink>
       </li>

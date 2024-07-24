@@ -1,6 +1,21 @@
 .rooms{
   &__content{
     @apply relative;
+    .ui-table{
+      @apply table-auto;
+      th{
+        @apply first:pr-0 first:w-10;
+        &:nth-child(2){
+          @apply pl-3;
+        }
+      }
+      td{
+        @apply first:pr-0 first:w-10;
+        &:nth-child(2){
+          @apply pl-3;
+        }
+      }
+    }
   }
   &__actions{
     @apply flex gap-6 justify-between items-center;

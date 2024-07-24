@@ -10,37 +10,77 @@
           :search-types="searchTypes"
           :headers="headers"
           :data="rooms?.results"
-          :sort="['room_number','status']"
+          :sort="['room_number','status', 'temp']"
           @sorted="storeConfigurationRooms.sortList"
           @more="moreHandle"
           :is-pagination="rooms.count > rooms.results.length"
           @click="toPage"
           pointer
       >
+        <template #header-select>
+          <CheckAll v-model="rooms.results" />
+        </template>
+        <template #select="{entity}">
+          <UiCheckbox @click.stop v-model="entity.select"/>
+        </template>
         <template #room_number="{entity}">
-          <UiBadge>{{entity.room_number}}</UiBadge>
+          <p class="font-bold">{{(entity as IRoom).room_number}}</p>
         </template>
         <template #temp="{entity}">
-          <span class="font-semibold">{{entity.temp || 0 + '°C'}}</span>
+          <UiBadge class="text" :class="{'error': ((entity as IRoom).temp || 0) < 17 || ((entity as IRoom).temp || 0) > 30}">{{(entity as IRoom).temp || 0 + '°C'}}</UiBadge>
         </template>
-        <template #system_mode="{entity}">
-          {{entity.system_mode || 'Off'}}
-        </template>
-        <template #indicators="{entity}">
-          <div class="rooms-card__actions">
-            <UiSmallButton :class="entity.state === 'MakeUpRoom' ? 'active' : 'inactive'">
-              <UiIcon name="brush" filled/>
-            </UiSmallButton>
-            <UiSmallButton :class="entity.status === 'OFF' ? 'active' : 'inactive'">
-              <UiIcon name="wifi" filled/>
-            </UiSmallButton>
-            <UiSmallButton class="inactive">
-              <UiIcon name="alert-circle" filled/>
-            </UiSmallButton>
+        <template #header-cln="{entity}">
+          <div class="flex items-center gap-1">
+            {{entity}}
+            <UiIcon v-tooltip="'This indicator reflects the current status of room cleaning'" class="cursor-pointer" name="help-circle" filled/>
           </div>
         </template>
-        <template #status="{entity}">
-          <UiStatus :status="entity.state as string" />
+        <template #header-dnd="{entity}">
+          <div class="flex items-center gap-1">
+            {{entity}}
+            <UiIcon v-tooltip="'This indicator reflects the current status of room cleaning'" class="cursor-pointer" name="help-circle" filled/>
+          </div>
+        </template>
+        <template #header-device="{entity}">
+          <div class="flex items-center gap-1">
+            {{entity}}
+            <UiIcon v-tooltip="'This indicator reflects the current status of room cleaning'" class="cursor-pointer" name="help-circle" filled/>
+          </div>
+        </template>
+        <template #cln>
+          <UiSmallButton class="inactive">
+            <UiIcon name="check" filled/>
+          </UiSmallButton>
+        </template>
+        <template #dnd>
+          <UiSmallButton class="warning">
+            <UiIcon name="alarm-clock-off" filled/>
+          </UiSmallButton>
+        </template>
+        <template #device="{entity}">
+          <UiSmallButton :class="{active: entity.status === 'OFF'}">
+            <UiIcon name="alert-circle" filled/>
+          </UiSmallButton>
+        </template>
+        <template #actions>
+          <div class="ui-table__actions">
+            <UiDropdown @click.stop>
+              <template #trigger>
+                <div class="flex gap-2 items-center text-primary-600 dark:text-white">
+                  {{ $t('dashboard.rooms.table.actions') }}
+                  <UiIcon class="stroke-primary-600 dark:stroke-white" name="chevron-down" filled />
+                </div>
+              </template>
+              <template #content>
+                <div class="dropdown__menu">
+                  <div>{{ $t('dashboard.rooms.table.delete_room') }}</div>
+                  <div>{{ $t('dashboard.rooms.table.edit_room') }}</div>
+                  <div>{{ $t('dashboard.rooms.table.activate_cleaning') }}</div>
+                  <div>{{ $t('dashboard.rooms.table.activate_dnd') }}</div>
+                </div>
+              </template>
+            </UiDropdown>
+          </div>
         </template>
       </UiTable>
     </template>
@@ -66,18 +106,20 @@
 import UiSearch from "@components/ui/Search.vue";
 import RoomsList from "@components/pages/dashboard/rooms/RoomsList.vue";
 import UiTable from "@components/ui/Table.vue";
-import UiStatus from "@components/ui/Status.vue";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 import {storeToRefs} from "pinia";
 import {computed} from "vue";
 import {useI18n} from "vue-i18n";
 import UiSmallButton from "@components/ui/ButtonSmall.vue";
 import UiIcon from "@components/ui/Icon.vue";
-import UiBadge from "@components/ui/Badge.vue";
 import UiLoader from "@components/ui/Loader.vue";
 import {useRouter} from "vue-router";
 import UiButton from "@components/ui/Button.vue";
-defineProps(['isTable', 'isSearchOpen'])
+import CheckAll from "@components/ui/CheckAll.vue";
+import UiCheckbox from "@components/ui/Checkbox.vue";
+import UiBadge from "@components/ui/Badge.vue";
+import UiDropdown from "@components/ui/Dropdown.vue";
+defineProps(['isTable', 'isSearchOpen', 'headers'])
 const {t} = useI18n()
 const {push} = useRouter()
 const storeConfigurationRooms = useConfigurationRoomsStore()
@@ -126,20 +168,23 @@ const searchTypes = computed(() => [
   },
 ])
 
-const headers = computed<IConfigurationRoomsHead>(() => ({
-  room_number: t('dashboard.rooms.table.room_number'),
-  floor: t('dashboard.rooms.table.floor'),
-  block: t('dashboard.rooms.table.block'),
-  type: t('dashboard.rooms.table.type'),
-  temp: t('dashboard.rooms.table.temp'),
-  system_mode: t('dashboard.rooms.table.system_mode'),
-  indicators: t('dashboard.rooms.table.indicators'),
-  status: t('dashboard.rooms.table.status'),
-}))
 const moreHandle = async () => {
   await storeConfigurationRooms.loadMore()
 }
 const toPage = async (entity: any) => {
   await push({name: 'room-inner', params: {id: entity.id}})
+}
+
+interface IRoom {
+  id?: any
+  block: any
+  devices?: any
+  status?: any
+  state?: any
+  floor: any
+  room_number: any
+  temp?: any
+  system_mode?: any
+  type: IConfigurationRoomTypes | any
 }
 </script>

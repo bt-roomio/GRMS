@@ -15,23 +15,17 @@
       @apply bg-primary-600 dark:bg-gray-600;
     }
     .item-submenu{
-      @apply fixed left-20 top-0 w-60 mt-0 h-full bg-white p-4 border-r;
-      .item-text{
-        @apply block text-black;
-      }
-      .ui-icon{
-        @apply opacity-100;
-      }
+      @apply fixed left-20 top-0 w-60 mt-0 h-full bg-white dark:bg-gray-500 p-4 border-r;
       .sidebar__menu-head{
-        @apply block
+        @apply block text-primary-600 dark:text-gray-200;
       }
       .item-content{
         @apply bg-transparent dark:bg-transparent;
         .item-icon{
-          @apply stroke-primary-600 relative;
+          @apply stroke-primary-600 relative dark:stroke-gray-200 opacity-100;
         }
         .item-text{
-          @apply text-primary-600;
+          @apply block text-primary-600 dark:text-gray-200;
         }
         &:hover{
           @apply bg-primary-600 dark:bg-gray-400;

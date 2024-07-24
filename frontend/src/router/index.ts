@@ -25,6 +25,7 @@ import Room from "@/pages/dashboard/rooms/Room.vue";
 import DashboardInner from "@/pages/dashboard/configuration/DashboardInner.vue";
 import NewPassword from "@/pages/authorization/NewPassword.vue";
 import Default from "@/layouts/Default.vue";
+import Roles from "@/pages/dashboard/configuration/Roles.vue";
 
 
 const router = createRouter({
@@ -81,6 +82,11 @@ const router = createRouter({
                             path: 'users',
                             name: 'configuration-users',
                             component: Users
+                        },
+                        {
+                            path: 'roles',
+                            name: 'configuration-roles',
+                            component: Roles
                         },
                         {
                             path: 'rooms',

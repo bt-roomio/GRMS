@@ -17,14 +17,21 @@
           :errors="validation?.$dirty ? validation?.$silentErrors : []"
           :disabled="editID"
       />
-<!--        <div class="ui-multiselect">-->
-<!--          <label>{{ $t('dashboard.configuration.users.form.user_role') }}</label>-->
-<!--          <Multiselect-->
-<!--              v-model="state.role"-->
-<!--              :options="['Admin', 'Editor', 'User']"-->
-<!--              :canClear="false"-->
-<!--          />-->
-<!--        </div>-->
+        <div class="ui-multiselect">
+          <label>{{ $t('dashboard.configuration.users.form.user_role') }}</label>
+          <Multiselect
+              mode="tags"
+              v-model="state.groups"
+              :options="roles"
+              label="name"
+              value-prop="id"
+              :canClear="false"
+              :canDeselect="true"
+              :close-on-select="false"
+              :close-on-deselect="false"
+              :placeholder="$t('dashboard.configuration.users.form.user_role_name_placeholder')"
+          />
+        </div>
       <UiInput
           name="phone"
           :label="$t('dashboard.configuration.users.form.phone')"
@@ -56,10 +63,10 @@
         />
       </div>
       <div v-if="editID">
-        <h3 class="mb-2">Action with user</h3>
-        <p @click="resendHandle" class="hover:text-primary-700 cursor-pointer mb-2 font-medium">Resend activation link</p>
-        <p @click="displayHandle" class="hover:text-primary-700 cursor-pointer mb-2 font-medium">Demonstrate activation link</p>
-        <p class="hover:text-primary-700 cursor-pointer font-medium">Delete user</p>
+        <h3 class="mb-2">{{$t('dashboard.configuration.users.modal.action_with_user')}}</h3>
+        <p @click="resendHandle" class="hover:text-primary-700 cursor-pointer mb-2 font-medium">{{$t('dashboard.configuration.users.modal.resend_activation_link')}}</p>
+        <p @click="displayHandle" class="hover:text-primary-700 cursor-pointer mb-2 font-medium">{{$t('dashboard.configuration.users.modal.demonstrate_activation_link')}}</p>
+        <p class="hover:text-primary-700 cursor-pointer font-medium">{{$t('dashboard.configuration.users.modal.delete_user')}}</p>
       </div>
     </form>
     <template #footer="{close}">
@@ -88,9 +95,12 @@ import {storeToRefs} from "pinia";
 import {toast} from "vue3-toastify";
 import useApiFetch from "@/composables/useApiFetch.ts";
 import ModalCopyBox from "@components/pages/dashboard/configuration/users/ModalCopyBox.vue";
+import {useConfigurationRolesStore} from "@store/dashboard/configuration/roles.ts";
 const {t} = useI18n()
 const add_user = ref<IModal | null>(null)
 const copyBox = ref<IModal | null>(null)
+const storeRoles = useConfigurationRolesStore()
+const {roles} = storeToRefs(storeRoles)
 const storeUser = useUserStore()
 const {state, validation, editID} = storeToRefs(storeUser)
 const invite = ref('display')

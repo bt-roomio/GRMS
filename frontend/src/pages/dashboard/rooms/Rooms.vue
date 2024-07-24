@@ -13,11 +13,13 @@
         <Tabs :list="tabList"/>
         <RoomsActions
             v-model:search="isSearchOpen"
+            :filters="sortedHeaders ? sortedHeaders : headers"
             v-model:isTable="isTable"
             ref="actions"
+            @theadSort="theadSortHandle"
         />
       </div>
-      <RoomContent :is-search-open="isSearchOpen" :is-table="isTable"/>
+      <RoomContent :is-search-open="isSearchOpen" :headers="sortedHeaders ? sortedHeaders : headers" :is-table="isTable"/>
     </div>
   </div>
 </template>
@@ -33,9 +35,17 @@ import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.t
 import RoomContent from "@components/pages/dashboard/rooms/RoomContent.vue";
 import {storeToRefs} from "pinia";
 import router from "@/router";
+import {useUserStore} from "@store/dashboard/user";
 const isSearchOpen = ref(false)
-const isTable = ref(false)
+const isTable = ref(true)
 const {t} = useI18n()
+const storeUser = useUserStore()
+const {profile} = storeToRefs(storeUser)
+const profileIsTable = computed(() =>
+    (typeof profile.value?.additional_info?.[router.currentRoute.value.path]?.isTable === 'boolean') ?
+        profile.value?.additional_info?.[router.currentRoute.value.path]?.isTable :
+        true
+)
 const storeConfigurationRooms = useConfigurationRoomsStore()
 const {sortedData, searchValue} = storeToRefs(storeConfigurationRooms)
 const tabList = computed(() => [
@@ -64,12 +74,16 @@ const tabList = computed(() => [
     to: {name: 'room-list', query: { state: 'MakeUpRoom' }},
   }
 ])
+watch(profileIsTable, value => {
+    isTable.value = value
+})
 watch(isSearchOpen, value => {
   if (!value) {
     searchValue.value = ''
   }
 })
 onMounted(async () => {
+  isTable.value = profileIsTable.value
   sortedData.value = {sort_by: ['block', 'floor']}
   await storeConfigurationRooms.getList({sort_by: ['block', 'floor'], ...router.currentRoute.value.query})
 })
@@ -79,4 +93,45 @@ onBeforeRouteUpdate(async (to) => {
 onUnmounted(() => {
   storeConfigurationRooms.$reset()
 })
+const sortedHeaders = computed(() => {
+  const columns = profile.value?.additional_info?.[router.currentRoute.value.path]?.columnFilters || null
+  if (columns) {
+    const importantKeys = ['select', 'actions']
+    const results: any = {}
+
+    for (const headersKey in headers.value) {
+      if ([...columns, ...importantKeys].includes(headersKey as string)){
+        results[headersKey] = headers.value[headersKey]
+      }
+    }
+    return results
+  } else {
+    return null
+  }
+});
+
+const headers = computed<IConfigurationRoomsHead>(() => ({
+  select: false,
+  room_number: t('dashboard.rooms.table.room_number'),
+  floor: t('dashboard.rooms.table.floor'),
+  block: t('dashboard.rooms.table.block'),
+  type: t('dashboard.rooms.table.type'),
+  temp: t('dashboard.rooms.table.temp'),
+  cln: 'MUR',
+  dnd: 'DND',
+  device: t('dashboard.rooms.table.device'),
+  actions: '',
+}))
+const theadSortHandle = (array: string[]) => {
+  let results: any = {}
+  results.select = true
+  for (const headersKey in headers.value) {
+    if (array.includes(headers.value[headersKey] as string)){
+      results[headersKey] = headers.value[headersKey]
+    }
+  }
+  results.actions = ''
+  const key = Object.keys(results)
+  storeUser.saveUserConfiguration(router.currentRoute.value.path, { columnFilters: key });
+}
 </script>

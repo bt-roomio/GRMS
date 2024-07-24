@@ -28,7 +28,7 @@ export const useUserStore = defineStore('user', () => {
         first_name: '',
         last_name: '',
         password: '',
-        groups: []
+        groups: [] as number[]
     })
     const rules = computed(() => ({
         email: {
@@ -92,6 +92,7 @@ export const useUserStore = defineStore('user', () => {
             state.value.last_name = data.last_name || ''
             state.value.email = data.email || ''
             state.value.phone = data.phone || ''
+            state.value.groups = data.groups || []
         }
         user.value = data
     }

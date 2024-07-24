@@ -12,9 +12,15 @@
     }
   }
   &__head-period{
-    @apply mr-auto;
+    @apply mr-auto ;
+    .ui-button{
+      @apply max-lg:text-[0] max-lg:gap-0;
+    }
   }
   &__head-settings{
     @apply flex gap-4;
+    .ui-button{
+      @apply max-lg:text-[0] max-lg:gap-0;
+    }
   }
 }

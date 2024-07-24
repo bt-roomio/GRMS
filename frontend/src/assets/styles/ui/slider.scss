@@ -21,7 +21,7 @@
   @apply h-full;
 }
 .ui-slider{
-  @apply table-row border-b-[16px] last:border-b-0 border-white ;
+  @apply table-row border-b-[16px] last:border-b-0 border-white dark:border-gray-600;
   &__label{
     @apply content-center table-cell;
     span{

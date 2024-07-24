@@ -1,4 +1,4 @@
-type IConfigurationRoom = {
+interface IConfigurationRoom {
     id?: any
     block: any
     devices?: any
@@ -17,6 +17,17 @@ interface IConfigurationRoomTypes {
     check_out_value?: string | null
     dashboard?: {[key: string]: unknown} | null | any
 }
+interface IConfigurationRole {
+    id?: string
+    name: string
+    permissions: any[]
+}
+interface IConfigurationPermissions {
+    id: number
+    name: string
+    codename: string
+    content_type: number
+}
 interface IConfigurationDashboard {
     id?: string
     title: string | null
@@ -27,6 +38,10 @@ interface IConfigurationDashboard {
     external_id?: string | null
 }
 interface IConfigurationRoomTypesData {
+    select?: boolean,
+    [key: string]: any,
+}
+interface IConfigurationSelectData {
     select?: boolean,
     [key: string]: any,
 }

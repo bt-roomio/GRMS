@@ -1,7 +1,13 @@
 .ui_badge{
-  @apply flex bg-gray-100 justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2  text-gray-700;
+  @apply flex bg-gray-100 justify-center items-center gap-1.5 rounded-2xl w-max py-0.5 px-2 text-gray-700;
   .ui-icon{
     @apply w-4 h-4 stroke-[#606271];
+  }
+  &.text {
+    @apply bg-transparent border border-gray-200 text-primary-600;
+    &.error {
+      @apply border-red-500 text-error-500;
+    }
   }
   &.off{
     @apply bg-error-100 text-error-500;

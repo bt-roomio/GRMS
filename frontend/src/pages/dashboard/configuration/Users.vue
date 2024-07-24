@@ -70,6 +70,8 @@ import ModalAddUser from "@components/pages/dashboard/configuration/users/ModalA
 import ConfigurationUsersActions from "@components/pages/dashboard/configuration/users/Actions.vue";
 import {onBeforeRouteUpdate} from "vue-router";
 import router from "@/router";
+import {useConfigurationRolesStore} from "@store/dashboard/configuration/roles.ts";
+const storeRoles = useConfigurationRolesStore()
 const storeUser = useUserStore()
 const {users, editID, searchType, searchValue, loading, error, size, user, sortedData, profile} = storeToRefs(storeUser)
 const isSearchOpen = ref(false)
@@ -152,7 +154,10 @@ onBeforeRouteUpdate(async (to) => {
   await storeUser.getUsers(to.query)
 })
 onMounted(async () => {
-  await storeUser.getUsers(router.currentRoute.value.query)
+  await Promise.all([
+    storeUser.getUsers(router.currentRoute.value.query),
+    storeRoles.getList({})
+  ])
 })
 onUnmounted(() => {
   size.value = 10
