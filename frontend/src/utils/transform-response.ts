@@ -8,10 +8,13 @@ const addFieldSelect = (data: string) => {
 }
 const addFieldSelectArray = (data: string) => {
     let response = JSON.parse(data)
-    response = response?.map((el: any) => {
-        el.select = false
-        return el
-    })
-    return response
+    if (Array.isArray(response)) {
+        response = response?.map((el: any) => {
+            el.select = false
+            return el
+        })
+        return response
+    }
+    return []
 }
 export {addFieldSelect, addFieldSelectArray}

@@ -39,9 +39,8 @@ export const useConfigurationRolesStore = defineStore('configuration-roles', () 
                 params: {
                     ...params
                 },
-                transformResponse: [(data) => addFieldSelectArray(data)]
+                transformResponse: [(data) => addFieldSelectArray(data || [])]
             })
-
             roles.value = data
         }catch (e: any) {
             if (e.response?.status){

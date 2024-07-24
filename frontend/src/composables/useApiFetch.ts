@@ -61,7 +61,6 @@ useApiFetch.interceptors.response.use(
         return response;
     },
     async (error) => {
-
         const { status } = error.response || {};
         const config = error.config as CustomAxiosRequestConfig;
         if (config?.metadata?.timer) {
@@ -110,15 +109,14 @@ useApiFetch.interceptors.response.use(
             toast.remove(config.metadata?.toast as string);
             toast.error(error.message);
         }
-        if (typeof error.response.data === 'object'){
+        if (typeof error.response?.data === 'object'){
             for (const eKey in error.response.data) {
                 toast.error(error.response.data[eKey]);
             }
         }else {
-            toast.remove(config.metadata?.toast as string);
             toast.error(error.response.statusText);
         }
-
+        toast.remove(config.metadata?.toast as string);
         throw error;
     }
 );
