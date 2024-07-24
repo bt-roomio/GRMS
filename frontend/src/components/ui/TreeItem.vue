@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="  flex justify-between" :class="{'border p-3 rounded-lg mb-3': item.children?.length}">
-      <UiCheckbox v-model="item.checked" @change="toggle(item.checked)">{{ item.label }} {{item.id}}</UiCheckbox>
+      <UiCheckbox v-model="item.checked" @change="toggle(item.checked)">{{ item.label }}</UiCheckbox>
       <UiIcon class="stroke-primary-600 w-12 h-12 -m-3 p-3.5" :class="{'-rotate-90 border-t': item.collapsed, 'border-l': !item.collapsed}" @click="toggleCollapse" v-if="item.children" style="cursor: pointer;" name="chevron-down" filled />
     </div>
     <div v-if="item.children && !item.collapsed" class="grid grid-cols-2 bg-gray-50 border p-3 rounded-lg gap-3 mb-3">
