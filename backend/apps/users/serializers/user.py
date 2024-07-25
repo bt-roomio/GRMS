@@ -3,6 +3,7 @@ from django.contrib.auth.models import Group
 from drf_yasg import openapi
 from rest_framework import serializers
 from users.models import User
+from users.serializers.group import GroupSimpleSerializer
 
 
 class AdditionalInfoField(serializers.JSONField):
@@ -24,12 +25,6 @@ class UserSerializer(serializers.ModelSerializer):
     groups = serializers.PrimaryKeyRelatedField(many=True, queryset=Group.objects.all())
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        for field in self.context.get("excluded_fields", []):
-            data.pop(field, None)
-        return data
-
     def create(self, validated_data):
         groups_data = validated_data.pop("groups")
         user = User.objects.create(**validated_data)
@@ -48,6 +43,29 @@ class UserSerializer(serializers.ModelSerializer):
             "created_at",
             "tenant",
             "groups",
+            "is_active",
+        )
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["groups"] = GroupSimpleSerializer(instance.groups, many=True).data
+        return data
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "additional_info",
+            "phone",
+            "created_at",
+            "tenant",
+            "groups",
+            "is_active",
         )
 
 

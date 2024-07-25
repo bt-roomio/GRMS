@@ -8,6 +8,19 @@ class PermissionsSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "codename", "content_type")
 
 
+class GroupSimpleSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["permissions"] = (
+            PermissionsSerializer(instance.permissions, many=True).data if instance.permissions else []
+        )
+        return data
+
+    class Meta:
+        model = Group
+        fields = ("id", "name", "permissions")
+
+
 class GroupSerializer(serializers.ModelSerializer):
     permissions = serializers.PrimaryKeyRelatedField(queryset=Permission.objects.all(), many=True)
 

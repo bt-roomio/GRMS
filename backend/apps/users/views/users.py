@@ -6,15 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.models import User
-from users.serializers.user import UserParams, UserSerializer
+from users.serializers.user import UserParams, UserSerializer, UserDetailSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
-
-
-def excluded_fields(user: User):
-    fields = user.additional_info and user.additional_info.get("excluded_fields")
-    if isinstance(fields, list):
-        return fields
-    return []
 
 
 class UserListView(APIView):
@@ -28,7 +21,7 @@ class UserListView(APIView):
             search_value=params.get("search_value"),
             sort_by=params.get("sort_by"),
         )
-        serializer = UserSerializer(queryset, many=True, context={"excluded_fields": excluded_fields(request.user)})
+        serializer = UserSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
@@ -50,11 +43,12 @@ class UserDetailView(APIView):
     @swagger_auto_schema(responses=UserDetailSwagger)
     @check_for_tenant
     def get(self, request, pk):
+        queryset = User.objects.prefetch_related("groups", "groups__permissions")
         if "SYS_ADMIN" in [request.user.groups.all()]:
-            instance = get_object_or_404(User, id=pk)
+            instance = get_object_or_404(queryset, id=pk)
         else:
-            instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
-        serializer = UserSerializer(instance)
+            instance = get_object_or_404(queryset, id=pk, tenant_id=request.user.tenant_id)
+        serializer = UserDetailSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=UserDetailSwagger, request_body=UserSerializer)
