@@ -35,14 +35,9 @@ class GroupSerializer(serializers.ModelSerializer):
         return group
 
     def update(self, instance, validated_data):
-        permissions = validated_data.pop("permissions")
-        instance.name = validated_data.get("name", instance.name)
-        instance.save()
-        instance.permissions.clear()
-        for permission in permissions:
-            queryset = Permission.objects.get(id=permission.id)
-            instance.permissions.add(queryset)
-        return instance
+        user = self.context.get("request").user
+        user.groups.add(instance)
+        return super().update(instance, validated_data)
 
     class Meta:
         model = Group

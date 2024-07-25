@@ -36,11 +36,11 @@ class IsGroupUser(BasePermission):
 
 
 class IsSysAdmin(IsGroupUser):
-    groups = "SYS_ADMIN"
+    groups = ["SYS_ADMIN"]
 
 
 class IsTenantAdmin(IsGroupUser):
-    groups = "TENANT_ADMIN"
+    groups = ["TENANT_ADMIN"]
 
 
 class IsTenantAndSysAdmin(IsGroupUser):
