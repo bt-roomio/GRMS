@@ -1,10 +1,11 @@
-from core.utils.pagination import pagination
-from core.utils.permission import IsTenantAndSysAdmin, check_for_tenant
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from core.utils.pagination import pagination
+from core.utils.permission import IsTenantAndSysAdmin
 from users.models import User
 from users.serializers.user import UserParams, UserSerializer, UserDetailSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
@@ -12,7 +13,6 @@ from users.swagger.users import UserDetailSwagger, UserSwagger
 
 class UserListView(APIView):
     @swagger_auto_schema(responses=UserSwagger, query_serializer=UserParams)
-    @check_for_tenant
     def get(self, request):
         params = UserParams.check(request.GET)
         queryset = User.objects.list(
@@ -26,7 +26,6 @@ class UserListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(responses=UserSwagger, request_body=UserSerializer)
-    @check_for_tenant
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -41,18 +40,18 @@ class UserDetailView(APIView):
         return [IsAuthenticated()]
 
     @swagger_auto_schema(responses=UserDetailSwagger)
-    @check_for_tenant
     def get(self, request, pk):
         queryset = User.objects.prefetch_related("groups", "groups__permissions")
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(queryset, id=pk)
         else:
-            instance = get_object_or_404(queryset, id=pk, tenant_id=request.user.tenant_id)
+            instance = get_object_or_404(
+                queryset, id=pk, tenant_id=request.user.tenant_id
+            )
         serializer = UserDetailSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=UserDetailSwagger, request_body=UserSerializer)
-    @check_for_tenant
     def put(self, request, pk):
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(User, id=pk)
@@ -64,7 +63,6 @@ class UserDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(responses={})
-    @check_for_tenant
     def delete(self, request, pk):
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(User, id=pk)

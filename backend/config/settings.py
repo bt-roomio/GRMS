@@ -65,6 +65,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "core.utils.middleware.CheckForTenantMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -121,7 +122,9 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -160,7 +163,9 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Rest Framework
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 15,
@@ -175,11 +180,15 @@ SIMPLE_JWT = {
 SWAGGER_SETTINGS = {
     "PERSIST_AUTH": True,
     "USE_SESSION_AUTH": False,
-    "SECURITY_DEFINITIONS": {"Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}},
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    },
 }
 
 FRONTEND_DOMAIN = os.environ.get("FRONTEND_DOMAIN", "http://localhost:3000")
-FRONTEND_ACTIVATION_URL = os.environ.get("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
+FRONTEND_ACTIVATION_URL = os.environ.get(
+    "FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate"
+)
 COMPANY_NAME = os.environ.get("COMPANY_NAME", "Room.io")
 
 # Default primary key field type
