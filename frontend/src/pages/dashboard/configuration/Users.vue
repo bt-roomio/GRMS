@@ -4,7 +4,7 @@
       <PageHead
           :title="$t('dashboard.configuration.users.title')"
           :description="$t('dashboard.configuration.users.subtitle')"
-          :button="$t('dashboard.configuration.users.button')"
+          :button="storePermissions.hasPermission('add_user') ? $t('dashboard.configuration.users.button') : undefined"
           button-icon="plus"
           @click-button="openModalUser"
       />
@@ -43,10 +43,10 @@
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
-          <UiButton class="secondary" @click.prevent="openEditUser(entity.id)">
+          <UiButton class="secondary" v-if="storePermissions.hasPermission('change_user')" @click.prevent="openEditUser(entity.id)">
             <UiIcon name="edit" filled />
           </UiButton>
-          <UiButton class="text" @click.prevent="storeUser.deleteUser(entity.id)">
+          <UiButton class="text" v-if="storePermissions.hasPermission('delete_user')" @click.prevent="storeUser.deleteUser(entity.id)">
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
@@ -71,8 +71,10 @@ import ConfigurationUsersActions from "@components/pages/dashboard/configuration
 import {onBeforeRouteUpdate} from "vue-router";
 import router from "@/router";
 import {useConfigurationRolesStore} from "@store/dashboard/configuration/roles.ts";
+import {usePermissions} from "@store/dashboard/user/permissions.ts";
 const storeRoles = useConfigurationRolesStore()
 const storeUser = useUserStore()
+const storePermissions = usePermissions()
 const {users, editID, searchType, searchValue, loading, error, size, user, sortedData, profile} = storeToRefs(storeUser)
 const isSearchOpen = ref(false)
 const {t} = useI18n()

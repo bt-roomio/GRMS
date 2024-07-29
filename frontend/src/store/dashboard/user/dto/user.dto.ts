@@ -7,5 +7,17 @@ interface IUser {
     phone?: null | any
     created_at?: number
     tenant_id?: string
-    groups?: any[]
+    groups?: IGroup[] | []
+}
+
+interface IGroup {
+    id: number
+    name: string,
+    permissions: IPermission[]
+}
+interface IPermission {
+    id: number
+    name: string,
+    codename: string,
+    content_type: number,
 }

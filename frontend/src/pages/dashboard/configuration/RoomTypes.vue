@@ -4,7 +4,7 @@
       <PageHead
           :title="$t('dashboard.configuration.room_type.title')"
           :description="$t('dashboard.configuration.room_type.subtitle')"
-          :button="$t('dashboard.configuration.room_type.add_room_type')"
+          :button="storePermissions.hasPermission('add_roomtype') ? $t('dashboard.configuration.room_type.add_room_type') : undefined"
           button-icon="plus"
           @click-button="openAddRoomType"
       />
@@ -30,10 +30,10 @@
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
-          <UiButton class="secondary" @click.prevent="openEditRoomType(entity.id as string)">
+          <UiButton class="secondary" v-if="storePermissions.hasPermission('delete_roomtype')" @click.prevent="openEditRoomType(entity.id as string)">
             <UiIcon name="edit" filled />
           </UiButton>
-          <UiButton class="text" @click.prevent="storeConfigurationRoomType.deleteItem(entity.id as string)">
+          <UiButton class="text" v-if="storePermissions.hasPermission('change_roomtype')" @click.prevent="storeConfigurationRoomType.deleteItem(entity.id as string)">
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
@@ -59,6 +59,8 @@ import ModalAddRoomType from "@components/pages/dashboard/configuration/room-typ
 import ModalEditRoomType from "@components/pages/dashboard/configuration/room-type/ModalEditRoomType.vue";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 import UiBadge from "@components/ui/Badge.vue";
+import {usePermissions} from "@store/dashboard/user/permissions.ts";
+const storePermissions = usePermissions()
 const add_room_type = ref<IModal | null>(null)
 const edit_room_type = ref<IModal | null>(null)
 const {t} = useI18n()

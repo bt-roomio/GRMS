@@ -9,7 +9,7 @@ import {useRouter} from "vue-router";
 import axios from "axios";
 import {useI18n} from "vue-i18n";
 import decodeJWT from "@utils/decodeJWT.ts"
-export const useAuthorizationStore = defineStore('authorization', () => {
+export const useAuthorizationStore = defineStore('authorization-store', () => {
     const {t} = useI18n()
     const cookies = useCookies(['access_token', 'refresh_token', 'user_id'])
     const isAuth = computed(() => (!!cookies.get('access_token') || !!cookies.get('refresh_token')))
@@ -86,7 +86,6 @@ export const useAuthorizationStore = defineStore('authorization', () => {
 
     const setToken = async (data: ITokens, isExpires: boolean) => {
         const obj = decodeJWT(data['access'])
-        console.log(obj)
         cookies.set('user_id', obj.payload.user_id)
         cookies.set('access_token', data['access'], isExpires ? {
             expires: getExpires().access,

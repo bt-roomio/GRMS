@@ -4,7 +4,7 @@
       <PageHead
           :title="$t('dashboard.menu.dashboard')"
           :description="$t('dashboard.configuration.dashboard.subtitle')"
-          :button="$t('dashboard.configuration.dashboard.modal.add_button')"
+          :button="storePermissions.hasPermission('add_dashboard') ? $t('dashboard.configuration.dashboard.modal.add_button') : undefined"
           button-icon="plus"
           @click-button="openAddDashboard"
       />
@@ -32,20 +32,20 @@
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
-          <UiButton class="secondary" @click.stop="openEditRoomType(entity.id as string)">
+          <UiButton class="secondary" v-if="storePermissions.hasPermission('change_dashboard')" @click.stop="openEditRoomType(entity.id as string)">
             <UiIcon name="edit" filled />
           </UiButton>
-          <UiButton class="text" @click.stop="storeConfigurationDashboard.copyItem(entity)">
+          <UiButton class="text" v-if="storePermissions.hasPermission('add_dashboard')" @click.stop="storeConfigurationDashboard.copyItem(entity)">
             <UiIcon name="copy" filled />
           </UiButton>
-          <UiButton class="text" @click.stop="storeConfigurationDashboard.deleteItem(entity.id as string)">
+          <UiButton class="text" v-if="storePermissions.hasPermission('delete_dashboard')" @click.stop="storeConfigurationDashboard.deleteItem(entity.id as string)">
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
       </template>
     </UiTable>
-    <ModalAddDashboard ref="add_dashboard"/>
-    <ModalEditDashboard ref="edit_dashboard"/>
+    <ModalAddDashboard v-if="storePermissions.hasPermission('change_dashboard')" ref="add_dashboard"/>
+    <ModalEditDashboard v-if="storePermissions.hasPermission('add_dashboard')" ref="edit_dashboard"/>
   </div>
 </template>
 <script setup lang="ts">
@@ -64,13 +64,14 @@ import ModalAddDashboard from "@components/pages/dashboard/configuration/dashboa
 import ModalEditDashboard from "@components/pages/dashboard/configuration/dashboard/ModalEditDashboard.vue";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 import {useRouter} from "vue-router";
+import {usePermissions} from "@store/dashboard/user/permissions.ts";
 const {push} = useRouter()
 const add_dashboard = ref<IModal | null>(null)
 const edit_dashboard = ref<IModal | null>(null)
 const {t} = useI18n()
 const storeConfigurationDashboard = useConfigurationDashboardStore()
 const storeConfigurationRoomType = useConfigurationRoomTypeStore()
-
+const storePermissions = usePermissions()
 const {dashboards, loading, error} = storeToRefs(storeConfigurationDashboard)
 
 const headers = computed<IConfigurationRoomsHead>(() => ({
@@ -102,6 +103,8 @@ const moreHandle = async () => {
   await storeConfigurationDashboard.loadMore()
 }
 const toPage = async (entity: any) => {
-  await push({name: 'configuration-dashboard-inner', params: {id: entity.id}})
+  if (storePermissions.hasPermission('change_dashboard')) {
+    await push({name: 'configuration-dashboard-inner', params: {id: entity.id}})
+  }
 }
 </script>

@@ -73,8 +73,6 @@
               </template>
               <template #content>
                 <div class="dropdown__menu">
-                  <div>{{ $t('dashboard.rooms.table.delete_room') }}</div>
-                  <div>{{ $t('dashboard.rooms.table.edit_room') }}</div>
                   <div>{{ $t('dashboard.rooms.table.activate_cleaning') }}</div>
                   <div>{{ $t('dashboard.rooms.table.activate_dnd') }}</div>
                 </div>

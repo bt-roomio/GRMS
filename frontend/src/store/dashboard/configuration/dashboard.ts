@@ -168,6 +168,15 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         }
     }
     const $reset = async () => {
+
+        state.value = {
+            id: "",
+            title: "",
+            configuration: {},
+        }
+        v$.value.$reset()
+    }
+    const $resetData = async () => {
         editModel.value = null
         readModel.value = null
         viewModel.value = null
@@ -180,12 +189,6 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         dashboard.value = null
         loading.value = false
         isSettings.value = false
-        state.value = {
-            id: "",
-            title: "",
-            configuration: {},
-        }
-        v$.value.$reset()
     }
     const sortList = async (output: ISortOutput) => {
         sortedData.value = output
@@ -354,6 +357,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         copyItem,
         searchItems,
         $reset,
+        $resetData,
         sortList,
         loadMore,
         getDashboardInnerHelpers,

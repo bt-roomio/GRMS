@@ -1,5 +1,5 @@
 <template>
-  <CheckboxTree v-model="data"/>
+  <CheckboxTree v-if="data" v-model="data"/>
 </template>
 <script setup lang="ts">
 import CheckboxTree from "@components/ui/CheckboxTree.vue";

@@ -1,5 +1,6 @@
 <template>
-  <div class="dashboard__layouts">
+  <UiLoader v-if="loading" />
+  <div class="dashboard__layouts" v-else-if="permissions.size && !loading">
     <Sidebar />
     <Header />
     <div class="dashboard__layouts-content" :class="{'sidebar-close': sidebarIsOpen}">
@@ -12,15 +13,10 @@ import Sidebar from "../components/partials/sidebar/Index.vue";
 import Header from "../components/partials/header/Index.vue";
 import {useTemplateStore} from "@store/template.ts";
 import {storeToRefs} from "pinia";
-import {useUserStore} from "@store/dashboard/user";
-import {onMounted} from "vue";
-import {useCookies} from "@vueuse/integrations/useCookies";
+import {usePermissions} from "@store/dashboard/user/permissions.ts";
+import UiLoader from "@components/ui/Loader.vue";
 const storeTemplate = useTemplateStore()
-const storeUser = useUserStore()
+const storePermissions = usePermissions()
+const {permissions, loading} = storeToRefs(storePermissions)
 const {sidebarIsOpen} = storeToRefs(storeTemplate)
-const cookies = useCookies(['user_id'])
-
-onMounted(async () => {
-  await storeUser.getProfile(cookies.get('user_id'))
-})
 </script>

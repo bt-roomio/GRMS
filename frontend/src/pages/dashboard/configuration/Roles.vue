@@ -4,7 +4,7 @@
       <PageHead
           :title="$t('dashboard.configuration.roles.title')"
           :description="$t('dashboard.configuration.roles.subtitle')"
-          :button="$t('dashboard.configuration.roles.button')"
+          :button="storePermissions.hasPermission('add_group') ? $t('dashboard.configuration.roles.button') : undefined"
           button-icon="plus"
           @click-button="openModalRole"
       />
@@ -38,10 +38,10 @@
         </template>
         <template #actions="{entity}">
           <div class="ui-table__actions col-2">
-            <UiButton class="secondary" @click.prevent="openEditRole(entity.id)">
+            <UiButton class="secondary" v-if="storePermissions.hasPermission('change_group')" @click.prevent="openEditRole(entity.id)">
               <UiIcon name="edit" filled />
             </UiButton>
-            <UiButton class="text" @click.prevent="storeRole.deleteItem(entity.id)">
+            <UiButton class="text" v-if="storePermissions.hasPermission('delete_group')" @click.prevent="storeRole.deleteItem(entity.id)">
               <UiIcon name="trash" filled />
             </UiButton>
           </div>
@@ -65,6 +65,9 @@ import {storeToRefs} from "pinia";
 import router from "@/router";
 import {useI18n} from "vue-i18n";
 import UiBadge from "@components/ui/Badge.vue";
+import {usePermissions} from "@store/dashboard/user/permissions.ts";
+const storePermissions = usePermissions()
+
 const {t} = useI18n()
 const storeRole = useConfigurationRolesStore()
 const {roles, editID, loading, error, role} = storeToRefs(storeRole)

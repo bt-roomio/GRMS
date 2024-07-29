@@ -1,9 +1,9 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { useCookies } from "@vueuse/integrations/useCookies";
-import { useAuthorizationStore } from "@store/authorization";
 import router from "@/router";
 import qs from 'qs';
 import { toast } from "vue3-toastify";
+import decodeJWT from "@utils/decodeJWT.ts";
 
 const cookies = useCookies(['access_token', 'refresh_token']);
 
@@ -38,6 +38,51 @@ const processQueue = (error: any, token: string | null = null) => {
     failedQueue = [];
 };
 
+const refreshToken = async () => {
+    try {
+        const { data } = await axios('/users/refresh-token/', {
+            baseURL: import.meta.env.VITE_API_BASE_URL,
+            method: 'POST',
+            data: {
+                refresh: cookies.get('refresh_token')
+            }
+        })
+        await setToken(data, true)
+        return data
+    }catch (e: any) {
+        throw e
+    }
+
+}
+
+const setToken = async (data: ITokens, isExpires: boolean) => {
+    const obj = decodeJWT(data['access'])
+    cookies.set('user_id', obj.payload.user_id)
+    cookies.set('access_token', data['access'], isExpires ? {
+        expires: getExpires().access,
+        path: '/'
+    }: {path: '/'})
+    if (data['refresh']){
+        cookies.set('refresh_token', data['refresh'], isExpires ? {
+            expires: getExpires().refresh,
+            path: '/'
+        }: {path: '/'})
+    }
+}
+const getExpires = () => {
+    const now = new Date()
+    const access = new Date(now.setHours(now.getHours() + 1))
+    const refresh = new Date(now.setDate(now.getDate() + 30))
+    return {
+        access,
+        refresh
+    }
+}
+const deleteToken = async () => {
+    cookies.remove('user_id')
+    cookies.remove('access_token')
+    cookies.remove('refresh_token')
+}
 useApiFetch.interceptors.request.use((config: CustomAxiosRequestConfig) => {
     config.metadata = { startTime: new Date() };
     if (cookies.get('access_token')) {
@@ -69,7 +114,6 @@ useApiFetch.interceptors.response.use(
         }
 
         if (status === 401 && !config._retry) {
-            const authorizationStore = useAuthorizationStore();
             if (cookies.get('refresh_token')) {
                 if (isRefreshing) {
                     return new Promise(function (resolve, reject) {
@@ -86,13 +130,13 @@ useApiFetch.interceptors.response.use(
                 isRefreshing = true;
 
                 return new Promise(function (resolve, reject) {
-                    authorizationStore.refreshToken().then(() => {
+                    refreshToken().then(() => {
                         config.headers['Authorization'] = 'Bearer ' + cookies.get('access_token');
                         processQueue(null, cookies.get('access_token'));
                         resolve(useApiFetch(config));
                     }).catch((err) => {
                         processQueue(err, null);
-                        authorizationStore.deleteToken();
+                        deleteToken();
                         router.push({ name: 'login' });
                         reject(err);
                     }).finally(() => {
@@ -100,7 +144,7 @@ useApiFetch.interceptors.response.use(
                     });
                 });
             } else {
-                await authorizationStore.deleteToken();
+                await deleteToken();
                 await router.push({ name: 'login' });
             }
         }

@@ -16,7 +16,8 @@ interface Item {
     icon: string;
     name: string;
     to: string;
-    children?: { icon: string; to: string; name: string; }[];
+    children?: { icon: string; to: string; name: string; show: boolean}[];
+    show: boolean
 }
 
 interface IConfigurationRoomsHead {

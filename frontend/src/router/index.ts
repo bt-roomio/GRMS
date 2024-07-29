@@ -26,6 +26,7 @@ import DashboardInner from "@/pages/dashboard/configuration/DashboardInner.vue";
 import NewPassword from "@/pages/authorization/NewPassword.vue";
 import Default from "@/layouts/Default.vue";
 import Roles from "@/pages/dashboard/configuration/Roles.vue";
+import permission from "@router/middleware/permission.ts";
 
 
 const router = createRouter({
@@ -39,6 +40,9 @@ const router = createRouter({
                     path: '',
                     name: 'main',
                     component: Main,
+                    meta: {
+                        access: ['view_dashboard']
+                    }
                 },
                 {
                     path: 'rooms',
@@ -49,19 +53,27 @@ const router = createRouter({
                             path: 'room-list',
                             name: 'room-list',
                             component: Rooms,
+                            meta: {
+                                access: ['view_room']
+                            }
                         },
                         {
                             path: '/rooms/room-list/:id',
                             name: 'room-inner',
-                            component: Room
+                            component: Room,
+                            meta: {
+                                access: ['view_room']
+                            }
                         }
                     ]
                 },
-
                 {
                     path: 'public-space',
                     name: 'public-space',
-                    component: PublicSpace
+                    component: PublicSpace,
+                    meta: {
+                        access: []
+                    }
                 },
                 {
                     path: 'configuration',
@@ -71,37 +83,58 @@ const router = createRouter({
                         {
                             path: 'dashboard',
                             name: 'configuration-dashboard',
-                            component: Dashboard
+                            component: Dashboard,
+                            meta: {
+                                access: ['view_dashboard']
+                            }
                         },
                         {
                             path: 'dashboard/:id',
                             name: 'configuration-dashboard-inner',
-                            component: DashboardInner
+                            component: DashboardInner,
+                            meta: {
+                                access: ['view_dashboard', 'change_dashboard']
+                            }
                         },
                         {
                             path: 'users',
                             name: 'configuration-users',
-                            component: Users
+                            component: Users,
+                            meta: {
+                                access: ['view_user']
+                            }
                         },
                         {
                             path: 'roles',
                             name: 'configuration-roles',
-                            component: Roles
+                            component: Roles,
+                            meta: {
+                                access: ['view_group']
+                            }
                         },
                         {
                             path: 'rooms',
                             name: 'configuration-rooms',
-                            component: ConfigurationRooms
+                            component: ConfigurationRooms,
+                            meta: {
+                                access: ['view_room']
+                            }
                         },
                         {
                             path: 'room-types',
                             name: 'configuration-room-types',
-                            component: RoomTypes
+                            component: RoomTypes,
+                            meta: {
+                                access: ['view_roomtype']
+                            }
                         },
                         {
                             path: 'controllers',
                             name: 'configuration-controllers',
-                            component: Controllers
+                            component: Controllers,
+                            meta: {
+                                access: ['view_device']
+                            }
                         },
                     ]
                 },
@@ -114,29 +147,44 @@ const router = createRouter({
                         {
                             path: 'general',
                             name: 'settings-general',
-                            component: General
+                            component: General,
+                            meta: {
+                                access: ['view_adminsettings']
+                            }
                         },
                         {
                             path: 'alarms',
                             name: 'settings-alarms',
-                            component: Alarms
+                            component: Alarms,
+                            meta: {
+                                access: ['view_adminsettings']
+                            }
                         },
                         {
                             path: 'email-setup',
                             name: 'settings-email-setup',
-                            component: EmailSetup
+                            component: EmailSetup,
+                            meta: {
+                                access: ['view_adminsettings']
+                            }
                         },
                     ]
                 },
                 {
                     path: 'access',
                     name: 'access',
-                    component: Access
+                    component: Access,
+                    meta: {
+                        access: ['view_permission']
+                    }
                 },
                 {
                     path: 'backlog',
                     name: 'backlog',
-                    component: Backlog
+                    component: Backlog,
+                    meta: {
+                        access: []
+                    }
                 }
             ]
         },
@@ -184,4 +232,5 @@ const router = createRouter({
 
 
 router.beforeEach(auth)
+router.beforeEach(permission)
 export default router

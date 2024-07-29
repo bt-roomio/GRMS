@@ -4,7 +4,7 @@
       <PageHead
           :title="$t('dashboard.configuration.rooms.title')"
           :description="$t('dashboard.configuration.rooms.subtitle')"
-          :button="$t('dashboard.configuration.rooms.add_room')"
+          :button="storePermissions.hasPermission('add_room') ? $t('dashboard.configuration.rooms.add_room') : undefined"
           button-icon="plus"
           @click-button="openAddRoom"
       />
@@ -51,10 +51,10 @@
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions col-2">
-          <UiButton class="secondary" @click.prevent="openEditRoom(entity.id as string)">
+          <UiButton class="secondary" v-if="storePermissions.hasPermission('change_room')" @click.prevent="openEditRoom(entity.id as string)">
             <UiIcon name="edit" filled />
           </UiButton>
-          <UiButton class="text" @click.prevent="storeConfigurationRooms.deleteItem(entity.id as string)">
+          <UiButton class="text" v-if="storePermissions.hasPermission('delete_room')" @click.prevent="storeConfigurationRooms.deleteItem(entity.id as string)">
             <UiIcon name="trash" filled />
           </UiButton>
         </div>
@@ -79,7 +79,8 @@ import {useI18n} from "vue-i18n";
 import {onBeforeRouteUpdate} from "vue-router";
 import router from "@/router";
 import {useUserStore} from "@store/dashboard/user";
-
+import {usePermissions} from "@store/dashboard/user/permissions.ts";
+const storePermissions = usePermissions()
 const {t} = useI18n()
 const storeConfigurationRooms = useConfigurationRoomsStore()
 const {rooms, error, searchType, searchValue, loading} = storeToRefs(storeConfigurationRooms)

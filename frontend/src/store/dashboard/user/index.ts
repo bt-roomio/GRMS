@@ -5,13 +5,14 @@ import {addFieldSelect} from "@utils/transform-response.ts";
 import {email, minLength, required} from "@vuelidate/validators";
 import useVuelidate from "@vuelidate/core";
 import {toast} from "vue3-toastify";
-import {useI18n} from "vue-i18n";
 import {useConfirm} from "@store/dashboard/useConfirm.ts";
 import router from "@/router";
+import i18n from "@/i18n";
 
 export const useUserStore = defineStore('user', () => {
     const confirmStore = useConfirm()
-    const {t} = useI18n()
+    // @ts-ignore
+    const t = (key: string) => i18n.global.t(key)
     const size = ref<number>(10)
     const profile = ref<IUser | null>(null)
     const user = ref<IUser | null>(null)
@@ -28,7 +29,7 @@ export const useUserStore = defineStore('user', () => {
         first_name: '',
         last_name: '',
         password: '',
-        groups: [] as number[]
+        groups: [] as IGroup[]
     })
     const rules = computed(() => ({
         email: {

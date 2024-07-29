@@ -63,5 +63,6 @@ onMounted(async () => {
 })
 onUnmounted(() => {
   storeConfigurationDashboard.$reset()
+  storeConfigurationDashboard.$resetData()
 })
 </script>

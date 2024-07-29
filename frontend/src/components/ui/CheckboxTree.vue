@@ -1,5 +1,5 @@
 <template>
-  <div class="flex justify-between border p-3 rounded-lg">
+  <div class="flex justify-between border p-3 rounded-lg border-gray-200 dark:border-gray-500">
     <UiCheckbox v-model="checkAll" @change="handleToggleAll(model)">{{ $t('dashboard.configuration.roles.form.checked_all') }}</UiCheckbox>
   </div>
   <div>
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import {defineComponent, ref} from 'vue';
+import {defineComponent, nextTick, onMounted, ref} from 'vue';
 import TreeItem from './TreeItem.vue';
 import UiCheckbox from "@components/ui/Checkbox.vue";
 const checkAll = ref(false)
@@ -26,6 +26,15 @@ interface TreeNode {
   children?: TreeNode[];
 }
 const model = defineModel<TreeNode[]>({default: []})
+onMounted(() => {
+  nextTick(() => {
+    if (model.value && model.value.length) {
+      checkAll.value = model.value.every(child => child.checked)
+    }else {
+      checkAll.value = false
+    }
+  })
+})
 const handleToggleAll = (nodes: TreeNode[]) => {
   for (const node of nodes) {
       node.checked = checkAll.value;
