@@ -1,0 +1,6 @@
+.iframe-container {
+  @apply h-full w-full;
+  iframe{
+    @apply w-full h-full;
+  }
+}

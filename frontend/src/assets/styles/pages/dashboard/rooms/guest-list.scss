@@ -1,0 +1,24 @@
+.guest-list{
+  .ui-table__container{
+    @apply border-0;
+    thead{
+      @apply hidden
+    }
+    td{
+      @apply px-0;
+    }
+    tr:first-child{
+      td {
+        @apply pt-0;
+      }
+    }
+    tr:last-child{
+      td {
+        @apply pb-0;
+      }
+    }
+    tr:hover{
+      @apply bg-transparent;
+    }
+  }
+}

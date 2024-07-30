@@ -113,5 +113,39 @@
         "description": "More information about this type",
         "tags": "",
         "external_id": null
+    },
+    {
+        "name": "Frame display",
+        "deprecated": false,
+        "fqn": "frame_display",
+        "descriptor": {
+            "type": "timeseries",
+            "icon": "frame-display",
+            "config_file": "frame-display",
+            "default_config": {
+                "ws_args": {
+                    "scope": "CLIENT_SCOPE",
+                    "entityType": "DEVICE",
+                    "type": "ATTRIBUTES",
+                    "entityId": ""
+                },
+                "title": "",
+                "subtitle": "",
+                "url": "",
+                "loading": "lazy"
+            },
+            "dashboard_config": {
+                "x": 0,
+                "y": 0,
+                "w": 6,
+                "h": 13,
+                "minH": 8,
+                "minW": 4
+            }
+        },
+        "image": null,
+        "description": "It is used to display surveillance cameras, web pages and other web resources with flexible settings.",
+        "tags": "",
+        "external_id": null
     }
 ]

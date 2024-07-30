@@ -11,18 +11,23 @@
         <h1>{{title}}</h1>
         <p>{{description}}</p>
       </div>
-      <div class="page-head__action" v-if="button !== undefined">
-        <Button @click.prevent="$emit('clickButton')" :class="buttonClass ? buttonClass: 'primary'">
-          <UiIcon v-if="buttonIcon" :name="buttonIcon" filled />
-          {{button}}
-        </Button>
-      </div>
-      <div class="page-head__action row" v-if="buttons !== undefined">
-        <Button v-for="item in buttons" :key="item.id" @click.prevent="$emit('clickButton', item)" :class="item.class ? item.class : 'primary'">
-          <UiIcon v-if="item.icon" :name="item.icon" filled />
-          {{item.name}}
-        </Button>
-      </div>
+      <template v-if="$slots.button">
+        <slot name="button" />
+      </template>
+      <template v-else>
+        <div class="page-head__action" v-if="button !== undefined">
+          <Button @click.prevent="$emit('clickButton')" :class="buttonClass ? buttonClass: 'primary'">
+            <UiIcon v-if="buttonIcon" :name="buttonIcon" filled />
+            {{button}}
+          </Button>
+        </div>
+        <div class="page-head__action row" v-if="buttons !== undefined">
+          <Button v-for="item in buttons" :key="item.id" @click.prevent="$emit('clickButton', item)" :class="item.class ? item.class : 'primary'">
+            <UiIcon v-if="item.icon" :name="item.icon" filled />
+            {{item.name}}
+          </Button>
+        </div>
+      </template>
     </div>
   </div>
 </template>

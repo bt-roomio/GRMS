@@ -407,7 +407,10 @@
         "fan_valve": "Fan Valve",
         "power_level_empty": "The name of the power level should be here",
         "title_empty": "There should be a title here",
-        "subtitle_empty": "There should be a subtitle here"
+        "subtitle_empty": "There should be a subtitle here",
+        "url": "URL",
+        "loading_type": "Loading type",
+        "loading_type_placeholder": "Choose loading type"
       }
     }
   },

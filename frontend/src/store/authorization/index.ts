@@ -86,7 +86,7 @@ export const useAuthorizationStore = defineStore('authorization-store', () => {
 
     const setToken = async (data: ITokens, isExpires: boolean) => {
         const obj = decodeJWT(data['access'])
-        cookies.set('user_id', obj.payload.user_id)
+        cookies.set('user_id', obj.payload.user_id, {path: '/'})
         cookies.set('access_token', data['access'], isExpires ? {
             expires: getExpires().access,
             path: '/'

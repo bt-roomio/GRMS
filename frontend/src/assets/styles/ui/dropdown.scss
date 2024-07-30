@@ -19,7 +19,7 @@
     ;
   }
   &__menu{
-    @apply flex flex-col w-full;
+    @apply flex flex-col w-full gap-1;
     >label,
     >div,
     li{

@@ -41,7 +41,12 @@
         </template>
       </template>
       <template v-if="item.fqn === 'room_temperature'">
-        <FanSpeed :value="item.descriptor.default_config"/>
+        <FanSpeed :value="item.descriptor.default_config" />
+      </template>
+      <template v-if="item.fqn === 'frame_display'">
+        <ViewIframe
+            :value="item.descriptor.default_config"
+        ></ViewIframe>
       </template>
     </div>
   </div>
@@ -70,6 +75,7 @@ import {storeToRefs} from "pinia";
 import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 import Progress from "@components/widgets/Progress.vue";
 import {useWS} from "@store/dashboard/ws";
+import ViewIframe from "@components/widgets/ViewIframe.vue";
 const {send, unSubscription} = useWS()
 const cookies = useCookies(['mode'])
 const option = computed(() => props.item.config.setting)

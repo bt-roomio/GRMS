@@ -14,41 +14,43 @@
           v-model="editWidget.descriptor.default_config.subtitle"
           :placeholder="$t('dashboard.widget.form.subtitle_placeholder')"
       />
-      <UiDoubleSelect
-          v-model="editWidget.descriptor.default_config.ws_args.entityId"
-          v-model:select="editWidget.descriptor.default_config.ws_args.entityType"
-          :options="devices?.results"
-          :args="{valueProp: 'id', label: 'name'}"
-          :select-options="['DEVICE', 'ALIAS']"
-          :label="$t('dashboard.widget.form.datasource')"
-          name="datasource"
-          :placeholder="$t('dashboard.widget.form.room_temperature')"
-      />
-      <div class="ui-multiselect">
-        <label>{{ $t('dashboard.widget.form.type') }}</label>
-        <Multiselect
-            v-model="editWidget.descriptor.default_config.ws_args.type"
-            :options="['ATTRIBUTES', 'TIMESERIES']"
-            :canClear="false"
-            :canDeselect="false"
-            :caret="false"
-            :searchable="true"
-            :placeholder="$t('dashboard.search_from_the_list')"
-            @select="typeSelected"
+      <template v-if="!hideDevice">
+        <UiDoubleSelect
+            v-model="editWidget.descriptor.default_config.ws_args.entityId"
+            v-model:select="editWidget.descriptor.default_config.ws_args.entityType"
+            :options="devices?.results"
+            :args="{valueProp: 'id', label: 'name'}"
+            :select-options="['DEVICE', 'ALIAS']"
+            :label="$t('dashboard.widget.form.datasource')"
+            name="datasource"
+            :placeholder="$t('dashboard.widget.form.room_temperature')"
         />
-      </div>
-      <div class="ui-multiselect" v-if="editWidget.descriptor.default_config.ws_args.type === 'ATTRIBUTES'">
-        <label>SCOPE</label>
-        <Multiselect
-            v-model="editWidget.descriptor.default_config.ws_args.scope"
-            :options="['SHARED_SCOPE', 'CLIENT_SCOPE', 'SERVER_SCOPE']"
-            :canClear="false"
-            :canDeselect="false"
-            :caret="false"
-            :searchable="true"
-            :placeholder="'Write the SCOPE'"
-        />
-      </div>
+        <div class="ui-multiselect">
+          <label>{{ $t('dashboard.widget.form.type') }}</label>
+          <Multiselect
+              v-model="editWidget.descriptor.default_config.ws_args.type"
+              :options="['ATTRIBUTES', 'TIMESERIES']"
+              :canClear="false"
+              :canDeselect="false"
+              :caret="false"
+              :searchable="true"
+              :placeholder="$t('dashboard.search_from_the_list')"
+              @select="typeSelected"
+          />
+        </div>
+        <div class="ui-multiselect" v-if="editWidget.descriptor.default_config.ws_args.type === 'ATTRIBUTES'">
+          <label>SCOPE</label>
+          <Multiselect
+              v-model="editWidget.descriptor.default_config.ws_args.scope"
+              :options="['SHARED_SCOPE', 'CLIENT_SCOPE', 'SERVER_SCOPE']"
+              :canClear="false"
+              :canDeselect="false"
+              :caret="false"
+              :searchable="true"
+              :placeholder="'Write the SCOPE'"
+          />
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -71,4 +73,5 @@ const typeSelected = (value: any) => {
     editWidget.value.descriptor.default_config.ws_args.scope = ''
   }
 }
+defineProps(['hideDevice'])
 </script>
