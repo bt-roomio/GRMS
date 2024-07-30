@@ -1,6 +1,8 @@
-from core.models import BaseModel, UpdateByModel
 from django.db import models
 from django.db.models import CASCADE, SET_NULL
+
+from core.models import BaseModel, UpdateByModel
+from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
@@ -251,3 +253,22 @@ class WidgetType(BaseModel):
         db_table = "main_widget_type"
         ordering = ["created_at"]
         unique_together = ("name", "tenant")
+
+
+class Guest(BaseModel):
+    name = models.CharField(max_length=255)
+    lastname = models.CharField(max_length=255, null=True, blank=True)
+    gender = models.CharField(max_length=255, null=True, blank=True)
+    nationality = models.CharField(max_length=255, null=True, blank=True)
+    birthday = UnixTimeStampField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)
+    check_in = UnixTimeStampField(null=True, blank=True)
+    check_out = UnixTimeStampField(null=True, blank=True)
+    auth_check_out = UnixTimeStampField(null=True, blank=True)
+    reservation_number = models.CharField(max_length=255, null=True, blank=True)
+    room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+
+    class Meta:
+        db_table = "main_guest"
+        ordering = ["created_at"]

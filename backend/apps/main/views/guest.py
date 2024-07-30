@@ -1,0 +1,42 @@
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from core.utils.pagination import pagination
+from main.models import Guest
+from main.serializers.guest import GuestSerializer, GuestFilterParams
+from main.swagger.guest import GuestSwagger, GuestDetailSwagger
+
+
+class GuestListView(APIView):
+    @swagger_auto_schema(responses=GuestSwagger, query_serializer=GuestFilterParams)
+    def get(self, request):
+        params = GuestFilterParams.check(request.GET)
+        queryset = Guest.objects.filter(tenant_id=request.user.tenant_id)
+        serializer = GuestSerializer(queryset, many=True)
+        data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
+        return Response(data)
+
+    @swagger_auto_schema(responses=GuestSwagger, request_body=GuestSerializer)
+    def post(self, request):
+        serializer = GuestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(tenant_id=request.user.tenant_id)
+        return Response(serializer.data, 201)
+
+
+class GuestDetailView(APIView):
+    @swagger_auto_schema(responses=GuestDetailSwagger)
+    def get(self, request, pk):
+        instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id)
+        serializer = GuestSerializer(instance)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(responses=GuestDetailSwagger, request_body=GuestSerializer)
+    def put(self, request, pk):
+        instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id)
+        serializer = GuestSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(tenant_id=request.user.tenant_id)
+        return Response(serializer.data)

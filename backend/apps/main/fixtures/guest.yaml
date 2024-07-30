@@ -1,0 +1,22 @@
+- model: main.Guest
+  pk: 5b66af57-fb27-4c26-9986-b9994e644605
+  fields:
+      name: Amigo
+      lastname: Amigoev
+      birthday: 1722332871
+      check_in: 1722332912
+      reservation_number: 101
+      room_id: df77f910-2dcd-45cf-b6be-054c744561a7
+      tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c
+
+
+- model: main.Guest
+  pk: 52d8ba26-6fac-463b-a131-c16410e42ede
+  fields:
+      name: Alexandr
+      lastname: Slavenko
+      birthday: 1722334871
+      check_in: 1722334912
+      reservation_number: 101
+      room_id: ab09aa20-77b8-457a-bfc4-5dee69790241
+      tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c

@@ -24,6 +24,7 @@ class Command(BaseCommand):
             "device_credentials",
             "attribute_kv",
             "room_type",
+            "guest",
             "widget_type",
             "dashboard",
             "ts_dictionary",
