@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import Guest
+from main.models import Guest, Room
 
 
 class GuestSerializer(serializers.ModelSerializer):
@@ -26,3 +26,4 @@ class GuestSerializer(serializers.ModelSerializer):
 class GuestFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
+    room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)

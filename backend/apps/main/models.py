@@ -6,6 +6,7 @@ from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
+from main.querysets.guest import GuestQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
@@ -268,6 +269,8 @@ class Guest(BaseModel):
     reservation_number = models.CharField(max_length=255, null=True, blank=True)
     room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+
+    objects = GuestQuerySet.as_manager()
 
     class Meta:
         db_table = "main_guest"
