@@ -18,7 +18,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "room",
             "check_in",
             "check_out",
-            "auth_check_out",
+            "auto_check_out",
             "reservation_number",
         )
 
