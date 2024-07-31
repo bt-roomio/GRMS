@@ -7,6 +7,7 @@ from main.views.device_credentials import DeviceCredentialsDetailView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestListView, GuestDetailView
+from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
@@ -26,5 +27,6 @@ urlpatterns = [
     path("device/", DeviceListView.as_view(), name="device-list"),
     path("device/<str:token>/credentials/", DeviceCredentialsDetailView.as_view(), name="device-credentials-detail"),
     path("guest/", GuestListView.as_view(), name="guest-list"),
-    path("guest/<uuid:pk>", GuestDetailView.as_view(), name="guest-detail"),
+    path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
+    path("guest/<uuid:pk>/", GuestDetailView.as_view(), name="guest-detail"),
 ]
