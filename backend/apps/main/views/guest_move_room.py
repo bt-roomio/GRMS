@@ -1,3 +1,4 @@
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -6,6 +7,13 @@ from main.serializers.guest import GuestMoveRoomSerializer, GuestMoveRoomFilterP
 
 
 class GuestMoveRoomListView(APIView):
+    @swagger_auto_schema(
+        responses={
+            200: '"detail": "Guests moved successfully!"',
+            404: '"detail": "\'from_room\' guests doesn\'t exist!"',
+        },
+        query_serializer=GuestMoveRoomFilterParams,
+    )
     def put(self, request):
         params = GuestMoveRoomFilterParams.check(request.GET)
         instance = Guest.objects.filter(room_id=params.get("from_room"))
