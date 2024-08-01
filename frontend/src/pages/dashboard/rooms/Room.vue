@@ -10,22 +10,20 @@
       >
         <template #button>
           <div class="page-head__action row">
-            <UiDropdown>
+            <UiDropdown v-if="$route.query.tab === 'guests'">
               <template #trigger>
-                <Button class="text">
-                  Actions
-                  <UiIcon name="chevron-down" filled />
-                </Button>
+                <UiButton class="text">
+                  {{ $t('dashboard.rooms.table.actions') }}
+                  <UiIcon name="chevron-down" filled @click.prevent/>
+                </UiButton>
               </template>
               <template #content>
                 <div class="dropdown__menu">
                   <div @click.prevent="openCheckIn">Check-In guest</div>
-                  <div @click.prevent="storeCheckInOut.checkOut()">Check-out all guest</div>
-                  <div @click.prevent="openMove">Move</div>
+                  <div @click.prevent="openMove">Move all guest</div>
                 </div>
               </template>
             </UiDropdown>
-
             <Button @click.prevent class="text">
               <UiIcon name="settings" filled />
             </Button>
@@ -60,14 +58,14 @@ import {useRoute} from "vue-router";
 import UiLoader from "@components/ui/Loader.vue";
 import Button from "@components/ui/Button.vue";
 import UiIcon from "@components/ui/Icon.vue";
-import UiDropdown from "@components/ui/Dropdown.vue";
 import ModalCheckIn from "@components/pages/dashboard/rooms/check-in-out/ModalCheckIn.vue";
-import {useCheckInOutStore} from "@store/dashboard/check-in-out";
-import ModalMove from "@components/pages/dashboard/rooms/check-in-out/ModalMove.vue";
 import GuestList from "@components/pages/dashboard/rooms/GuestList.vue";
-const modal_check_in = ref<IModal | null>(null)
+import UiDropdown from "@components/ui/Dropdown.vue";
+import UiButton from "@components/ui/Button.vue";
+import ModalMove from "@components/pages/dashboard/rooms/check-in-out/ModalMove.vue";
 const modal_move = ref<IModal | null>(null)
-const storeCheckInOut = useCheckInOutStore()
+
+const modal_check_in = ref<IModal | null>(null)
 const storeConfigurationDashboard = useConfigurationDashboardStore()
 const storeConfigurationRooms = useConfigurationRoomsStore()
 const {itemLoading, room} = storeToRefs(storeConfigurationRooms)

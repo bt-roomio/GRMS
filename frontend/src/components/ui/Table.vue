@@ -20,6 +20,7 @@
         <th
             v-for="(header, i) in headers"
             :key="`${header}${i}`"
+            :class="getThClass(i)"
             scope="col"
         >
           <slot v-if="$slots['header-' + i]" :name="'header-' + i" :entity="header" />
@@ -40,10 +41,12 @@
           v-for="(entity, index) in data"
           :key="`entity-${index}`"
           @click.prevent="clickTrHandle(entity)"
+          :class="getTrClass(entity)"
       >
         <td
             v-for="([key], i) in Object.entries(headers)"
             :key="`${key}-${i}`"
+            :class="getTdClass(entity, key)"
         >
           <slot v-if="$slots[key]" :name="key" :entity="entity as {[key: string]: any}" />
           <template v-else>
@@ -116,7 +119,26 @@ const props = defineProps<{
   loading?: boolean
   isPagination?: boolean
   pointer?: boolean
+  options?: any
 }>()
+const getThClass = (key: any) => {
+  if (props.options?.elementsClass && props.options?.elementsClass.th) {
+    return props.options?.elementsClass.th(key);
+  }
+  return '';
+}
+const getTrClass = (entity: any) => {
+  if (props.options?.elementsClass && props.options?.elementsClass.tr) {
+    return props.options?.elementsClass.tr(entity);
+  }
+  return '';
+}
+const getTdClass = (entity: any, key: string) => {
+  if (props.options?.elementsClass && props.options?.elementsClass.td) {
+    return props.options?.elementsClass.td(entity, key);
+  }
+  return '';
+}
 const isEmpty = computed(() => !!props.data?.length)
 const clickTrHandle = (entity: any) => {
   emits('click', entity)
