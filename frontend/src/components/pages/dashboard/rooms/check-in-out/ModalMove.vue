@@ -52,7 +52,7 @@ const modal = ref<IModal | null>(null)
 const close = () => {
   modal.value?.close()
 }
-const open = (id) => {
+const open = (id: any) => {
   if (id) {
     roomId.value = id
   }
