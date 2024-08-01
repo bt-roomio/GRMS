@@ -33,34 +33,34 @@
       </template>
       <template #actions="{entity}">
         <div class="ui-table__actions" v-if="entity.is_active">
-          <UiButton class="text" @click.prevent="storeCheckInOut.checkOut(entity.id)">
-            <UiIcon name="x-circle" filled/>
-            Check-out
-          </UiButton>
-<!--          <UiDropdown>-->
-<!--            <template #trigger>-->
-<!--              <UiButton class="text">-->
-<!--                {{ $t('dashboard.rooms.table.actions') }}-->
-<!--                <UiIcon name="chevron-down" filled @click.prevent/>-->
-<!--              </UiButton>-->
-<!--            </template>-->
-<!--            <template #content>-->
-<!--              <div class="dropdown__menu">-->
-<!--                <div @click.prevent="storeCheckInOut.checkOut(entity.id)">Check-out</div>-->
-<!--                <div @click.prevent="openMove">Move</div>-->
-<!--              </div>-->
-<!--            </template>-->
-<!--          </UiDropdown>-->
+<!--          <UiButton class="text" @click.prevent="storeCheckInOut.checkOut(entity.id)">-->
+<!--            <UiIcon name="x-circle" filled/>-->
+<!--            Check-out-->
+<!--          </UiButton>-->
+          <UiDropdown>
+            <template #trigger>
+              <UiButton class="text">
+                {{ $t('dashboard.rooms.table.actions') }}
+                <UiIcon name="chevron-down" filled @click.prevent/>
+              </UiButton>
+            </template>
+            <template #content>
+              <div class="dropdown__menu">
+                <div @click.prevent="storeCheckInOut.checkOut(entity.id)">Check-out</div>
+                <div @click.prevent="openMove(entity.id)">Move</div>
+              </div>
+            </template>
+          </UiDropdown>
         </div>
         <div class="ui-table__actions" v-else></div>
       </template>
     </UiTable>
   </div>
-<!--  <ModalMove ref="modal_move"/>-->
+  <ModalMove ref="modal_move"/>
 </template>
 <script setup lang="ts">
 import UiTable from "@components/ui/Table.vue";
-import {computed, onMounted} from "vue";
+import {computed, onMounted, ref} from "vue";
 import UiButton from "@components/ui/Button.vue";
 import UiIcon from "@components/ui/Icon.vue";
 import {useCheckInOutStore} from "@store/dashboard/check-in-out";
@@ -68,9 +68,10 @@ import {storeToRefs} from "pinia";
 import moment from "moment";
 import UiBadge from "@components/ui/Badge.vue";
 // import UiDropdown from "@components/ui/Dropdown.vue";
-// import ModalMove from "@components/pages/dashboard/rooms/check-in-out/ModalMove.vue";
+import ModalMove from "@components/pages/dashboard/rooms/check-in-out/ModalMove.vue";
 import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
-// const modal_move = ref<IModal | null>(null)
+import UiDropdown from "@components/ui/Dropdown.vue";
+const modal_move = ref<IModal | null>(null)
 const storeCheckInOut = useCheckInOutStore()
 const storeRooms = useConfigurationRoomsStore()
 const {guests, loading, error} = storeToRefs(storeCheckInOut)
@@ -86,7 +87,7 @@ onMounted( async () => {
     storeCheckInOut.getGuests({})
   ])
 })
-// const openMove = () => {
-//   modal_move.value?.open()
-// }
+const openMove = (id: any) => {
+  modal_move.value?.open(id)
+}
 </script>

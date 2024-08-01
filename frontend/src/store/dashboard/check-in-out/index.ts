@@ -143,7 +143,7 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 		})
 	}
 
-	const move = async (args: any, callback: () => void) => {
+	const moveAll = async (args: any, callback: () => void) => {
 		callback()
 		await confirmStore.showConfirm({
 			title: 'Are you sure?',
@@ -152,6 +152,26 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 				if (confirmed) {
 					await useApiFetch(`/main/guest/move/room/`, {method: 'PUT', params: args})
 
+					await getGuests(searchValue.value ? {
+						...sortedData.value,
+						...router.currentRoute.value.query,
+						search_value: searchValue.value,
+						search_field: searchType.value,
+					} : {...sortedData.value, ...router.currentRoute.value.query})
+					toast.success(t('toast.save_success') as string)
+				}
+			},
+		})
+	}
+
+	const move = async (args: any, callback: () => void) => {
+		callback()
+		await confirmStore.showConfirm({
+			title: 'Are you sure?',
+			content: 'The guests will be checked into the specified room!',
+			callback: async confirmed => {
+				if (confirmed) {
+					await useApiFetch(`/main/guest/${args.id}/`, {method: 'PUT', data: args})
 					await getGuests(searchValue.value ? {
 						...sortedData.value,
 						...router.currentRoute.value.query,
@@ -214,6 +234,7 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 		sortList,
 		checkIn,
 		checkOut,
+		moveAll,
 		move,
 		$reset,
 		state,

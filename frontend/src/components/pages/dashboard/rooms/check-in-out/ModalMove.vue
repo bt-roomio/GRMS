@@ -23,7 +23,10 @@
       </div>
     </form>
     <template #footer="{close}">
-      <UiButton class="primary" @click.prevent="storeCheckInOut.move({from_room: $route.params.id, to_room: room}, close)">
+      <UiButton v-if="roomId" class="primary" @click.prevent="storeCheckInOut.move({id: roomId, room}, close)">
+        {{$t('dashboard.settings.save')}}
+      </UiButton>
+      <UiButton v-else class="primary" @click.prevent="storeCheckInOut.moveAll({from_room: $route.params.id, to_room: room}, close)">
         {{$t('dashboard.settings.save')}}
       </UiButton>
       <UiButton class="text" @click.prevent="close()">
@@ -43,12 +46,16 @@ import {useCheckInOutStore} from "@store/dashboard/check-in-out";
 const storeCheckInOut = useCheckInOutStore()
 const storeRoom = useConfigurationRoomsStore()
 const {rooms, searchValue, searchType} = storeToRefs(storeRoom)
+const roomId = ref(null)
 const room = ref(null)
 const modal = ref<IModal | null>(null)
 const close = () => {
   modal.value?.close()
 }
-const open = () => {
+const open = (id) => {
+  if (id) {
+    roomId.value = id
+  }
   modal.value?.open()
 }
 const searchRoom = (query: string) => {
