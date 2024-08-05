@@ -9,3 +9,9 @@ extend-select = ["I"]
 
 [tool.ruff.format]
 indent-style = "space"
+
+[tool.black]
+line-length = 120
+target-version = ['py37']
+include = '\.pyi?$'
+force-exclude = '''(migrations)'''

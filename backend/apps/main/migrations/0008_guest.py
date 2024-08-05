@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
                     "birthday",
                     core.utils.unix_timestamp.UnixTimeStampField(blank=True, null=True),
                 ),
-                ("is_active", models.BooleanField(default=False)),
+                ("is_active", models.BooleanField(default=True)),
                 (
                     "check_in",
                     core.utils.unix_timestamp.UnixTimeStampField(blank=True, null=True),
