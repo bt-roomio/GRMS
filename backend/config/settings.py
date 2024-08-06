@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "django_celery_results",
+    "django_celery_beat",
     "corsheaders",
     "drf_yasg",
     "channels",
@@ -122,9 +124,7 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -163,9 +163,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Rest Framework
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
+    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 15,
@@ -180,15 +178,11 @@ SIMPLE_JWT = {
 SWAGGER_SETTINGS = {
     "PERSIST_AUTH": True,
     "USE_SESSION_AUTH": False,
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}
-    },
+    "SECURITY_DEFINITIONS": {"Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}},
 }
 
 FRONTEND_DOMAIN = os.environ.get("FRONTEND_DOMAIN", "http://localhost:3000")
-FRONTEND_ACTIVATION_URL = os.environ.get(
-    "FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate"
-)
+FRONTEND_ACTIVATION_URL = os.environ.get("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 COMPANY_NAME = os.environ.get("COMPANY_NAME", "Room.io")
 
 # Default primary key field type
@@ -203,6 +197,20 @@ RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD", "guest")
 
 
 WS_INTERVAL = os.environ.get("WS_INTERVAL", 5)
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "redis://localhost:6379/1",
+    }
+}
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_CACHE_BACKEND = "default"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 try:
     from .settings_dev import *  # noqa: F403
