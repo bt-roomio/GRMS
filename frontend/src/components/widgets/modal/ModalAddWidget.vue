@@ -31,8 +31,7 @@
     </div>
     <template #footer="{close, closeWithoutEvents}" v-if="selectedComponent && isEdit">
       <UiButton class="primary" @click.prevent="closeWithoutEvents(); storeConfigurationDashboard.handleConfirmWidget()">
-        <UiIcon name="plus" filled/>
-        {{$t('dashboard.widget.modal.edit_button')}}
+        {{$t('dashboard.widget.modal.save_button')}}
       </UiButton>
       <UiButton class="text" @click.prevent="close(); storeConfigurationDashboard.handleCancelWidget()">
         {{ $t('dashboard.configuration.rooms.modals.add_new_rooms.cancel') }}
@@ -59,7 +58,7 @@ const add_widget = ref<IModal | null>(null)
 const storeWidgetType = useWidgetType()
 const storeConfigurationDevice = useConfigurationDeviceStore()
 const storeConfigurationDashboard = useConfigurationDashboardStore()
-const {isEdit, selectedComponent, editWidget} = storeToRefs(storeConfigurationDashboard)
+const {isEdit, selectedComponent, editWidget, alias} = storeToRefs(storeConfigurationDashboard)
 const {widgetTypes} = storeToRefs(storeWidgetType)
 const currentComponent = ref<{[key: string]: any} | null>(null)
 const mode = computed(() => import.meta.env.MODE)
@@ -109,7 +108,17 @@ watch(attrDataWs, (newValue) => {
     previousValue = null
   }
   if (newValue) {
-    send(newValue);
+    if (newValue.entityType === 'ALIAS') {
+      const deviceId = alias.value.find((el: any) => el.id === newValue.entityId)?.device_id
+      const newObj = {
+        ...newValue,
+        entityId: deviceId,
+        entityType: 'DEVICE',
+      }
+      send(newObj)
+    }else {
+      send(newValue);
+    }
 
     previousValue = JSON.parse(JSON.stringify(newValue));
   }

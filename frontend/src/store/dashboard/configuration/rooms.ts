@@ -89,7 +89,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         itemError.value.code = null
         itemError.value.msg = null
         try {
-            const {data} = await useApiFetch<IConfigurationRoom>('/main/room/' + id, {method: 'GET'})
+            const {data} = await useApiFetch<IConfigurationRoom>(`/main/room/${id}/`, {method: 'GET'})
             room.value = data
             if (isFilled) {
                 state.value.id = data.id
@@ -136,7 +136,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         if (!isFormCorrect) return
         let obj = JSON.parse(JSON.stringify(state.value))
         try {
-            await useApiFetch<IConfigurationRoom>('/main/room/' + obj.id, {method: 'PUT', data: obj})
+            await useApiFetch<IConfigurationRoom>(`/main/room/${obj.id}/`, {method: 'PUT', data: obj})
             await getList(searchValue.value ? {
                 ...sortedData.value,
                 ...router.currentRoute.value.query,
@@ -160,7 +160,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             callback: async (confirmed) => {
                 if (confirmed) {
                     try {
-                        await useApiFetch<IConfigurationRoom>('/main/room/' + id, {method: 'DELETE'})
+                        await useApiFetch<IConfigurationRoom>(`/main/room/${id}/`, {method: 'DELETE'})
                         await getList(searchValue.value ? {
                             ...sortedData.value,
                             ...router.currentRoute.value.query,
@@ -178,14 +178,6 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
 
     }
     const $reset = async () => {
-        size.value = 10
-        room.value = null
-        rooms.value = {results: [], count: 0}
-        searchValue.value = ''
-        searchType.value = 'room_number'
-        itemError.value = {code: null, msg: null}
-        error.value = {code: null, msg: null}
-        sortedData.value = {}
         state.value = {
             id: null,
             type: "",
@@ -195,6 +187,16 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
             devices: [],
         }
         v$.value.$reset()
+    }
+    const $resetData = async () => {
+        size.value = 10
+        room.value = null
+        rooms.value = {results: [], count: 0}
+        searchValue.value = ''
+        searchType.value = 'room_number'
+        itemError.value = {code: null, msg: null}
+        error.value = {code: null, msg: null}
+        sortedData.value = {}
     }
     watch(searchType, async value => {
         if (searchValue.value) {
@@ -234,6 +236,7 @@ export const useConfigurationRoomsStore = defineStore('configuration-rooms', () 
         searchValue,
         searchType,
         validation: v$,
-        $reset
+        $reset,
+        $resetData
     }
 })

@@ -29,13 +29,13 @@
             <label>{{ $t('dashboard.widget.form.tag') }}</label>
             <Multiselect
                 v-model="item.tag"
-                :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+                :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
                 :canClear="false"
                 :canDeselect="false"
                 :caret="false"
                 :searchable="true"
                 :placeholder="$t('dashboard.widget.form.tag_placeholder')"
-                :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+                :disabled="!state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
             />
           </div>
           <UiInput
@@ -125,7 +125,7 @@ const types = ref([
   'Sensor',
 ])
 watch(state, (value) => {
-  const entityId = editWidget.value?.descriptor?.default_config?.ws_args.entityId;
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(editWidget.value?.descriptor?.default_config?.ws_args);
   const scope = editWidget.value?.descriptor?.default_config?.ws_args.scope;
   const attrs = entityId ? value.attrs.get(entityId + '_' + scope) : null;
 

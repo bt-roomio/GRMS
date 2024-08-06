@@ -8,8 +8,8 @@
           <label>{{$t('dashboard.widget.form.tag')}}</label>
           <Multiselect
               v-model="editWidget.descriptor.default_config.tag"
-              :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
-              :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :disabled="!state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
               :canClear="false"
               :canDeselect="false"
               :caret="false"
@@ -68,8 +68,8 @@
           <label>{{ $t('dashboard.widget.form.tag') }}</label>
           <Multiselect
               v-model="editWidget.descriptor.default_config.fan_tag"
-              :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
-              :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :disabled="!state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
               :canClear="false"
               :canDeselect="false"
               :caret="false"
@@ -121,8 +121,8 @@
             <label>{{ $t('dashboard.widget.form.tag') }}</label>
             <Multiselect
                 v-model="editWidget.descriptor.default_config.master_off_tag"
-                :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
-                :disabled="(!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope) || !editWidget.descriptor.default_config.master_off)"
+                :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+                :disabled="(!state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope) || !editWidget.descriptor.default_config.master_off)"
                 :canClear="false"
                 :canDeselect="false"
                 :caret="false"
@@ -134,8 +134,8 @@
             <label>{{ $t('dashboard.widget.form.tag') }}</label>
             <Multiselect
                 v-model="editWidget.descriptor.default_config.fan_valve_tag"
-                :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
-                :disabled="(!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope) || !editWidget.descriptor.default_config.fan_valve)"
+                :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+                :disabled="(!state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope) || !editWidget.descriptor.default_config.fan_valve)"
                 :canClear="false"
                 :canDeselect="false"
                 :caret="false"
@@ -192,7 +192,7 @@ onMounted(async () => {
 })
 
 watch(state, (value) => {
-  const entityId = editWidget.value?.descriptor?.default_config?.ws_args.entityId;
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(editWidget.value?.descriptor?.default_config?.ws_args);
   const scope = editWidget.value?.descriptor?.default_config?.ws_args.scope;
   const attrs = entityId ? value.attrs.get(entityId + '_' + scope) : null;
   if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.tag))) {

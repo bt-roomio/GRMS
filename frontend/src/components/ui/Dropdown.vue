@@ -7,9 +7,11 @@
       ></slot>
     </div>
     <transition name="fade">
-      <div ref="floating" :style="floatingStyles" class="dropdown__content" v-if="open">
-        <slot name="content" :close="close"></slot>
-      </div>
+      <teleport to="body">
+        <div ref="floating" :style="floatingStyles" class="dropdown__content" v-if="open">
+          <slot name="content" :close="close"></slot>
+        </div>
+      </teleport>
     </transition>
   </div>
 </template>

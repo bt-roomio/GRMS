@@ -1,7 +1,7 @@
 <template>
   <teleport to="body">
     <transition>
-      <div class="modal" v-if="isOpen">
+      <div class="modal" :class="position" v-if="isOpen">
         <div class="modal__wrapper" @click.prevent="close()"></div>
         <div class="modal__body">
           <div class="modal__head">
@@ -43,4 +43,5 @@ const open = () => {
 }
 defineComponent({name: 'UiModal'})
 defineExpose({close, open, closeWithoutEvents})
+defineProps(['position'])
 </script>

@@ -5,15 +5,17 @@
       <div class="ui-form">
         <div class="ui-multiselect">
           <label>{{$t('dashboard.widget.form.tag')}}</label>
+          <pre>{{editWidget.descriptor.default_config.tag}}</pre>
+          <pre>{{state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)}}</pre>
           <Multiselect
               v-model="editWidget.descriptor.default_config.tag"
-              :options="state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
               :canClear="false"
               :canDeselect="false"
               :caret="false"
               :searchable="true"
               :placeholder="$t('dashboard.widget.form.tag_placeholder')"
-              :disabled="!state.attrs.get(editWidget?.descriptor.default_config.ws_args.entityId + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
+              :disabled="!state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
           />
         </div>
         <div class="ui-multiselect" v-if="editWidget?.descriptor.default_config.unit !== 'Custom Units'">
@@ -80,7 +82,7 @@ onMounted(async () => {
   await storeConfigurationDevice.getList()
 })
 watch(state, (value) => {
-  const entityId = editWidget.value?.descriptor?.default_config?.ws_args.entityId;
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(editWidget.value?.descriptor?.default_config?.ws_args);
   const scope = editWidget.value?.descriptor?.default_config?.ws_args.scope;
   const attrs = entityId ? value.attrs.get(entityId + '_' + scope) : null;
   if (editWidget.value?.descriptor?.default_config && (!attrs || !attrs.includes(editWidget.value?.descriptor?.default_config?.tag))) {

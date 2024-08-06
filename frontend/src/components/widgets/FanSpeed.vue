@@ -70,7 +70,9 @@ import UiToggle from "@components/ui/Toggle.vue";
 import {useWS} from "@store/dashboard/ws";
 import {storeToRefs} from "pinia";
 import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
+import {useConfigurationDashboardStore} from "@store/dashboard/configuration/dashboard.ts";
 const storeWs = useWS()
+const storeConfigurationDashboard = useConfigurationDashboardStore()
 const storeConfigurationDevice = useConfigurationDeviceStore()
 const {state} = storeToRefs(storeWs)
 const props = defineProps(['value'])
@@ -93,12 +95,14 @@ const units = computed(() => ({
 }) as { [key: string]: any })
 
 const getRangeValue = (tag: string) => {
-  const { entityId, scope } = props.value.ws_args || {};
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(props.value.ws_args)
+  const { scope } = props.value.ws_args || {};
   const eventKey = `${entityId}_${scope}`;
   return state.value.events?.get(eventKey)?.data?.[tag]?.[0]?.[1] || 0;
 }
 const setRangeValue = async ({value}: any, tag: string) => {
-  const { entityId, scope } = props.value.ws_args || {};
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(props.value.ws_args)
+  const { scope } = props.value.ws_args || {};
   if (entityId && scope) {
     let obj: any = {};
     obj[tag] = value;
@@ -106,12 +110,14 @@ const setRangeValue = async ({value}: any, tag: string) => {
   }
 }
 const getFanValue = (tag: string) => {
-  const { entityId, scope } = props.value.ws_args || {};
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(props.value.ws_args)
+  const { scope } = props.value.ws_args || {};
   const eventKey = `${entityId}_${scope}`;
   return state.value.events?.get(eventKey)?.data?.[tag]?.[0]?.[1] || 0;
 }
 const setFanValue = async (value: any, tag: string) => {
-  const { entityId, scope } = props.value.ws_args || {};
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(props.value.ws_args)
+  const { scope } = props.value.ws_args || {};
   if (entityId && scope) {
     let obj: any = {};
     obj[tag] = value;
@@ -120,13 +126,15 @@ const setFanValue = async (value: any, tag: string) => {
 }
 
 const getToggleValue = (tag: string) => {
-  const { entityId, scope } = props.value.ws_args || {};
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(props.value.ws_args)
+  const { scope } = props.value.ws_args || {};
   const eventKey = `${entityId}_${scope}`;
   return state.value.events?.get(eventKey)?.data?.[tag]?.[0]?.[1] || false;
 }
 
 const changeMode = async (e: any, tag: string) => {
-  const { entityId, scope } = props.value.ws_args || {};
+  const entityId = storeConfigurationDashboard.getAliasIsEqual(props.value.ws_args)
+  const { scope } = props.value.ws_args || {};
   if (entityId && scope) {
     let obj: any = {};
     obj[tag] = e.target.checked;

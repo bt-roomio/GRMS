@@ -92,6 +92,7 @@ onBeforeRouteUpdate(async (to) => {
 })
 onUnmounted(() => {
   storeConfigurationRooms.$reset()
+  storeConfigurationRooms.$resetData()
 })
 const sortedHeaders = computed(() => {
   const columns = profile.value?.additional_info?.[router.currentRoute.value.path]?.columnFilters || null

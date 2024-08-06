@@ -223,6 +223,12 @@
           "edit_title": "Edit new dashboard",
           "edit_subtitle": "Edit a new room in your hotel",
           "edit_button": "Save dashboard"
+        },
+        "alias": {
+          "confirm": {
+            "title": "Confirm deletion of alias",
+            "subtitle": "By clicking the 'Confirm' button you confirm the deletion of the selected alias without the possibility of restoration"
+          }
         }
       },
       "users": {
@@ -367,10 +373,13 @@
         "add_title": "Add new widget",
         "add_subtitle": "Select the widget you want to add",
         "edit_button": "Edit widget",
+        "save_button": "Save widget",
         "choose_widget_type": "Choose widget type"
       },
       "form": {
+        "alias": "Alias",
         "add_alias": "Add alias",
+        "edit_alias": "Edit alias",
         "add_widget": "Add widget",
         "general": "General",
         "title": "Title",
@@ -439,6 +448,9 @@
     "user_add_success": "The creation of the user was successful",
     "user_edit_success": "The editing of the user was successful",
     "user_delete_success": "The delete of the user was successful",
+    "alias_add_success": "The creation of the alias was successful",
+    "alias_edit_success": "The editing of the alias was successful",
+    "alias_delete_success": "The delete of the alias was successful",
     "user_wait_activation_link": "Wait, the link for user activation is being generated",
     "copy_link": "Copy link",
     "password_updated__success": "Your password has been updated successfully",

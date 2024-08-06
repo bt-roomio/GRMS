@@ -38,6 +38,18 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
     const dashboards = ref<IServerResponse<IConfigurationDashboard> | null>(null)
     const dashboard = ref<IConfigurationDashboard | null>(null)
 
+    const alias = ref<{
+        id: string
+        name: string,
+        device_name: string,
+        device_id: string
+    }[]>([])
+    const aliasState = ref({
+        id: '',
+        name: '',
+        device_name: '',
+        device_id: ''
+    })
     // Dashboard helpers
 
     const loading = ref(false)
@@ -108,7 +120,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
         try {
-            await useApiFetch('/main/dashboard/' + state.value.id, {method: 'PUT', data: state.value})
+            await useApiFetch(`/main/dashboard/${state.value.id}/`, {method: 'PUT', data: state.value})
             await getList(sortedData.value)
             callback()
             toast.success(t('toast.dashboard_edit_success') as string);
@@ -119,7 +131,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
     }
     const getItem = async (id: string, isFilled: boolean) => {
         try {
-            const {data} = await useApiFetch<IConfigurationDashboard>(`/main/dashboard/${id}`, {method: 'GET'})
+            const {data} = await useApiFetch<IConfigurationDashboard>(`/main/dashboard/${id}/`, {method: 'GET'})
             dashboard.value = data
             if (isFilled) {
                 state.value.id = data.id
@@ -137,7 +149,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
             callback: async (confirmed) => {
                 if (confirmed) {
                     try {
-                        await useApiFetch('/main/dashboard/' + id, {method: 'DELETE'})
+                        await useApiFetch(`/main/dashboard/${id}/`, {method: 'DELETE'})
                         await getList(sortedData.value)
                         toast.success(t('toast.dashboard_delete_success') as string);
                     }catch (e: any) {
@@ -168,7 +180,6 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         }
     }
     const $reset = async () => {
-
         state.value = {
             id: "",
             title: "",
@@ -199,7 +210,12 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         await getList(sortedData.value)
     }
     // Dashboard Inner helpers
-
+    const getAlias = async () => {
+        if (dashboard.value && !dashboard.value?.configuration?.alias){
+            dashboard.value.configuration = {alias: []}
+        }
+        alias.value = dashboard.value?.configuration.alias
+    }
     const getDashboardInnerHelpers = async () => {
         try {
             if (dashboard.value && !dashboard.value?.configuration?.widgets){
@@ -300,12 +316,40 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
                           dashboard_config: editModel.value ? editModel.value[key] : null
                       }
                   }
-                })
+                }),
+                alias: alias.value
             }
         }
-        const {data} = await useApiFetch('/main/dashboard/' + state.value.id, {method: 'PUT', data: dashboardState})
+        const {data} = await useApiFetch(`/main/dashboard/${state.value.id}/`, {method: 'PUT', data: dashboardState})
         dashboard.value = data
         await getDashboardInnerHelpers()
+    }
+    const getAliasIsEqual = (entity: any) => {
+        if (entity.entityType === 'ALIAS') {
+            return alias.value.find((el: any) => el.id === entity.entityId)?.device_id
+        }else {
+            return entity.entityId
+        }
+    }
+    const saveAlias = async () => {
+        if (!dashboard.value) return
+        const dashboardState = {
+            id: dashboard.value.id,
+            title: dashboard.value.title,
+            configuration: {
+                widgets: viewWidgets.value?.map((item, key) => {
+                    return {
+                        ...item,
+                        descriptor: {
+                            ...item.descriptor,
+                            dashboard_config: viewModel.value ? viewModel.value[key] : null
+                        }
+                    }
+                }),
+                alias: alias.value
+            }
+        }
+        await useApiFetch(`/main/dashboard/${state.value.id}/`, {method: 'PUT', data: dashboardState})
     }
     const resetDashboard = async () => {
         editModel.value = null
@@ -338,6 +382,8 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         readWidget,
         dashboards,
         dashboard,
+        alias,
+        aliasState,
         loading,
         isSettings,
         dashboardSettingsCallback,
@@ -358,6 +404,7 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         searchItems,
         $reset,
         $resetData,
+        getAlias,
         sortList,
         loadMore,
         getDashboardInnerHelpers,
@@ -372,6 +419,8 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
         handleConfirmWidget,
         handleCancelWidget,
         saveDashboard,
+        saveAlias,
+        getAliasIsEqual,
         resetDashboard,
     }
 })

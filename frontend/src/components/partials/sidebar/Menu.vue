@@ -84,7 +84,7 @@ const menu = computed<Item[]>(() => [
         show: storePermissions.hasPermission('view_device')
       },
     ],
-    show: true
+    show: storePermissions.hasPermission('view_dashboard') || storePermissions.hasPermission('view_user') || storePermissions.hasPermission('view_group') || storePermissions.hasPermission('view_room') || storePermissions.hasPermission('view_roomtype') || storePermissions.hasPermission('view_device')
   },
   {
     icon: 'settings',

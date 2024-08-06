@@ -9,9 +9,11 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue3-toastify'
+import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 
 export const useCheckInOutStore = defineStore('check-in-out', () => {
 	const confirmStore = useConfirm()
+	const storeRoom = useConfigurationRoomsStore()
 	const { t } = useI18n()
 	const loading = ref(false)
 	const error = ref({ code: null, msg: null })
@@ -109,12 +111,15 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 			newState.check_out = moment(newState.check_out).unix()
 			newState.room = router.currentRoute.value.params.id as string
 			const {data} = await useApiFetch('/main/guest/', {method: 'POST', data: newState})
-			await getGuests(searchValue.value ? {
-				...sortedData.value,
-				...router.currentRoute.value.query,
-				search_value: searchValue.value,
-				search_field: searchType.value,
-			} : {...sortedData.value, ...router.currentRoute.value.query})
+			await Promise.all([
+				getGuests(searchValue.value ? {
+					...sortedData.value,
+					...router.currentRoute.value.query,
+					search_value: searchValue.value,
+					search_field: searchType.value,
+				} : {...sortedData.value, ...router.currentRoute.value.query}),
+				storeRoom.getItem(router.currentRoute.value.params.id as string, false)
+			])
 			callback()
 			await $reset()
 			toast.success(t('toast.save_success') as string)
@@ -130,13 +135,8 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 			content: 'Are you sure want to checkout selected guests in the room?',
 			callback: async confirmed => {
 				if (confirmed) {
-					await useApiFetch(`/main/guest/${id}/`, {method: 'PUT', data: {is_active: false}})
-					await getGuests(searchValue.value ? {
-						...sortedData.value,
-						...router.currentRoute.value.query,
-						search_value: searchValue.value,
-						search_field: searchType.value,
-					} : {...sortedData.value, ...router.currentRoute.value.query})
+					await useApiFetch(`/main/guest/${id}/`, {method: 'PUT', data: {is_active: false, room: null}})
+					await updateState()
 					toast.success(t('toast.save_success') as string)
 				}
 			},
@@ -151,13 +151,7 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 			callback: async confirmed => {
 				if (confirmed) {
 					await useApiFetch(`/main/guest/move/room/`, {method: 'PUT', params: args})
-
-					await getGuests(searchValue.value ? {
-						...sortedData.value,
-						...router.currentRoute.value.query,
-						search_value: searchValue.value,
-						search_field: searchType.value,
-					} : {...sortedData.value, ...router.currentRoute.value.query})
+					await updateState()
 					toast.success(t('toast.save_success') as string)
 				}
 			},
@@ -172,12 +166,8 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 			callback: async confirmed => {
 				if (confirmed) {
 					await useApiFetch(`/main/guest/${args.id}/`, {method: 'PUT', data: args})
-					await getGuests(searchValue.value ? {
-						...sortedData.value,
-						...router.currentRoute.value.query,
-						search_value: searchValue.value,
-						search_field: searchType.value,
-					} : {...sortedData.value, ...router.currentRoute.value.query})
+					await updateState()
+
 					toast.success(t('toast.save_success') as string)
 				}
 			},
@@ -221,6 +211,17 @@ export const useCheckInOutStore = defineStore('check-in-out', () => {
 				: { ...sortedData.value, ...router.currentRoute.value.query }
 		)
 	})
+	const updateState = async () => {
+		await Promise.all([
+			getGuests(searchValue.value ? {
+				...sortedData.value,
+				...router.currentRoute.value.query,
+				search_value: searchValue.value,
+				search_field: searchType.value,
+			} : {...sortedData.value, ...router.currentRoute.value.query}),
+			storeRoom.getItem(router.currentRoute.value.params.id as string, false)
+		])
+	}
 	return {
 		guest,
 		guests,

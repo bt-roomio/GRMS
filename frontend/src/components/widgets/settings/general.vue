@@ -18,7 +18,7 @@
         <UiDoubleSelect
             v-model="editWidget.descriptor.default_config.ws_args.entityId"
             v-model:select="editWidget.descriptor.default_config.ws_args.entityType"
-            :options="devices?.results"
+            :options="editWidget.descriptor.default_config.ws_args.entityType === 'DEVICE' ? devices?.results : alias"
             :args="{valueProp: 'id', label: 'name'}"
             :select-options="['DEVICE', 'ALIAS']"
             :label="$t('dashboard.widget.form.datasource')"
@@ -61,8 +61,9 @@ import {useConfigurationDashboardStore} from "@store/dashboard/configuration/das
 import {storeToRefs} from "pinia";
 import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 import Multiselect from "@vueform/multiselect";
+import {onMounted} from "vue";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
-const {editWidget} = storeToRefs(storeConfigurationDashboard)
+const {editWidget, alias} = storeToRefs(storeConfigurationDashboard)
 const storeConfigurationDevice = useConfigurationDeviceStore()
 const {devices} = storeToRefs(storeConfigurationDevice)
 
@@ -73,5 +74,9 @@ const typeSelected = (value: any) => {
     editWidget.value.descriptor.default_config.ws_args.scope = ''
   }
 }
+
+onMounted(() => {
+  storeConfigurationDashboard.getAlias()
+})
 defineProps(['hideDevice'])
 </script>

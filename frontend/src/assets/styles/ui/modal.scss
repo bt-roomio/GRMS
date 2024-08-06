@@ -1,5 +1,21 @@
 .modal{
   @apply fixed w-full h-full top-0 left-0 z-20 flex justify-end overflow-hidden transition;
+  &.top-center{
+    @apply justify-center items-start;
+    &.v-enter-active{
+      .modal__body{
+        animation: 150ms slideInTop forwards;
+      }
+    }
+    &.v-leave-active{
+      .modal__body{
+        animation: 0.3s slideOutTop;
+      }
+    }
+    .modal__body{
+      @apply h-auto w-full max-w-[630px];
+    }
+  }
   &.v-enter-active{
     .modal__wrapper{
       animation: 150ms fadeIn forwards;

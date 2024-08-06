@@ -105,7 +105,8 @@ onMounted(() => {
     wAndH.value.width = '100%'
     wAndH.value.height = '100%'
   })
-  const wsArgs = props.item?.descriptor.default_config?.ws_args;
+
+  const wsArgs = {...props.item?.descriptor.default_config?.ws_args, entityType: 'DEVICE', entityId: storeConfigurationDashboard.getAliasIsEqual(props.item?.descriptor.default_config?.ws_args)};
   if (!wsArgs) return null;
 
   const isFilled = Object.values(wsArgs).every(arg => !!arg);
@@ -115,7 +116,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  const wsArgs = props.item?.descriptor.default_config?.ws_args;
+  const wsArgs = {...props.item?.descriptor.default_config?.ws_args, entityType: 'DEVICE', entityId: storeConfigurationDashboard.getAliasIsEqual(props.item?.descriptor.default_config?.ws_args)};
   if (!wsArgs) return null;
 
   const isFilled = Object.values(wsArgs).every(arg => !!arg);

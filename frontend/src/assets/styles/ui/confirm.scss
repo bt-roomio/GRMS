@@ -1,5 +1,5 @@
 .ui-confirm{
-  @apply fixed w-full h-full top-0 left-0 z-20 transition;
+  @apply fixed w-full h-full top-0 left-0 z-40 transition;
   &.v-enter-active{
     .ui-confirm__wrapper{
       animation: 150ms fadeIn forwards;

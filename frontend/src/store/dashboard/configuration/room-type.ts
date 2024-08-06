@@ -71,7 +71,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
         const isFormCorrect = await v$.value.$validate()
         if (!isFormCorrect) return
         try {
-            await useApiFetch('/main/room-type/' + state.value.id, {method: 'PUT', data: state.value})
+            await useApiFetch(`/main/room-type/${state.value.id}/`, {method: 'PUT', data: state.value})
             await getList(sortedData.value)
             callback()
             await $reset()
@@ -82,7 +82,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
     }
     const getItem = async (id: string, isFilled: boolean) => {
         try {
-            const {data} = await useApiFetch<IConfigurationRoomTypes>('/main/room-type/' + id, {method: 'GET'})
+            const {data} = await useApiFetch<IConfigurationRoomTypes>(`/main/room-type/${id}/`, {method: 'GET'})
             room_type.value = data
             if (isFilled) {
                 state.value.id = data.id
@@ -100,7 +100,7 @@ export const useConfigurationRoomTypeStore = defineStore('configuration-room-typ
             callback: async (confirmed) => {
                 if (confirmed) {
                     try {
-                        await useApiFetch('/main/room-type/' + id, {method: 'DELETE'})
+                        await useApiFetch(`/main/room-type/${id}/`, {method: 'DELETE'})
                         await getList(sortedData.value)
                         toast.success(t('toast.room_type_delete_success') as string);
                     }catch (e: any) {

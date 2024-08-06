@@ -11,7 +11,7 @@ export const useWidgetType = defineStore('widget-type', () => {
         widgetTypes.value = data
     }
     const getWidgetType = async (id: string) => {
-        const {data} = await useApiFetch<IWidgetType>('/main/widget-type/' + id, {method: 'GET'})
+        const {data} = await useApiFetch<IWidgetType>(`/main/widget-type/${id}/`, {method: 'GET'})
         widgetType.value = data
     }
     const setWidgetTypes = async () => {
@@ -21,7 +21,7 @@ export const useWidgetType = defineStore('widget-type', () => {
     }
     const deleteWidgetTypes = async () => {
         widgetTypes.value?.results.map(async e => {
-            await useApiFetch<IWidgetType>('/main/widget-type/' + e.id, {method: 'DELETE'})
+            await useApiFetch<IWidgetType>(`/main/widget-type/${e.id}/`, {method: 'DELETE'})
         })
     }
 

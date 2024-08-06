@@ -18,6 +18,7 @@
       />
     </div>
     <ModalAddWidget ref="add_widget" />
+    <ModalAlias @submit="saveAlias" ref="modal_alias" />
   </div>
 </template>
 <script setup lang="ts">
@@ -29,7 +30,10 @@ import PageHead from "@components/pages/dashboard/PageHead.vue";
 import WidgetContainer from "@components/widgets/WidgetContainer.vue";
 import ModalAddWidget from "@components/widgets/modal/ModalAddWidget.vue";
 import {useI18n} from "vue-i18n";
+import ModalAlias from "@components/widgets/modal/ModalAlias.vue";
+import {useConfigurationDeviceStore} from "@store/dashboard/configuration/device.ts";
 const storeConfigurationDashboard = useConfigurationDashboardStore()
+const storeConfigurationDevice = useConfigurationDeviceStore()
 const {
   dashboard,
   isSettings,
@@ -38,6 +42,7 @@ const {
 } = storeToRefs(storeConfigurationDashboard)
 const {t} = useI18n()
 const {params} = useRoute()
+const modal_alias = ref<IModal | null>(null)
 const add_widget = ref<IModal | null>(null)
 
 const buttons = computed(() => {
@@ -45,11 +50,11 @@ const buttons = computed(() => {
     {icon: 'settings', id: 'settings', class: 'text'},
     {icon: 'check', id: 'save', class: 'text'},
     {icon: 'x-close', id: 'cancel', class: 'text delete'},
-    {name: t('dashboard.widget.form.add_alias'), icon: 'plus', id: 'add-alias', class: 'text'},
+    {name: t('dashboard.widget.form.alias'), id: 'alias', class: 'text'},
     {name: t('dashboard.widget.form.add_widget'), icon: 'plus', id: 'add-widget'},
   ]
   if (!isSettings.value) {
-    objs = objs.filter(el => !(['add-alias', 'add-widget', 'save', 'cancel'].includes(el.id)))
+    objs = objs.filter(el => !(['alias', 'add-widget', 'save', 'cancel'].includes(el.id)))
   }else {
     objs = objs.filter(el => !(['settings'].includes(el.id)))
   }
@@ -59,7 +64,9 @@ const buttons = computed(() => {
 onMounted(async () => {
   await Promise.all([
     storeConfigurationDashboard.getItem(params.id as string, true),
+    storeConfigurationDevice.getList(),
   ])
+  await storeConfigurationDashboard.getAlias()
   await storeConfigurationDashboard.getDashboardInnerHelpers()
 })
 const editWidgetHandle = (args: {item: IWidgetType, key: number}) => {
@@ -98,7 +105,13 @@ const clickButtonsHandle = (evt: any) => {
           break;
     case 'add-widget': add_widget.value?.open()
           break;
+    case 'alias': modal_alias.value?.open()
+          break;
   }
+}
+
+const saveAlias = () => {
+  storeConfigurationDashboard.saveAlias()
 }
 onUnmounted(() => {
   storeConfigurationDashboard.$reset()
