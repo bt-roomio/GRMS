@@ -25,7 +25,7 @@
     li{
       @apply w-full flex gap-2 items-center hover:bg-gray-200 dark:hover:bg-gray-600 p-1 pr-3 rounded-md cursor-pointer dark:text-white;
       .ui-icon{
-        @apply text-xl flex-shrink-0 w-5 h-5 dark:stroke-white;
+        @apply text-xl flex-shrink-0 w-5 h-5 dark:stroke-white stroke-primary-600;
       }
     }
   }

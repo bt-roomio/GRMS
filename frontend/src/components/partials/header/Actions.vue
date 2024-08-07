@@ -21,7 +21,7 @@
           </li>
           <li style="padding: 0; border-radius: 0" class="border-b"></li>
           <li @click.prevent="changeMode">
-            <UiIcon name="palette" class="mb-auto mt-1" filled/>
+            <UiIcon name="palette" filled/>
             Mode: <span class="capitalize">{{hasMode}}</span>
           </li>
           <li @click.prevent="authorizationStore.logout()">
@@ -56,7 +56,7 @@ const changeMode = () => {
         break;
     }
   }else {
-    cookies.set('mode', 'dark', {path: '/'})
+    cookies.set('mode', hasMode.value === 'dark' ? 'light': 'dark', {path: '/'})
   }
 }
 </script>

@@ -4,10 +4,10 @@
     @apply left-20 w-[calc(100%_-_80px)];
   }
   &__hotel{
-    @apply stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex justify-between items-center border-r border-gray-200 dark:border-gray-700 px-8 h-full gap-2;
+    @apply max-lg:hidden stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex justify-between items-center border-r border-gray-200 dark:border-gray-700 px-8 h-full gap-2;
   }
   &__time{
-    @apply stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex items-center px-6 h-full gap-2 mr-auto;
+    @apply max-lg:hidden stroke-gray-800 text-gray-800 dark:text-white dark:stroke-white flex items-center px-6 h-full gap-2 mr-auto;
   }
   &__actions{
     @apply flex items-center px-6 h-full gap-4 dark:text-white dark:stroke-white stroke-gray-800;

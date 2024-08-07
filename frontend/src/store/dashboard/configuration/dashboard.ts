@@ -1,4 +1,4 @@
-import {defineStore} from "pinia";
+import {defineStore, storeToRefs} from "pinia";
 import {computed, DefineComponent, ref, shallowRef} from "vue";
 import useApiFetch from "@/composables/useApiFetch.ts";
 import {addFieldSelect} from "@utils/transform-response.ts";
@@ -9,10 +9,14 @@ import {useI18n} from "vue-i18n";
 import {useConfirm} from "@store/dashboard/useConfirm.ts";
 import {Layout} from "grid-layout-plus";
 import useMainStore from "@/store";
+import router from "@/router";
+import {useConfigurationRoomsStore} from "@store/dashboard/configuration/rooms.ts";
 
 export const useConfigurationDashboardStore = defineStore('configuration-dashboard', () => {
 
     const mainStore = useMainStore()
+    const storeRoom = useConfigurationRoomsStore()
+    const {room} = storeToRefs(storeRoom)
     const confirmStore = useConfirm()
     const {t} = useI18n()
 
@@ -326,6 +330,11 @@ export const useConfigurationDashboardStore = defineStore('configuration-dashboa
     }
     const getAliasIsEqual = (entity: any) => {
         if (entity.entityType === 'ALIAS') {
+            if (router.currentRoute.value.name === 'room-inner') {
+                if (room.value?.devices.length){
+                    return room.value?.devices[0].id
+                }
+            }
             return alias.value.find((el: any) => el.id === entity.entityId)?.device_id
         }else {
             return entity.entityId

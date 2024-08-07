@@ -1,15 +1,24 @@
 .tabs{
-  @apply mb-6;
+  @apply mb-6 overflow-auto;
+  &::-webkit-scrollbar {
+    @apply w-0 h-0;
+  }
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-transparent;
+  }
   &.fill {
     @apply w-full;
     .tabs__list { @apply w-full}
     .tabs__item { @apply w-full justify-center}
   }
   &__list{
-    @apply inline-flex  relative;
+    @apply inline-flex relative w-full;
   }
   &__item{
-    @apply p-3 cursor-pointer flex gap-2 border-b-2 border-gray-200 dark:border-gray-500 ;
+    @apply p-3 cursor-pointer flex gap-2 border-b-2 border-gray-200 dark:border-gray-500 whitespace-nowrap;
   }
   &__line{
     @apply border-b-2 border-primary-600 dark:border-gray-300 w-24 absolute transition-all;

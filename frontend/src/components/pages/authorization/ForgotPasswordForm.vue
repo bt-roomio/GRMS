@@ -1,5 +1,5 @@
 <template>
-  <form class="forgot-password__form" @submit.prevent="storeForgotPassword.submit()">
+  <form class="forgot-password__form text-left" @submit.prevent="storeForgotPassword.submit()">
     <UiInput
         name="email"
         type="email"

@@ -18,7 +18,10 @@
     }
   }
   &__actions{
-    @apply flex gap-6 justify-between items-center;
+    @apply flex max-lg:flex-col gap-6 justify-between items-center;
+    .tabs{
+      @apply max-lg:w-full;
+    }
   }
   &__buttons{
     @apply flex flex-wrap gap-6 items-center mb-6;
