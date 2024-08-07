@@ -5,8 +5,6 @@
       <div class="ui-form">
         <div class="ui-multiselect">
           <label>{{$t('dashboard.widget.form.tag')}}</label>
-          <pre>{{editWidget.descriptor.default_config.tag}}</pre>
-          <pre>{{state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)}}</pre>
           <Multiselect
               v-model="editWidget.descriptor.default_config.tag"
               :options="state.attrs.get(storeConfigurationDashboard.getAliasIsEqual(editWidget?.descriptor.default_config.ws_args) + '_' + editWidget?.descriptor.default_config.ws_args.scope)"
