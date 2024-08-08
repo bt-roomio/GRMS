@@ -98,8 +98,6 @@ import {useRouter} from "vue-router";
 import UiButton from "@components/ui/Button.vue";
 import CheckAll from "@components/ui/CheckAll.vue";
 import UiCheckbox from "@components/ui/Checkbox.vue";
-import UiBadge from "@components/ui/Badge.vue";
-import UiDropdown from "@components/ui/Dropdown.vue";
 import RoomWsData from "@components/pages/dashboard/rooms/RoomWsData.vue";
 defineProps(['isTable', 'isSearchOpen', 'headers'])
 const {t} = useI18n()
