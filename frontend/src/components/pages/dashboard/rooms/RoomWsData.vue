@@ -61,8 +61,8 @@ const props = defineProps(['type', 'entity'])
 const entityId = computed(() => (props.entity as IRoom).devices?.[0]?.id || null)
 
 const wsValueTemp = computed(() => {
-  if (entityId.value && state.value.events.get(entityId.value + '_SHARED_SCOPE')?.data['temp']){
-    return state.value.events.get(entityId.value + '_SHARED_SCOPE').data['temp'][0][1]
+  if (entityId.value && state.value.events.get(entityId.value + '_SHARED_SCOPE')?.data['room_temp']){
+    return state.value.events.get(entityId.value + '_SHARED_SCOPE').data['room_temp'][0][1]
   }else {
     return 'error'
   }
@@ -119,7 +119,7 @@ const activateMur = async () => {
 const activateDnd = async () => {
   if (entityId.value) {
     let obj: any = {};
-    obj['dnd'] = !wsValueMur.value;
+    obj['dnd'] = !wsValueDnd.value;
     await storeConfigurationDevice.setAttr(entityId.value, 'SHARED_SCOPE', obj);
   }
 }

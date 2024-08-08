@@ -51,8 +51,8 @@ const storeWs = useWS()
 const {send, unSubscription} = storeWs
 const {state} = storeToRefs(storeWs)
 const wsValueTemp = computed(() => {
-  if (entityId.value && state.value.events.get(entityId.value + '_SHARED_SCOPE')?.data['temp']){
-    return state.value.events.get(entityId.value + '_SHARED_SCOPE').data['temp'][0][1]
+  if (entityId.value && state.value.events.get(entityId.value + '_SHARED_SCOPE')?.data['room_temp']){
+    return state.value.events.get(entityId.value + '_SHARED_SCOPE').data['room_temp'][0][1]
   }else {
     return 'error'
   }

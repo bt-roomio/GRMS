@@ -31,4 +31,15 @@
       }
     }
   }
+  &.warning{
+    @apply bg-warning-100 text-warning-500;
+    .ui-icon{
+      @apply stroke-warning-500
+    }
+    &.dot{
+      &:before{
+        @apply content-[''] w-1.5 h-1.5 bg-warning-500 rounded-full;
+      }
+    }
+  }
 }

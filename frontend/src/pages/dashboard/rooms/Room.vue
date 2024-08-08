@@ -30,7 +30,7 @@
           </div>
         </template>
       </PageHead>
-      <RoomActions :item="room"/>
+      <RoomActions v-if="room" :item="room"/>
       <Tabs :list="tabList"/>
       <WidgetContainer
           v-if="viewModel && !$route.query.tab"

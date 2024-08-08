@@ -1,6 +1,7 @@
 [
   ["/shuttle/attributes/47aef21b-6cc9-4ec5-8573-1a6f491940c0/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 27,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -23,6 +24,7 @@
   }],
   ["/shuttle/attributes/a1561fb2-e031-42ce-812a-0ce84843c0f0/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 28,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -45,6 +47,7 @@
   }],
   ["/shuttle/attributes/12984ef9-71e3-4e84-bbd9-a8059ae1771e/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 23,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -67,6 +70,7 @@
   }],
   ["/shuttle/attributes/cae8e88f-4e57-4479-b751-97acd66e792f/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 25,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -89,6 +93,7 @@
   }],
   ["/shuttle/attributes/44d63ff6-d66d-46b6-bfd3-0c48e3d124ff/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 24,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -111,6 +116,7 @@
   }],
   ["/shuttle/attributes/ec120f51-3a5b-44a3-b9c2-3b456318e943/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 19,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -133,6 +139,7 @@
   }],
   ["/shuttle/attributes/648df4e6-5439-48a2-8f79-54d910109d9a/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 19,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -155,6 +162,7 @@
   }],
   ["/shuttle/attributes/66574fb4-77e0-440a-a28e-da23cfc60407/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 20,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -177,6 +185,7 @@
   }],
   ["/shuttle/attributes/9a74bd56-846a-41fe-b640-e043bb5541ce/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 21,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -199,6 +208,7 @@
   }],
   ["/shuttle/attributes/35080719-75ad-4a57-bedd-45ef877d8916/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 23,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -221,6 +231,7 @@
   }],
   ["/shuttle/attributes/091f3d84-5d6c-4887-9ca5-a672d417a0df/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 31,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -243,6 +254,7 @@
   }],
   ["/shuttle/attributes/e00ea2b8-d11a-489c-adcb-8ed31938fd25/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 22,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
@@ -265,6 +277,7 @@
   }],
   ["/shuttle/attributes/34e29905-40e0-425e-a9fe-a58198ffad07/SHARED_SCOPE/", {
     "temp": 25,
+    "room_temp": 26,
     "fan": "auto",
     "master_off": false,
     "fan_valve": false,
