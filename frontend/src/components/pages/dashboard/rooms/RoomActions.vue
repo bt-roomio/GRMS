@@ -31,7 +31,6 @@ import UiIcon from "@components/ui/Icon.vue";
 import {computed, onMounted, onUnmounted} from "vue";
 import {useWS} from "@store/dashboard/ws";
 import {storeToRefs} from "pinia";
-import UiSmallButton from "@components/ui/ButtonSmall.vue";
 const props = defineProps(['item'])
 const entityId = computed(() => (props.item as IRoom)?.devices?.[0]?.id || null)
 const storeWs = useWS()
