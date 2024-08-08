@@ -5,19 +5,20 @@
     <UiBadge class="text font-bold h-8" :class="{'error': wsValueTemp < 17 || wsValueTemp > 30}" v-if="wsValueTemp !== 'error'">
       {{ wsValueTemp }} °C
     </UiBadge>
-    <UiBadge v-else class="text error" v-tooltip="'No connection'">NC</UiBadge>
-    <UiBadge class="bg-gray-200 font-medium h-8">
+    <UiBadge v-else class="text error h-8" v-tooltip="'No connection'">NC</UiBadge>
+    <UiBadge class="bg-gray-200 font-medium h-8" v-if="wsValueAcStatus !== 'error'">
       <UiIcon name="wind" filled/>
-      1
+      {{ wsValueAcStatus }}
     </UiBadge>
+    <UiBadge v-else class="text error h-8" v-tooltip="'No connection AC'">NC</UiBadge>
     <UiBadge :class="wsValueMur ? 'warning' : ''" v-if="wsValueMur !== 'error'" :isDot="false" class="font-medium h-8">
       <UiIcon name="brush" filled/>
     </UiBadge>
-    <UiBadge v-else class="text error" v-tooltip="'No connection'">NC</UiBadge>
+    <UiBadge v-else class="text error h-8" v-tooltip="'No connection'">NC</UiBadge>
     <UiBadge :class="wsValueDnd ? 'warning' : ''" v-if="wsValueDnd !== 'error'" :isDot="false" class="font-medium h-8">
       <UiIcon name="alarm-clock-off" filled/>
     </UiBadge>
-    <UiBadge v-else class="text error" v-tooltip="'No connection'">NC</UiBadge>
+    <UiBadge v-else class="text error h-8" v-tooltip="'No connection'">NC</UiBadge>
 
     <UiBadge :isDot="false" :class="item.status === 'OFF' ? 'off' : ''">
       <UiIcon name="alert-circle" filled/>
@@ -39,6 +40,13 @@ const {state} = storeToRefs(storeWs)
 const wsValueTemp = computed(() => {
   if (entityId.value && state.value.events.get(entityId.value + '_SHARED_SCOPE')?.data['room_temp']){
     return state.value.events.get(entityId.value + '_SHARED_SCOPE').data['room_temp'][0][1]
+  }else {
+    return 'error'
+  }
+})
+const wsValueAcStatus = computed(() => {
+  if (entityId.value && state.value.events.get(entityId.value + '_SHARED_SCOPE')?.data['ac_status']){
+    return state.value.events.get(entityId.value + '_SHARED_SCOPE').data['ac_status'][0][1]
   }else {
     return 'error'
   }
