@@ -27,7 +27,7 @@
           <p class="font-bold">{{(entity as IRoom).room_number}}</p>
         </template>
         <template #temp="{entity}">
-          <UiBadge class="text" :class="{'error': ((entity as IRoom).temp || 0) < 17 || ((entity as IRoom).temp || 0) > 30}">{{(entity as IRoom).temp || 0 + '°C'}}</UiBadge>
+          <RoomWsData type="temp" :entity="entity"/>
         </template>
         <template #header-cln="{entity}">
           <div class="flex items-center gap-1">
@@ -47,37 +47,20 @@
             <UiIcon v-tooltip="'This indicator reflects the current status of room cleaning'" class="cursor-pointer" name="help-circle" filled/>
           </div>
         </template>
-        <template #cln>
-          <UiSmallButton class="inactive">
-            <UiIcon name="check" filled/>
-          </UiSmallButton>
+        <template #cln="{entity}">
+          <RoomWsData type="cln" :entity="entity"/>
         </template>
-        <template #dnd>
-          <UiSmallButton class="warning">
-            <UiIcon name="alarm-clock-off" filled/>
-          </UiSmallButton>
+        <template #dnd="{entity}">
+          <RoomWsData type="dnd" :entity="entity"/>
         </template>
         <template #device="{entity}">
-          <UiSmallButton :class="{active: entity.status === 'OFF'}">
+          <UiSmallButton :class="entity.status === 'OFF' ? 'error' : 'inactive'">
             <UiIcon name="alert-circle" filled/>
           </UiSmallButton>
         </template>
-        <template #actions>
-          <div class="ui-table__actions">
-            <UiDropdown @click.stop>
-              <template #trigger>
-                <div class="flex gap-2 items-center text-primary-600 dark:text-white">
-                  {{ $t('dashboard.rooms.table.actions') }}
-                  <UiIcon class="stroke-primary-600 dark:stroke-white" name="chevron-down" filled />
-                </div>
-              </template>
-              <template #content>
-                <div class="dropdown__menu">
-                  <div>{{ $t('dashboard.rooms.table.activate_cleaning') }}</div>
-                  <div>{{ $t('dashboard.rooms.table.activate_dnd') }}</div>
-                </div>
-              </template>
-            </UiDropdown>
+        <template #actions="{entity}">
+          <div class="ui-table__actions" @click.stop>
+            <RoomWsData type="actions" :entity="entity"/>
           </div>
         </template>
       </UiTable>
@@ -117,6 +100,7 @@ import CheckAll from "@components/ui/CheckAll.vue";
 import UiCheckbox from "@components/ui/Checkbox.vue";
 import UiBadge from "@components/ui/Badge.vue";
 import UiDropdown from "@components/ui/Dropdown.vue";
+import RoomWsData from "@components/pages/dashboard/rooms/RoomWsData.vue";
 defineProps(['isTable', 'isSearchOpen', 'headers'])
 const {t} = useI18n()
 const {push} = useRouter()

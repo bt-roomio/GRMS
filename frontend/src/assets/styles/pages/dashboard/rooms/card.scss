@@ -13,7 +13,7 @@
     @apply flex flex-col gap-1;
   }
   &__number{
-    @apply inline-flex gap-1 items-center w-max;
+    @apply inline-flex gap-1 items-center w-max text-gray-500;
     p{
       @apply text-gray-700 dark:text-gray-200 font-bold text-sm;
     }
@@ -24,16 +24,10 @@
       @apply text-green-500;
     }
     &.checkedin {
-      @apply text-blue-500;
+      @apply text-orange-500;
     }
     &.occupied {
       @apply text-red-500;
-    }
-    &.donotdistrub {
-      @apply text-red-500;
-    }
-    &.makeuproom {
-      @apply text-yellow-500;
     }
   }
   &__degree{

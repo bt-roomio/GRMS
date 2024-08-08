@@ -357,7 +357,7 @@
         "status": "Status",
         "delete_room": "Delete room",
         "edit_room": "Edit room",
-        "activate_cleaning": "Activate Cleaning",
+        "activate_cleaning": "Activate MUR",
         "activate_dnd": "Activate DND"
       },
       "subtitle": "Track and manage your room list",

@@ -28,7 +28,6 @@ import Default from "@/layouts/Default.vue";
 import Roles from "@/pages/dashboard/configuration/Roles.vue";
 import permission from "@router/middleware/permission.ts";
 
-
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [

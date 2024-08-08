@@ -11,7 +11,13 @@
       @apply stroke-gray-500;
     }
   }
-  &.active{
+  &.success{
+    @apply bg-success-500 border-success-500;
+    .ui-icon{
+      @apply stroke-white;
+    }
+  }
+  &.error{
     @apply bg-error-500 border-error-500;
     .ui-icon{
       @apply stroke-white;
