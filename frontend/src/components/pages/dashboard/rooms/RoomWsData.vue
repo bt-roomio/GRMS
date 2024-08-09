@@ -38,7 +38,7 @@
 import UiIcon from "@components/ui/Icon.vue";
 import UiBadge from "@components/ui/Badge.vue";
 import UiSmallButton from "@components/ui/ButtonSmall.vue";
-import {computed, onMounted, onUnmounted, ref, watch} from "vue";
+import {computed, onUnmounted, ref, watch} from "vue";
 import {useWS} from "@store/dashboard/ws";
 import {storeToRefs} from "pinia";
 import UiDropdown from "@components/ui/Dropdown.vue";
