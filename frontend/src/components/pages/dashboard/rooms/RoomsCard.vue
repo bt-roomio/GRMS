@@ -1,8 +1,8 @@
 <template>
-  <router-link :to="{name: 'room-inner', params: {id: item.id}}" class="rooms-card" v-if="item" :class="{'error': item.status === 'OFF'}">
+  <router-link ref="target" :to="{name: 'room-inner', params: {id: item.id}}" class="rooms-card" v-if="item" :class="{'error': item.status === 'OFF'}">
     <div class="rooms-card__info">
       <div class="rooms-card__number" :class="item.state.toLowerCase()">
-        <p>{{ item.room_number }}</p>
+        <p>{{ item.room_number }}</p> {{targetIsVisible}}
       </div>
       <div class="rooms-card__degree" :class="{'text-error-500': wsValueTemp < 17 || wsValueTemp > 30}" v-if="wsValueTemp !== 'error'">
         t {{ wsValueTemp }} °C
@@ -42,9 +42,12 @@
 <script setup lang="ts">
 import UiSmallButton from "@components/ui/ButtonSmall.vue";
 import UiIcon from "@components/ui/Icon.vue";
-import {computed, onMounted, onUnmounted} from "vue";
+import {computed, onUnmounted, ref, watch} from "vue";
 import {useWS} from "@store/dashboard/ws";
 import {storeToRefs} from "pinia";
+import {useElementVisibility} from "@vueuse/core";
+const target = ref(null)
+const targetIsVisible = useElementVisibility(target)
 const props = defineProps(['item'])
 const entityId = computed(() => (props.item as IRoom).devices?.[0]?.id || null)
 const storeWs = useWS()
@@ -71,17 +74,22 @@ const wsValueDnd = computed(() => {
     return 'error'
   }
 })
-onMounted(() => {
-  if (entityId.value) {
-    const wsArgs = {
-      entityType: 'DEVICE',
-      entityId: entityId.value,
-      scope: "SHARED_SCOPE",
-      type: "ATTRIBUTES"
-    }
-    const isFilled = Object.values(wsArgs).every(arg => !!arg);
-    if (isFilled){
+
+watch(targetIsVisible, (newValue) => {
+  const wsArgs = {
+    entityType: 'DEVICE',
+    entityId: entityId.value,
+    scope: "SHARED_SCOPE",
+    type: "ATTRIBUTES"
+  }
+  const isFilled = Object.values(wsArgs).every(arg => !!arg);
+  if (newValue && entityId.value) {
+    if (isFilled) {
       send(wsArgs)
+    }
+  }else {
+    if (isFilled) {
+      unSubscription(wsArgs)
     }
   }
 })

@@ -19,7 +19,6 @@
       <UiIcon name="alarm-clock-off" filled/>
     </UiBadge>
     <UiBadge v-else class="text error h-8" v-tooltip="'No connection'">NC</UiBadge>
-
     <UiBadge :isDot="false" :class="item.status === 'OFF' ? 'off' : ''">
       <UiIcon name="alert-circle" filled/>
     </UiBadge>
@@ -65,6 +64,7 @@ const wsValueDnd = computed(() => {
     return 'error'
   }
 })
+
 onMounted(() => {
   if (entityId.value) {
     const wsArgs = {
