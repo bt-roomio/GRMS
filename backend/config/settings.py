@@ -15,6 +15,12 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,15 +29,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", "ABCD")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "ABCD")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", False)
+DEBUG = os.getenv("DJANGO_DEBUG", False)
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-]
+# 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
+# For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS").split(" ")
 
 # Append module dir
 sys.path.append(os.path.join(BASE_DIR, "apps"))
@@ -72,10 +77,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
-CORS_ORIGIN_WHITELIST = (
-    "http://127.0.0.1",
-    "http://localhost:3000",
-)
+# 'CORS_ORIGIN_WHITELIST' should be a single string of hosts with a space between each.
+# For example: 'CORS_ORIGIN_WHITELIST=http://localhost:8000'
+CORS_ORIGIN_WHITELIST = os.getenv("DJANGO_CORS_ORIGIN_WHITELIST").split(" ")
 
 TEMPLATES = [
     {
@@ -112,11 +116,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "postgres"),
-        "USER": os.environ.get("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", 5432),
+        "NAME": os.getenv("DATABASE_NAME", "postgres"),
+        "USER": os.getenv("DATABASE_USER", "postgres"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
+        "HOST": os.getenv("DATABASE_HOST", "localhost"),
+        "PORT": os.getenv("DATABASE_PORT", 5432),
     }
 }
 
@@ -153,11 +157,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "files/uploads")
 
 # Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.mail.ru")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", True)
-EMAIL_PORT = os.environ.get("EMAIL_PORT", 2525)
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.mail.ru")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", True)
+EMAIL_PORT = os.getenv("EMAIL_PORT", 2525)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 SERVER_EMAIL = EMAIL_HOST_USER
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
@@ -181,23 +185,21 @@ SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {"Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}},
 }
 
-FRONTEND_DOMAIN = os.environ.get("FRONTEND_DOMAIN", "http://localhost:3000")
-FRONTEND_ACTIVATION_URL = os.environ.get("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
-COMPANY_NAME = os.environ.get("COMPANY_NAME", "Room.io")
+FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:3000")
+FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
+COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
-RABBIT_HOST = os.environ.get("RABBIT_MQ_HOST", "localhost")
-RABBIT_PORT = os.environ.get("RABBIT_MQ_PORT", 5672)
-RABBIT_TYPE = os.environ.get("RABBIT_TYPE", "rabbitMQ")
-RABBIT_LOGIN = os.environ.get("RABBIT_LOGIN", "guest")
-RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD", "guest")
+RABBIT_HOST = os.getenv("RABBIT_MQ_HOST", "localhost")
+RABBIT_PORT = os.getenv("RABBIT_MQ_PORT", 5672)
+RABBIT_TYPE = os.getenv("RABBIT_TYPE", "rabbitMQ")
+RABBIT_LOGIN = os.getenv("RABBIT_LOGIN", "guest")
+RABBIT_PASSWORD = os.getenv("RABBIT_PASSWORD", "guest")
 
-
-WS_INTERVAL = os.environ.get("WS_INTERVAL", 5)
-
+WS_INTERVAL = os.getenv("WS_INTERVAL", 5)
 
 CACHES = {
     "default": {
@@ -211,8 +213,3 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-
-try:
-    from .settings_dev import *  # noqa: F403
-except ImportError:
-    pass
