@@ -11,4 +11,3 @@ def update_status_of_room(sender, instance, **kwargs):
 
         instance.room.status = "ON" if working_devices else "OFF"
         instance.room.save()
-

@@ -2,7 +2,7 @@ from django.urls import path
 
 from main.views.alarm_settings import AlarmSettingsDetailView
 from main.views.dashboard import DashboardDetailView, DashboardListView
-from main.views.device import DeviceListView
+from main.views.device import DeviceListView, DeviceDetailView
 from main.views.device_credentials import DeviceCredentialsDetailView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
@@ -25,6 +25,7 @@ urlpatterns = [
     path("dashboard/", DashboardListView.as_view(), name="dashboard-list"),
     path("dashboard/<uuid:pk>/", DashboardDetailView.as_view(), name="dashboard-detail"),
     path("device/", DeviceListView.as_view(), name="device-list"),
+    path("device/<uuid:pk>/", DeviceDetailView.as_view(), name="device-detail"),
     path("device/<str:token>/credentials/", DeviceCredentialsDetailView.as_view(), name="device-credentials-detail"),
     path("guest/", GuestListView.as_view(), name="guest-list"),
     path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
