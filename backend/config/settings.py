@@ -151,9 +151,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "files/static")
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 MEDIA_URL = "/uploads/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "files/uploads")
+MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_URL)
 
 # Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -208,7 +208,7 @@ CACHES = {
     }
 }
 
-CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
