@@ -4,6 +4,7 @@ from main.views.alarm_settings import AlarmSettingsDetailView
 from main.views.dashboard import DashboardDetailView, DashboardListView
 from main.views.device import DeviceListView, DeviceDetailView
 from main.views.device_credentials import DeviceCredentialsDetailView
+from main.views.device_profile import DeviceProfileListView, DeviceProfileDetailView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestListView, GuestDetailView
@@ -26,6 +27,8 @@ urlpatterns = [
     path("dashboard/<uuid:pk>/", DashboardDetailView.as_view(), name="dashboard-detail"),
     path("device/", DeviceListView.as_view(), name="device-list"),
     path("device/<uuid:pk>/", DeviceDetailView.as_view(), name="device-detail"),
+    path("device-profile/", DeviceProfileListView.as_view(), name="device-profile-list"),
+    path("device-profile/<uuid:pk>/", DeviceProfileDetailView.as_view(), name="device-profile-detail"),
     path("device/<str:token>/credentials/", DeviceCredentialsDetailView.as_view(), name="device-credentials-detail"),
     path("guest/", GuestListView.as_view(), name="guest-list"),
     path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
