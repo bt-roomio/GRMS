@@ -15,15 +15,14 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -36,7 +35,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", False)
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS").split(" ")
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(" ")
 
 # Append module dir
 sys.path.append(os.path.join(BASE_DIR, "apps"))
@@ -79,7 +78,7 @@ ROOT_URLCONF = "config.urls"
 
 # 'CORS_ORIGIN_WHITELIST' should be a single string of hosts with a space between each.
 # For example: 'CORS_ORIGIN_WHITELIST=http://localhost:8000'
-CORS_ORIGIN_WHITELIST = os.getenv("DJANGO_CORS_ORIGIN_WHITELIST").split(" ")
+CORS_ORIGIN_WHITELIST = os.getenv("DJANGO_CORS_ORIGIN_WHITELIST", "").split(" ")
 
 TEMPLATES = [
     {
@@ -108,7 +107,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -213,3 +211,10 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CELERY_BEAT_SCHEDULE = {
+    "auto-checkout": {
+        "task": "main.tasks.auto_check_out",
+        "schedule": 30.0,
+    },
+}
