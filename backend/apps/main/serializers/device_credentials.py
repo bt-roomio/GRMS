@@ -1,5 +1,6 @@
-from main.models import Device
 from rest_framework import serializers
+
+from main.models import Device, DeviceCredentials
 
 
 class DeviceSimpleCredentialsSerializer(serializers.ModelSerializer):
@@ -13,8 +14,14 @@ class DeviceSimpleCredentialsSerializer(serializers.ModelSerializer):
         fields = ("id",)
 
 
-class DeviceCredentialsSerializer(serializers.Serializer):
+class DeviceCredentialsDetailSerializer(serializers.Serializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["device"] = DeviceSimpleCredentialsSerializer(instance.device).data
         return data
+
+
+class DeviceCredentialsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceCredentials
+        fields = ("id", "credentials_id", "credentials_type", "credentials_value")

@@ -166,7 +166,7 @@ class DeviceCredentials(BaseModel):
     credentials_id = models.CharField(unique=True, blank=True, null=True)
     credentials_type = models.CharField(max_length=255, blank=True, null=True)
     credentials_value = models.CharField(blank=True, null=True)
-    device = models.OneToOneField("main.Device", CASCADE, blank=True, null=True)
+    device = models.OneToOneField("main.Device", CASCADE, blank=True, null=True, related_name="credentials")
 
     objects = DeviceCredentialsQuerySet.as_manager()
 

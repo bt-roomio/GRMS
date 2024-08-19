@@ -15,7 +15,8 @@ class DeviceListView(APIView):
         params = DeviceFilterParams.check(request.GET)
         queryset = Device.objects.list(
             tenant=request.user.tenant,
-            search=params.get("search"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
             status=params.get("status"),
             sort_by=params.get("sort_by"),
         )
