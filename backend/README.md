@@ -5,6 +5,9 @@ Configure postgresql image:
 2. `docker exec -it postgres bash`
 3. `psql -U DB_USER`
 4. `create database DB_NAME owner DB_USER;`
+5. `exit`
+
+-- For checking db before `exit` write `\l`
 
 # Celery
 

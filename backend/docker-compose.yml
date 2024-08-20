@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:latest
     restart: always
     container_name: postgres
     environment:
@@ -9,10 +9,17 @@ services:
      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
     - '5432:5432'
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
 
   web:
     build: .
     container_name: django
+    command: >
+      /bin/bash -c "
+      python /app/manage.py migrate &&
+      python /app/manage.py collectstatic --no-input &&
+      supervisord -c /etc/supervisor/conf.d/supervisord.conf"
     ports:
       - '8000:8000'
     environment:
@@ -20,7 +27,7 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
+      - DATABASE_PORT=${DATABASE_PORT}
     volumes:
       - .:/app
       - static_volume:/app/static/
@@ -63,12 +70,12 @@ services:
       - redis
       - postgres
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
+      - DATABASE_PORT=${DATABASE_PORT}
 
 
 volumes:
