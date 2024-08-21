@@ -1,8 +1,9 @@
 import time
 
-from core.models import BaseModel, BaseModelTs
 from django.db import models
 from django.db.models import CASCADE
+
+from core.models import BaseModel, BaseModelTs
 from shuttle.querysets.attributes import AttributeKvQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
@@ -95,7 +96,7 @@ class Relation(BaseModel):
     to_type = models.CharField(max_length=255)
     relation_type_group = models.CharField(max_length=255)
     relation_type = models.CharField(max_length=255)
-    additional_info = models.CharField(blank=True, null=True)
+    additional_info = models.JSONField(blank=True, null=True)
 
     objects = RelationQuerySet.as_manager()
 
