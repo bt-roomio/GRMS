@@ -9,6 +9,7 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
         model = DeviceProfile
         fields = (
             "id",
+            "created_at",
             "name",
             "type",
             "tenant",

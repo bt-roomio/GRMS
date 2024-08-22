@@ -1,5 +1,8 @@
+import time
+
+from django.db.models import Q, Count
+
 from core.querysets.base_queryset import BaseQuerySet
-from django.db.models import Q
 
 
 class RoomQuerySet(BaseQuerySet):
@@ -22,4 +25,14 @@ class RoomQuerySet(BaseQuerySet):
                     pass
         query = query.filter(status=status) if status else query
 
+        return query
+
+    def room_status(self, tenant):
+        query = self.filter(active=True, tenant=tenant)
+        query = (
+            query.values("state")
+            .filter(created_at__gte=time.time() - 86400)
+            .annotate(count=Count("id"))
+            .values_list("state", "count")
+        )
         return query
