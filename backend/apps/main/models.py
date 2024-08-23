@@ -6,6 +6,7 @@ from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
+from main.querysets.device_profile import DeviceProfileQuerySet
 from main.querysets.guest import GuestQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
@@ -177,6 +178,7 @@ class DeviceCredentials(BaseModel):
 class DeviceProfile(BaseModel):
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
+    state = models.BooleanField(default=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     image = models.CharField(max_length=1000000, blank=True, null=True)
     transport_type = models.CharField(max_length=255, blank=True, null=True)
@@ -187,6 +189,8 @@ class DeviceProfile(BaseModel):
     default_queue_name = models.CharField(max_length=255, blank=True, null=True)
     provision_device_key = models.CharField(unique=True, blank=True, null=True)
     external_id = models.UUIDField(blank=True, null=True)
+
+    objects = DeviceProfileQuerySet.as_manager()
 
     def __str__(self):
         return str(self.name)

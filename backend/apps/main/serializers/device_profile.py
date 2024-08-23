@@ -12,6 +12,7 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "name",
             "type",
+            "state",
             "tenant",
             "image",
             "transport_type",
@@ -31,3 +32,6 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
 class DeviceProfileFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
+    state = serializers.BooleanField(allow_null=True)
+    search_field = serializers.ChoiceField(choices=("name", "type"), required=False)
+    search_value = serializers.CharField(required=False)

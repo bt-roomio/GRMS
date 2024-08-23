@@ -13,7 +13,12 @@ class DeviceProfileListView(APIView):
     @swagger_auto_schema(responses=DeviceProfileSwagger, query_serializer=DeviceProfileFilterParams)
     def get(self, request):
         params = DeviceProfileFilterParams.check(request.GET)
-        queryset = DeviceProfile.objects.filter(tenant_id=request.user.tenant_id)
+        queryset = DeviceProfile.objects.list(
+            tenant=request.user.tenant,
+            state=params.get("state"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+        )
         serializer = DeviceProfileSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
