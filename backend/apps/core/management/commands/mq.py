@@ -3,11 +3,12 @@ import logging
 import time
 
 import pika
-from core.utils.random_letter import get_random_letter
 from django.conf import settings
 from django.core.management.base import BaseCommand
+
+from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
-from shuttle.models import AttributeKv, Relation, TsKv, TsKvDictionary, TsKvLatest
+from shuttle.models import AttributeKv, TsKv, TsKvDictionary, TsKvLatest, Relation
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 logger = logging.getLogger(__name__)
@@ -18,18 +19,7 @@ RABBIT_PASSWORD = settings.RABBIT_PASSWORD
 RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
-gatewayPublish = [
-    "v1/gateway/connect",
-    "v1/gateway/disconnect",
-    "v1/gateway/attributes",
-    "v1/gateway/attributes/request",
-    "v1/gateway/attributes/response",
-    "v1/gateway/attributes/request/+",
-    "v1/gateway/attributes/response/+",
-    "v1/gateway/telemetry",
-    "v1/devices/me/telemetry",
-    "v1/devices/me/attributes",
-]
+rabbit_queues = {"toGRMSqueueName": "toGRMS", "fromGRMSqueueName": "fromGRMS"}
 
 
 class Command(BaseCommand):
@@ -52,17 +42,18 @@ class Command(BaseCommand):
 
 
 def callback(ch, method, properties, body):
-    logger.critical(" Received body = %s ", body)
-    logger.critical(" [x] Received properties = %s ", properties)
-    logger.critical(" [x] Received method = %s ", method)
-    routing_key = method.routing_key
+    # logger.critical(" Received body = %s ", body)
+    # logger.critical(" [x] Received properties = %s ", properties)
+    # logger.critical(" [x] Received method = %s ", method)
+
     msg = json.loads(body)
 
     device = Device.objects.filter(id=msg.get("sourceDeviceUUID")).first()
     data = msg.get("data")
+    topic = msg.get("topic")
     ts = None
 
-    if routing_key.startswith("v1/gateway/") and data and isinstance(data, dict):
+    if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         from_id = device.id
         for key, value in data.items():
             device, created = Device.objects.get_or_create(
@@ -73,6 +64,7 @@ def callback(ch, method, properties, body):
                 device_profile_id="be17d30b-9785-4415-bfa5-e7fdaf19e37c",
             )
             if created:
+                print("Device created")
                 DeviceCredentials.objects.create(
                     credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device
                 )
@@ -86,11 +78,12 @@ def callback(ch, method, properties, body):
                 relation_type="Created",
             )
             data = value
-
             if data and isinstance(data, dict):
-                if routing_key.endswith("attributes"):
+                if topic.endswith("attributes"):
+                    print("save_attribute_kv")
                     save_attribute_kv(device, data)
-                if routing_key.endswith("telemetry"):
+                if topic.endswith("telemetry"):
+                    print("save_telemetry_kv")
                     save_telemetry_kv(device, data, ts)
 
             elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
@@ -98,9 +91,11 @@ def callback(ch, method, properties, body):
                     if res.get("ts") and res.get("values"):
                         ts = res.get("ts")
                         res = res.get("values")
-                    if routing_key.endswith("attributes"):
+                    if topic.endswith("attributes"):
+                        print("attributes")
                         save_attribute_kv(device, res)
-                    if routing_key.endswith("telemetry"):
+                    if topic.endswith("telemetry"):
+                        print("save_telemetry_kv")
                         save_telemetry_kv(device, res, ts)
 
     if not device:
@@ -116,27 +111,26 @@ def callback(ch, method, properties, body):
         data = data.get("values")
 
     if data and isinstance(data, dict):
-        if routing_key == "v1/devices/me/attributes":
+        if topic == "v1/devices/me/attributes":
             save_attribute_kv(device, data)
-        if routing_key == "v1/devices/me/telemetry":
+        if topic == "v1/devices/me/telemetry":
             save_telemetry_kv(device, data, ts)
 
     elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
         for res in data:
-            if routing_key == "v1/devices/me/attributes":
+            if topic == "v1/devices/me/attributes":
+                print("save_attribute_kv")
                 save_attribute_kv(device, res)
-            if routing_key == "v1/devices/me/telemetry":
+            if topic == "v1/devices/me/telemetry":
+                print("save_telemetry_kv")
                 save_telemetry_kv(device, res, ts)
-
-    print(json.loads(body))
 
 
 def consume():
     channel = connect_to_rabbitmq()
-    for topic in gatewayPublish:
-        channel.basic_consume(queue=topic, on_message_callback=callback, auto_ack=True)
+    channel.basic_consume(queue=rabbit_queues["toGRMSqueueName"], on_message_callback=callback, auto_ack=True)
 
-        logger.critical(f"Waiting for messages in {topic}. To exit press CTRL+C")
+    logger.critical(f"Waiting for messages in topic. To exit press CTRL+C")
     channel.start_consuming()
 
 
@@ -145,105 +139,7 @@ def connect_to_rabbitmq():
     parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-    for topic in gatewayPublish:
-        channel.queue_declare(queue=topic)
     return channel
-
-
-def test():
-    # "v1/devices/me/telemetr -> TsKv"
-    """
-    Topic: v1/gateway/connect
-    Message: {"device":"Device A"}
-    {'sourceDeviceUUID': '47aef21b-6cc9-4ec5-8573-ja6f491940c0', 'data': {
-    'Device A': [
-        {'ts': 1483228800000, 'values': {'temperature': 42, 'humidity': 80}},
-        {'ts': 1483228801000, 'values': {'temperature': 43, 'humidity': 82}}],
-    'Device B': [{'ts': 1483228800000, 'values': {'temperature': 42, 'humidity': 80}}]}}
-    v1/gateway/telemetry
-    """
-    fake_data = {
-        "sourceDeviceUUID": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
-        "data": {
-            "Device W": [
-                {"temperature": True, "humidity": 80},
-                {"temperature": "43", "humidity": {"a": 1, "b": 2}},
-            ],
-            "Device Y": {"temperature2": 42, "humidity1": 80},
-        },
-    }
-
-    routing_key = "v1/gateway/attributes"
-    msg = fake_data
-
-    device = Device.objects.filter(id=msg.get("sourceDeviceUUID")).first()
-    data = msg.get("data")
-    ts = None
-
-    if routing_key.startswith("v1/gateway/") and data and isinstance(data, dict):
-        from_id = device.id
-        for key, value in data.items():
-            device, created = Device.objects.get_or_create(
-                name=key,
-                type="default",
-                customer_id="0e43b252-8391-430d-807e-de64e0a63194",
-                tenant_id="28c81921-f78e-4864-87d2-cec674f19d1c",
-                device_profile_id="be17d30b-9785-4415-bfa5-e7fdaf19e37c",
-            )
-            if created:
-                device_credential = DeviceCredentials.objects.create(
-                    credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device
-                )
-            Relation.objects.get_or_create(
-                from_id_id=from_id,
-                to_id_id=device.id,
-                from_type="DEVICE",
-                to_type="DEVICE",
-                relation_type_group="COMMON",
-                relation_type="Created",
-            )
-            data = value
-
-            if data and isinstance(data, dict):
-                if routing_key.endswith("attributes"):
-                    save_attribute_kv(device, data)
-                if routing_key.endswith("telemetry"):
-                    save_telemetry_kv(device, data, ts)
-
-            elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
-                for res in data:
-                    if res.get("ts") and res.get("values"):
-                        ts = res.get("ts")
-                        res = res.get("values")
-                    if routing_key.endswith("attributes"):
-                        save_attribute_kv(device, res)
-                    if routing_key.endswith("telemetry"):
-                        save_telemetry_kv(device, res, ts)
-
-    if not device:
-        print("Device not found")
-        return
-
-    if not data:
-        print("No data found")
-        return
-
-    if data and isinstance(data, dict) and data.get("ts") and data.get("values"):
-        ts = data.get("ts")
-        data = data.get("values")
-
-    if data and isinstance(data, dict):
-        if routing_key == "v1/devices/me/attributes":
-            save_attribute_kv(device, data)
-        if routing_key == "v1/devices/me/telemetry":
-            save_telemetry_kv(device, data, ts)
-
-    elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
-        for res in data:
-            if routing_key == "v1/devices/me/attributes":
-                save_attribute_kv(device, res)
-            if routing_key == "v1/devices/me/telemetry":
-                save_telemetry_kv(device, res, ts)
 
 
 def save_telemetry_kv(device, data, ts):
@@ -276,3 +172,14 @@ def save_attribute_kv(device, data):
             defaults={**fields, "entity_type": "DEVICE"},
         )
         time.sleep(0.1)
+
+    server_data = {"active": True, "lastActivityTime": int(time.time())}
+    for key, item in find_compatible_field(server_data).items():
+        fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
+        fields[item[0]] = item[1]
+        AttributeKv.objects.update_or_create(
+            entity=device,
+            attribute_type=AttributeKv.SERVER_SCOPE,
+            attribute_key=key,
+            defaults={**fields, "entity_type": "DEVICE"},
+        )

@@ -2,6 +2,7 @@ import time
 
 from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView, Response
+
 from shuttle.models import AttributeKv
 from shuttle.serializers.attributes import AttributeKvParams
 from shuttle.utils.find_compatible_field import find_compatible_field
@@ -22,7 +23,7 @@ class AttributeListView(APIView):
             value = item[1]
             fields[field] = value
 
-            obj, _ = AttributeKv.objects.update_or_create(
+            attribute_kv, _ = AttributeKv.objects.update_or_create(
                 entity=params_data.get("deviceId"),
                 attribute_type=params_data.get("scope"),
                 attribute_key=key,
