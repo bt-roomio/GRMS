@@ -42,7 +42,7 @@ class Command(BaseCommand):
 
 
 def callback(ch, method, properties, body):
-    # logger.critical(" Received body = %s ", body)
+    logger.critical(" Received body = %s ", body)
     # logger.critical(" [x] Received properties = %s ", properties)
     # logger.critical(" [x] Received method = %s ", method)
 
