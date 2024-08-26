@@ -32,11 +32,11 @@ class AttributeListView(APIView):
             )
 
         relation = Relation.objects.filter(to_id=params_data.get("deviceId")).first()
-        device_id = relation and relation.from_id or params_data.get("deviceId")
+        device_id = relation and relation.from_id
 
-        device = Device.objects.filter(pk=device_id.id).first()
+        device = Device.objects.filter(pk=params_data.get("deviceId").id).first()
         if device:
             attributes = dict((k, v[1]) for k, v in available_fields.items())
-            send_to_rabbitmq(device.id, device.name, attributes)
+            send_to_rabbitmq(device_id or device.id, device.name, attributes)
 
         return Response({}, 201)

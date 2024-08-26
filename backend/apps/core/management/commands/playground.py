@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from main.models import Device
-from shuttle.models import TsKv
+from shuttle.models import TsKvLatest
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN
 RABBIT_PASSWORD = settings.RABBIT_PASSWORD
@@ -16,4 +16,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         devices = Device.objects.all()
         for device in devices:
-            TsKv.objects.create(entity=device, key=45, long_v=23)
+            TsKvLatest.objects.create(entity=device, key=45, long_v=23)
