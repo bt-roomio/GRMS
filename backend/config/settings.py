@@ -99,15 +99,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
-        },
-    },
-}
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -153,6 +144,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 MEDIA_URL = "/uploads/"
 MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_URL)
 
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+
 # Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.mail.ru")
@@ -187,9 +184,14 @@ FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:3000")
 FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(os.getenv("CHANNEL_LAYERS_HOST", "localhost"), 6379)],
+        },
+    },
+}
 
 RABBIT_HOST = os.getenv("RABBIT_MQ_HOST", "localhost")
 RABBIT_PORT = os.getenv("RABBIT_MQ_PORT", 5672)
@@ -202,7 +204,7 @@ WS_INTERVAL = os.getenv("WS_INTERVAL", 5)
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "redis://localhost:6379/1",
+        "LOCATION": os.getenv("CACHE_LOCATION", "redis://localhost:6379/1"),
     }
 }
 
