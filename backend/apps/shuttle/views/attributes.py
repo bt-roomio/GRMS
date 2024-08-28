@@ -37,6 +37,6 @@ class AttributeListView(APIView):
         device = Device.objects.filter(pk=params_data.get("deviceId").id).first()
         if device:
             attributes = dict((k, v[1]) for k, v in available_fields.items())
-            send_to_rabbitmq(device_id or device.id, device.name, attributes)
+            send_to_rabbitmq(device_id and device_id.id or device.id, device.name, attributes)
 
         return Response({}, 201)

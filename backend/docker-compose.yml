@@ -9,6 +9,8 @@ services:
      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
     - '5432:5432'
+    volumes:
+      - /var/run/postgresql:/var/run/postgresql
 
   web:
     build: .
