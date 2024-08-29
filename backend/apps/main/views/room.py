@@ -1,17 +1,16 @@
-from core.utils.pagination import pagination
-from core.utils.permission import check_for_tenant
 from drf_yasg.utils import swagger_auto_schema
-from main.models import Room
-from main.serializers.room import RoomFilterParams, RoomSerializer
-from main.swagger.room import RoomDetailSwagger, RoomSwagger
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.pagination import pagination
+from main.models import Room
+from main.serializers.room import RoomFilterParams, RoomSerializer
+from main.swagger.room import RoomDetailSwagger, RoomSwagger
+
 
 class RoomListView(APIView):
     @swagger_auto_schema(responses=RoomSwagger, query_serializer=RoomFilterParams)
-    @check_for_tenant
     def get(self, request):
         params = RoomFilterParams.check(request.GET)
         queryset = Room.objects.list(
@@ -27,7 +26,6 @@ class RoomListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(responses=RoomSwagger, request_body=RoomSerializer)
-    @check_for_tenant
     def post(self, request):
         serializer = RoomSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -37,14 +35,12 @@ class RoomListView(APIView):
 
 class RoomDetailView(APIView):
     @swagger_auto_schema(responses=RoomDetailSwagger)
-    @check_for_tenant
     def get(self, request, pk):
         queryset = get_object_or_404(Room, id=pk, active=True)
         serializer = RoomSerializer(queryset, context={"detail": True})
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=RoomDetailSwagger, request_body=RoomSerializer)
-    @check_for_tenant
     def put(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)
         serializer = RoomSerializer(instance, data=request.data)
@@ -53,7 +49,6 @@ class RoomDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(responses={})
-    @check_for_tenant
     def delete(self, request, pk):
         instance = get_object_or_404(Room, id=pk)
         instance.delete()

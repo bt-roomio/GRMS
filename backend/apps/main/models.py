@@ -91,7 +91,7 @@ class Room(BaseModel, UpdateByModel):
     OFF = "OFF"
     STATUS = ((ON, "on"), (OFF, "off"))
 
-    room_number = models.IntegerField()
+    number = models.IntegerField()
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
@@ -110,7 +110,7 @@ class Room(BaseModel, UpdateByModel):
     objects = RoomQuerySet.as_manager()
 
     def __str__(self):
-        return str(self.room_number)
+        return str(self.number)
 
     class Meta:
         db_table = "main_room"

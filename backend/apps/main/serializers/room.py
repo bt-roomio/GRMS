@@ -1,9 +1,10 @@
-from core.utils.serializers import ValidatorSerializer
 from django.utils.translation import gettext_lazy as _
+from rest_framework import serializers
+
+from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
 from main.serializers.room_type import RoomTypeSerializer
-from rest_framework import serializers
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -35,7 +36,7 @@ class RoomSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "created_at",
-            "room_number",
+            "number",
             "floor",
             "block",
             "type",
@@ -52,7 +53,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
 
 class RoomFilterParams(ValidatorSerializer):
-    SORT_FIELDS = ("room_number", "floor", "block", "device", "-room_number", "-floor", "-block", "-device")
+    SORT_FIELDS = ("number", "floor", "block", "-number", "-floor", "-block")
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
@@ -62,7 +63,7 @@ class RoomFilterParams(ValidatorSerializer):
         required=False,
         error_messages={"invalid_choice": _('"{input}" is not a valid choice. Choose next: ON or OFF')},
     )
-    search_field = serializers.ChoiceField(choices=("room_number", "floor", "block"), required=False)
+    search_field = serializers.ChoiceField(choices=("number", "floor", "block"), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 

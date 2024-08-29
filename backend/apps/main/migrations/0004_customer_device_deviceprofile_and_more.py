@@ -3,10 +3,11 @@
 import time
 import uuid
 
-import core.utils.unix_timestamp
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+
+import core.utils.unix_timestamp
 
 
 class Migration(migrations.Migration):
@@ -164,7 +165,7 @@ class Migration(migrations.Migration):
                     "updated_at",
                     core.utils.unix_timestamp.UnixTimeStampField(default=time.time, null=True),
                 ),
-                ("room_number", models.IntegerField()),
+                ("number", models.IntegerField()),
                 ("floor", models.CharField(max_length=255)),
                 ("block", models.CharField(max_length=255)),
                 ("active", models.BooleanField(default=True)),

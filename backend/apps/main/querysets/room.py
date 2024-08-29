@@ -15,6 +15,9 @@ class RoomQuerySet(BaseQuerySet):
 
         if sort_by:
             for item in sort_by:
+                if item in ["number", "-number"]:
+                    query = query.order_by(item)
+                    continue
                 dash = "-" if item.startswith("-") else ""
                 item = item.replace("-", "")
                 try:
