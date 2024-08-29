@@ -39,7 +39,9 @@ class GroupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context.get("request").user
-        permissions = validated_data.pop("permissions")
+        permissions = (
+            Permission.objects.all() if validated_data.get("name") == "SYS_ADMIN" else validated_data.pop("permissions")
+        )
         group = Group.objects.create(**validated_data)
         user.groups.add(group)
         for permission in permissions:
@@ -48,6 +50,8 @@ class GroupSerializer(serializers.ModelSerializer):
         return group
 
     def update(self, instance, validated_data):
+        if validated_data.get("name") == "SYS_ADMIN":
+            validated_data["permissions"] = Permission.objects.all()
         user = self.context.get("request").user
         user.groups.add(instance)
         return super().update(instance, validated_data)

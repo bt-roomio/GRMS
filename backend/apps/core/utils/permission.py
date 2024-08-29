@@ -1,3 +1,4 @@
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 from rest_framework.views import Http404
 
@@ -11,14 +12,18 @@ def check_for_tenant(func):
     return check
 
 
-def permission(perms):
+def check_perms(perms):
     def wrapper(func):
         def check(view, request, *args, **kwargs):
-            for group in request.user.groups.all():
-                for perm in group.permissions.select_related("content_type"):
-                    print(perm)
-            # if not request.user.has_perm(perm):
-            #     raise PermissionDenied()
+            access = False
+
+            for group in request.user.groups.prefetch_related("permissions").all():
+                for x in group.permissions.select_related("content_type"):
+                    if x.codename in perms:
+                        access = True
+
+            if not access:
+                raise PermissionDenied()
 
             return func(view, request, *args, **kwargs)
 

@@ -5,10 +5,7 @@ from rest_framework.views import APIView
 
 from main.models import EmailConfiguration
 from main.serializers.email_config import EmailConfigSerializer
-from main.swagger.email_configuration import (
-    EmailConfigSwagger,
-    EmailConfigUpdateSwagger,
-)
+from main.swagger.email_configuration import EmailConfigSwagger, EmailConfigUpdateSwagger
 
 
 class EmailConfigDetailView(APIView):
