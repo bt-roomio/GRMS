@@ -28,7 +28,7 @@ class GroupsListView(APIView):
     )
     def post(self, request):
         instance = Group.objects.filter(name=request.data.get("name")).first()
-        if instance.name == "SYS_ADMIN" and not request.user.groups.filter(name="SYS_ADMIN"):
+        if instance and instance.name == "SYS_ADMIN" and not request.user.groups.filter(name="SYS_ADMIN"):
             raise ValidationError({"detail": "You don't have permission to create SYS_ADMIN."})
         serializer = GroupSerializer(instance, data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
