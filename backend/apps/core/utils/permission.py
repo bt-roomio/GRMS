@@ -15,14 +15,7 @@ def check_for_tenant(func):
 def check_perms(perms):
     def wrapper(func):
         def check(view, request, *args, **kwargs):
-            access = False
-
-            for group in request.user.groups.prefetch_related("permissions").all():
-                for x in group.permissions.select_related("content_type"):
-                    if x.codename in perms:
-                        access = True
-
-            if not access:
+            if not request.user.has_perms(perms):
                 raise PermissionDenied()
 
             return func(view, request, *args, **kwargs)

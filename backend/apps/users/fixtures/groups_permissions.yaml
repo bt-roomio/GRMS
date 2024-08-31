@@ -1,13 +1,15 @@
 # Group Permissions
-- model: auth.group
-  pk: 1
+- model: users.Role
+  pk: 4131460f-05d5-4597-aba5-53f34fbfc66e
   fields:
       name: SYS_ADMIN
+      tenant: 28c81921-f78e-4864-87d2-cec674f19d1c
 
-- model: auth.group
-  pk: 2
+- model: users.Role
+  pk: bb436b2a-2ff5-4835-a264-fe27e30710e6
   fields:
       name: TENANT_ADMIN
+      tenant: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
       permissions:
           - - view_room
             - main

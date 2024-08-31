@@ -1,7 +1,8 @@
-from core.utils.serializers import ValidatorSerializer
 from django.contrib.auth.models import Group
 from drf_yasg import openapi
 from rest_framework import serializers
+
+from core.utils.serializers import ValidatorSerializer
 from users.models import User
 from users.serializers.group import GroupSimpleSerializer
 
@@ -37,6 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "first_name",
             "last_name",
+            "is_superuser",
             "email",
             "additional_info",
             "phone",
@@ -45,6 +47,9 @@ class UserSerializer(serializers.ModelSerializer):
             "groups",
             "is_active",
         )
+        extra_kwargs = {
+            "is_superuser": {"read_only": True},
+        }
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -60,6 +65,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
+            "is_superuser",
             "additional_info",
             "phone",
             "created_at",
@@ -67,6 +73,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "groups",
             "is_active",
         )
+        extra_kwargs = {
+            "is_superuser": {"read_only": True},
+        }
 
 
 class UserParams(ValidatorSerializer):

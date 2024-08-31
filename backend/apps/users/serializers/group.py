@@ -1,5 +1,7 @@
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Permission
 from rest_framework import serializers
+
+from users.models import Role
 
 
 class PermissionsSerializer(serializers.ModelSerializer):
@@ -11,51 +13,27 @@ class PermissionsSerializer(serializers.ModelSerializer):
 class GroupSimpleSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["permissions"] = (
-            PermissionsSerializer(instance.permissions, many=True).data if instance.permissions else []
-        )
+        perms = instance.permissions
+        data["permissions"] = PermissionsSerializer(perms, many=True).data if perms else []
         return data
 
     class Meta:
-        model = Group
+        model = Role
         fields = ("id", "name", "permissions")
 
 
-class GroupSerializer(serializers.ModelSerializer):
-    permissions = serializers.PrimaryKeyRelatedField(queryset=Permission.objects.all(), many=True)
-
-    def validate(self, attrs):
-        if self.instance:
-            if "name" not in attrs:
-                attrs["name"] = self.instance.name
-            if "permissions" not in attrs:
-                attrs["permissions"] = list()
-        return attrs
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["permissions"] = PermissionsSerializer(instance.permissions, many=True).data
-        return data
-
-    def create(self, validated_data):
-        user = self.context.get("request").user
-        permissions = (
-            Permission.objects.all() if validated_data.get("name") == "SYS_ADMIN" else validated_data.pop("permissions")
-        )
-        group = Group.objects.create(**validated_data)
-        user.groups.add(group)
-        for permission in permissions:
-            permission = Permission.objects.get(id=permission.id)
-            group.permissions.add(permission.id)
-        return group
+class RoleSerializer(serializers.ModelSerializer):
+    permissions = serializers.PrimaryKeyRelatedField(queryset=Permission.objects.all(), many=True, required=True)
 
     def update(self, instance, validated_data):
-        if validated_data.get("name") == "SYS_ADMIN":
-            validated_data["permissions"] = Permission.objects.all()
-        user = self.context.get("request").user
-        user.groups.add(instance)
+        tenant, pk = instance.tenant, instance.pk
+        name = validated_data.get("name", instance.name)
+
+        if instance.name != name and Role.objects.filter(name=name, tenant=tenant).exclude(pk=pk).exists():
+            raise serializers.ValidationError({"name": "A role with this name already exists for this tenant."})
+
         return super().update(instance, validated_data)
 
     class Meta:
-        model = Group
+        model = Role
         fields = ("id", "name", "permissions")

@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 from users.views.groups import GroupDetailView, GroupsListView
 from users.views.permissions import PermissionsListView
 from users.views.reset_password import ActivationLinkView, ResetPasswordView
@@ -9,10 +10,10 @@ from users.views.users import UserDetailView, UserListView
 urlpatterns = [
     # User-related views
     path("users/", UserListView.as_view(), name="users-list"),
-    path("user/<uuid:pk>", UserDetailView.as_view(), name="users-detail"),
+    path("user/<uuid:pk>/", UserDetailView.as_view(), name="users-detail"),
     path("permissions/", PermissionsListView.as_view(), name="permissions-list"),
     path("groups/", GroupsListView.as_view(), name="groups-list"),
-    path("group/<int:pk>", GroupDetailView.as_view(), name="groups-detail"),
+    path("group/<uuid:pk>/", GroupDetailView.as_view(), name="groups-detail"),
     # JWT-related views
     path("access-token/", TokenObtainPairView.as_view(), name="access-token"),
     path("refresh-token/", TokenRefreshView.as_view(), name="refresh-token"),
