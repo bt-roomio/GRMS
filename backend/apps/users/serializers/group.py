@@ -1,6 +1,7 @@
 from django.contrib.auth.models import Permission
 from rest_framework import serializers
 
+from main.models import Tenant
 from users.models import Role
 
 
@@ -24,6 +25,14 @@ class GroupSimpleSerializer(serializers.ModelSerializer):
 
 class RoleSerializer(serializers.ModelSerializer):
     permissions = serializers.PrimaryKeyRelatedField(queryset=Permission.objects.all(), many=True, required=True)
+    tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False, allow_null=True)
+
+    def __init__(self, *args, **kwargs):
+        if kwargs.get("context", {}).get("is_superuser"):
+            self.fields["tenant"].required = True
+        else:
+            self.fields.pop("tenant")
+        super().__init__(*args, **kwargs)
 
     def update(self, instance, validated_data):
         tenant, pk = instance.tenant, instance.pk
@@ -36,4 +45,4 @@ class RoleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Role
-        fields = ("id", "name", "permissions")
+        fields = ("id", "name", "permissions", "tenant")
