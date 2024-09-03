@@ -1,19 +1,28 @@
-from django.conf import settings
+import random
+import time
+
 from django.core.management.base import BaseCommand
 
-from main.models import Device
-from shuttle.models import TsKvLatest
-
-RABBIT_LOGIN = settings.RABBIT_LOGIN
-RABBIT_PASSWORD = settings.RABBIT_PASSWORD
-RABBIT_HOST = settings.RABBIT_HOST
-RABBIT_PORT = settings.RABBIT_PORT
+from main.models import Room, Tenant
 
 
 class Command(BaseCommand):
     help = "Playground"
 
     def handle(self, *args, **options):
-        devices = Device.objects.all()
-        for device in devices:
-            TsKvLatest.objects.create(entity=device, key=45, long_v=23)
+        pass
+
+
+def fake_rooms():
+    tenants = Tenant.objects.all()
+    for i in range(5000):
+        r = Room.objects.get_or_create(
+            number=random.randint(1, 100),
+            floor=random.randint(1, 100),
+            block=random.randint(1, 100),
+            state=random.choice([x[0] for x in Room.STATE]),
+            tenant=random.choice(tenants),
+            status=random.choice([x[0] for x in Room.STATUS]),
+            created_at=random.choice([int(time.time()), int(time.time() - (86500 * 1.5))]),
+        )
+        print(r)
