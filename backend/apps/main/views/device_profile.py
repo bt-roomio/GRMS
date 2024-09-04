@@ -10,7 +10,7 @@ from main.swagger.device_profile import DeviceProfileSwagger, DeviceProfileDetai
 
 
 class DeviceProfileListView(APIView):
-    @swagger_auto_schema(responses=DeviceProfileSwagger, query_serializer=DeviceProfileFilterParams)
+    @swagger_auto_schema(responses=DeviceProfileSwagger, query_serializer=DeviceProfileFilterParams())
     def get(self, request):
         params = DeviceProfileFilterParams.check(request.GET)
         queryset = DeviceProfile.objects.list(

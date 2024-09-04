@@ -1,14 +1,15 @@
-from core.utils.pagination import pagination
 from drf_yasg.utils import swagger_auto_schema
-from main.models import Dashboard
-from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer
-from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
+from core.utils.pagination import pagination
+from main.models import Dashboard
+from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer
+from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
+
 
 class DashboardListView(APIView):
-    @swagger_auto_schema(responses=DashboardSwagger, query_serializer=DashboardFilterParams)
+    @swagger_auto_schema(responses=DashboardSwagger, query_serializer=DashboardFilterParams())
     def get(self, request):
         params = DashboardFilterParams.check(request.GET)
         queryset = Dashboard.objects.filter(tenant_id=request.user.tenant_id)

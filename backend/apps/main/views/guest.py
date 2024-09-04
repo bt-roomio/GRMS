@@ -10,7 +10,7 @@ from main.swagger.guest import GuestSwagger, GuestDetailSwagger
 
 
 class GuestListView(APIView):
-    @swagger_auto_schema(responses=GuestSwagger, query_serializer=GuestFilterParams)
+    @swagger_auto_schema(responses=GuestSwagger, query_serializer=GuestFilterParams())
     def get(self, request):
         params = GuestFilterParams.check(request.GET)
         queryset = Guest.objects.list(tenant_id=request.user.tenant_id, room=params.get("room"))
