@@ -10,7 +10,7 @@ from main.swagger.device import DeviceSwagger, DeviceDetailSwagger
 
 
 class DeviceListView(APIView):
-    @swagger_auto_schema(responses=DeviceSwagger, query_serializer=DeviceFilterParams)
+    @swagger_auto_schema(responses=DeviceSwagger, query_serializer=DeviceFilterParams())
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
         queryset = Device.objects.list(
