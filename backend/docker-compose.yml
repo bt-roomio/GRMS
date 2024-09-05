@@ -41,7 +41,7 @@ services:
     image: nginx:latest
     container_name: nginx
     volumes:
-      - static_volume:/static/
+      - static_volume:/app/static/
     ports:
       - '9000:8000'
     depends_on:
