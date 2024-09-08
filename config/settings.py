@@ -34,7 +34,7 @@ DEBUG = os.getenv("DJANGO_DEBUG")
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(" ")
+ALLOWED_HOSTS = list(filter(None, [*os.getenv("DJANGO_ALLOWED_HOSTS", "").split(" ")]))
 
 # Append module dir
 sys.path.append(os.path.join(BASE_DIR, "apps"))
@@ -77,7 +77,7 @@ ROOT_URLCONF = "config.urls"
 
 # 'CORS_ORIGIN_WHITELIST' should be a single string of hosts with a space between each.
 # For example: 'CORS_ORIGIN_WHITELIST=http://localhost:8000'
-CORS_ORIGIN_WHITELIST = os.getenv("DJANGO_CORS_ORIGIN_WHITELIST", "").split(" ")
+CORS_ORIGIN_WHITELIST = list(filter(None, [*os.getenv("DJANGO_CORS_ORIGIN_WHITELIST", "").split(" ")]))
 
 TEMPLATES = [
     {
