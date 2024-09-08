@@ -24,9 +24,11 @@ test:
     POSTGRES_PORT: 5432
     POSTGRES_HOST: postgres
     POSTGRES_HOST_AUTH_METHOD: trust
+  before_script:
+    - apt-get update && apt-get install -y postgresql-client
   script:
-    - pip install -r requirements.txt
     - until pg_isready -h postgres -p 5432; do echo "Waiting for database..."; sleep 3; done
+    - pip install -r requirements.txt
     - mkdir -p logs
     - ./manage.py test
 
