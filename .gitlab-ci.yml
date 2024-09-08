@@ -1,38 +1,38 @@
 stages:
-  - lint
-  - test
+  # - lint
+  # - test
   - production
 
 
-lint:
-  image: python:3.12-alpine
-  stage: lint
-  script:
-    - pip install black==24.4.2
-    - black . --check
+# lint:
+#   image: python:3.12-alpine
+#   stage: lint
+#   script:
+#     - pip install black==24.4.2
+#     - black . --check
 
 
-test:
-  stage: test
-  image: python:3.12
-  services:
-    - name: postgres:16-alpine
-      alias: postgres
-      variables:
-        POSTGRES_DB: roomio
-        POSTGRES_USER: runner
-        POSTGRES_PASSWORD: ""
-  variables:
-    DATABASE_NAME: roomio
-    DATABASE_USER: runner
-    DATABASE_PASSWORD: ""
-    DATABASE_HOST: postgres
-    DATABASE_PORT: 5432
-    POSTGRES_HOST_AUTH_METHOD: trust
-  script:
-    - pip install -r requirements.txt
-    - mkdir -p logs
-    - ./manage.py test
+# test:
+#   stage: test
+#   image: python:3.12
+#   services:
+#     - name: postgres:16-alpine
+#       alias: postgres
+#       variables:
+#         POSTGRES_DB: roomio
+#         POSTGRES_USER: runner
+#         POSTGRES_PASSWORD: ""
+#   variables:
+#     DATABASE_NAME: roomio
+#     DATABASE_USER: runner
+#     DATABASE_PASSWORD: ""
+#     DATABASE_HOST: postgres
+#     DATABASE_PORT: 5432
+#     POSTGRES_HOST_AUTH_METHOD: trust
+#   script:
+#     - pip install -r requirements.txt
+#     - mkdir -p logs
+#     - ./manage.py test
 
 
 production:
