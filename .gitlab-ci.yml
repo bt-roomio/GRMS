@@ -4,10 +4,6 @@ stages:
   - production
 
 
-services:
-  - postgres:16
-
-
 lint:
   image: python:3.12-alpine
   stage: lint
@@ -19,6 +15,8 @@ lint:
 test:
   stage: test
   image: python:3.12
+  services:
+    - postgres:16
   variables:
     POSTGRES_DB: roomio
     POSTGRES_USER: runner
@@ -28,6 +26,7 @@ test:
     POSTGRES_HOST_AUTH_METHOD: trust
   script:
     - pip install -r requirements.txt
+    - until pg_isready -h postgres -p 5432; do echo "Waiting for database..."; sleep 3; done
     - mkdir -p logs
     - ./manage.py test
 
