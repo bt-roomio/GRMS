@@ -1,0 +1,43 @@
+stages:
+  - lint
+  - test
+  - production
+
+
+lint:
+  image: python:3.12-alpine
+  stage: lint
+  script:
+    - pip install black==24.4.2
+    - black . --check
+
+
+test:
+  stage: test
+  image: python:3.12
+  services:
+    - postgres:16
+  variables:
+    POSTGRES_DB: roomio
+    POSTGRES_USER: runner
+    POSTGRES_PASSWORD: ""
+    POSTGRES_PORT: 5432
+    POSTGRES_HOST: postgres
+    POSTGRES_HOST_AUTH_METHOD: trust
+  script:
+    - pip install -r requirements.txt
+    - ./manage.py test
+
+
+production:
+  stage: production
+  when: manual
+  image: python:3.12
+  only:
+    - Umarov
+  script:
+    - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey admin@$PROD_HOST "
+      cd dd_dock/;
+      git pull origin main;
+      docker compose up --build web -d;"

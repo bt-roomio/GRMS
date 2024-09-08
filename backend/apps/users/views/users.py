@@ -45,9 +45,7 @@ class UserDetailView(APIView):
         if "SYS_ADMIN" in [request.user.groups.all()]:
             instance = get_object_or_404(queryset, id=pk)
         else:
-            instance = get_object_or_404(
-                queryset, id=pk, tenant_id=request.user.tenant_id
-            )
+            instance = get_object_or_404(queryset, id=pk, tenant_id=request.user.tenant_id)
         serializer = UserDetailSerializer(instance)
         return Response(serializer.data)
 

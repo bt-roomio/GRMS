@@ -9,18 +9,18 @@ from rest_framework.views import APIView, Response
 
 
 class AlarmSettingsDetailView(APIView):
-	@swagger_auto_schema(responses=AlarmSettingsSwagger)
-	def get(self, request):
-		instance = get_object_or_404(Tenant, id=request.user.tenant_id)
-		data = json.loads(instance.additional_info or "{}").get("general_settings", {})
-		serializer = AlarmSettingsSerializer(instance, data)
-		serializer.is_valid(raise_exception=True)
-		return Response(serializer.data)
+    @swagger_auto_schema(responses=AlarmSettingsSwagger)
+    def get(self, request):
+        instance = get_object_or_404(Tenant, id=request.user.tenant_id)
+        data = json.loads(instance.additional_info or "{}").get("general_settings", {})
+        serializer = AlarmSettingsSerializer(instance, data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
 
-	@swagger_auto_schema(request_body=AlarmSettingsSerializer, responses=AlarmSettingsSwagger)
-	def put(self, request):
-		instance = get_object_or_404(Tenant, id=request.user.tenant_id)
-		serializer = AlarmSettingsSerializer(instance, data=request.data)
-		serializer.is_valid(raise_exception=True)
-		serializer.save()
-		return Response(serializer.data)
+    @swagger_auto_schema(request_body=AlarmSettingsSerializer, responses=AlarmSettingsSwagger)
+    def put(self, request):
+        instance = get_object_or_404(Tenant, id=request.user.tenant_id)
+        serializer = AlarmSettingsSerializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
