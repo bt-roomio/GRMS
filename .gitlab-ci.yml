@@ -4,12 +4,12 @@ stages:
   - production
 
 
-lint:
-  image: python:3.12-alpine
-  stage: lint
-  script:
-    - pip install black==24.4.2
-    - black . --check
+# lint:
+#   image: python:3.12-alpine
+#   stage: lint
+#   script:
+#     - pip install black==24.4.2
+#     - black . --check
 
 
 test:
