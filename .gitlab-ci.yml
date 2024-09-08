@@ -26,6 +26,7 @@ test:
     POSTGRES_HOST_AUTH_METHOD: trust
   script:
     - pip install -r requirements.txt
+    - mkdir -p logs
     - ./manage.py test
 
 

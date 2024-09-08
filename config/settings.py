@@ -15,7 +15,6 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -246,13 +245,13 @@ if not DEBUG:
             "file": {
                 "level": "DEBUG",
                 "class": "logging.FileHandler",
-                "filename": "/var/log/django/debug.log" if not DEBUG else BASE_DIR / "debug.log",
+                "filename": BASE_DIR / "logs" / "debug.log",
                 "formatter": "verbose",
             },
             "error_file": {
                 "level": "ERROR",
                 "class": "logging.FileHandler",
-                "filename": "/var/log/django/errors.log" if not DEBUG else BASE_DIR / "errors.log",
+                "filename": BASE_DIR / "logs" / "errors.log",
                 "formatter": "verbose",
             },
         },
