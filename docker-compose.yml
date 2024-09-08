@@ -10,7 +10,7 @@ services:
     ports:
     - '5432:5432'
     volumes:
-      - /var/run/postgresql:/var/run/postgresql
+      - pg_data:/var/run/postgresql
 
   web:
     build: .
@@ -37,7 +37,7 @@ services:
   nginx:
     build:
       dockerfile: ./Dockerfile
-      context: ./docker/nginx
+      context: ./docker/nginx/
     image: nginx:latest
     container_name: nginx
     volumes:
@@ -58,7 +58,7 @@ services:
     command: celery -A config worker --loglevel=info
     depends_on:
       - redis
-      - postgres
+      - web
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_NAME=${DATABASE_NAME}
@@ -72,7 +72,7 @@ services:
     command: celery -A config beat --loglevel=info
     depends_on:
       - redis
-      - postgres
+      - web
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_NAME=${DATABASE_NAME}
@@ -84,3 +84,4 @@ services:
 
 volumes:
   static_volume:
+  pg_data:

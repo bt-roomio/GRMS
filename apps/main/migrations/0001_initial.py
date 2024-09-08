@@ -3,9 +3,10 @@
 import time
 import uuid
 
-import core.utils.unix_timestamp
 import django.db.models.deletion
 from django.db import migrations, models
+
+import core.utils.unix_timestamp
 
 
 class Migration(migrations.Migration):
@@ -19,8 +20,8 @@ class Migration(migrations.Migration):
 			fields=[
 				("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
 				(
-					"created_at",
-					core.utils.unix_timestamp.UnixTimeStampField(
+                    "created_at",
+                    core.utils.unix_timestamp.UnixTimeStampField(
 						default=time.time,
 						editable=False,
 						null=True,
@@ -48,7 +49,7 @@ class Migration(migrations.Migration):
 				("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
 				(
 					"created_at",
-					core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
 				),
 				("name", models.CharField(max_length=255, unique=True)),
 				("profile_data", models.JSONField(null=True, blank=True)),
@@ -67,7 +68,7 @@ class Migration(migrations.Migration):
 				("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
 				(
 					"created_at",
-					core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
+                    core.utils.unix_timestamp.UnixTimeStampField(default=time.time, editable=False, null=True),
 				),
 				("json_value", models.JSONField(null=True, blank=True)),
 				("key", models.CharField(max_length=255)),

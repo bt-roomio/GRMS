@@ -2,8 +2,9 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.core.mail.backends.smtp import EmailBackend
 from django.template.loader import render_to_string
-from main.models import EmailConfiguration
 from rest_framework.exceptions import ValidationError
+
+from main.models import EmailConfiguration
 from users.models import ResetPassword
 
 
@@ -26,7 +27,7 @@ def send_reset_link_email(user, send_activation_mail=True):
     if not send_activation_mail:
         return bytes(url, encoding="utf-8")
 
-    body = render_to_string("reset_password.html", {"user": user, "url": url})
+    body = render_to_string("../templates/reset_password.html", {"user": user, "url": url})
     subject = "Reset password, %s"
 
     backend = EmailBackend(
