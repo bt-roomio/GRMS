@@ -4,6 +4,7 @@
       email: "admin@gmail.com"
       first_name: "Admin"
       last_name: "Adminov"
+      is_superuser: true
       password: "pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU=" # password
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
 

@@ -30,20 +30,17 @@ class RoomTest(BaseTestCase):
         self.assertEqual(response.data["block"], ["This field is required."])
 
     def test_delete(self):
-        room_list = self.client.get(reverse("main:room-list"))
-        first_room_id = room_list.data["results"][0]["id"]
-        response = self.client.delete(reverse("main:room-detail", kwargs={"pk": first_room_id}))
+        urls = reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"})
+        response = self.client.delete(urls)
         self.assertEqual(response.status_code, 204)
 
     def test_update(self):
-        room_list = self.client.get(reverse("main:room-list"))
-        first_room_id = room_list.data["results"][0]["id"]
         data = {
             "number": 103,
             "floor": "5",
             "block": "2",
         }
-        url = reverse("main:room-detail", kwargs={"pk": first_room_id})
+        url = reverse("main:room-detail", kwargs={"pk": "ab09aa20-77b8-457a-bfc4-5dee69790241"})
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 200)
 
