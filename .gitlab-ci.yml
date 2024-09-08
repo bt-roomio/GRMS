@@ -42,6 +42,9 @@ production:
   only:
     - Umarov
   script:
+    - echo "PROD_HOST is $PROD_HOST"
+    - echo "PROD_HOST is $PROD_USER"
+    - echo "PROD_HOST is $PROD_PORT"
     - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $PROD_USER@$PROD_HOST -p $PROD_PORT "
       cd /home/bakhodir/GRMS/;
