@@ -18,11 +18,11 @@ test:
   services:
     - postgres:16
   variables:
-    POSTGRES_DB: roomio
-    POSTGRES_USER: runner
-    POSTGRES_PASSWORD: ""
-    POSTGRES_PORT: 5432
-    POSTGRES_HOST: postgres
+    DATABASE_NAME: roomio
+    DATABASE_USER: runner
+    DATABASE_PASSWORD: ""
+    DATABASE_HOST: postgres
+    DATABASE_PORT: 5432
     POSTGRES_HOST_AUTH_METHOD: trust
   before_script:
     - apt-get update && apt-get install -y postgresql-client
