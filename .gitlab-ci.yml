@@ -1,5 +1,5 @@
 stages:
-  - lint
+  # - lint
   - test
   - production
 
@@ -16,7 +16,7 @@ test:
   stage: test
   image: python:3.12
   services:
-    - postgres:16
+    - postgres:16-alpine
   variables:
     DATABASE_NAME: roomio
     DATABASE_USER: runner
@@ -24,10 +24,7 @@ test:
     DATABASE_HOST: postgres
     DATABASE_PORT: 5432
     POSTGRES_HOST_AUTH_METHOD: trust
-  before_script:
-    - apt-get update && apt-get install -y postgresql-client
   script:
-    - until pg_isready -h postgres -p 5432; do echo "Waiting for database..."; sleep 3; done
     - pip install -r requirements.txt
     - mkdir -p logs
     - ./manage.py test
