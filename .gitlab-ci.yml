@@ -4,10 +4,6 @@ stages:
   - production
 
 
-notify:
-  email: false
-
-
 lint:
   image: python:3.12-alpine
   stage: lint
