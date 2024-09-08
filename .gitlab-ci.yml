@@ -4,6 +4,10 @@ stages:
   - production
 
 
+services:
+  - postgres:16
+
+
 lint:
   image: python:3.12-alpine
   stage: lint
@@ -15,8 +19,6 @@ lint:
 test:
   stage: test
   image: python:3.12
-  services:
-    - postgres:16
   variables:
     POSTGRES_DB: roomio
     POSTGRES_USER: runner
