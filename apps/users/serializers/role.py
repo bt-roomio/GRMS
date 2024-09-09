@@ -11,7 +11,7 @@ class PermissionsSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "codename", "content_type")
 
 
-class GroupSimpleSerializer(serializers.ModelSerializer):
+class RoleSimpleSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         perms = instance.permissions

@@ -6,6 +6,6 @@ from django.contrib.auth.models import Permission
 
 class CustomBackend(ModelBackend):
     def _get_group_permissions(self, user_obj, obj=None):
-        user_groups_field = get_user_model()._meta.get_field("roles")
-        user_groups_query = "role__%s" % user_groups_field.related_query_name()
-        return Permission.objects.filter(**{user_groups_query: user_obj})
+        user_roles_field = get_user_model()._meta.get_field("roles")
+        user_roles_query = "role__%s" % user_roles_field.related_query_name()
+        return Permission.objects.filter(**{user_roles_query: user_obj})

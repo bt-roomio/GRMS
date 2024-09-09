@@ -9,7 +9,7 @@ class DeviceTest(BaseTestCase):
     fixtures = (
         "tenant_profile.yaml",
         "tenant.yaml",
-        "groups_permissions.yaml",
+        "roles_permissions.yaml",
         "users.yaml",
         "room.yaml",
         "customer.yaml",

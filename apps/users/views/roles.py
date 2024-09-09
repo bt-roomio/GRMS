@@ -5,12 +5,12 @@ from rest_framework.views import APIView, Response
 
 from core.utils.permission import check_perms
 from users.models import Role
-from users.serializers.group import RoleSerializer, GroupSimpleSerializer
-from users.swagger.groups import GroupsSwagger, GroupDetailSwagger
+from users.serializers.role import RoleSerializer, RoleSimpleSerializer
+from users.swagger.roles import RolesSwagger, RoleDetailSwagger
 
 
-class GroupsListView(APIView):
-    @swagger_auto_schema(operation_description="Getting all user groups.", responses=GroupsSwagger)
+class RolesListView(APIView):
+    @swagger_auto_schema(operation_description="Getting all user roles.", responses=RolesSwagger)
     @check_perms(["users.view_role"])
     def get(self, request):
         instance = Role.objects.list(tenant=request.user.tenant, is_superuser=request.user.is_superuser)
@@ -18,8 +18,8 @@ class GroupsListView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(
-        operation_description="Creating a group for exactly tenant.",
-        responses=GroupDetailSwagger,
+        operation_description="Creating a role for exactly tenant.",
+        responses=RoleDetailSwagger,
         request_body=RoleSerializer,
     )
     @check_perms(["users.add_role"])
@@ -34,18 +34,18 @@ class GroupsListView(APIView):
         return Response(serializer.data, 201)
 
 
-class GroupDetailView(APIView):
-    @swagger_auto_schema(responses=GroupDetailSwagger)
+class RoleDetailView(APIView):
+    @swagger_auto_schema(responses=RoleDetailSwagger)
     @check_perms(["users.view_role"])
     def get(self, request, pk):
         if request.user.is_superuser:
             instance = get_object_or_404(Role, pk=pk)
         else:
             instance = get_object_or_404(Role, pk=pk, tenant=request.user.tenant)
-        serializer = GroupSimpleSerializer(instance)
+        serializer = RoleSimpleSerializer(instance)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=GroupDetailSwagger)
+    @swagger_auto_schema(responses=RoleDetailSwagger)
     @check_perms(["users.change_role"])
     def put(self, request, pk):
         if request.user.is_superuser:

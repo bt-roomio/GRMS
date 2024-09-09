@@ -1,10 +1,9 @@
-from django.contrib.auth.models import Group
 from drf_yasg import openapi
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from users.models import User
-from users.serializers.group import GroupSimpleSerializer
+from users.models import User, Role
+from users.serializers.role import RoleSimpleSerializer
 
 
 class AdditionalInfoField(serializers.JSONField):
@@ -23,13 +22,13 @@ class AdditionalInfoField(serializers.JSONField):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    groups = serializers.PrimaryKeyRelatedField(many=True, queryset=Group.objects.all())
+    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all())
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
 
     def create(self, validated_data):
-        groups_data = validated_data.pop("groups")
+        roles_data = validated_data.pop("roles")
         user = User.objects.create(**validated_data)
-        user.groups.set(groups_data)
+        user.roles.set(roles_data)
         return user
 
     class Meta:
@@ -44,7 +43,7 @@ class UserSerializer(serializers.ModelSerializer):
             "phone",
             "created_at",
             "tenant",
-            "groups",
+            "roles",
             "is_active",
         )
         extra_kwargs = {
@@ -55,7 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["groups"] = GroupSimpleSerializer(instance.groups, many=True).data
+        data["roles"] = RoleSimpleSerializer(instance.roles, many=True).data
         return data
 
     class Meta:
@@ -70,7 +69,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "phone",
             "created_at",
             "tenant",
-            "groups",
+            "roles",
             "is_active",
         )
         extra_kwargs = {

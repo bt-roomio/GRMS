@@ -1,6 +1,7 @@
 import uuid
 
 from django.urls import reverse
+
 from core.tests.base_test import BaseTestCase
 from main.models import Room
 
@@ -9,7 +10,7 @@ class GuestTest(BaseTestCase):
     fixtures = (
         "tenant_profile.yaml",
         "tenant.yaml",
-        "groups_permissions.yaml",
+        "roles_permissions.yaml",
         "users.yaml",
         "room.yaml",
         "guest.yaml",

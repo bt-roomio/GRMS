@@ -1,8 +1,8 @@
 from drf_yasg import openapi
 
-from users.serializers.group import RoleSerializer
+from users.serializers.role import RoleSerializer
 
-GroupsSwagger = {
+RolesSwagger = {
     200: openapi.Response(
         description="Success",
         examples={"application/json": [{"id": 1, "name": "SYS_ADMIN", "permissions": []}]},
@@ -11,7 +11,7 @@ GroupsSwagger = {
 }
 
 
-GroupDetailSwagger = {
+RoleDetailSwagger = {
     200: openapi.Response(
         description="Success",
         examples={"application/json": {"id": 1, "name": "SYS_ADMIN", "permissions": []}},

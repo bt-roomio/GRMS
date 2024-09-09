@@ -8,7 +8,7 @@ class UsersManager(BaseUserManager):
     """
 
     def list(self, tenant_id, sort_by=None, search_field=None, search_value=None):
-        query = self.prefetch_related("groups").filter(tenant_id=tenant_id)
+        query = self.prefetch_related("roles").filter(tenant_id=tenant_id)
 
         if sort_by:
             # INFO: nulls_last() in asc or desc can't help, we need sort empty fields

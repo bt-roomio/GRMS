@@ -1,4 +1,5 @@
 from drf_yasg import openapi
+
 from users.serializers.user import UserSerializer
 
 UserSwagger = {
@@ -17,7 +18,7 @@ UserSwagger = {
                         "phone": "phone",
                         "created_at": "created_at",
                         "tenant_id": "tenant_id",
-                        "groups": "groups",
+                        "roles": "roles",
                     }
                 ],
             }

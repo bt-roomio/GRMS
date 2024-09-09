@@ -1,11 +1,9 @@
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
-from core.utils.permission import IsTenantAndSysAdmin
 from users.models import User
 from users.serializers.user import UserParams, UserSerializer, UserDetailSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
@@ -34,37 +32,23 @@ class UserListView(APIView):
 
 
 class UserDetailView(APIView):
-    def get_permissions(self):
-        if self.request.method == "DELETE":
-            return [IsTenantAndSysAdmin()]
-        return [IsAuthenticated()]
-
     @swagger_auto_schema(responses=UserDetailSwagger)
     def get(self, request, pk):
-        queryset = User.objects.prefetch_related("groups", "groups__permissions")
-        if "SYS_ADMIN" in [request.user.groups.all()]:
-            instance = get_object_or_404(queryset, id=pk)
-        else:
-            instance = get_object_or_404(queryset, id=pk, tenant_id=request.user.tenant_id)
+        queryset = User.objects.prefetch_related("roles", "roles__permissions")
+        instance = get_object_or_404(queryset, id=pk, tenant=request.user.tenant_id)
         serializer = UserDetailSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=UserDetailSwagger, request_body=UserSerializer)
     def put(self, request, pk):
-        if "SYS_ADMIN" in [request.user.groups.all()]:
-            instance = get_object_or_404(User, id=pk)
-        else:
-            instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
-        serializer = UserSerializer(instance, data=request.data, partial=True)
+        instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
+        serializer = UserSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
     @swagger_auto_schema(responses={})
     def delete(self, request, pk):
-        if "SYS_ADMIN" in [request.user.groups.all()]:
-            instance = get_object_or_404(User, id=pk)
-        else:
-            instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
+        instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
         instance.delete()
         return Response({"message": "User deleted"}, 204)

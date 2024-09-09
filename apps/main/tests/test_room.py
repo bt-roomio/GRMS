@@ -4,7 +4,7 @@ from core.tests.base_test import BaseTestCase
 
 
 class RoomTest(BaseTestCase):
-    fixtures = ("tenant_profile.yaml", "tenant.yaml", "groups_permissions.yaml", "users.yaml", "room.yaml")
+    fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "room.yaml")
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)

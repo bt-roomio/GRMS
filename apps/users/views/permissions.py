@@ -2,7 +2,8 @@ from django.contrib.auth.models import Permission
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from users.serializers.group import PermissionsSerializer
+
+from users.serializers.role import PermissionsSerializer
 from users.swagger.permissions import PermissionsSwagger
 
 

@@ -1,6 +1,6 @@
 from drf_yasg import openapi
 
-from users.serializers.group import PermissionsSerializer
+from users.serializers.role import PermissionsSerializer
 
 PermissionsSwagger = {
     200: openapi.Response(

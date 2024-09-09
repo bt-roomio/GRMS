@@ -1,12 +1,13 @@
-from core.tests.base_test import BaseTestCase
 from django.urls import reverse
+
+from core.tests.base_test import BaseTestCase
 
 
 class RoomTypeTest(BaseTestCase):
     fixtures = (
         "tenant_profile.yaml",
         "tenant.yaml",
-        "groups_permissions.yaml",
+        "roles_permissions.yaml",
         "users.yaml",
         "dashboard.yaml",
         "room_type.yaml",

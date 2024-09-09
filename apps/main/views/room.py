@@ -12,7 +12,7 @@ from main.swagger.room import RoomDetailSwagger, RoomSwagger
 
 class RoomListView(APIView):
     @swagger_auto_schema(responses=RoomSwagger, query_serializer=RoomFilterParams())
-    @check_perms(["view_room"])
+    @check_perms(["main.view_room"])
     def get(self, request):
         params = RoomFilterParams.check(request.GET)
         queryset = Room.objects.list(
@@ -28,7 +28,7 @@ class RoomListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(responses=RoomSwagger, request_body=RoomSerializer)
-    @check_perms(["add_room"])
+    @check_perms(["main.add_room"])
     def post(self, request):
         serializer = RoomSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -38,14 +38,14 @@ class RoomListView(APIView):
 
 class RoomDetailView(APIView):
     @swagger_auto_schema(responses=RoomDetailSwagger)
-    @check_perms(["view_room"])
+    @check_perms(["main.view_room"])
     def get(self, request, pk):
         queryset = get_object_or_404(Room, id=pk, active=True)
         serializer = RoomSerializer(queryset, context={"detail": True})
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=RoomDetailSwagger, request_body=RoomSerializer)
-    @check_perms(["change_room"])
+    @check_perms(["main.change_room"])
     def put(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)
         serializer = RoomSerializer(instance, data=request.data)
@@ -54,7 +54,7 @@ class RoomDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(responses={})
-    @check_perms(["delete_room"])
+    @check_perms(["main.delete_room"])
     def delete(self, request, pk):
         instance = get_object_or_404(Room, id=pk)
         instance.delete()

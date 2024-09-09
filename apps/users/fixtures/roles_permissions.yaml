@@ -1,4 +1,4 @@
-# Group Permissions
+# Role Permissions
 - model: users.Role
   pk: 4131460f-05d5-4597-aba5-53f34fbfc66e
   fields:
