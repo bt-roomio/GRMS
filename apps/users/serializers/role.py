@@ -29,7 +29,9 @@ class RoleSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['permissions'] = PermissionsSerializer(instance.permissions, many=True).data if instance.permissions else []
+        data["permissions"] = (
+            PermissionsSerializer(instance.permissions, many=True).data if instance.permissions else []
+        )
         return data
 
     def __init__(self, *args, **kwargs):
