@@ -27,6 +27,11 @@ class RoleSerializer(serializers.ModelSerializer):
     permissions = serializers.PrimaryKeyRelatedField(queryset=Permission.objects.all(), many=True, required=True)
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False, allow_null=True)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['permissions'] = PermissionsSerializer(instance.permissions, many=True).data if instance.permissions else []
+        return data
+
     def __init__(self, *args, **kwargs):
         if kwargs.get("context", {}).get("is_superuser"):
             self.fields["tenant"].required = True

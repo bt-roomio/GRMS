@@ -143,6 +143,7 @@ def connect_to_rabbitmq():
 
 
 def save_telemetry_kv(device, data, ts):
+    print(data)
     for key, item in find_compatible_field(data).items():
         fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
         ts_kv_dict, _ = TsKvDictionary.objects.get_or_create(key=key)
@@ -162,6 +163,7 @@ def save_telemetry_kv(device, data, ts):
 
 
 def save_attribute_kv(device, data):
+    print(data)
     for key, item in find_compatible_field(data).items():
         fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
         fields[item[0]] = item[1]
