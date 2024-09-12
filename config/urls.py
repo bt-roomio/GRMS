@@ -22,6 +22,3 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += [path("admin/", admin.site.urls)]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-admin.site.site_header = "Chi gap"
