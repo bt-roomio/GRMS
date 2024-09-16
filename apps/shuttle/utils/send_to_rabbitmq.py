@@ -9,6 +9,14 @@ RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
 
+def connect_to_rabbitmq():
+    credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
+    parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    return channel
+
+
 def send_to_rabbitmq(device_id, device_name, attributes):
     channel = connect_to_rabbitmq()
     message_data = {
@@ -22,9 +30,15 @@ def send_to_rabbitmq(device_id, device_name, attributes):
     channel.basic_publish(exchange="", routing_key=topic_name, body=message)
 
 
-def connect_to_rabbitmq():
-    credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
-    parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-    return channel
+def send_to_rabbitmq_rpc(message_id, gateway_device, device, method, params):
+    channel = connect_to_rabbitmq()
+    message_data = {
+        "targetDeviceUUID": str(gateway_device.id),
+        "topic": "v1/gateway/rpc",
+        "data": {"device": device.name, "data": {"id": str(message_id), "method": method, "params": params}},
+    }
+
+    message = json.dumps(message_data, indent=2).encode("utf-8")
+    topic_name = "toGRMS"
+
+    channel.basic_publish(exchange="", routing_key=topic_name, body=message)

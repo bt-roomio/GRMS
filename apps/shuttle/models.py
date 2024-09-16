@@ -103,3 +103,14 @@ class Relation(BaseModel):
     class Meta:
         db_table = "shuttle_relation"
         unique_together = (("from_id", "from_type", "relation_type_group", "relation_type", "to_id", "to_type"),)
+
+
+class RPCMessage(BaseModel):
+    sent = models.BooleanField(default=False)
+    additional_info = models.JSONField(blank=True, null=True)
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        db_table = "shuttle_rpcmessage"

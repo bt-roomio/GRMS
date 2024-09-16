@@ -53,6 +53,7 @@ def callback(ch, method, properties, body):
     topic = msg.get("topic")
     ts = None
 
+    print(time.time(), "HELLO" * 10, data)
     if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         from_id = device.id
         for key, value in data.items():
