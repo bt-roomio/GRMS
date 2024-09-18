@@ -1,10 +1,12 @@
 import asyncio
 
 from shuttle.consumers.aggregations.attribute_kv import attribute_kv
+from shuttle.consumers.aggregations.gateway_list import gateway_list
 from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
 from shuttle.consumers.aggregations.ts_kv_history import history_telemetery
 from shuttle.consumers.base import BaseConsumer
 from shuttle.models import AttributeKv
+from shuttle.utils.camel_to_snake import camel_to_snake
 from shuttle.utils.response import response
 
 
@@ -84,6 +86,18 @@ class ReceiverConsumer(BaseConsumer):
             """
             - Entity Data
             """
+            # Gateway List
+            if cmd.get("type") == "ENTITY_DATA" and cmd.get("latestCmd") and cmd.get("query"):
+                result = response({}, cmd.get("cmdId"))
+
+                entity_fields = cmd.get("query").get("entityFields")
+                entity_fields = [camel_to_snake(i.get("key")) for i in entity_fields]
+
+                attributes = [i.get("key") for i in cmd.get("latestCmd").get("keys") if i.get("type") == "ATTRIBUTE"]
+
+                result["data"] = await gateway_list(entity_fields, attributes)
+                await self.send_json(result)
+
             if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
                 result = await history_telemetery(cmd, user, self.send_json)
                 await self.send_json(result)
