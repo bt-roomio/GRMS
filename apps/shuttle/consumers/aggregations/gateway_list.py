@@ -9,7 +9,7 @@ from shuttle.utils.get_non_null_field import get_non_null_field
 @database_sync_to_async
 def gateway_list(entity_fields, attributes):
     data = []
-    attr = AttributeKv.objects.filter(attribute_type=AttributeKv.CLIENT_SCOPE, attribute_key__in=attributes)
+    attr = AttributeKv.objects.filter(attribute_key__in=attributes)
     devices = Device.objects.prefetch_related(Prefetch(queryset=attr, lookup="attribute_kvs")).filter(
         additional_info__gateway=True
     )
