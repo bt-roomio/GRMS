@@ -53,7 +53,7 @@ class DeviceSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, data):
-        if data.get("additional_info", {}).get("roomio_node") and has_roomio_node(data.get("tenant_id")):
+        if data.get("additional_info", {}).get("roomio_node") and has_roomio_node(data.get("tenant_id"), instance.id):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
         return super().update(instance, data)
