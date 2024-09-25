@@ -3,26 +3,37 @@ import time
 from typing import List
 
 from django.core.management.base import BaseCommand
-from django.db.models import Subquery, Window, F, QuerySet
+from django.db.models import Subquery, Window, F, QuerySet, FloatField, Value, Func, ExpressionWrapper
 from django.db.models.functions import RowNumber
 
+from core.utils.query_debugger import query_debugger
 from main.models import Room, Tenant, Customer
+from shuttle.models import TsKv
 
 
 class Command(BaseCommand):
     help = "Playground"
 
+    @query_debugger
     def handle(self, *args, **options):
-        pass
-        # fake_customers()
-        # remove_duplicate_rows(Customer.objects, ["created_at", "title"])
+        rounded_ts = ExpressionWrapper(
+            Func(F("ts") / Value(30), function="FLOOR") * Value(30), output_field=FloatField()
+        )
+
+        tenants = Tenant.objects.filter(additional_info__general_settings__aggregate_db=True)
+        remove_duplicate_rows(
+            TsKv.objects.filter(entity__tenant__in=tenants).annotate(ts_minute=rounded_ts),
+            ["ts_minute", "entity_id", "key", "dbl_v"],
+        )
 
 
 def remove_duplicate_rows(queryset: QuerySet, columns: List[str]):
     subquery = (
         queryset.annotate(
             row_num=Window(
-                expression=RowNumber(), partition_by=[F(column) for column in columns], order_by=F("id").asc()
+                expression=RowNumber(),
+                partition_by=[F(column) for column in columns],
+                order_by=F("id").asc(),
             )
         )
         .filter(row_num__gt=1)
@@ -30,16 +41,13 @@ def remove_duplicate_rows(queryset: QuerySet, columns: List[str]):
     )
 
     data = queryset.filter(id__in=Subquery(subquery))
-    elements = data.values(*columns)
-    for row in elements:
-        print(row)
-
+    print(data.query)
     if not data:
         print("No data was found.")
         return
 
     print("*" * 50)
-    print(" " * 10, "This elements will be deleted!")
+    print(" " * 10, f"{len(data)} raws will be deleted!")
     print("*" * 50)
 
     yes_or_no = input("Y/N: ")

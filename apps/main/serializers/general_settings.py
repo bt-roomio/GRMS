@@ -1,5 +1,3 @@
-import json
-
 from rest_framework import serializers
 
 
@@ -22,13 +20,24 @@ class GeneralSettingsSerializer(serializers.Serializer):
     aperio_locks = serializers.BooleanField(default=False)
     door_lock = DoorLockSerializer(default=dict)
     auto_checkout = serializers.BooleanField(default=False)
-    bathroom_enable = serializers.BooleanField(default=False)
-    humidity_enable = serializers.BooleanField(default=False)
+    aggregate_db = serializers.BooleanField(default=False)
 
     def update(self, instance, validated_data):
-        instance.additional_info = json.dumps({"general_settings": validated_data})
+        general_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
+        instance.additional_info = {"general_settings": {**general_settings, **validated_data}}
         instance.save()
         return instance
 
     def to_representation(self, instance):
-        return {"tenant_id": instance.id, **self.validated_data}
+        general_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
+        defaults = {
+            field_name: (
+                field.default
+                if not isinstance(field, serializers.BaseSerializer)
+                else field.to_representation(field.get_default())
+            )
+            for field_name, field in self.fields.items()
+        }
+
+        merged = {**defaults, **general_settings}
+        return {"tenant_id": instance.id, **merged}

@@ -3,6 +3,7 @@ from django.db.models import CASCADE, SET_NULL
 
 from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
+from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
@@ -212,6 +213,8 @@ class Customer(BaseModel):
     state = models.CharField(max_length=255, blank=True, null=True)
     zip = models.CharField(max_length=255, blank=True, null=True)
     external_id = models.UUIDField(blank=True, null=True)
+
+    objects = CustomerQuerySet.as_manager()
 
     def __str__(self):
         return str(self.title)

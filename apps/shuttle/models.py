@@ -72,7 +72,7 @@ class AttributeKv(BaseModel):
     str_v = models.CharField(max_length=10000000, blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
     dbl_v = models.FloatField(blank=True, null=True)
-    json_v = models.TextField(blank=True, null=True)
+    json_v = models.JSONField(blank=True, null=True)
     last_update_ts = models.BigIntegerField(blank=True, null=True)
 
     objects = AttributeKvQuerySet.as_manager()
