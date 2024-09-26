@@ -6,6 +6,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
+
 from shuttle.utils.response import response
 from users.models import User
 
@@ -24,6 +25,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         self.task_params = {}  # Store parameters for tasks
         self.last_cmds = []
         self.interval = settings.WS_INTERVAL
+        self.connectors = []
 
     async def disconnect(self, code):
         """

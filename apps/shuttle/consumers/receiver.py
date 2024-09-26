@@ -1,7 +1,7 @@
 import asyncio
-import random
 
 from shuttle.consumers.aggregations.attribute_kv import attribute_kv
+from shuttle.consumers.aggregations.connectors import make_connectors
 from shuttle.consumers.aggregations.gateway_list import gateway_list
 from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
 from shuttle.consumers.aggregations.ts_kv_history import history_telemetery
@@ -106,24 +106,19 @@ class ReceiverConsumer(BaseConsumer):
             """
             - Entity Data
             """
-            if cmd.get("type") == "ENTITY_DATA" and cmd.get("entityType") == "CONNECTOR":
-                devices_name = ["Deluxe QUEEN", "Roomio", "Gateway roomio"]
-                mac_addresses = ["Doesn't exist", "10.22.50.156"]
-                rooms = [i for i in range(100, 400, 10)]
-                address_map = ["Open map", "Not connected"]
-                statuses = ["Oneline", "Offline", "Processing"]
-                message = []
-
-                for i in range(100):
-                    controller = {
-                        "name": random.choice(devices_name),
-                        "mac_address": random.choice(mac_addresses),
-                        "ip_address": f"10.22.50.{i}",
-                        "room": random.choice(rooms),
-                        "address_map": random.choice(address_map),
-                        "file_name": "Doesn't exist",
-                        "status": random.choice(statuses),
-                    }
-                    message.append(controller)
-
-                await self.send_json(message)
+            if (
+                cmd.get("type") == "ENTITY_DATA"
+                and cmd.get("entityType") == "DEVICE"
+                and cmd.get("query")
+                and cmd.get("entityId")
+                and cmd.get("connectorName")
+            ):
+                if not self.connectors:
+                    print("not connectors")
+                    self.connectors = make_connectors()
+                query = cmd.get("query")
+                page = query.get("page") or 1
+                page_size = query.get("pageSize")
+                offset = (page - 1) * page_size
+                limit = offset + page_size
+                await self.send_json(self.connectors[offset:limit])
