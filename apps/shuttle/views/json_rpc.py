@@ -1,14 +1,17 @@
 import uuid
 
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import Device
 from shuttle.models import Relation
+from shuttle.swagger.rpc import RPCSwagger
 
 
 class JsonRpcView(APIView):
+    @swagger_auto_schema(responses={200: RPCSwagger})
     def post(self, request, device_id):
         device = get_object_or_404(Device, id=device_id)
         gateway_device = get_object_or_404(Relation, to_id_id=device_id)

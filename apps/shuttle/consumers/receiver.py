@@ -1,4 +1,5 @@
 import asyncio
+import random
 
 from shuttle.consumers.aggregations.attribute_kv import attribute_kv
 from shuttle.consumers.aggregations.gateway_list import gateway_list
@@ -101,3 +102,28 @@ class ReceiverConsumer(BaseConsumer):
             if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
                 result = await history_telemetery(cmd, user, self.send_json)
                 await self.send_json(result)
+
+            """
+            - Entity Data
+            """
+            if cmd.get("type") == "ENTITY_DATA" and cmd.get("entityType") == "CONNECTOR":
+                devices_name = ["Deluxe QUEEN", "Roomio", "Gateway roomio"]
+                mac_addresses = ["Doesn't exist", "10.22.50.156"]
+                rooms = [i for i in range(100, 400, 10)]
+                address_map = ["Open map", "Not connected"]
+                statuses = ["Oneline", "Offline", "Processing"]
+                message = []
+
+                for i in range(100):
+                    controller = {
+                        "name": random.choice(devices_name),
+                        "mac_address": random.choice(mac_addresses),
+                        "ip_address": f"10.22.50.{i}",
+                        "room": random.choice(rooms),
+                        "address_map": random.choice(address_map),
+                        "file_name": "Doesn't exist",
+                        "status": random.choice(statuses),
+                    }
+                    message.append(controller)
+
+                await self.send_json(message)
