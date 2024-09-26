@@ -7,11 +7,11 @@ from rest_framework.views import APIView
 
 from main.models import Device
 from shuttle.models import Relation
-from shuttle.swagger.rpc import RPCSwagger
+from shuttle.swagger.rpc import RPCSwagger, RPCRequestSwagger
 
 
 class JsonRpcView(APIView):
-    @swagger_auto_schema(responses={200: RPCSwagger})
+    @swagger_auto_schema(request_body=RPCRequestSwagger, responses={200: RPCSwagger})
     def post(self, request, device_id):
         device = get_object_or_404(Device, id=device_id)
         gateway_device = get_object_or_404(Relation, to_id_id=device_id)
