@@ -1,7 +1,8 @@
 import time
 
-from core.utils.read_cpu_ram import get_cpu_usage, get_ram_usage
 from django.core.management.base import BaseCommand
+
+from core.utils.read_cpu_ram import get_cpu_usage, get_ram_usage
 from main.models import Device
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 
@@ -13,7 +14,7 @@ class Command(BaseCommand):
         while True:
             print("Saving CPU RAM Usage to DB", time.time())
             cpu_ram_save_db()
-            time.sleep(5)
+            time.sleep(15)
 
 
 def cpu_ram_save_db():

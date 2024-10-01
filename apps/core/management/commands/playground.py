@@ -1,68 +1,28 @@
 import random
 import time
-from typing import List
 
 from django.core.management.base import BaseCommand
-from django.db.models import Subquery, Window, F, QuerySet, FloatField, Value, Func, ExpressionWrapper
-from django.db.models.functions import RowNumber
 
-from core.utils.query_debugger import query_debugger
-from main.models import Room, Tenant, Customer
-from shuttle.models import TsKv
+from main.models import Customer, Room, Tenant
 
 
 class Command(BaseCommand):
     help = "Playground"
 
-    @query_debugger
     def handle(self, *args, **options):
-        rounded_ts = ExpressionWrapper(
-            Func(F("ts") / Value(30), function="FLOOR") * Value(30), output_field=FloatField()
-        )
-
-        tenants = Tenant.objects.filter(additional_info__general_settings__aggregate_db=True)
-        remove_duplicate_rows(
-            TsKv.objects.filter(entity__tenant__in=tenants).annotate(ts_minute=rounded_ts),
-            ["ts_minute", "entity_id", "key", "dbl_v"],
-        )
-
-
-def remove_duplicate_rows(queryset: QuerySet, columns: List[str]):
-    subquery = (
-        queryset.annotate(
-            row_num=Window(
-                expression=RowNumber(),
-                partition_by=[F(column) for column in columns],
-                order_by=F("id").asc(),
-            )
-        )
-        .filter(row_num__gt=1)
-        .values("id")
-    )
-
-    data = queryset.filter(id__in=Subquery(subquery))
-    print(data.query)
-    if not data:
-        print("No data was found.")
-        return
-
-    print("*" * 50)
-    print(" " * 10, f"{len(data)} raws will be deleted!")
-    print("*" * 50)
-
-    yes_or_no = input("Y/N: ")
-    if yes_or_no == "N":
-        print("you choose No")
-    elif yes_or_no == "Y":
-        print(data.delete())
-    else:
-        print("that is not a answer. sorry...")
+        pass
 
 
 def fake_customers():
     tenant = Tenant.objects.first()
+    tt = int(time.time())
+    data = []
     for i in range(100):
-        Customer.objects.create(title=f"Title" if i % 5 != 0 else f"Title {i}", tenant=tenant)
+        if i % 3 == 0:
+            tt = int(time.time()) + i
+        data.append(Customer(title=f"Title" if i % 5 != 0 else f"Title {i}", tenant=tenant, created_at=tt))
+
+    Customer.objects.bulk_create(data)
 
 
 def fake_rooms():

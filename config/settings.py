@@ -15,7 +15,6 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from celery.beat import crontab
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -220,11 +219,7 @@ CELERY_BEAT_SCHEDULE = {
     "auto-checkout": {
         "task": "main.tasks.auto_check_out",
         "schedule": 30.0,
-    },
-    "aggregate_table_in_db": {
-        "task": "shuttle.tasks.aggregate_table_db",
-        "schedule": crontab(hour="0", minute="0"),
-    },
+    }
 }
 
 if not DEBUG:

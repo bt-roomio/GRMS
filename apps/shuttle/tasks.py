@@ -1,25 +1,35 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from django.db.models import ExpressionWrapper, Func, Value, FloatField, F
-
-from core.tests.aggregate_table_in_db import remove_duplicate_rows
-from shuttle.models import TsKv
+from django.db import connection
 
 logger = get_task_logger(__name__)
 
 
 @shared_task
-def aggregate_table_db():
-    logger.info("Task aggregating table")
-    rounded_ts = ExpressionWrapper(
-        Func(F("ts") / Value(30), function="FLOOR") * Value(30),
-        output_field=FloatField(),
-    )
+def aggregate_table_ts_kv():
+    # aggregate between period date
+    logger.info("Task aggregating table shuttle_ts_kv")
+    diff_time = 30
 
-    res = remove_duplicate_rows(
-        TsKv.objects.annotate(ts_minute=rounded_ts),
-        ["ts_minute", "entity_id", "key", "dbl_v"],
-    )
-
-    logger.info(res)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+                    WITH ranked_duplicates AS (
+                        SELECT entity_id,
+                               key,
+                               ts,
+                               dbl_v,
+                               ROW_NUMBER() OVER (PARTITION BY entity_id, key, FLOOR(ts / {diff_time}) ORDER BY ABS(dbl_v)) AS row_num
+                        FROM shuttle_ts_kv
+                        WHERE dbl_v IS NOT NULL
+                    )
+                    DELETE FROM shuttle_ts_kv
+                    WHERE (entity_id, key, ts) IN (
+                        SELECT entity_id, key, ts
+                        FROM ranked_duplicates
+                        WHERE row_num > 1
+                    );
+                    """
+        )
+        logger.info(cursor.rowcount, "records deleted")
     logger.info("The aggregating table task successfully.")
