@@ -141,8 +141,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = "/app/static/"
-MEDIA_URL = "/uploads/"
+STATIC_ROOT = os.path.join(BASE_DIR, STATIC_URL)
+MEDIA_URL = "media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_URL)
 
 
@@ -221,55 +221,3 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 30.0,
     }
 }
-
-if not DEBUG:
-    LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "verbose": {
-                "format": "{levelname} {asctime} {module} {message}",
-                "style": "{",
-            },
-            "simple": {
-                "format": "{levelname} {message}",
-                "style": "{",
-            },
-        },
-        "handlers": {
-            "console": {
-                "level": "DEBUG",
-                "class": "logging.StreamHandler",
-                "formatter": "verbose",
-            },
-            "file": {
-                "level": "DEBUG",
-                "class": "logging.FileHandler",
-                "filename": BASE_DIR / "logs" / "debug.log",
-                "formatter": "verbose",
-            },
-            "error_file": {
-                "level": "ERROR",
-                "class": "logging.FileHandler",
-                "filename": BASE_DIR / "logs" / "errors.log",
-                "formatter": "verbose",
-            },
-        },
-        "loggers": {
-            "django": {
-                "handlers": ["console", "file"],
-                "level": "DEBUG",
-                "propagate": True,
-            },
-            "django.request": {
-                "handlers": ["console", "error_file"],
-                "level": "ERROR",
-                "propagate": False,
-            },
-            "myapp": {  # Custom logger for your app
-                "handlers": ["console", "file"],
-                "level": "DEBUG",
-                "propagate": False,
-            },
-        },
-    }

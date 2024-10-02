@@ -48,3 +48,11 @@ def size_2mb(value):
     if value.size > 2097152:
         raise ValidationError("The maximum file size that can be uploaded is 2MB")
     return value
+
+
+def file_date_time(instance, filename: str):
+    return f"{int(instance.created_at)}_{filename}"
+
+
+def controller_file(*args, **kwargs):
+    return f"controller/{file_date_time(*args, **kwargs)}"

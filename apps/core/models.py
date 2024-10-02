@@ -1,9 +1,10 @@
 import time
 import uuid
 
-from core.utils.unix_timestamp import UnixTimeStampField
 from django.db import models
 from django.db.models import SET_NULL
+
+from core.utils.unix_timestamp import UnixTimeStampField
 
 
 class BaseModel(models.Model):
@@ -41,6 +42,19 @@ class UpdateByModel(models.Model):
         if self.pk:
             self.updated_at = time.time()
         return super(UpdateByModel, self).save(*args, **kwargs)
+
+    class Meta:
+        abstract = True
+
+
+class CreatedByModel(models.Model):
+    created_by = models.ForeignKey(
+        "users.User",
+        SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_%(model_name)ss",
+    )
 
     class Meta:
         abstract = True

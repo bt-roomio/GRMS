@@ -3,7 +3,8 @@ import time
 from django.db import models
 from django.db.models import CASCADE
 
-from core.models import BaseModel, BaseModelTs
+from core.models import BaseModel, BaseModelTs, UpdateByModel, CreatedByModel
+from core.utils.files import controller_file
 from shuttle.querysets.attributes import AttributeKvQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
@@ -114,3 +115,11 @@ class RPCMessage(BaseModel):
 
     class Meta:
         db_table = "shuttle_rpcmessage"
+
+
+class ControllerFile(BaseModel, UpdateByModel, CreatedByModel):
+    content = models.FileField(upload_to=controller_file)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+
+    class Meta:
+        db_table = "shuttle_controller_file"
