@@ -10,6 +10,8 @@ from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, TsKv, TsKvDictionary, TsKvLatest, Relation
 from shuttle.utils.find_compatible_field import find_compatible_field
+from shuttle.utils.get_non_null_field import get_non_null_field
+from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq_device_me
 
 logger = logging.getLogger(__name__)
 logger.critical("Now logging consumer command")
@@ -54,6 +56,16 @@ def callback(ch, method, properties, body):
     ts = None
 
     print(time.time(), "HELLO" * 10, data)
+
+    if topic.startswith("v1/devices/me/attributes/request"):
+        shared_keys = data.get("sharedKeys")
+        shared_keys = {key: "" for key in shared_keys.split(",")}
+        attributes = AttributeKv.objects.filter(attribute_key__in=shared_keys.keys())
+        for attribute in attributes:
+            field, value = get_non_null_field(attribute)
+            shared_keys[attribute.attribute_key] = value
+        send_to_rabbitmq_device_me(device.id, shared_keys, topic.replace("request", "response"))
+
     if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         from_id = device.id
         for key, value in data.items():

@@ -42,3 +42,16 @@ def send_to_rabbitmq_rpc(message_id, gateway_device, device, method, params):
     topic_name = "toGRMS"
 
     channel.basic_publish(exchange="", routing_key=topic_name, body=message)
+
+
+def send_to_rabbitmq_device_me(device_id, attributes, topic):
+    channel = connect_to_rabbitmq()
+    message_data = {
+        "targetDeviceUUID": str(device_id),
+        "topic": topic,
+        "data": attributes,
+    }
+    message = json.dumps(message_data, indent=2).encode("utf-8")
+    topic_name = "fromGRMS"
+
+    channel.basic_publish(exchange="", routing_key=topic_name, body=message)
