@@ -17,11 +17,11 @@ def connect_to_rabbitmq():
     return channel
 
 
-def send_to_rabbitmq(device_id, device_name, attributes):
+def send_to_rabbitmq(device_id, device_name, attributes, topic):
     channel = connect_to_rabbitmq()
     message_data = {
         "targetDeviceUUID": str(device_id),
-        "topic": "v1/gateway/attributes",
+        "topic": topic,
         "data": {"device": device_name, "data": attributes},
     }
     message = json.dumps(message_data, indent=2).encode("utf-8")

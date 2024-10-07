@@ -26,8 +26,7 @@ def update_state_of_room(sender, instance, **kwargs):
                 device.room.state = Room.MakeUpRoom
                 device.room.save()
             if instance.attribute_key == "active" and instance.attribute_type == AttributeKv.SERVER_SCOPE:
-                if instance.bool_v:
-                    device.room.status = Room.ON
-                    device.room.save()
-                else:
-                    device.room.status = Room.OFF
+                device.room.status = Room.ON if instance.bool_v else Room.OFF
+                device.room.save()
+                device.status = bool(instance.bool_v)
+                device.save()
