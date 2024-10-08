@@ -45,8 +45,6 @@ class Command(BaseCommand):
 
 def callback(ch, method, properties, body):
     logger.critical(" Received body = %s ", body)
-    # logger.critical(" [x] Received properties = %s ", properties)
-    # logger.critical(" [x] Received method = %s ", method)
 
     msg = json.loads(body)
 
@@ -54,8 +52,6 @@ def callback(ch, method, properties, body):
     data = msg.get("data")
     topic = msg.get("topic")
     ts = None
-
-    print(time.time(), "HELLO" * 10, data)
 
     if topic.startswith("v1/devices/me/attributes/request"):
         shared_keys = data.get("sharedKeys")
@@ -93,10 +89,10 @@ def callback(ch, method, properties, body):
             data = value
             if data and isinstance(data, dict):
                 if topic.endswith("attributes"):
-                    print("save_attribute_kv")
+                    print("attributes", data)
                     save_attribute_kv(device, data)
                 if topic.endswith("telemetry"):
-                    print("save_telemetry_kv")
+                    print("telemetry", data)
                     save_telemetry_kv(device, data, ts)
 
             elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
@@ -105,7 +101,7 @@ def callback(ch, method, properties, body):
                         ts = res.get("ts")
                         res = res.get("values")
                     if topic.endswith("attributes"):
-                        print("attributes")
+                        print("save_attribute_kv")
                         save_attribute_kv(device, res)
                     if topic.endswith("telemetry"):
                         print("save_telemetry_kv")
@@ -142,7 +138,6 @@ def callback(ch, method, properties, body):
 def consume():
     channel = connect_to_rabbitmq()
     channel.basic_consume(queue=rabbit_queues["toGRMSqueueName"], on_message_callback=callback, auto_ack=True)
-
     logger.critical(f"Waiting for messages in topic. To exit press CTRL+C")
     channel.start_consuming()
 
@@ -156,7 +151,6 @@ def connect_to_rabbitmq():
 
 
 def save_telemetry_kv(device, data, ts):
-    print(data)
     for key, item in find_compatible_field(data).items():
         fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
         ts_kv_dict, _ = TsKvDictionary.objects.get_or_create(key=key)
@@ -176,7 +170,6 @@ def save_telemetry_kv(device, data, ts):
 
 
 def save_attribute_kv(device, data):
-    print(data)
     for key, item in find_compatible_field(data).items():
         fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
         fields[item[0]] = item[1]
