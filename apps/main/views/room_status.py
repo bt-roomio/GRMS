@@ -2,7 +2,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from main.models import RoomHistory
+from main.models import Room
 from main.serializers.room_status import RoomHistoryStatusSerializer
 
 
@@ -15,7 +15,7 @@ class RoomHistoryStatusView(APIView):
         operation_summary="Get room status",
     )
     def get(self, request):
-        rooms = RoomHistory.objects.room_status(tenant=request.user.tenant)
+        rooms = Room.objects.room_status(tenant=request.user.tenant)
         data = [room for room in rooms]
         serializer = RoomHistoryStatusSerializer(data=data, many=True)
         serializer.is_valid(raise_exception=True)

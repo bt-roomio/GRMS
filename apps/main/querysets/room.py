@@ -1,4 +1,6 @@
-from django.db.models import Q
+import datetime
+
+from django.db.models import Q, Count, Case, When, Value, F
 
 from core.querysets.base_queryset import BaseQuerySet
 
@@ -26,4 +28,22 @@ class RoomQuerySet(BaseQuerySet):
                     pass
         query = query.filter(status=status) if status else query
 
+        return query
+
+    def room_status(self, tenant):
+        query = self.filter(active=True, tenant=tenant)
+        today_midnight = datetime.datetime.combine(datetime.date.today(), datetime.time.min).timestamp()
+        yesterday_midnight = today_midnight - 86400
+
+        query = (
+            query.annotate(
+                today=Count(Case(When(updated_at__gte=today_midnight, then=Value(1)))),
+                yesterday=Count(
+                    Case(When(updated_at__gte=yesterday_midnight, updated_at__lt=today_midnight, then=Value(1)))
+                ),
+                last_24_hour=Count("state"),
+            )
+            .values("state", "last_24_hour")
+            .annotate(diff_previous_day=F("today") - F("yesterday"), status=F("state"))
+        )
         return query
