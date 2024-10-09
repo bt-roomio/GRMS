@@ -2,9 +2,9 @@ import time
 
 from django.core.management.base import BaseCommand
 
-from core.utils.read_cpu_ram import get_cpu_usage, get_ram_usage
+from core.utils.read_cpu_ram import get_cpu_usage, get_ram_usage, get_disk_usage
 from main.models import Device
-from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
+from shuttle.models import TsKvDictionary, TsKvLatest, TsKv
 
 
 class Command(BaseCommand):
@@ -14,20 +14,21 @@ class Command(BaseCommand):
         while True:
             print("Saving CPU RAM Usage to DB", time.time())
             cpu_ram_save_db()
-            time.sleep(15)
+            time.sleep(10)
 
 
 def cpu_ram_save_db():
-    cpu_ram = (get_cpu_usage(), get_ram_usage())
-    keys = ["cpuUsage", "memoryUsage"]
-    entity_id = Device.objects.filter(name="CPU RAM Usage").first().id
-    if entity_id is None:
-        print("Entity not found")
-        return
-    for index in range(2):
-        ts_kv_dict = TsKvDictionary.objects.filter(key=keys[index]).first()
+    keys = {"cpuUsage": get_cpu_usage(), "memoryUsage": get_ram_usage(), "diskUsage": get_disk_usage()}
+    device, _ = Device.objects.get_or_create(name="CPU RAM Usage")
+
+    for key, value in keys.items():
+        ts_kv_dict, _ = TsKvDictionary.objects.get_or_create(key=key)
         TsKvLatest.objects.update_or_create(
-            entity_id=entity_id, key=ts_kv_dict.key_id, defaults={"dbl_v": cpu_ram[index], "ts": int(time.time())}
+            entity=device, key=ts_kv_dict.key_id, defaults={"dbl_v": value, "ts": int(time.time())}
         )
 
-        TsKv.objects.create(key=ts_kv_dict.key_id, dbl_v=cpu_ram[index], ts=int(time.time()), entity_id=entity_id)
+        last_ts_kv = TsKv.objects.filter(key=ts_kv_dict.key_id, entity=device)
+        last_ts_kv = last_ts_kv.first() if not last_ts_kv else last_ts_kv.latest("ts")
+
+        if not last_ts_kv or last_ts_kv.dbl_v != value:
+            TsKv.objects.create(key=ts_kv_dict.key_id, dbl_v=value, ts=int(time.time()), entity=device)

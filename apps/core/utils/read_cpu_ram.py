@@ -7,3 +7,7 @@ def get_cpu_usage(seconds=2):
 
 def get_ram_usage():
     return psutil.virtual_memory()[2]
+
+
+def get_disk_usage():
+    return psutil.disk_usage("/")[3]
