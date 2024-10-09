@@ -10,7 +10,7 @@ from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestListView, GuestDetailView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.room import RoomDetailView, RoomListView
-from main.views.room_status import RoomStatusView
+from main.views.room_status import RoomHistoryStatusView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.tenant import TenantListView
 from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
@@ -35,6 +35,6 @@ urlpatterns = [
     path("guest/", GuestListView.as_view(), name="guest-list"),
     path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
     path("guest/<uuid:pk>/", GuestDetailView.as_view(), name="guest-detail"),
-    path("room-status/", RoomStatusView.as_view(), name="room-status-list"),
+    path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
     path("tenant/", TenantListView.as_view(), name="tenant-list"),
 ]
