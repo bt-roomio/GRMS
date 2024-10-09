@@ -20,7 +20,7 @@ def update_state_of_room(sender, instance, **kwargs):
     if devices:
         for device in devices:
             if instance.attribute_key == "dnd":
-                device.room.state = Room.DoNotDistrub
+                device.room.state = Room.DoNotDisturb
                 device.room.save()
             if instance.attribute_key == "mur":
                 device.room.state = Room.MakeUpRoom

@@ -176,7 +176,7 @@ class Migration(migrations.Migration):
                             ("Available", "Available"),
                             ("CheckedIn", "CheckedIn"),
                             ("Occupied", "Occupied"),
-                            ("DoNotDistrub", "DoNotDistrub"),
+                            ("DoNotDisturb", "DoNotDisturb"),
                             ("MakeUpRoom", "MakeUpRoom"),
                         ],
                         default="Available",

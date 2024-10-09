@@ -4,11 +4,11 @@ services:
     restart: always
     container_name: postgres
     environment:
-     - POSTGRES_DB=${DATABASE_NAME}
-     - POSTGRES_USER=${DATABASE_USER}
-     - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
-    - '5432:5432'
+      - '5432:5432'
     volumes:
       - pg_data:/var/run/postgresql
 

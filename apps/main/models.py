@@ -10,6 +10,7 @@ from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.device_profile import DeviceProfileQuerySet
 from main.querysets.guest import GuestQuerySet
 from main.querysets.room import RoomQuerySet
+from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
@@ -77,14 +78,14 @@ class Room(BaseModel, UpdateByModel):
     Available = "Available"
     CheckedIn = "CheckedIn"
     Occupied = "Occupied"
-    DoNotDistrub = "DoNotDistrub"
+    DoNotDisturb = "DoNotDisturb"
     MakeUpRoom = "MakeUpRoom"
 
     STATE = (
         (Available, "Available"),
         (CheckedIn, "CheckedIn"),
         (Occupied, "Occupied"),
-        (DoNotDistrub, "DoNotDistrub"),
+        (DoNotDisturb, "DoNotDisturb"),
         (MakeUpRoom, "MakeUpRoom"),
     )
 
@@ -113,8 +114,75 @@ class Room(BaseModel, UpdateByModel):
     def __str__(self):
         return str(self.number)
 
+    def save(self, *args, **kwargs):
+        if self.pk:
+            if Room.objects.filter(pk=self.pk).exists():
+                RoomHistory.objects.create(
+                    number=self.number,
+                    floor=self.floor,
+                    block=self.block,
+                    active=self.active,
+                    state=self.state,
+                    public_area_id=self.public_area_id,
+                    pan_id=self.pan_id,
+                    building=self.building,
+                    door_lock_id=self.door_lock_id,
+                    type=self.type,
+                    suite=self.suite,
+                    tenant=self.tenant,
+                    status=self.status,
+                    updated_at=self.updated_at,
+                    updated_by=self.updated_by,
+                )
+        super().save(*args, **kwargs)
+
     class Meta:
         db_table = "main_room"
+
+
+class RoomHistory(BaseModel, UpdateByModel):
+    Available = "Available"
+    CheckedIn = "CheckedIn"
+    Occupied = "Occupied"
+    DoNotDisturb = "DoNotDisturb"
+    MakeUpRoom = "MakeUpRoom"
+
+    STATE = (
+        (Available, "Available"),
+        (CheckedIn, "CheckedIn"),
+        (Occupied, "Occupied"),
+        (DoNotDisturb, "DoNotDisturb"),
+        (MakeUpRoom, "MakeUpRoom"),
+    )
+
+    ON = "ON"
+    OFF = "OFF"
+    STATUS = ((ON, "on"), (OFF, "off"))
+
+    number = models.IntegerField()
+    floor = models.CharField(max_length=255)
+    block = models.CharField(max_length=255)
+    active = models.BooleanField(default=True)
+    state = models.CharField(max_length=255, choices=STATE, default=Available)
+    public_area_id = models.IntegerField(null=True, blank=True)
+    pan_id = models.CharField(max_length=255, null=True, blank=True)
+    building = models.CharField(max_length=255, null=True, blank=True)
+    door_lock_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
+    suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+
+    # Helpers
+    status = models.CharField(max_length=255, choices=STATUS, default=OFF)
+
+    objects = RoomHistoryQuerySet.as_manager()
+
+    def __str__(self):
+        return str(self.number)
+
+    class Meta:
+        db_table = "main_room_history"
+        default_related_name = "room_history"
 
 
 class RoomType(BaseModel):

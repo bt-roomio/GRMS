@@ -1,14 +1,15 @@
-from core.utils.pagination import pagination
 from drf_yasg.utils import swagger_auto_schema
-from main.models import RoomType
-from main.serializers.room_type import RoomTypeFilterParams, RoomTypeSerializer
-from main.swagger.room_type import RoomTypeDetailSwagger, RoomTypeSwagger
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
+from core.utils.pagination import pagination
+from main.models import RoomType
+from main.serializers.room_type import RoomTypeFilterParams, RoomTypeSerializer
+from main.swagger.room_type import RoomTypeDetailSwagger, RoomTypeSwagger
+
 
 class RoomTypeListView(APIView):
-    @swagger_auto_schema(responses=RoomTypeSwagger, query_serializer=RoomTypeFilterParams)
+    @swagger_auto_schema(responses=RoomTypeSwagger, query_serializer=RoomTypeFilterParams())
     def get(self, request):
         params = RoomTypeFilterParams.check(request.GET)
         queryset = RoomType.objects.list(tenant=request.user.tenant, search=params.get("search"))
