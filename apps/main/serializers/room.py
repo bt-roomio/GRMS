@@ -63,7 +63,7 @@ class RoomFilterParams(ValidatorSerializer):
         required=False,
         error_messages={"invalid_choice": _('"{input}" is not a valid choice. Choose next: ON or OFF')},
     )
-    search_field = serializers.ChoiceField(choices=("number", "floor", "block"), required=False)
+    search_field = serializers.ChoiceField(choices=("number", "floor", "block", "type__title"), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
