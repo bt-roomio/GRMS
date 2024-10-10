@@ -17,17 +17,10 @@ def connect_to_rabbitmq():
     return channel
 
 
-def send_to_rabbitmq(device_id, device_name, attributes, topic):
+def send_to_rabbitmq(message: dict):
     channel = connect_to_rabbitmq()
-    message_data = {
-        "targetDeviceUUID": str(device_id),
-        "topic": topic,
-        "data": {"device": device_name, "data": attributes},
-    }
-    message = json.dumps(message_data, indent=2).encode("utf-8")
-    topic_name = "fromGRMS"
-
-    channel.basic_publish(exchange="", routing_key=topic_name, body=message)
+    message = json.dumps(message, indent=2).encode("utf-8")
+    channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
 
 
 def send_to_rabbitmq_rpc(message_id, gateway_device, device, method, params):

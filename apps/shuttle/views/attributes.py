@@ -37,10 +37,15 @@ class AttributeListView(APIView):
         device = Device.objects.filter(pk=params_data.get("deviceId").id).first()
         if device:
             attributes = dict((k, v[1]) for k, v in available_fields.items())
-            topic = "v1/gateway/attributes"
+            message = {
+                "targetDeviceUUID": str(device_id),
+                "topic": "v1/gateway/attributes",
+                "data": {"device": str(device_id and device_id.id or device.id), "data": attributes},
+            }
             if device.additional_info and device.additional_info.get("gateway"):
-                topic = "v1/devices/me/attributes/"
+                message["topic"] = "v1/devices/me/attributes/"
+                message["data"] = attributes
 
-            send_to_rabbitmq(device_id and device_id.id or device.id, device.name, attributes, topic)
+            send_to_rabbitmq(message)
 
         return Response({}, 201)

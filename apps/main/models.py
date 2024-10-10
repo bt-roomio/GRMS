@@ -138,32 +138,15 @@ class Room(BaseModel, UpdateByModel):
 
     class Meta:
         db_table = "main_room"
+        unique_together = ("number", "floor", "block")
 
 
 class RoomHistory(BaseModel, UpdateByModel):
-    Available = "Available"
-    CheckedIn = "CheckedIn"
-    Occupied = "Occupied"
-    DoNotDisturb = "DoNotDisturb"
-    MakeUpRoom = "MakeUpRoom"
-
-    STATE = (
-        (Available, "Available"),
-        (CheckedIn, "CheckedIn"),
-        (Occupied, "Occupied"),
-        (DoNotDisturb, "DoNotDisturb"),
-        (MakeUpRoom, "MakeUpRoom"),
-    )
-
-    ON = "ON"
-    OFF = "OFF"
-    STATUS = ((ON, "on"), (OFF, "off"))
-
     number = models.IntegerField()
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
-    state = models.CharField(max_length=255, choices=STATE, default=Available)
+    state = models.CharField(max_length=255, choices=Room.STATE, default=Room.Available)
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
@@ -173,7 +156,7 @@ class RoomHistory(BaseModel, UpdateByModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
     # Helpers
-    status = models.CharField(max_length=255, choices=STATUS, default=OFF)
+    status = models.CharField(max_length=255, choices=Room.STATUS, default=Room.OFF)
 
     objects = RoomHistoryQuerySet.as_manager()
 
