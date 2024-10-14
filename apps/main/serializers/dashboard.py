@@ -1,6 +1,7 @@
+from rest_framework import serializers
+
 from core.utils.serializers import ValidatorSerializer
 from main.models import Dashboard
-from rest_framework import serializers
 
 
 class SimpleDashboardSerializer(serializers.ModelSerializer):
@@ -19,11 +20,6 @@ class SimpleDashboardSerializer(serializers.ModelSerializer):
 
 
 class DashboardSerializer(serializers.ModelSerializer):
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["tenant"] = instance.tenant_id
-        return data
-
     class Meta:
         model = Dashboard
         fields = (
@@ -35,9 +31,14 @@ class DashboardSerializer(serializers.ModelSerializer):
             "mobile_order",
             "image",
             "external_id",
+            "tenant",
         )
 
 
 class DashboardFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
+
+
+class DashboardTypeSerializer(ValidatorSerializer):
+    type = serializers.ChoiceField(choices=[Dashboard.MAIN_DASHBOARD, Dashboard.PUBLIC_SPACE_DASHBOARD])

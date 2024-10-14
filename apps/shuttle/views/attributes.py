@@ -43,7 +43,8 @@ class AttributeListView(APIView):
                 "data": {"device": str(device_id and device_id.id or device.id), "data": attributes},
             }
             if device.additional_info and device.additional_info.get("gateway"):
-                message["topic"] = "v1/devices/me/attributes/"
+                message["targetDeviceUUID"] = str(device.id)
+                message["topic"] = "v1/devices/me/attributes"
                 message["data"] = attributes
 
             send_to_rabbitmq(message)

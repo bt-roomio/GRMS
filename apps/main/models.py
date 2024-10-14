@@ -275,6 +275,9 @@ class Customer(BaseModel):
 
 
 class Dashboard(BaseModel):
+    MAIN_DASHBOARD = "main_dashboard"
+    PUBLIC_SPACE_DASHBOARD = "public_space_dashboard"
+
     title = models.CharField(unique=True, max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     configuration = models.JSONField(blank=True, null=True)

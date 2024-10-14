@@ -1,10 +1,12 @@
+from django.db.models import F
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
-from main.models import Dashboard
-from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer
+from main.models import Dashboard, Tenant
+from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer, DashboardTypeSerializer
 from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 
 
@@ -28,8 +30,8 @@ class DashboardListView(APIView):
 class DashboardDetailView(APIView):
     @swagger_auto_schema(responses=DashboardDetailSwagger)
     def get(self, request, pk):
-        room_type = get_object_or_404(Dashboard, pk=pk, tenant=request.user.tenant)
-        serializer = DashboardSerializer(room_type)
+        instance = get_object_or_404(Dashboard, pk=pk, tenant=request.user.tenant)
+        serializer = DashboardSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=DashboardDetailSwagger, request_body=DashboardSerializer)
@@ -45,3 +47,28 @@ class DashboardDetailView(APIView):
         instance = get_object_or_404(Dashboard, id=pk)
         instance.delete()
         return Response({}, 204)
+
+
+class DashboardTypeView(APIView):
+    @swagger_auto_schema(
+        operation_description="Getting Dashboard by category **[main_dashboard, public_space_dashboard]**",
+        query_serializer=DashboardTypeSerializer(),
+        responses=DashboardDetailSwagger,
+    )
+    def get(self, request):
+        params = DashboardTypeSerializer.check(request.GET)
+        criteria = {f"additional_info__general_settings__{params.get("type")}__isnull": False}
+        has_dashboard_type = (
+            Tenant.objects.filter(**criteria)
+            .annotate(dashboard_type_pk=F(f"additional_info__general_settings__{params.get("type")}"))
+            .values("dashboard_type_pk")
+        ).first()
+
+        if not has_dashboard_type:
+            raise ValidationError({f"{params.get("type")}": [f"Object does not exist in general_settings!"]})
+
+        instance = get_object_or_404(
+            Dashboard, pk=has_dashboard_type.get("dashboard_type_pk"), tenant=request.user.tenant
+        )
+        serializer = DashboardSerializer(instance)
+        return Response(serializer.data)
