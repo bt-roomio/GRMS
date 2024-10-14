@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from main.models import Dashboard
+
 
 class DoorLockSerializer(serializers.Serializer):
     ving_card = serializers.BooleanField(default=False)
@@ -21,6 +23,22 @@ class GeneralSettingsSerializer(serializers.Serializer):
     door_lock = DoorLockSerializer(default=dict)
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
+    main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
+    public_space_dashboard = serializers.PrimaryKeyRelatedField(
+        queryset=Dashboard.objects.all(), required=False, many=False
+    )
+
+    def validate_main_dashboard(self, value):
+        dashboard = Dashboard.objects.filter(title=value).first()
+        if not dashboard:
+            raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})
+        return str(dashboard.id)
+
+    def validate_public_space_dashboard(self, value):
+        dashboard = Dashboard.objects.filter(title=value).first()
+        if not dashboard:
+            raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})
+        return str(dashboard.id)
 
     def update(self, instance, validated_data):
         general_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
@@ -29,15 +47,16 @@ class GeneralSettingsSerializer(serializers.Serializer):
         return instance
 
     def to_representation(self, instance):
-        general_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
-        defaults = {
-            field_name: (
-                field.default
-                if not isinstance(field, serializers.BaseSerializer)
-                else field.to_representation(field.get_default())
-            )
-            for field_name, field in self.fields.items()
-        }
+        g_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
+        for field_name, field in self.fields.items():
+            if field_name == "main_dashboard":
+                g_settings[field_name] = g_settings.get(field_name, None)
+            elif field_name == "public_space_dashboard":
+                g_settings[field_name] = g_settings.get(field_name, None)
+            elif field_name == "door_lock":
+                g_settings[field_name] = g_settings.get(field_name, field.to_representation(field.get_default()))
+            else:
+                g_settings[field_name] = g_settings.get(field_name, field.default)
 
-        merged = {**defaults, **general_settings}
+        merged = {**g_settings}
         return {"tenant_id": instance.id, **merged}

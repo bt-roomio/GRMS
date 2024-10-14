@@ -55,12 +55,13 @@ def callback(ch, method, properties, body):
 
     if topic.startswith("v1/devices/me/attributes/request"):
         shared_keys = data.get("sharedKeys")
-        shared_keys = {key: "" for key in shared_keys.split(",")}
-        attributes = AttributeKv.objects.filter(attribute_key__in=shared_keys.keys())
+        shared_keys = shared_keys.split(",")
+        attributes = AttributeKv.objects.filter(attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE)
+        response_keys = {}
         for attribute in attributes:
             field, value = get_non_null_field(attribute)
-            shared_keys[attribute.attribute_key] = value
-        send_to_rabbitmq_device_me(device.id, shared_keys, topic.replace("request", "response"))
+            response_keys[attribute.attribute_key] = value
+        send_to_rabbitmq_device_me(device.id, response_keys, topic.replace("request", "response"))
 
     if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         from_id = device.id
