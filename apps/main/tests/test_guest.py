@@ -62,7 +62,7 @@ class GuestTest(BaseTestCase):
 
         response = self.client.get(reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"}))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["state"], Room.Available)
+        self.assertEqual(response.data["state"], [Room.Available])
 
         url = reverse("main:guest-detail", kwargs={"pk": "5b66af57-fb27-4c26-9986-b9994e644605"})
         data = {"name": "Guido", "room": "df77f910-2dcd-45cf-b6be-054c744561a7"}

@@ -12,7 +12,7 @@ class GuestMoveRoomListView(APIView):
             200: '"detail": "Guests moved successfully!"',
             404: '"detail": "\'from_room\' guests doesn\'t exist!"',
         },
-        query_serializer=GuestMoveRoomFilterParams,
+        query_serializer=GuestMoveRoomFilterParams(),
     )
     def put(self, request):
         params = GuestMoveRoomFilterParams.check(request.GET)
