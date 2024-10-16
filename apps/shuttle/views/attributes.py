@@ -32,7 +32,7 @@ class AttributeListView(APIView):
             )
 
         relation = Relation.objects.filter(to_id=params_data.get("deviceId")).first()
-        device_id = relation and relation.from_id
+        device_id = relation and relation.from_id_id
 
         device = Device.objects.filter(pk=params_data.get("deviceId").id).first()
         if device:
@@ -40,7 +40,7 @@ class AttributeListView(APIView):
             message = {
                 "targetDeviceUUID": str(device_id),
                 "topic": "v1/gateway/attributes",
-                "data": {"device": str(device_id and device_id.id or device.id), "data": attributes},
+                "data": {"device": device.name, "data": attributes},
             }
             if device.additional_info and device.additional_info.get("gateway"):
                 message["targetDeviceUUID"] = str(device.id)

@@ -1,5 +1,3 @@
-import uuid
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +5,7 @@ from rest_framework.views import APIView
 from main.models import Device
 from shuttle.models import Relation
 from shuttle.swagger.rpc import json_rpc_swagger
+from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq
 
 
 class JsonRpcView(APIView):
@@ -21,22 +20,21 @@ class JsonRpcView(APIView):
         except KeyError as err:
             return Response({"error": f"Missing {str(err)}"}, 400)
 
-        methods = {"getValue": get_value(gateway_device, device, method, params, request, timeout)}
-
-        if methods.get(method):
-            return methods[method]
-
-        return Response({"error": f"A method named '{method}' not found."}, 400)
+        return prepare_mqtt_request(gateway_device, device, method, params, request, timeout)
 
 
-def get_value(gateway_device, device, method, params, request, timeout):
+def prepare_mqtt_request(gateway_device, device, method, params, request, timeout):
     print("Getting value")
-    message_id = uuid.uuid4()
-    # send_to_rabbitmq_rpc(message_id, gateway_device, device, method, params)
-    # Wait until response or changes in db, After sent rpc_message clear db.
+    message = {
+        "targetDeviceUUID": str(device.id),
+        "topic": "v1/gateway/rpc",
+        "data": {"device": str(device.name), "data": {"id": 1, "method": method, "params": params}},
+    }
+    send_to_rabbitmq(message)
 
+    # Wait until response or changes in db, After sent rpc_message clear db.
     # 1. wait response in this function
     # 2. while every .5s check for db
-    # instance = RPCMessage.objects.filter(id=message_id)
+    # instance = RPCMessage.objects.filter(id=request_id)
     # serializer = RPCMessageSerializer(instance)
-    return Response({"device": "Device A", "id": message_id, "data": {"success": True}})
+    return Response({"device": device.name, "id": 1, "data": {"success": True}})
