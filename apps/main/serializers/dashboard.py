@@ -20,6 +20,11 @@ class SimpleDashboardSerializer(serializers.ModelSerializer):
 
 
 class DashboardSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["tenant"] = instance.tenant_id
+        return data
+
     class Meta:
         model = Dashboard
         fields = (
@@ -31,7 +36,6 @@ class DashboardSerializer(serializers.ModelSerializer):
             "mobile_order",
             "image",
             "external_id",
-            "tenant",
         )
 
 
