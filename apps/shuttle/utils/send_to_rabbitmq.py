@@ -21,9 +21,11 @@ def send_to_rabbitmq(message: dict):
     channel = connect_to_rabbitmq()
     message = json.dumps(message, indent=2).encode("utf-8")
     channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
+    return channel
 
 
 def send_to_rabbitmq_rpc(message_id, gateway_device, device, method, params):
+    # TODO: remove after realise rpc request without this func
     channel = connect_to_rabbitmq()
     message_data = {
         "targetDeviceUUID": str(gateway_device.id),

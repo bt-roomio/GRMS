@@ -12,3 +12,6 @@ class DeviceQuerySet(BaseQuerySet):
         query = query.order_by(*sort_by) if sort_by else query
 
         return query
+
+    def gateway_or_none(self, pk):
+        return self.filter(pk=pk, additional_info__gateway=True).first()
