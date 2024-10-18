@@ -1,10 +1,14 @@
+import json
+import time
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import Device
-from shuttle.models import Relation
+from shuttle.models import Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
+from shuttle.utils.send_to_rabbitmq import connect_to_rabbitmq
 
 
 class JsonRpcView(APIView):
@@ -18,32 +22,34 @@ class JsonRpcView(APIView):
         except KeyError as err:
             return Response({"error": f"Missing {str(err)}"}, 400)
 
-        return prepare_mqtt_request(device, method, params)
+        return prepare_mqtt_request(device, method, params, timeout / 1000)
 
 
-def prepare_mqtt_request(device, method, params):
+def prepare_mqtt_request(device, method, params, timeout):
     relation = Relation.objects.filter(to_id_id=device.id).first()
     device_id = relation and relation.from_id_id
     gateway_or_none = Device.objects.gateway_or_none(device_id)
+    rpc_message = RPCMessage.objects.create(additional_info={})
+    request_id = rpc_message.id
     message = {
         "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device.id),
         "topic": "v1/gateway/rpc",
-        "data": {"device": str(device.name), "data": {"id": 1, "method": method, "params": params}},
+        "data": {"device": str(device.name), "data": {"id": request_id, "method": method, "params": params}},
     }
-    # send_to_rabbitmq(message)
-    print(message)
-    # channel = connect_to_rabbitmq()
-    # message = json.dumps(message, indent=2).encode("utf-8")
-    # channel.basic_publish(exchange="", routing_key="toGRMS", body=message)
-    # channel.basic_consume(queue="toGRMS", on_message_callback=callback, auto_ack=True)
-    # channel.start_consuming()
 
-    # Wait until response or changes in db, After sent rpc_message clear db.
-    # 1. wait response in this function
-    # 2. while every .5s check for db
-    # instance = RPCMessage.objects.filter(id=request_id)
-    # serializer = RPCMessageSerializer(instance)
-    return Response({"device": device.name, "id": 1, "data": {"success": True}})
+    channel = connect_to_rabbitmq()
+    message = json.dumps(message, indent=2).encode("utf-8")
+    channel.basic_publish(exchange="", routing_key="toGRMS", body=message)
+
+    start_time = 0
+    while start_time < timeout:
+        has_message = RPCMessage.objects.filter(id=request_id, received=True)
+        if has_message:
+            return Response(has_message.first().additional_info)
+        time.sleep(1)
+        start_time += 1
+
+    return Response({"device": device.name, "id": request_id, "data": {"success": False, "msg": "Timeout error"}})
 
 
 def callback(ch, method, props, body):

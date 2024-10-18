@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
-from shuttle.models import AttributeKv, TsKv, TsKvDictionary, TsKvLatest, Relation
+from shuttle.models import AttributeKv, TsKv, TsKvDictionary, TsKvLatest, Relation, RPCMessage
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq_device_me
@@ -52,6 +52,13 @@ def callback(ch, method, properties, body):
     data = msg.get("data")
     topic = msg.get("topic")
     ts = None
+
+    if topic == "v1/gateway/rpc":
+        rpc_msg = RPCMessage.objects.filter(id=data.get("id")).first()
+        if rpc_msg:
+            rpc_msg.received = True
+            rpc_msg.additional_info = data.get("data")
+            rpc_msg.save()
 
     if topic.startswith("v1/devices/me/attributes/request"):
         shared_keys = data.get("sharedKeys")
