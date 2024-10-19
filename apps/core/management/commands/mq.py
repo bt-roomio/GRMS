@@ -60,6 +60,11 @@ def callback(ch, method, properties, body):
             rpc_msg.additional_info = data.get("data")
             rpc_msg.save()
 
+    if topic == "v1/gateway/connect":
+        update_activity_device(device)
+    if topic == "v1/gateway/disconnect":
+        update_activity_device(device, connected=False)
+
     if topic.startswith("v1/devices/me/attributes/request"):
         shared_keys = data.get("sharedKeys")
         shared_keys = shared_keys.split(",")
@@ -176,6 +181,8 @@ def save_telemetry_kv(device, data, ts):
         )
         time.sleep(0.1)
 
+    update_activity_gateway(device)
+
 
 def save_attribute_kv(device, data):
     for key, item in find_compatible_field(data).items():
@@ -189,7 +196,17 @@ def save_attribute_kv(device, data):
         )
         time.sleep(0.1)
 
-    server_data = {"active": True, "lastActivityTime": int(time.time())}
+    update_activity_gateway(device)  # Ask for this line, when topic /attribute, should check for gateway then update ?
+
+
+def update_activity_gateway(device):
+    is_gateway = Device.objects.filter(id=device.id, additional_info__gateway=True).exists()
+    if is_gateway:
+        update_activity_device(device)
+
+
+def update_activity_device(device, connected=True):
+    server_data = {"active": connected, "lastActivityTime": int(time.time())}
     for key, item in find_compatible_field(server_data).items():
         fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
         fields[item[0]] = item[1]

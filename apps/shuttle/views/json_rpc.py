@@ -49,8 +49,4 @@ def prepare_mqtt_request(device, method, params, timeout):
         time.sleep(1)
         start_time += 1
 
-    return Response({"device": device.name, "id": request_id, "data": {"success": False, "msg": "Timeout error"}})
-
-
-def callback(ch, method, props, body):
-    print(" Received body = %s ", body)
+    return Response({"device": device.name, "data": {"success": False, "msg": "Timeout error"}})
