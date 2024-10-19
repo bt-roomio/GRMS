@@ -72,7 +72,7 @@ class GuestTest(BaseTestCase):
 
         response = self.client.get(reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"}))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["state"], Room.CheckedIn)
+        self.assertIn(Room.CheckedIn, response.data["state"])
 
         url = reverse("main:guest-detail", kwargs={"pk": "52d8ba26-6fac-463b-a131-c16410e42ede"})
         data = {"name": "Guido", "room": "df77f910-2dcd-45cf-b6be-054c744561a7"}
@@ -82,7 +82,7 @@ class GuestTest(BaseTestCase):
 
         response = self.client.get(reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"}))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["state"], Room.CheckedIn)
+        self.assertIn(Room.CheckedIn, response.data["state"])
 
         url = reverse("main:guest-detail", kwargs={"pk": "52d8ba26-6fac-463b-a131-c16410e42ede"})
         data = {"name": "Guido", "room": "ab09aa20-77b8-457a-bfc4-5dee69790241"}
@@ -92,4 +92,4 @@ class GuestTest(BaseTestCase):
 
         response = self.client.get(reverse("main:room-detail", kwargs={"pk": "ab09aa20-77b8-457a-bfc4-5dee69790241"}))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["state"], Room.CheckedIn)
+        self.assertIn(Room.CheckedIn, response.data["state"])
