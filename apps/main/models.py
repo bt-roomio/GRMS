@@ -1,5 +1,6 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import CASCADE, SET_NULL
+from django.db.models import CASCADE, SET_NULL, DO_NOTHING
 
 from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
@@ -75,11 +76,15 @@ class EmailConfiguration(BaseModel, UpdateByModel):
 
 
 class Room(BaseModel, UpdateByModel):
-    Available = "Available"
-    CheckedIn = "CheckedIn"
-    Occupied = "Occupied"
-    DoNotDisturb = "DoNotDisturb"
-    MakeUpRoom = "MakeUpRoom"
+    """
+    If change Room model, don't forget about RoomHistory model.
+    """
+
+    Available = 0
+    CheckedIn = 1
+    Occupied = 2
+    DoNotDisturb = 3
+    MakeUpRoom = 4
 
     STATE = (
         (Available, "Available"),
@@ -97,7 +102,7 @@ class Room(BaseModel, UpdateByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
-    state = models.CharField(max_length=255, choices=STATE, default=Available)
+    state = ArrayField(models.PositiveSmallIntegerField(choices=STATE), default=list)
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
@@ -105,8 +110,6 @@ class Room(BaseModel, UpdateByModel):
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
-
-    # Helpers
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
 
     objects = RoomQuerySet.as_manager()
@@ -114,27 +117,27 @@ class Room(BaseModel, UpdateByModel):
     def __str__(self):
         return str(self.number)
 
-    def save(self, *args, **kwargs):
-        if self.pk:
-            if Room.objects.filter(pk=self.pk).exists():
-                RoomHistory.objects.create(
-                    number=self.number,
-                    floor=self.floor,
-                    block=self.block,
-                    active=self.active,
-                    state=self.state,
-                    public_area_id=self.public_area_id,
-                    pan_id=self.pan_id,
-                    building=self.building,
-                    door_lock_id=self.door_lock_id,
-                    type=self.type,
-                    suite=self.suite,
-                    tenant=self.tenant,
-                    status=self.status,
-                    updated_at=self.updated_at,
-                    updated_by=self.updated_by,
-                )
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     if self.pk:
+    #         if Room.objects.filter(pk=self.pk).exists():
+    #             RoomHistory.objects.create(
+    #                 number=self.number,
+    #                 floor=self.floor,
+    #                 block=self.block,
+    #                 active=self.active,
+    #                 state=self.state,
+    #                 public_area_id=self.public_area_id,
+    #                 pan_id=self.pan_id,
+    #                 building=self.building,
+    #                 door_lock_id=self.door_lock_id,
+    #                 type=self.type,
+    #                 suite=self.suite,
+    #                 tenant=self.tenant,
+    #                 status=self.status,
+    #                 updated_at=self.updated_at,
+    #                 updated_by=self.updated_by,
+    #             )
+    #     super().save(*args, **kwargs)
 
     class Meta:
         db_table = "main_room"
@@ -146,7 +149,7 @@ class RoomHistory(BaseModel, UpdateByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
-    state = models.CharField(max_length=255, choices=Room.STATE, default=Room.Available)
+    state = ArrayField(models.PositiveSmallIntegerField(choices=Room.STATE), default=list)
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
@@ -154,8 +157,6 @@ class RoomHistory(BaseModel, UpdateByModel):
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
-
-    # Helpers
     status = models.CharField(max_length=255, choices=Room.STATUS, default=Room.OFF)
 
     objects = RoomHistoryQuerySet.as_manager()
@@ -329,7 +330,7 @@ class Guest(BaseModel):
     check_out = UnixTimeStampField(null=True, blank=True)
     auto_check_out = models.BooleanField(default=False)
     reservation_number = models.CharField(max_length=255, null=True, blank=True)
-    room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
+    room = models.ForeignKey("main.Room", DO_NOTHING, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
     objects = GuestQuerySet.as_manager()

@@ -20,10 +20,10 @@ def update_state_of_room(sender, instance, **kwargs):
     if devices:
         for device in devices:
             if instance.attribute_key == "dnd":
-                device.room.state = Room.DoNotDisturb
+                device.room.state.append(Room.DoNotDisturb)
                 device.room.save()
             if instance.attribute_key == "mur":
-                device.room.state = Room.MakeUpRoom
+                device.room.state.append(Room.MakeUpRoom)
                 device.room.save()
             if instance.attribute_key == "active" and instance.attribute_type == AttributeKv.SERVER_SCOPE:
                 if device.room:
@@ -31,3 +31,8 @@ def update_state_of_room(sender, instance, **kwargs):
                     device.room.save()
                 device.status = bool(instance.bool_v)
                 device.save()
+
+
+@receiver(post_save, sender=Room)
+def check_for_duplicate_state(instance, **kwargs):
+    Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))

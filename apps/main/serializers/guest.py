@@ -15,7 +15,8 @@ class GuestMoveRoomSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         from_room = validated_data.pop("from_room")
-        from_room.state = Room.Available
+        from_room.state.append(Room.Available)
+        from_room.state.remove(Room.CheckedIn)
         from_room.save()
 
         for guest in instance:
@@ -23,7 +24,8 @@ class GuestMoveRoomSerializer(serializers.Serializer):
             guest.save()
 
         to_room = validated_data.pop("to_room")
-        to_room.state = Room.CheckedIn
+        to_room.state.append(Room.CheckedIn)
+        to_room.state.remove(Room.Available)
         to_room.save()
 
         return instance
@@ -34,20 +36,23 @@ class GuestSerializer(serializers.ModelSerializer):
         instance = super().create(validated_data)
 
         room = instance.room
-        if room and room.state != Room.CheckedIn:
-            room.state = Room.CheckedIn
+        if room and Room.CheckedIn not in room.state:
+            room.state.remove(Room.Available)
+            room.state.append(Room.CheckedIn)
             room.save()
         return instance
 
     def update(self, instance, validated_data):
         old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
         if old_room and len(old_room.guests.all()) == 1:
-            old_room.state = Room.Available
+            old_room.state.remove(Room.Available)
+            old_room.state.append(Room.Available)
             old_room.save()
 
         new_room = validated_data.get("room") and Room.objects.filter(id=validated_data.get("room").id).first()
         if new_room and not new_room.guests.exists():
-            new_room.state = Room.CheckedIn
+            new_room.state.remove(Room.Available)
+            new_room.state.append(Room.CheckedIn)
             new_room.save()
         return super().update(instance, validated_data)
 
