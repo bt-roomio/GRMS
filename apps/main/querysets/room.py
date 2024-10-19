@@ -62,7 +62,7 @@ class RoomQuerySet(BaseQuerySet):
         )
         result = []
         for s in all_states_tenant:
-            data = {"status": Room.STATE[s["state_element"]][1], "last_24_hour": s["count"]}
+            data = {"status": Room.STATE[s["state_element"]][1], "last_24_hour": s["count"], "diff_previous_day": 0}
             result.append(data)
 
         all_state_elements = set(today_counts.keys()).union(yesterday_counts.keys())
