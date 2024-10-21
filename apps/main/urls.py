@@ -1,6 +1,7 @@
 from django.urls import path
 
 from main.views.alarm_settings import AlarmSettingsDetailView
+from main.views.controller import ControllerListView
 from main.views.dashboard import DashboardDetailView, DashboardListView, DashboardTypeView
 from main.views.device import DeviceListView, DeviceDetailView
 from main.views.device_credentials import DeviceCredentialsDetailView
@@ -38,4 +39,5 @@ urlpatterns = [
     path("guest/<uuid:pk>/", GuestDetailView.as_view(), name="guest-detail"),
     path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
     path("tenant/", TenantListView.as_view(), name="tenant-list"),
+    path("controller/<uuid:device_id>/<str:name>/", ControllerListView.as_view(), name="controller-view"),
 ]
