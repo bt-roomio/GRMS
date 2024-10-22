@@ -25,8 +25,7 @@ class ControllerListView(APIView):
             }
             temp_devices = [i.get("macAddress") for i in devices if i.get("tempDevice")]
             not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
-
-            self.get_scanned_devices(temp_devices, result)
+            self.get_scanned_devices(temp_devices, not_temp_devices, address_maps, result)
             self.get_gateway_attrs(not_temp_devices, address_maps, result)
 
             return Response(result)
@@ -34,7 +33,7 @@ class ControllerListView(APIView):
             return Response({"detail": str(e)}, 400)
 
     @staticmethod
-    def get_scanned_devices(temp_devices, result):
+    def get_scanned_devices(temp_devices, not_temp_devices, address_maps, result):
         attrs = (
             AttributeKv.objects.select_related("entity")
             .filter(
@@ -47,12 +46,18 @@ class ControllerListView(APIView):
         for scan_device in attrs:
             scan_device = scan_device.get("json_v")
             for mac_address, value in scan_device.items():
+                address_map_id = {
+                    "addressMapId": i.get("addressMapId")
+                    for i in not_temp_devices
+                    if mac_address == i.get("macAddress")
+                }
+                address_map = address_maps[address_map_id.get("addressMapId")] if address_map_id else {}
                 found_device = Device.objects.filter(name=mac_address).first()
                 data = {
                     "mac_address": mac_address,
                     "ip_address": value.get("ip"),
                     "room": found_device and str(found_device.room),
-                    "address_map": {},  # TODO: ask for address_map, doesn't exist in CLIENT_SCOPE and scanned_device
+                    "address_map": address_map,
                     "file": "",
                     "status": value.get("device_is_online"),
                 }
