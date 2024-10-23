@@ -39,7 +39,7 @@ def prepare_mqtt_request(device, method, params, timeout):
 
     channel = connect_to_rabbitmq()
     message = json.dumps(message, indent=2).encode("utf-8")
-    channel.basic_publish(exchange="", routing_key="toGRMS", body=message)
+    channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
 
     start_time = 0
     while start_time < timeout:

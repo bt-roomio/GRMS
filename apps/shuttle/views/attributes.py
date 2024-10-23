@@ -30,6 +30,8 @@ class AttributeListView(APIView):
                 attribute_key=key,
                 defaults={"entity_type": "DEVICE", **fields, "last_update_ts": time.time()},
             )
+        if params_data.get("scope") == AttributeKv.SERVER_SCOPE:
+            return Response({}, 201)
 
         relation = Relation.objects.filter(to_id=params_data.get("deviceId")).first()
         device_id = relation and relation.from_id_id
