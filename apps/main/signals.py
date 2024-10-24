@@ -2,6 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from main.models import Device, Room
+from main.utils.remove_or_add_state import remove_or_add
 from shuttle.models import AttributeKv
 
 
@@ -20,11 +21,9 @@ def update_state_of_room(sender, instance, **kwargs):
     if devices:
         for device in devices:
             if instance.attribute_key == "dnd":
-                device.room.state.append(Room.DoNotDisturb)
-                device.room.save()
+                remove_or_add(instance.bool_v, device.room, Room.DoNotDisturb)
             if instance.attribute_key == "mur":
-                device.room.state.append(Room.MakeUpRoom)
-                device.room.save()
+                remove_or_add(instance.bool_v, device.room, Room.MakeUpRoom)
             if instance.attribute_key == "active" and instance.attribute_type == AttributeKv.SERVER_SCOPE:
                 if device.room:
                     device.room.status = Room.ON if instance.bool_v else Room.OFF
