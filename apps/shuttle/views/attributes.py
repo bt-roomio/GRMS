@@ -28,7 +28,7 @@ class AttributeListView(APIView):
                 entity=params_data.get("deviceId"),
                 attribute_type=params_data.get("scope"),
                 attribute_key=key,
-                defaults={"entity_type": "DEVICE", **fields, "last_update_ts": time.time()},
+                defaults={"entity_type": "DEVICE", **fields, "last_update_ts": int(time.time())},
             )
         if params_data.get("scope") == AttributeKv.SERVER_SCOPE:
             return Response({}, 201)

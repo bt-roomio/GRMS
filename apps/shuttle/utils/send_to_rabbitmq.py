@@ -24,21 +24,6 @@ def send_to_rabbitmq(message: dict):
     return channel
 
 
-def send_to_rabbitmq_rpc(message_id, gateway_device, device, method, params):
-    # TODO: remove after realise rpc request without this func
-    channel = connect_to_rabbitmq()
-    message_data = {
-        "targetDeviceUUID": str(gateway_device.id),
-        "topic": "v1/gateway/rpc",
-        "data": {"device": device.name, "data": {"id": str(message_id), "method": method, "params": params}},
-    }
-
-    message = json.dumps(message_data, indent=2).encode("utf-8")
-    topic_name = "toGRMS"
-
-    channel.basic_publish(exchange="", routing_key=topic_name, body=message)
-
-
 def send_to_rabbitmq_device_me(device_id, attributes, topic):
     channel = connect_to_rabbitmq()
     message_data = {
