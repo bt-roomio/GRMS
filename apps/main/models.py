@@ -117,27 +117,27 @@ class Room(BaseModel, UpdateByModel):
     def __str__(self):
         return str(self.number)
 
-    # def save(self, *args, **kwargs):
-    #     if self.pk:
-    #         if Room.objects.filter(pk=self.pk).exists():
-    #             RoomHistory.objects.create(
-    #                 number=self.number,
-    #                 floor=self.floor,
-    #                 block=self.block,
-    #                 active=self.active,
-    #                 state=self.state,
-    #                 public_area_id=self.public_area_id,
-    #                 pan_id=self.pan_id,
-    #                 building=self.building,
-    #                 door_lock_id=self.door_lock_id,
-    #                 type=self.type,
-    #                 suite=self.suite,
-    #                 tenant=self.tenant,
-    #                 status=self.status,
-    #                 updated_at=self.updated_at,
-    #                 updated_by=self.updated_by,
-    #             )
-    #     super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.pk:
+            if Room.objects.filter(pk=self.pk).exists():
+                RoomHistory.objects.create(
+                    number=self.number,
+                    floor=self.floor,
+                    block=self.block,
+                    active=self.active,
+                    state=self.state,
+                    public_area_id=self.public_area_id,
+                    pan_id=self.pan_id,
+                    building=self.building,
+                    door_lock_id=self.door_lock_id,
+                    type=self.type,
+                    suite=self.suite,
+                    tenant=self.tenant,
+                    status=self.status,
+                    updated_at=self.updated_at,
+                    updated_by=self.updated_by,
+                )
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "main_room"

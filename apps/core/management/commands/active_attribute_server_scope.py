@@ -2,7 +2,7 @@ import time
 
 from django.core.management.base import BaseCommand
 
-from shuttle.models import AttributeKv
+from shuttle.models import AttributeKv, Relation
 
 
 class Command(BaseCommand):
@@ -18,17 +18,24 @@ class Command(BaseCommand):
 def active_attribute_server_scope():
     attribute_kv = AttributeKv.objects.select_related("entity").filter(
         entity__additional_info__gateway=True,
-        attribute_type=AttributeKv.SERVER_SCOPE,
         attribute_key="active",
         bool_v=True,
     )
-
     check_activity_time(attribute_kv)
 
 
 def check_activity_time(attribute_kv):
     for attr_active in attribute_kv:
         attr = AttributeKv.objects.get(entity_id=attr_active.entity, attribute_key="lastActivityTime")
-        if attr.long_v <= int(time.time()) - 30:
+        if attr.long_v < int(time.time()) - 30:
             attr_active.bool_v = False
             attr_active.save()
+
+            relations = Relation.objects.filter(from_id=attr_active.entity_id)
+            relation_devices = list(relations.values_list("to_id_id", flat=True))
+            relation_attrs = AttributeKv.objects.filter(
+                entity_id__in=relation_devices, attribute_key="active", bool_v=True
+            )
+            for relation_attr in relation_attrs:
+                relation_attr.bool_v = False
+                relation_attr.save()

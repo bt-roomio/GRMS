@@ -16,7 +16,7 @@ def update_status_of_room(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=AttributeKv)
-def update_state_of_room(sender, instance, **kwargs):
+def update_state_of_room_and_status_device(sender, instance, **kwargs):
     devices = Device.objects.filter(id=instance.entity_id)
     if devices:
         for device in devices:
