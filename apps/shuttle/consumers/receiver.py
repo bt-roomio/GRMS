@@ -4,7 +4,6 @@ from shuttle.consumers.aggregations.attribute_kv import attribute_kv
 from shuttle.consumers.aggregations.connectors import make_connectors
 from shuttle.consumers.aggregations.gateway_list import gateway_list
 from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
-from shuttle.consumers.aggregations.ts_kv_history import history_telemetery
 from shuttle.consumers.base import BaseConsumer
 from shuttle.models import AttributeKv
 from shuttle.utils.camel_to_snake import camel_to_snake
@@ -12,6 +11,16 @@ from shuttle.utils.response import response
 
 
 class ReceiverConsumer(BaseConsumer):
+    async def get_object_or_404_ws(self, queryset, *filter_args, **filter_kwargs):
+        from django.http import Http404
+        from channels.db import database_sync_to_async
+        from rest_framework.generics import get_object_or_404
+
+        try:
+            return await database_sync_to_async(get_object_or_404)(queryset, *filter_args, **filter_kwargs)
+        except Http404 as err:
+            await self.send_json(response({}, 0, 1, str(err)))
+
     async def receive_json(self, content, **kwargs):
         cmds = content.get("cmds")
         user = self.scope["user"]
@@ -100,7 +109,9 @@ class ReceiverConsumer(BaseConsumer):
                 await self.send_json(result)
 
             if cmd.get("type") == "ENTITY_DATA" and cmd.get("query") and cmd.get("historyCmd"):
-                result = await history_telemetery(cmd, user, self.send_json)
+                from shuttle.consumers.aggregations.ts_kv_history import history_telemetry
+
+                result = await history_telemetry(cmd)
                 await self.send_json(result)
 
             """
@@ -122,3 +133,36 @@ class ReceiverConsumer(BaseConsumer):
                 offset = (page - 1) * page_size
                 limit = offset + page_size
                 await self.send_json(self.connectors[offset:limit])
+
+            """
+            Connector list
+            """
+            if (
+                cmd.get("type") == "SCANNED_DEVICES"
+                and cmd.get("entityType") == "DEVICE"
+                and cmd.get("entityId")
+                and cmd.get("connectorName")
+            ):
+                from main.models import Device
+
+                device = await self.get_object_or_404_ws(Device, id=cmd.get("entityId"), additional_info__gateway=True)
+                attrs = await self.get_object_or_404_ws(
+                    AttributeKv,
+                    entity=device,
+                    attribute_type=AttributeKv.SHARED_SCOPE,
+                    attribute_key=cmd.get("connectorName"),
+                )
+                configuration_json = attrs and attrs.json_v and attrs.json_v.get("configurationJson") or {}
+                devices = configuration_json.get("devices") or {}
+                address_maps = {
+                    i.get("addressMapId"): i.get("addressMapName") for i in configuration_json.get("addressMaps")
+                }
+                temp_devices = [i.get("macAddress") for i in devices if i.get("tempDevice")]
+                not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
+                result = []
+                from shuttle.consumers.aggregations.scanned_devices import get_scanned_devices
+                from shuttle.consumers.aggregations.scanned_devices import get_gateway_attrs
+
+                await get_scanned_devices(temp_devices, not_temp_devices, address_maps, result)
+                await get_gateway_attrs(not_temp_devices, address_maps, result)
+                await self.send_json({"devices": result})
