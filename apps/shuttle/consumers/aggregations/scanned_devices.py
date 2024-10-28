@@ -66,6 +66,8 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, result):
 @database_sync_to_async
 def get_gateway_attrs(not_temp_devices, address_maps, result):
     for device in not_temp_devices:
+        if bool(list(filter(lambda x: x.get("mac_address") == device.get("macAddress"), result))):
+            continue
         found_device = Device.objects.filter(name=device.get("macAddress")).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
         data = {
