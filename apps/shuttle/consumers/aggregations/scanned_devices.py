@@ -4,6 +4,35 @@ from main.models import Device
 from shuttle.models import AttributeKv
 
 
+async def main_scanned_devices(get_object_or_404_ws, cmd, connectors):
+    device = await get_object_or_404_ws(Device, id=cmd.get("entityId"), additional_info__gateway=True)
+    attrs = await get_object_or_404_ws(
+        AttributeKv,
+        entity=device,
+        attribute_type=AttributeKv.SHARED_SCOPE,
+        attribute_key=cmd.get("connectorName"),
+    )
+    configuration_json = attrs and attrs.json_v and attrs.json_v.get("configurationJson") or {}
+    devices = configuration_json.get("devices") or {}
+    address_maps = {i.get("addressMapId"): i.get("addressMapName") for i in configuration_json.get("addressMaps")}
+    temp_devices = [i.get("macAddress") for i in devices if i.get("tempDevice")]
+    not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
+    result = []
+
+    await get_scanned_devices(temp_devices, not_temp_devices, address_maps, result)
+    await get_gateway_attrs(not_temp_devices, address_maps, result)
+
+    if not connectors:
+        connectors = result
+
+    query = cmd.get("query", {}).get("pageLink")
+    page = query.get("page") or 1
+    page_size = query.get("pageSize")
+    offset = (page - 1) * page_size
+    limit = offset + page_size
+    return connectors[offset:limit]
+
+
 @database_sync_to_async
 def get_scanned_devices(temp_devices, not_temp_devices, address_maps, result):
     attrs = (
@@ -38,7 +67,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, result):
 def get_gateway_attrs(not_temp_devices, address_maps, result):
     for device in not_temp_devices:
         found_device = Device.objects.filter(name=device.get("macAddress")).first()
-        address_map = address_maps[device.get("addressMapId")]
+        address_map = address_maps.get(device.get("addressMapId"), None)
         data = {
             "mac_address": device.get("macAddress"),
             "ip_address": device.get("lastIp"),
