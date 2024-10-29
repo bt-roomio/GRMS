@@ -2,6 +2,7 @@ from channels.db import database_sync_to_async
 
 from main.models import Device
 from shuttle.models import AttributeKv
+from shuttle.utils.response import response
 
 
 async def main_scanned_devices(get_object_or_404_ws, cmd, connectors):
@@ -17,24 +18,27 @@ async def main_scanned_devices(get_object_or_404_ws, cmd, connectors):
     address_maps = {i.get("addressMapId"): i.get("addressMapName") for i in configuration_json.get("addressMaps")}
     temp_devices = [i.get("macAddress") for i in devices if i.get("tempDevice")]
     not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
-    result = []
 
-    await get_scanned_devices(temp_devices, not_temp_devices, address_maps, result)
-    await get_gateway_attrs(not_temp_devices, address_maps, result)
+    scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps)
+    gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps)
 
     if not connectors:
-        connectors = result
+        connectors = [*scanned_devices, *gateway_devices]
 
     query = cmd.get("query", {}).get("pageLink")
     page = query.get("page") or 1
     page_size = query.get("pageSize")
     offset = (page - 1) * page_size
     limit = offset + page_size
-    return connectors[offset:limit]
+
+    result = response({}, cmd.get("cmdId"))
+    result["data"]["connectors"] = connectors[offset:limit]
+    return result
 
 
 @database_sync_to_async
-def get_scanned_devices(temp_devices, not_temp_devices, address_maps, result):
+def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
+    result = []
     attrs = (
         AttributeKv.objects.select_related("entity")
         .filter(
@@ -61,10 +65,12 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, result):
                 "status": value.get("device_is_online"),
             }
             result.append(data)
+    return result
 
 
 @database_sync_to_async
-def get_gateway_attrs(not_temp_devices, address_maps, result):
+def get_gateway_attrs(not_temp_devices, address_maps):
+    result = []
     for device in not_temp_devices:
         if bool(list(filter(lambda x: x.get("mac_address") == device.get("macAddress"), result))):
             continue
@@ -79,3 +85,5 @@ def get_gateway_attrs(not_temp_devices, address_maps, result):
             "status": False,
         }
         result.append(data)
+
+    return result

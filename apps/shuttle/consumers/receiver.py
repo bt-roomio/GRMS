@@ -138,6 +138,5 @@ class ReceiverConsumer(BaseConsumer):
             ):
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
-                    print(task_key)
                     del self.tasks[task_key]
                     del self.task_params[task_key]
