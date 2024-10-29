@@ -25,14 +25,17 @@ async def main_scanned_devices(get_object_or_404_ws, cmd, connectors):
     if not connectors:
         connectors = [*scanned_devices, *gateway_devices]
 
-    query = cmd.get("query", {}).get("pageLink")
-    page = query.get("page") or 1
-    page_size = query.get("pageSize")
+    page_link = cmd.get("query", {}).get("pageLink")
+    page = page_link.get("page") or 1
+    page_size = page_link.get("pageSize")
     offset = (page - 1) * page_size
     limit = offset + page_size
+    count = len(connectors)
+    page_link["count"] = count
 
     result = response({}, cmd.get("cmdId"))
     result["data"]["connectors"] = connectors[offset:limit]
+    result["data"]["query"] = cmd.get("query")
     return result
 
 
