@@ -20,7 +20,7 @@ async def main_scanned_devices(get_object_or_404_ws, cmd, connectors):
     not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
 
     scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps)
-    gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps)
+    gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps, scanned_devices)
 
     if not connectors:
         connectors = [*scanned_devices, *gateway_devices]
@@ -63,7 +63,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
                 "mac_address": mac_address,
                 "ip_address": value.get("ip"),
                 "room": found_device and str(found_device.room),
-                "address_map": address_map,
+                "address_map": {"id": address_map_id.get("addressMapId"), "name": address_map},
                 "file": "",
                 "status": value.get("device_is_online"),
             }
@@ -72,10 +72,10 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
 
 
 @database_sync_to_async
-def get_gateway_attrs(not_temp_devices, address_maps):
+def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
     result = []
     for device in not_temp_devices:
-        if bool(list(filter(lambda x: x.get("mac_address") == device.get("macAddress"), result))):
+        if bool(list(filter(lambda x: x.get("mac_address") == device.get("macAddress"), scanned_devices))):
             continue
         found_device = Device.objects.filter(name=device.get("macAddress")).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
@@ -83,7 +83,7 @@ def get_gateway_attrs(not_temp_devices, address_maps):
             "mac_address": device.get("macAddress"),
             "ip_address": device.get("lastIp"),
             "room": found_device and str(found_device.room),
-            "address_map": address_map,
+            "address_map": {"id": device.get("addressMapId"), "name": address_map},
             "file": "",
             "status": False,
         }

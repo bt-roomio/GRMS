@@ -7,8 +7,8 @@ from core.querysets.base_queryset import BaseQuerySet
 
 class RoomQuerySet(BaseQuerySet):
     def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None):
-        query = self.filter(active=True)
-        query = query.filter(state__contains=[state], tenant=tenant) if state else query
+        query = self.filter(active=True, tenant=tenant)
+        query = query.filter(state__contains=[state]) if state else query
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__startswith": search_value}))

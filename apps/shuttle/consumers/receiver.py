@@ -97,7 +97,12 @@ class ReceiverConsumer(BaseConsumer):
             - Entity Data
             """
             # Gateway List
-            if cmd.get("type") == "ENTITY_DATA" and cmd.get("latestCmd") and cmd.get("query"):
+            if (
+                cmd.get("type") == "ENTITY_DATA"
+                and cmd.get("latestCmd")
+                and cmd.get("query")
+                and cmd.get("scope") == "gateway"
+            ):
                 result = response({}, cmd.get("cmdId"))
 
                 entity_fields = cmd.get("query").get("entityFields")
