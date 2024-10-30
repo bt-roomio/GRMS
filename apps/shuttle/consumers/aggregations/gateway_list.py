@@ -7,11 +7,13 @@ from shuttle.utils.get_non_null_field import get_non_null_field
 
 
 @database_sync_to_async
-def gateway_list(entity_fields, attributes):
+def gateway_list(entity_fields, attributes, user):
     data = []
     attr = AttributeKv.objects.filter(attribute_key__in=attributes, attribute_type=AttributeKv.SHARED_SCOPE)
-    devices = Device.objects.prefetch_related(Prefetch(queryset=attr, lookup="attribute_kvs")).filter(
-        additional_info__gateway=True
+    devices = (
+        Device.objects.filter(tenant=user.tenant)
+        .prefetch_related(Prefetch(queryset=attr, lookup="attribute_kvs"))
+        .filter(additional_info__gateway=True)
     )
     for device in devices:
         item = {"aggLatest": {}, "entityId": {"entityType": "DEVICE", "id": str(device.id)}, "latest": {}}

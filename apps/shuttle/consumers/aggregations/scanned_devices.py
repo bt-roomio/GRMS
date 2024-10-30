@@ -5,17 +5,26 @@ from shuttle.models import AttributeKv
 from shuttle.utils.response import response
 
 
-async def main_scanned_devices(get_object_or_404_ws, cmd, connectors):
-    device = await get_object_or_404_ws(Device, id=cmd.get("entityId"), additional_info__gateway=True)
-    attrs = await get_object_or_404_ws(
-        AttributeKv,
+@database_sync_to_async
+def get_device(cmd, user):
+    return Device.objects.filter(id=cmd.get("entityId"), additional_info__gateway=True, tenant=user.tenant).first()
+
+
+@database_sync_to_async
+def get_attributes(cmd, device):
+    return AttributeKv.objects.filter(
         entity=device,
         attribute_type=AttributeKv.SHARED_SCOPE,
         attribute_key=cmd.get("connectorName"),
-    )
+    ).first()
+
+
+async def main_scanned_devices(cmd, connectors, user):
+    device = await get_device(cmd, user)
+    attrs = await get_attributes(cmd, device)
     configuration_json = attrs and attrs.json_v and attrs.json_v.get("configurationJson") or {}
     devices = configuration_json.get("devices") or {}
-    address_maps = {i.get("addressMapId"): i.get("addressMapName") for i in configuration_json.get("addressMaps")}
+    address_maps = {i.get("addressMapId"): i.get("addressMapName") for i in configuration_json.get("addressMaps", {})}
     temp_devices = [i.get("macAddress") for i in devices if i.get("tempDevice")]
     not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
 

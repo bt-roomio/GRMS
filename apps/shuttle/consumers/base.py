@@ -13,7 +13,7 @@ from users.models import User
 
 @database_sync_to_async
 def get_user(data):
-    return User.objects.get(id=data["user_id"])
+    return User.objects.select_related("tenant").get(id=data["user_id"])
 
 
 class BaseConsumer(AsyncJsonWebsocketConsumer):

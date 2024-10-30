@@ -5,11 +5,11 @@ from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.response import response
 
 
-async def attribute_kv(cmd):
+async def attribute_kv(cmd, user):
     result = response({}, cmd.get("cmdId"))
     latest_values = {}
 
-    attributes = await get_attributes(cmd)
+    attributes = await get_attributes(cmd, user)
     for attribute in attributes:
         field, value = get_non_null_field(attribute)
         ts = attribute.last_update_ts
@@ -21,9 +21,12 @@ async def attribute_kv(cmd):
 
 
 @database_sync_to_async
-def get_attributes(cmd):
+def get_attributes(cmd, user):
     result = AttributeKv.objects.filter(
-        entity_type=cmd.get("entityType"), entity_id=cmd.get("entityId"), attribute_type=cmd.get("scope")
+        entity_type=cmd.get("entityType"),
+        entity_id=cmd.get("entityId"),
+        attribute_type=cmd.get("scope"),
+        entity__tenant=user.tenant,
     ).order_by("created_at")
 
     return list(result)

@@ -1,5 +1,5 @@
 from channels.db import database_sync_to_async
-from main.models import Device
+
 from shuttle.models import TsKvDictionary, TsKvLatest
 from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.response import response
@@ -29,6 +29,5 @@ def get_ts_kv_dict(key_id):
 
 @database_sync_to_async
 def get_ts_kv_latest(cmd, user):
-    device = Device.objects.filter(id=cmd.get("entityId")).first()
-    ts_kv_latest = TsKvLatest.objects.filter(entity_id=device.id if device else None)
+    ts_kv_latest = TsKvLatest.objects.filter(entity_id=cmd.get("entityId"), entity__tenant=user.tenant)
     return list(ts_kv_latest)

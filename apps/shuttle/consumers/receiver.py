@@ -11,15 +11,10 @@ from shuttle.utils.response import response
 
 
 class ReceiverConsumer(BaseConsumer):
-    async def get_object_or_404_ws(self, queryset, *filter_args, **filter_kwargs):
-        from django.http import Http404
+    async def get_object_or_empty(self, queryset, *filter_args, **filter_kwargs):
         from channels.db import database_sync_to_async
-        from rest_framework.generics import get_object_or_404
 
-        try:
-            return await database_sync_to_async(get_object_or_404)(queryset, *filter_args, **filter_kwargs)
-        except Http404 as err:
-            await self.send_json(response({}, 0, 1, str(err)))
+        return await database_sync_to_async(queryset.filter)(*filter_args, **filter_kwargs)
 
     async def receive_json(self, content, **kwargs):
         cmds = content.get("cmds")
@@ -83,7 +78,7 @@ class ReceiverConsumer(BaseConsumer):
                     del self.task_params[task_key]
 
                 def func():
-                    return self.periodically_task(attribute_kv, cmd)
+                    return self.periodically_task(attribute_kv, cmd, user)
 
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
@@ -110,7 +105,7 @@ class ReceiverConsumer(BaseConsumer):
 
                 attributes = [i.get("key") for i in cmd.get("latestCmd").get("keys") if i.get("type") == "ATTRIBUTE"]
 
-                result["data"] = await gateway_list(entity_fields, attributes)
+                result["data"] = await gateway_list(entity_fields, attributes, user)
                 await self.send_json(result)
 
             """
@@ -130,7 +125,7 @@ class ReceiverConsumer(BaseConsumer):
                     del self.task_params[task_key]
 
                 def func():
-                    return self.periodically_task(main_scanned_devices, self.get_object_or_404_ws, cmd, self.connectors)
+                    return self.periodically_task(main_scanned_devices, cmd, self.connectors, user)
 
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
