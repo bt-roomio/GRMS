@@ -1,6 +1,6 @@
 from django.urls import path
 
-from shuttle.views.attributes import AttributeListView
+from shuttle.views.attributes import AttributeListView, AttributesChangeView
 from shuttle.views.controller_file import ControllerFileListView
 from shuttle.views.json_rpc import JsonRpcView
 from shuttle.views.relation import RelationListView, RelationDetailView
@@ -13,4 +13,9 @@ urlpatterns = [
     path("rpc/<uuid:device_id>/", JsonRpcView.as_view(), name="json-rpc-view"),
     path("controller/file/", ControllerFileListView.as_view(), name="controller-file-view"),
     path("telemetry/<uuid:device_id>/<str:scope>/", RemoveAttribute.as_view(), name="remove-attribute-view"),
+    path(
+        "attributes-change/<str:entity_type>/<uuid:entity_id>/",
+        AttributesChangeView.as_view(),
+        name="attributes-change-view",
+    ),
 ]

@@ -5,7 +5,9 @@ from rest_framework.views import APIView, Response
 
 from main.models import Device
 from shuttle.models import AttributeKv, Relation
-from shuttle.serializers.attributes import AttributeKvParams
+from shuttle.serializers.attributes import AttributeKvParams, AttributesChangeFilterPath, AttributesChangeSerializer
+from shuttle.swagger.attributes_change import swagger_attributes_change
+from shuttle.utils.dynamic_model_query import dynamic_query
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq
 
@@ -52,3 +54,31 @@ class AttributeListView(APIView):
             send_to_rabbitmq(message)
 
         return Response({}, 201)
+
+
+class AttributesChangeView(APIView):
+    @swagger_attributes_change()
+    def put(self, request, *args, **kwargs):
+        path = AttributesChangeFilterPath.check(kwargs)
+        entity = dynamic_query(path.get("entity_type"), ["main"], id=path.get("entity_id")).first()
+        devices = []
+
+        if entity and path.get("entity_type") == "Room":
+            devices = Device.objects.filter(room=entity)
+        elif entity and path.get("entity_type") == "RoomType":
+            devices = Device.objects.filter(room__type=entity)
+        elif entity and path.get("entity_type") == "Tenant":
+            devices = Device.objects.filter(room__tenant=entity)
+
+        instance = AttributeKv.objects.filter(entity__in=devices, attribute_key__in=request.data.keys())
+        available_fields = find_compatible_field(request.data)
+        for attr in instance:
+            setattr(
+                attr,
+                available_fields[attr.attribute_key][0],
+                available_fields[attr.attribute_key][1],
+            )
+            attr.save()
+
+        serializer = AttributesChangeSerializer(instance, many=True)
+        return Response(serializer.data)
