@@ -177,7 +177,7 @@ def save_telemetry_kv(device, data, ts):
         TsKvLatest.objects.update_or_create(
             entity=device,
             key=ts_kv_dict.key_id,
-            defaults=fields,
+            defaults={**fields, "ts": ts or time.time()},
         )
         time.sleep(0.1)
 
@@ -192,7 +192,7 @@ def save_attribute_kv(device, data):
             entity=device,
             attribute_type=AttributeKv.CLIENT_SCOPE,
             attribute_key=key,
-            defaults={**fields, "entity_type": "DEVICE"},
+            defaults={**fields, "entity_type": "DEVICE", "last_update_ts": int(time.time())},
         )
         time.sleep(0.1)
 
@@ -214,5 +214,5 @@ def update_activity_device(device, connected=True):
             entity=device,
             attribute_type=AttributeKv.SERVER_SCOPE,
             attribute_key=key,
-            defaults={**fields, "entity_type": "DEVICE"},
+            defaults={**fields, "entity_type": "DEVICE", "last_update_ts": int(time.time())},
         )
