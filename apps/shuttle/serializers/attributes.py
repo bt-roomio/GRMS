@@ -5,22 +5,10 @@ from main.models import Device
 from shuttle.models import AttributeKv
 
 
-class AttributesChangeSerializer(serializers.ModelSerializer):
-    fields_to_be_removed = ["str_v", "bool_v", "long_v", "dbl_v", "json_v"]
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        for field in self.fields_to_be_removed:
-            try:
-                if rep[field] is None:
-                    rep.pop(field)
-            except KeyError:
-                pass
-        return rep
-
-    class Meta:
-        model = AttributeKv
-        fields = ("id", "attribute_key", "str_v", "bool_v", "long_v", "dbl_v", "json_v")
+class AttributesChangeSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["ATTRIBUTES", "TELEMETRY"])
+    scope = serializers.ChoiceField(choices=AttributeKv.ENTITY_TYPE, allow_null=True, required=False)
+    items = serializers.DictField()
 
 
 class AttributeKvParams(serializers.Serializer):
@@ -29,5 +17,5 @@ class AttributeKvParams(serializers.Serializer):
 
 
 class AttributesChangeFilterPath(ValidatorSerializer):
-    entity_type = serializers.ChoiceField(choices=["Room", "RoomType", "Tenant"])
-    entity_id = serializers.UUIDField()
+    entity_type = serializers.ChoiceField(choices=["Room", "RoomType", "AllRoomType"])
+    entity_id = serializers.UUIDField(required=False)

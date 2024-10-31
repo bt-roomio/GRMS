@@ -11,7 +11,7 @@ from shuttle.swagger.rpc import json_rpc_swagger
 from shuttle.utils.send_to_rabbitmq import connect_to_rabbitmq
 
 
-class JsonRpcView(APIView):
+class JsonRPCView(APIView):
     @json_rpc_swagger()
     def post(self, request, device_id):
         device = get_object_or_404(Device, id=device_id)
