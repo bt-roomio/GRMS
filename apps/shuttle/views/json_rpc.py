@@ -22,7 +22,9 @@ class JsonRPCView(APIView):
         except KeyError as err:
             return Response({"error": f"Missing {str(err)}"}, 400)
 
-        return prepare_mqtt_request(device, method, params, timeout / 1000)
+        result = prepare_mqtt_request(device, method, params, timeout / 1000)
+
+        return Response(result)
 
 
 def prepare_mqtt_request(device, method, params, timeout):
@@ -45,8 +47,8 @@ def prepare_mqtt_request(device, method, params, timeout):
     while start_time < timeout:
         has_message = RPCMessage.objects.filter(id=request_id, received=True)
         if has_message:
-            return Response(has_message.first().additional_info)
+            return has_message.first().additional_info
         time.sleep(1)
         start_time += 1
 
-    return Response({"device": device.name, "data": {"success": False, "msg": "Timeout error"}})
+    return {"device": device.name, "data": {"success": False, "msg": "Timeout error"}}

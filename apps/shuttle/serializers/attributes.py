@@ -11,8 +11,8 @@ class AttributesChangeSerializer(serializers.Serializer):
     items = serializers.DictField()
 
 
-class AttributeKvParams(serializers.Serializer):
-    deviceId = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+class AttributeKvPath(serializers.Serializer):
+    device_id = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
     scope = serializers.ChoiceField(choices=[AttributeKv.SHARED_SCOPE, AttributeKv.SERVER_SCOPE])
 
 

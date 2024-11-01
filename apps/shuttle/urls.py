@@ -7,7 +7,7 @@ from shuttle.views.relation import RelationListView, RelationDetailView
 from shuttle.views.remove_attribute import RemoveAttribute
 
 urlpatterns = [
-    path("attributes/<uuid:deviceId>/<str:scope>/", AttributeListView.as_view(), name="attributes-list"),
+    path("attributes/<uuid:device_id>/<str:scope>/", AttributeListView.as_view(), name="attributes-list"),
     path("relation/", RelationListView.as_view(), name="relation-list"),
     path("relation/<uuid:pk>/", RelationDetailView.as_view(), name="relation-detail"),
     path("rpc/<uuid:device_id>/", JsonRPCView.as_view(), name="json-rpc-view"),

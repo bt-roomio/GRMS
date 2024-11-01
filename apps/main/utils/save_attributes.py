@@ -1,17 +1,24 @@
+import time
+
 from shuttle.models import AttributeKv
-from shuttle.utils.find_compatible_field import find_compatible_field
 
 
-def save_attributes(devices, items, scope):
+def save_attributes(devices, available_fields, scope):
     attributes = {}
-    instance = AttributeKv.objects.filter(entity__in=devices, attribute_key__in=items.keys(), attribute_type=scope)
-    available_fields = find_compatible_field(items)
-    for attr in instance:
-        key = attr.attribute_key
-        key_type = available_fields[key][0]
-        value = available_fields[key][1]
-        setattr(attr, key_type, value)
-        attr.save()
-        attributes[str(attr.entity_id)] = {key: value}
+    fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
+
+    for key, item in available_fields.items():
+        field, value = item[0], item[1]
+        fields[field] = value
+
+        for device in devices:
+            attribute_kv, _ = AttributeKv.objects.update_or_create(
+                entity_id=device,
+                attribute_type=scope,
+                attribute_key=key,
+                defaults={"entity_type": "DEVICE", **fields, "last_update_ts": int(time.time())},
+            )
+            attributes[str(device)] = attributes.get(str(device), {})
+            attributes[str(device)][key] = value
 
     return attributes

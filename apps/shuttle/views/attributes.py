@@ -1,53 +1,43 @@
-import time
-
 from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView, Response
 
 from main.models import Device
 from main.utils.save_attributes import save_attributes
-from main.utils.save_ts_kv import save_telemetry_kv
-from shuttle.models import AttributeKv, Relation
-from shuttle.serializers.attributes import AttributeKvParams, AttributesChangeFilterPath, AttributesChangeSerializer
+from shuttle.models import Relation, AttributeKv
+from shuttle.serializers.attributes import AttributeKvPath, AttributesChangeFilterPath, AttributesChangeSerializer
 from shuttle.swagger.attributes_change import swagger_attributes_change
 from shuttle.utils.dynamic_model_query import dynamic_query
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq
+from shuttle.views.json_rpc import prepare_mqtt_request
 
 
 class AttributeListView(APIView):
     parser_classes = (JSONParser,)
 
     def post(self, request, *args, **kwargs):
-        params = AttributeKvParams(data=kwargs)
-        params.is_valid(raise_exception=True)
-        params_data = params.validated_data
+        path = AttributeKvPath(data=kwargs)
+        path.is_valid(raise_exception=True)
+        path_data = path.validated_data
+
         available_fields = find_compatible_field(request.data)
 
-        for key, item in available_fields.items():
-            fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
-            field = item[0]
-            value = item[1]
-            fields[field] = value
-            attribute_kv, _ = AttributeKv.objects.update_or_create(
-                entity=params_data.get("deviceId"),
-                attribute_type=params_data.get("scope"),
-                attribute_key=key,
-                defaults={"entity_type": "DEVICE", **fields, "last_update_ts": int(time.time())},
-            )
+        save_attributes([path_data.get("device_id").id], available_fields, path_data.get("scope"))
 
-        if params_data.get("scope") == AttributeKv.SERVER_SCOPE:
+        if path_data.get("scope") == AttributeKv.SERVER_SCOPE:
             return Response({}, 201)
-        device_id = params_data.get("deviceId")
+
+        device_id = path_data.get("device_id")
         send_rabbit_mq_attributes(device_id and device_id.id, available_fields)
 
         return Response({}, 201)
 
 
-def send_rabbit_mq_attributes(params_device_id, available_fields):
-    relation = Relation.objects.filter(to_id_id=params_device_id).first()
+def send_rabbit_mq_attributes(path_device_id, available_fields):
+    relation = Relation.objects.filter(to_id_id=path_device_id).first()
     device_id = relation and relation.from_id_id
 
-    device = Device.objects.filter(pk=params_device_id).first()
+    device = Device.objects.filter(pk=path_device_id).first()
 
     if device:
         attributes = dict((k, v[1]) for k, v in available_fields.items())
@@ -68,7 +58,7 @@ class AttributesChangeRPCView(APIView):
     parser_classes = (JSONParser,)
 
     @swagger_attributes_change()
-    def put(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         path = AttributesChangeFilterPath.check(kwargs)
         model_name = path.get("entity_type") if path.get("entity_type") != "AllRoomType" else "Room"
         queryset = dynamic_query(model_name, ["main", "shuttle"], id=path.get("entity_id")).first()
@@ -82,28 +72,27 @@ class AttributesChangeRPCView(APIView):
         serializer.is_valid(raise_exception=True)
         changed_attrs = {"attributes": {}, "telemetry": {}}
         for entity in serializer.validated_data:
-            if entity.get("type") == "ATTRIBUTES":
-                changed_attrs["attributes"].update(
-                    save_attributes(devices, entity.get("items", {}), entity.get("scope"))
-                )
-            elif entity.get("type") == "TELEMETRY":
-                changed_attrs["telemetry"].update(save_telemetry_kv(devices, entity.get("items", {})))
-
-        # ASK: don't send "SERVER_SCOPE" attributes ?
-        # ASK: It's important response from mqtt ?
-
-        merged_data = {}
-        all_keys = set(changed_attrs["attributes"].keys()).union(set(changed_attrs["telemetry"].keys()))
-
-        for key in all_keys:
-            merged_data[key] = {}
-            if key in changed_attrs["attributes"]:
-                merged_data[key].update(changed_attrs["attributes"][key])
-            if key in changed_attrs["telemetry"]:
-                merged_data[key].update(changed_attrs["telemetry"][key])
-
-        for device_id in merged_data:
-            # send_rabbit_mq_attributes(device_id, merged_data[device_id])
-            print(device_id, merged_data[device_id])
+            entity_type = entity.get("type")
+            entity_scope = entity.get("scope")
+            entity_items = entity.get("items")
+            if entity_type == "ATTRIBUTES" and entity_scope in (AttributeKv.SHARED_SCOPE, AttributeKv.SERVER_SCOPE):
+                devices = devices.values_list("id", flat=True)
+                available_fields = find_compatible_field(entity_items)
+                changed_attrs["attributes"].update(save_attributes(devices, available_fields, entity_scope))
+                if entity_scope == AttributeKv.SERVER_SCOPE:
+                    continue
+                for device_id in devices:
+                    send_rabbit_mq_attributes(device_id, available_fields)
+            elif entity_type == "TELEMETRY" or (
+                entity_type == "ATTRIBUTES" and entity_scope == AttributeKv.CLIENT_SCOPE
+            ):
+                entity_type_method = {
+                    "TELEMETRY": "setTelemetry",
+                    "ATTRIBUTES": "setAttribute",
+                }
+                for device in devices:
+                    changed_attrs["telemetry"].update(
+                        {str(device.id): prepare_mqtt_request(device, entity_type_method[entity_type], entity_items, 5)}
+                    )
 
         return Response(changed_attrs)
