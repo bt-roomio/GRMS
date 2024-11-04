@@ -12,7 +12,7 @@ async def latest_telemetry(cmd, user):
     ts_kv_latest = await get_ts_kv_latest(cmd, user)
 
     for d in ts_kv_latest:
-        ts_kv_dict = await get_ts_kv_dict(d.key)
+        ts_kv_dict = await database_sync_to_async(get_ts_kv_dict)(d.key)
         field, value = get_non_null_field(d)
 
         result["data"][ts_kv_dict.key] = [[d.ts, value]]
@@ -22,7 +22,6 @@ async def latest_telemetry(cmd, user):
     return result
 
 
-@database_sync_to_async
 def get_ts_kv_dict(key_id):
     return TsKvDictionary.objects.filter(key_id=key_id).first()
 

@@ -5,6 +5,7 @@ from shuttle.views.controller_file import ControllerFileListView
 from shuttle.views.json_rpc import JsonRPCView
 from shuttle.views.relation import RelationListView, RelationDetailView
 from shuttle.views.remove_attribute import RemoveAttribute
+from shuttle.views.tag import TagListView
 
 urlpatterns = [
     path("attributes/<uuid:device_id>/<str:scope>/", AttributeListView.as_view(), name="attributes-list"),
@@ -18,4 +19,5 @@ urlpatterns = [
         AttributesChangeRPCView.as_view(),
         name="attributes-change-view",
     ),
+    path("tags/<uuid:device_id>/<str:scope>/", TagListView.as_view(), name="tag-list"),
 ]
