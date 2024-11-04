@@ -171,13 +171,13 @@ def save_telemetry_kv(device, data, ts):
         TsKv.objects.update_or_create(
             entity=device,
             key=ts_kv_dict.key_id,
-            ts=ts or time.time(),
-            defaults={**fields, "ts": ts or time.time()},
+            ts=ts or int(time.time()),
+            defaults=fields,
         )
         TsKvLatest.objects.update_or_create(
             entity=device,
             key=ts_kv_dict.key_id,
-            defaults={**fields, "ts": ts or time.time()},
+            defaults={**fields, "ts": int(time.time())},
         )
         time.sleep(0.1)
 
