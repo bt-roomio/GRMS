@@ -75,6 +75,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
                 "address_map": {"id": address_map_id.get("addressMapId"), "name": address_map},
                 "file": "",
                 "status": value.get("device_is_online"),
+                "exist_in_configuration": True,
             }
             result.append(data)
     return result
@@ -95,6 +96,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
             "address_map": {"id": device.get("addressMapId"), "name": address_map},
             "file": "",
             "status": False,
+            "exist_in_configuration": False,
         }
         result.append(data)
 
