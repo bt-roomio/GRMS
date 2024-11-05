@@ -3,17 +3,55 @@ from rest_framework.views import APIView, Response
 
 from main.models import Device
 from main.utils.save_attributes import save_attributes
-from shuttle.models import Relation, AttributeKv
+from shuttle.consumers.aggregations.latest_telemetry import get_ts_kv_dict
+from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
+from shuttle.models import Relation
 from shuttle.serializers.attributes import AttributeKvPath, AttributesChangeFilterPath, AttributesChangeSerializer
+from shuttle.serializers.tag import TagFilterPath, TagFilterParams
 from shuttle.swagger.attributes_change import swagger_attributes_change
+from shuttle.swagger.tag import tag_swagger
 from shuttle.utils.dynamic_model_query import dynamic_query
 from shuttle.utils.find_compatible_field import find_compatible_field
+from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq
 from shuttle.views.json_rpc import prepare_mqtt_request
 
 
 class AttributeListView(APIView):
     parser_classes = (JSONParser,)
+
+    @tag_swagger()
+    def get(self, request, *args, **kwargs):
+        path = TagFilterPath.check(kwargs)
+        params = TagFilterParams.check(request.GET)
+        if path.get("scope") != "LATEST_TELEMETRY":
+            result = {"data": {}, "latestValues": {}}
+            queryset = AttributeKv.objects.filter(
+                entity_id=path.get("device_id"),
+                attribute_type=path.get("scope"),
+                attribute_key__in=params.get("tags"),
+                entity__tenant_id=request.user.tenant_id,
+            )
+            for attribute in queryset:
+                field, value = get_non_null_field(attribute)
+                ts = attribute.last_update_ts
+                result["data"][attribute.attribute_key] = [[ts, value]]
+                result["latestValues"][attribute.attribute_key] = ts
+        else:
+            result = {"data": {}, "latestValues": {}}
+            keys = TsKvDictionary.objects.get_key_ids(params.get("tags"))
+            queryset = TsKvLatest.objects.filter(
+                key__in=keys,
+                entity_id=path.get("device_id"),
+                entity__tenant_id=request.user.tenant_id,
+            )
+            for d in queryset:
+                ts_kv_dict = get_ts_kv_dict(d.key)
+                field, value = get_non_null_field(d)
+                result["data"][ts_kv_dict.key] = [[d.ts, value]]
+                result["latestValues"][ts_kv_dict.key] = d.ts
+
+        return Response(result)
 
     def post(self, request, *args, **kwargs):
         path = AttributeKvPath(data=kwargs)
