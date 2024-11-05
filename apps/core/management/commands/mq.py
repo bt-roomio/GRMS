@@ -61,19 +61,21 @@ def callback(ch, method, properties, body):
             rpc_msg.save()
 
     if topic == "v1/gateway/connect":
+        device = Device.objects.filter(name=data.get("device")).first()
         update_activity_device(device)
     if topic == "v1/gateway/disconnect":
+        device = Device.objects.filter(name=data.get("device")).first()
         update_activity_device(device, connected=False)
 
-    if topic.startswith("v1/devices/me/attributes/request"):
-        shared_keys = data.get("sharedKeys")
+    if topic.startswith("v1/devices/me/attributes/request") or topic.startswith("v1/gateway/attributes/request"):
+        shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
         attributes = AttributeKv.objects.filter(attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE)
         response_keys = {}
         for attribute in attributes:
             field, value = get_non_null_field(attribute)
             response_keys[attribute.attribute_key] = value
-        send_to_rabbitmq_device_me(device.id, response_keys, topic.replace("request", "response"))
+        send_to_rabbitmq_device_me(device.id, response_keys, topic.replace("request", "response"), data.get("id"))
 
     if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         from_id = device.id

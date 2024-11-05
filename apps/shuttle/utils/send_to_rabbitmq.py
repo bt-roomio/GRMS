@@ -24,13 +24,11 @@ def send_to_rabbitmq(message: dict):
     return channel
 
 
-def send_to_rabbitmq_device_me(device_id, attributes, topic):
+def send_to_rabbitmq_device_me(device_id, attributes, topic, request_id=None):
     channel = connect_to_rabbitmq()
-    message_data = {
-        "targetDeviceUUID": str(device_id),
-        "topic": topic,
-        "data": attributes,
-    }
+    message_data = {"targetDeviceUUID": str(device_id), "topic": topic, "data": attributes}
+    if request_id:
+        message_data["data"]["id"] = request_id
     message = json.dumps(message_data, indent=2).encode("utf-8")
     topic_name = "fromGRMS"
 
