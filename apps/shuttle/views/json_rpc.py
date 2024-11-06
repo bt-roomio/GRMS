@@ -1,12 +1,14 @@
 import json
+import os
 import time
 
+from django.conf import settings
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import Device
-from shuttle.models import Relation, RPCMessage
+from shuttle.models import Relation, RPCMessage, ControllerFile
 from shuttle.swagger.rpc import json_rpc_swagger
 from shuttle.utils.send_to_rabbitmq import connect_to_rabbitmq
 
@@ -39,11 +41,19 @@ def prepare_mqtt_request(device, method, params, timeout):
         "data": {"device": str(device.name), "data": {"id": request_id, "method": method, "params": params}},
     }
 
+    for param in params:
+        if method == "uploadConfiguration" and param.get("file", {}).get("id"):
+            file_id = param.get("file").get("id")
+            file = ControllerFile.objects.filter(id=file_id).first()
+            if not file:
+                return {"error": "Not found file."}
+            param["file"]["content"] = file_to_binary(os.path.join(settings.MEDIA_ROOT, str(file.content)))
+
     channel = connect_to_rabbitmq()
     message = json.dumps(message, indent=2).encode("utf-8")
     channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
-
     start_time = 0
+
     while start_time < timeout:
         has_message = RPCMessage.objects.filter(id=request_id, received=True)
         if has_message:
@@ -52,3 +62,15 @@ def prepare_mqtt_request(device, method, params, timeout):
         start_time += 1
 
     return {"device": device.name, "data": {"success": False, "msg": "Timeout error"}}
+
+
+def file_to_binary(file_path):
+    try:
+        with open(file_path, "rb") as file:
+            binary_content = file.read()
+            binary_string = "".join(format(byte, "08b") for byte in binary_content)
+        return binary_string
+    except FileNotFoundError:
+        return {"error": f"File not found: {file_path}"}
+    except Exception as e:
+        return {"error": f"An error occurred: {e}"}
