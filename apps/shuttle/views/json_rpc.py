@@ -7,6 +7,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.helpers import read_binary, compress_data
 from main.models import Device
 from shuttle.models import Relation, RPCMessage, ControllerFile
 from shuttle.swagger.rpc import json_rpc_swagger
@@ -47,7 +48,7 @@ def prepare_mqtt_request(device, method, params, timeout):
             file = ControllerFile.objects.filter(id=file_id).first()
             if not file:
                 return {"error": "Not found file."}
-            param["file"]["content"] = file_to_binary(os.path.join(settings.MEDIA_ROOT, str(file.content)))
+            param["file"]["content"] = compress_data(read_binary(os.path.join(settings.MEDIA_ROOT, str(file.content))))
 
     channel = connect_to_rabbitmq()
     message = json.dumps(message, indent=2).encode("utf-8")
@@ -62,15 +63,3 @@ def prepare_mqtt_request(device, method, params, timeout):
         start_time += 1
 
     return {"device": device.name, "data": {"success": False, "msg": "Timeout error"}}
-
-
-def file_to_binary(file_path):
-    try:
-        with open(file_path, "rb") as file:
-            binary_content = file.read()
-            binary_string = "".join(format(byte, "08b") for byte in binary_content)
-        return binary_string
-    except FileNotFoundError:
-        return {"error": f"File not found: {file_path}"}
-    except Exception as e:
-        return {"error": f"An error occurred: {e}"}

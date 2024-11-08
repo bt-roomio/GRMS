@@ -6,4 +6,4 @@ from shuttle.models import ControllerFile
 class ControllerFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ControllerFile
-        fields = ("id", "content")
+        fields = ("id", "content", "file_type")

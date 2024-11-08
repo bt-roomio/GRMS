@@ -31,3 +31,26 @@ def get_index(array, element, default=None):
         return array.index(element)
     except ValueError:
         return default
+
+
+def read_binary(file_path):
+    with open(file_path, "rb") as file:
+        binary_data = file.read()
+    return binary_data
+
+
+def compress_data(data):
+    import zlib
+
+    return zlib.compress(data)
+
+
+def decompress_data(data):
+    import zlib
+
+    return zlib.decompress(data)
+
+
+def save_data_to_file(data, output_path):
+    with open(output_path, "wb") as file:
+        return file.write(data)

@@ -121,6 +121,17 @@ class RPCMessage(models.Model):
 class ControllerFile(BaseModel, UpdateByModel, CreatedByModel):
     content = models.FileField(upload_to=controller_file)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+    file_type = models.CharField(max_length=255, default="firmware")
 
     class Meta:
         db_table = "shuttle_controller_file"
+
+
+class Controller(BaseModel, UpdateByModel, CreatedByModel):
+    name = models.CharField(max_length=255)
+    mac_address = models.CharField(max_length=255, blank=True, null=True)
+    file = models.ForeignKey(ControllerFile, CASCADE)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+
+    class Meta:
+        db_table = "shuttle_controller"
