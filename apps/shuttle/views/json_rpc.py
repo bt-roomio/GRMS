@@ -48,6 +48,8 @@ def prepare_mqtt_request(device, method, params, timeout):
             file = ControllerFile.objects.filter(id=file_id).first()
             if not file:
                 return {"error": "Not found file."}
+            file_name = file.content.path.split("/")[-1][11:]
+            param["file"]["name"] = file_name
             param["file"]["content"] = compress_data(read_binary(os.path.join(settings.MEDIA_ROOT, str(file.content))))
 
     channel = connect_to_rabbitmq()
