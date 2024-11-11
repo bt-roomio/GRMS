@@ -2,7 +2,6 @@ from django.urls import path
 
 from shuttle.views.attributes import AttributeListView, AttributesChangeRPCView
 from shuttle.views.controller_file import ControllerFileListView
-from shuttle.views.controllers_status import ControllersStatusView
 from shuttle.views.json_rpc import JsonRPCView
 from shuttle.views.relation import RelationListView, RelationDetailView
 from shuttle.views.remove_attribute import RemoveAttribute
@@ -19,5 +18,4 @@ urlpatterns = [
         AttributesChangeRPCView.as_view(),
         name="attributes-change-view",
     ),
-    path("controllers-status/", ControllersStatusView.as_view(), name="controllers-status"),
 ]

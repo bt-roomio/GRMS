@@ -1,6 +1,7 @@
 import asyncio
 
 from shuttle.consumers.aggregations.attribute_kv import attribute_kv
+from shuttle.consumers.aggregations.controller_status import controller_status
 from shuttle.consumers.aggregations.gateway_list import gateway_list
 from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
 from shuttle.consumers.aggregations.scanned_devices import main_scanned_devices
@@ -136,6 +137,27 @@ class ReceiverConsumer(BaseConsumer):
                 and cmd.get("entityId")
                 and cmd.get("connectorName")
             ):
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+            """
+            Statuses widgets
+            """
+            if cmd.get("type") == "CONTROLLER_STATUS" and cmd.get("entityType") == "DEVICE":
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+                def func():
+                    return self.periodically_task(controller_status, cmd, user)
+
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
+
+            if cmd.get("type") == "CONTROLLER_STATUS_UNSUBSCRIBE" and cmd.get("entityType") == "DEVICE":
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
