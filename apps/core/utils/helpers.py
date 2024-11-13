@@ -1,3 +1,4 @@
+import base64
 from datetime import timedelta
 
 from django.utils import timezone
@@ -54,3 +55,7 @@ def decompress_data(data):
 def save_data_to_file(data, output_path):
     with open(output_path, "wb") as file:
         return file.write(data)
+
+
+def b_encode(binary_data: bytes):
+    return base64.b64encode(binary_data).decode("utf-8")

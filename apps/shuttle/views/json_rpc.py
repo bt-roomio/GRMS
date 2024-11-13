@@ -7,7 +7,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.utils.helpers import read_binary, compress_data
+from core.utils.helpers import read_binary, compress_data, b_encode
 from main.models import Device
 from shuttle.models import Relation, RPCMessage, ControllerFile
 from shuttle.swagger.rpc import json_rpc_swagger
@@ -51,7 +51,7 @@ def prepare_mqtt_request(device, method, params, timeout):
             file_name = file.content.path.split("/")[-1][11:]
             param["file"]["name"] = file_name
             param["file"]["content"] = str(
-                compress_data(read_binary(os.path.join(settings.MEDIA_ROOT, str(file.content))))
+                b_encode(compress_data(read_binary(os.path.join(settings.MEDIA_ROOT, str(file.content)))))
             )
 
     channel = connect_to_rabbitmq()
