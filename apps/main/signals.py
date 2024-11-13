@@ -30,6 +30,13 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
                     device.room.save()
                 device.status = bool(instance.bool_v)
                 device.save()
+    if instance.attribute_type == AttributeKv.CLIENT_SCOPE and instance.attribute_key == "scanned_devices":
+        AttributeKv.objects.update_or_create(
+            attribute_key=instance.attribute_key,
+            attribute_type=AttributeKv.SHARED_SCOPE,
+            entity_id=instance.entity_id,
+            defaults={"json_v": instance.json_v, "entity_type": "DEVICE"},
+        )
 
 
 @receiver(post_save, sender=Room)
