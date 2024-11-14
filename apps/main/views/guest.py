@@ -29,13 +29,13 @@ class GuestListView(APIView):
 class GuestDetailView(APIView):
     @swagger_auto_schema(responses=GuestDetailSwagger)
     def get(self, request, pk):
-        instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id)
+        instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GuestSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=GuestDetailSwagger, request_body=GuestSerializer)
     def put(self, request, pk):
-        instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id)
+        instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GuestSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)

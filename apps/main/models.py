@@ -324,6 +324,8 @@ class Guest(BaseModel):
     lastname = models.CharField(max_length=255, null=True, blank=True)
     gender = models.CharField(max_length=255, null=True, blank=True)
     nationality = models.CharField(max_length=255, null=True, blank=True)
+    language = models.CharField(max_length=255, null=True, blank=True)
+    title = models.CharField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     birthday = UnixTimeStampField(null=True, blank=True)
     check_in = UnixTimeStampField(null=True, blank=True)
@@ -332,6 +334,7 @@ class Guest(BaseModel):
     reservation_number = models.CharField(max_length=255, null=True, blank=True)
     room = models.ForeignKey("main.Room", DO_NOTHING, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+    additional_info = models.JSONField(blank=True, null=True)
 
     objects = GuestQuerySet.as_manager()
 

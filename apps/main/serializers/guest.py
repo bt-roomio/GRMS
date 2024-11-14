@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
 
@@ -16,7 +17,7 @@ class GuestMoveRoomSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         from_room = validated_data.pop("from_room")
         from_room.state.append(Room.Available)
-        from_room.state.remove(Room.CheckedIn)
+        from_room.state = safely_remove(from_room.state, Room.CheckedIn)
         from_room.save()
 
         for guest in instance:
@@ -25,7 +26,7 @@ class GuestMoveRoomSerializer(serializers.Serializer):
 
         to_room = validated_data.pop("to_room")
         to_room.state.append(Room.CheckedIn)
-        to_room.state.remove(Room.Available)
+        to_room.state = safely_remove(to_room.state, Room.Available)
         to_room.save()
 
         return instance
@@ -67,6 +68,8 @@ class GuestSerializer(serializers.ModelSerializer):
             "lastname",
             "gender",
             "nationality",
+            "language",
+            "title",
             "birthday",
             "is_active",
             "room",
@@ -74,6 +77,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "check_out",
             "auto_check_out",
             "reservation_number",
+            "additional_info",
         )
         extra_kwargs = {
             "check_in": {"required": True},

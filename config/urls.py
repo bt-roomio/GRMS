@@ -17,6 +17,7 @@ urlpatterns = [
             ]
         ),
     ),
+    path("", include(("hoteza.urls", "hoteza"), namespace="hoteza-integration")),
 ]
 
 if settings.DEBUG:

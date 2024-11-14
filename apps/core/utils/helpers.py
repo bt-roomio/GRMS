@@ -1,5 +1,6 @@
 import base64
 from datetime import timedelta
+from typing import List, Any
 
 from django.utils import timezone
 
@@ -59,3 +60,7 @@ def save_data_to_file(data, output_path):
 
 def b_encode(binary_data: bytes):
     return base64.b64encode(binary_data).decode("utf-8")
+
+
+def safely_remove(ll: List[Any], element):
+    return [x for x in ll if x != element]

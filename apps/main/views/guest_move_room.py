@@ -16,7 +16,7 @@ class GuestMoveRoomListView(APIView):
     )
     def put(self, request):
         params = GuestMoveRoomFilterParams.check(request.GET)
-        instance = Guest.objects.filter(room_id=params.get("from_room"))
+        instance = Guest.objects.filter(room_id=params.get("from_room"), is_active=True)
         if not instance.exists():
             return Response({"detail": "`from_room` guests doesn't exist!"}, 404)
         serializer = GuestMoveRoomSerializer(
