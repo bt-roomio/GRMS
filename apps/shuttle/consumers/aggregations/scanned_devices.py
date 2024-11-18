@@ -30,6 +30,7 @@ async def main_scanned_devices(cmd, connectors, user):
 
     scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps)
     gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps, scanned_devices)
+    upload_status, scan_status = await get_upload_scan_statuses(temp_devices)
 
     if not connectors:
         connectors = [*scanned_devices, *gateway_devices]
@@ -43,9 +44,29 @@ async def main_scanned_devices(cmd, connectors, user):
     page_link["count"] = count
 
     result = response({}, cmd.get("cmdId"))
-    result["data"]["connectors"] = connectors[offset:limit]
+    result["data"]["devices"] = connectors[offset:limit]
+    result["data"]["upload_status"] = upload_status
+    result["data"]["scan_status"] = scan_status
     result["data"]["query"] = cmd.get("query")
     return result
+
+
+@database_sync_to_async
+def get_upload_scan_statuses(temp_devices):
+    upload_status = AttributeKv.objects.filter(
+        entity__name__in=temp_devices,
+        attribute_type=AttributeKv.CLIENT_SCOPE,
+        attribute_key="upload_status",
+    ).first()
+    scan_status = AttributeKv.objects.filter(
+        entity__name__in=temp_devices,
+        attribute_type=AttributeKv.CLIENT_SCOPE,
+        attribute_key="scan_status",
+    ).first()
+    upload_status = upload_status and upload_status.bool_v
+    scan_status = scan_status and scan_status.bool_v
+    print(upload_status, scan_status)
+    return upload_status, scan_status
 
 
 @database_sync_to_async
@@ -60,18 +81,6 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
         )
         .values("json_v")
     )
-    upload_status = AttributeKv.objects.filter(
-        entity__name__in=temp_devices,
-        attribute_type=AttributeKv.CLIENT_SCOPE,
-        attribute_key="upload_status",
-    ).first()
-    scan_status = AttributeKv.objects.filter(
-        entity__name__in=temp_devices,
-        attribute_type=AttributeKv.CLIENT_SCOPE,
-        attribute_key="scan_status",
-    ).first()
-    upload_status = upload_status and upload_status.bool_v
-    scan_status = scan_status and scan_status.bool_v
     for scan_device in attrs:
         scan_device = scan_device.get("json_v")
         for mac_address, value in scan_device.items():
@@ -89,8 +98,6 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
                 "status": value.get("device_is_online"),
                 "exist_in_configuration": True,
                 "upload_file_status": value.get("upload_file_status"),
-                "upload_status": upload_status,
-                "scan_status": scan_status,
             }
             result.append(data)
     return result
@@ -113,8 +120,6 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
             "status": False,
             "exist_in_configuration": False,
             "upload_file_status": None,
-            "upload_status": None,
-            "scan_status": None,
         }
         result.append(data)
 
