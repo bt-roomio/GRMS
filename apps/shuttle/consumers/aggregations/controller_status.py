@@ -10,7 +10,7 @@ async def controller_status(cmd, user):
     status_controllers = await get_status_devices(user)
     status_rooms = await get_status_rooms(user)
     result["data"]["status_controllers"] = status_rooms
-    result["data"]["status_rooms"] = status_controllers
+    result["data"]["count_active_rooms"] = status_controllers
     return result
 
 
