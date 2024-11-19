@@ -1,19 +1,13 @@
 import asyncio
 import json
 
-from channels.auth import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
 
 from shuttle.utils.response import response
-from users.models import User
-
-
-@database_sync_to_async
-def get_user(data):
-    return User.objects.select_related("tenant").get(id=data["user_id"])
+from users.utils.get_user import get_user
 
 
 class BaseConsumer(AsyncJsonWebsocketConsumer):

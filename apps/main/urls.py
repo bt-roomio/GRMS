@@ -9,7 +9,7 @@ from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestListView, GuestDetailView
 from main.views.guest_move_room import GuestMoveRoomListView
-from main.views.room import RoomDetailView, RoomListView
+from main.views.room import RoomDetailView, RoomListView, RoomEventStreamViewSet
 from main.views.room_status import RoomHistoryStatusView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.tenant import TenantListView
@@ -20,6 +20,7 @@ urlpatterns = [
     path("general-settings/", GeneralSettingsDetailView.as_view(), name="general-settings-detail"),
     path("alarm-settings/", AlarmSettingsDetailView.as_view(), name="alarm-settings"),
     path("room/", RoomListView.as_view(), name="room-list"),
+    path("room-stream/", RoomEventStreamViewSet.as_view(), name="room-stream-list"),
     path("room/<uuid:pk>/", RoomDetailView.as_view(), name="room-detail"),
     path("room-type/", RoomTypeListView.as_view(), name="room-type-list"),
     path("room-type/<uuid:pk>/", RoomTypeDetailView.as_view(), name="room-type-detail"),
