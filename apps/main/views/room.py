@@ -96,7 +96,7 @@ class RoomEventStreamViewSet(View):
                     message["data"] = rooms
                 yield "data: %s\n\n" % json.dumps(message)
 
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
 
         return StreamingHttpResponse(event_stream(), content_type="text/event-stream", status=status)
 

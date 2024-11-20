@@ -44,7 +44,7 @@ class Command(BaseCommand):
 
 
 def callback(ch, method, properties, body):
-    logger.critical(" Received body = %s ", body)
+    logger.info(" Received body = %s ", body)
 
     msg = json.loads(body)
 
@@ -84,8 +84,8 @@ def callback(ch, method, properties, body):
                 name=key,
                 type="default",
                 customer_id="0e43b252-8391-430d-807e-de64e0a63194",
-                tenant_id="28c81921-f78e-4864-87d2-cec674f19d1c",
-                device_profile_id="be17d30b-9785-4415-bfa5-e7fdaf19e37c",
+                tenant_id=from_id.tenant_id,
+                device_profile_id=from_id.device_profile_id,
             )
             if created:
                 print("Device created")
