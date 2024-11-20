@@ -1,10 +1,23 @@
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
+from main.models import Device
 from shuttle.models import Relation
 
 
+class SimpleDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Device
+        fields = ("id", "name")
+
+
 class RelationSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["to_id"] = SimpleDeviceSerializer(instance.to_id).data
+        data["from_id"] = SimpleDeviceSerializer(instance.from_id).data
+        return data
+
     def update(self, instance, validated_data):
         validated_data.pop("from_id", None)
         validated_data.pop("from_type", None)
