@@ -60,15 +60,14 @@ def callback(ch, method, properties, body):
             rpc_msg.received = True
             rpc_msg.additional_info = data.get("data")
             rpc_msg.save()
-
-    if topic == "v1/gateway/connect":
+    elif topic == "v1/gateway/connect":
         device = Device.objects.filter(name=data.get("device")).first()
         update_activity_device(device)
-    if topic == "v1/gateway/disconnect":
+    elif topic == "v1/gateway/disconnect":
         device = Device.objects.filter(name=data.get("device")).first()
         update_activity_device(device, connected=False)
 
-    if topic.startswith("v1/devices/me/attributes/request") or topic.startswith("v1/gateway/attributes/request"):
+    elif topic.startswith("v1/devices/me/attributes/request") or topic.startswith("v1/gateway/attributes/request"):
         print(f"Topic: {topic}, {data}")
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
@@ -80,37 +79,16 @@ def callback(ch, method, properties, body):
             field, value = get_non_null_field(attribute)
             response_keys[attribute.attribute_key] = value
         send_to_rabbitmq_device_me(device.id, response_keys, topic.replace("request", "response"), data.get("id"))
-
-    if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
-        from_id = device.id
+    elif topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         for key, value in data.items():
-            device_to_id, created = Device.objects.get_or_create(
-                name=key,
-                type="default",
-                tenant_id=from_id.tenant_id,
-                device_profile_id=from_id.device_profile_id,
-            )
-            if created:
-                print("Device created")
-                DeviceCredentials.objects.create(
-                    credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device_to_id
-                )
-
-            Relation.objects.get_or_create(
-                from_id_id=from_id,
-                to_id_id=device_to_id.id,
-                from_type="DEVICE",
-                to_type="DEVICE",
-                relation_type_group="COMMON",
-                relation_type="Created",
-            )
+            device_to_id = get_or_create_device(key, device)
             data = value
             if data and isinstance(data, dict):
                 if topic.endswith("attributes"):
-                    print("attributes", data)
+                    print("save_attribute_kv", data)
                     save_attribute_kv(device_to_id, data)
                 if topic.endswith("telemetry"):
-                    print("telemetry", data)
+                    print("save_telemetry_kv", data)
                     save_telemetry_kv(device_to_id, data, ts)
 
             elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
@@ -223,3 +201,28 @@ def update_activity_device(device, connected=True):
             attribute_key=key,
             defaults={**fields, "entity_type": "DEVICE", "last_update_ts": int(time.time())},
         )
+
+
+def get_or_create_device(name, from_id):
+    device_to_id, created = Device.objects.get_or_create(
+        name=name,
+        type="default",
+        tenant_id=from_id.tenant_id,
+        device_profile_id=from_id.device_profile_id,
+    )
+    if created:
+        print("Device created")
+        DeviceCredentials.objects.create(
+            credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device_to_id
+        )
+
+    Relation.objects.get_or_create(
+        from_id_id=from_id,
+        to_id_id=device_to_id.id,
+        from_type="DEVICE",
+        to_type="DEVICE",
+        relation_type_group="COMMON",
+        relation_type="Created",
+    )
+
+    return device_to_id
