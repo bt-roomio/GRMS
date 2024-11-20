@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import time
@@ -44,7 +45,7 @@ class Command(BaseCommand):
 
 
 def callback(ch, method, properties, body):
-    logger.info(" Received body = %s ", body)
+    print(datetime.datetime.now(), " Received body = %s ", body)
 
     msg = json.loads(body)
 
@@ -68,9 +69,12 @@ def callback(ch, method, properties, body):
         update_activity_device(device, connected=False)
 
     if topic.startswith("v1/devices/me/attributes/request") or topic.startswith("v1/gateway/attributes/request"):
+        print(f"Topic: {topic}, {data}")
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
-        attributes = AttributeKv.objects.filter(attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE)
+        attributes = AttributeKv.objects.filter(
+            attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=device.id
+        )
         response_keys = {}
         for attribute in attributes:
             field, value = get_non_null_field(attribute)
@@ -80,22 +84,21 @@ def callback(ch, method, properties, body):
     if topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         from_id = device.id
         for key, value in data.items():
-            device, created = Device.objects.get_or_create(
+            device_to_id, created = Device.objects.get_or_create(
                 name=key,
                 type="default",
-                customer_id="0e43b252-8391-430d-807e-de64e0a63194",
                 tenant_id=from_id.tenant_id,
                 device_profile_id=from_id.device_profile_id,
             )
             if created:
                 print("Device created")
                 DeviceCredentials.objects.create(
-                    credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device
+                    credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device_to_id
                 )
 
             Relation.objects.get_or_create(
                 from_id_id=from_id,
-                to_id_id=device.id,
+                to_id_id=device_to_id.id,
                 from_type="DEVICE",
                 to_type="DEVICE",
                 relation_type_group="COMMON",
@@ -105,10 +108,10 @@ def callback(ch, method, properties, body):
             if data and isinstance(data, dict):
                 if topic.endswith("attributes"):
                     print("attributes", data)
-                    save_attribute_kv(device, data)
+                    save_attribute_kv(device_to_id, data)
                 if topic.endswith("telemetry"):
                     print("telemetry", data)
-                    save_telemetry_kv(device, data, ts)
+                    save_telemetry_kv(device_to_id, data, ts)
 
             elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
                 for res in data:
@@ -117,10 +120,10 @@ def callback(ch, method, properties, body):
                         res = res.get("values")
                     if topic.endswith("attributes"):
                         print("save_attribute_kv")
-                        save_attribute_kv(device, res)
+                        save_attribute_kv(device_to_id, res)
                     if topic.endswith("telemetry"):
                         print("save_telemetry_kv")
-                        save_telemetry_kv(device, res, ts)
+                        save_telemetry_kv(device_to_id, res, ts)
 
     if not device:
         print("Device not found")
@@ -136,8 +139,10 @@ def callback(ch, method, properties, body):
 
     if data and isinstance(data, dict):
         if topic == "v1/devices/me/attributes":
+            print("save_attribute_kv")
             save_attribute_kv(device, data)
         if topic == "v1/devices/me/telemetry":
+            print("save_telemetry")
             save_telemetry_kv(device, data, ts)
 
     elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
@@ -146,7 +151,7 @@ def callback(ch, method, properties, body):
                 print("save_attribute_kv")
                 save_attribute_kv(device, res)
             if topic == "v1/devices/me/telemetry":
-                print("save_telemetry_kv")
+                print("save_telemetry")
                 save_telemetry_kv(device, res, ts)
 
 
