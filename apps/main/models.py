@@ -15,6 +15,7 @@ from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
+from main.utils.default_state import default_state
 
 
 class Tenant(BaseModel):
@@ -94,10 +95,6 @@ class Room(BaseModel, UpdateByModel):
         (MakeUpRoom, "MakeUpRoom"),
     )
 
-    @staticmethod
-    def default_state():
-        return [0]
-
     ON = "ON"
     OFF = "OFF"
     STATUS = ((ON, "on"), (OFF, "off"))
@@ -106,7 +103,7 @@ class Room(BaseModel, UpdateByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
-    state = ArrayField(models.PositiveSmallIntegerField(choices=STATE))
+    state = ArrayField(models.PositiveSmallIntegerField(choices=STATE), default=default_state)
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
