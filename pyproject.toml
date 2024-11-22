@@ -3,3 +3,10 @@ line-length = 120
 target-version = ['py37']
 include = '\.pyi?$'
 force-exclude = '''(migrations)'''
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["migrations"]
+
+[tool.pyright]
+executionEnvironments = [{ root = "apps" }]

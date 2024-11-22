@@ -128,8 +128,8 @@ class ControllerFile(BaseModel, UpdateByModel, CreatedByModel):
 
 
 class Controller(BaseModel, UpdateByModel, CreatedByModel):
-    name = models.CharField(max_length=255)
-    mac_address = models.CharField(max_length=255, blank=True, null=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    mac_address = models.CharField(max_length=255)
     file = models.ForeignKey(ControllerFile, CASCADE)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
