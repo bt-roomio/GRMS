@@ -94,6 +94,10 @@ class Room(BaseModel, UpdateByModel):
         (MakeUpRoom, "MakeUpRoom"),
     )
 
+    @staticmethod
+    def default_state():
+        return [0]
+
     ON = "ON"
     OFF = "OFF"
     STATUS = ((ON, "on"), (OFF, "off"))
@@ -102,7 +106,7 @@ class Room(BaseModel, UpdateByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
-    state = ArrayField(models.PositiveSmallIntegerField(choices=STATE), default=list)
+    state = ArrayField(models.PositiveSmallIntegerField(choices=STATE))
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
@@ -141,7 +145,7 @@ class Room(BaseModel, UpdateByModel):
 
     class Meta:
         db_table = "main_room"
-        unique_together = ("number", "floor", "block")
+        unique_together = ("number", "floor", "block", "tenant")
 
 
 class RoomHistory(BaseModel, UpdateByModel):

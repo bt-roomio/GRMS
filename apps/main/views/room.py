@@ -35,9 +35,12 @@ class RoomListView(APIView):
     @swagger_auto_schema(responses=RoomSwagger, request_body=RoomSerializer)
     @check_perms(["main.add_room"])
     def post(self, request):
-        serializer = RoomSerializer(data=request.data)
+        tenant_id = request.user.tenant_id
+        data = request.data.copy()
+        data["tenant"] = tenant_id
+        serializer = RoomSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant_id=request.user.tenant_id)
+        serializer.save()
         return Response(serializer.data, 201)
 
 

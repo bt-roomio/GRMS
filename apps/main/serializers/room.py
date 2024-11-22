@@ -11,6 +11,7 @@ class RoomSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
     type = serializers.SlugRelatedField(queryset=RoomType.objects.all(), slug_field="title", required=False)
     devices = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), many=True, required=False)
+    state = serializers.ListField(child=serializers.ChoiceField(choices=Room.STATE), default=Room.default_state)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
