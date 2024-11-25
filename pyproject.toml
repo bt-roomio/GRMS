@@ -12,3 +12,7 @@ extend-select = ["I"]
 
 [tool.pyright]
 executionEnvironments = [{ root = "apps" }]
+
+# Reporting settings
+reportUnusedImport = "warning"
+reportUnusedVariable = "warning"

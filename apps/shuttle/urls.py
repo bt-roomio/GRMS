@@ -5,6 +5,7 @@ from shuttle.views.controller_file import ControllerFileListView
 from shuttle.views.json_rpc import JsonRPCView
 from shuttle.views.relation import RelationListView, RelationDetailView
 from shuttle.views.remove_attribute import RemoveAttribute
+from shuttle.views.ts_kv import TsKvListView
 
 urlpatterns = [
     path("attributes/<uuid:device_id>/<str:scope>/", AttributeListView.as_view(), name="attributes-list"),
@@ -13,6 +14,7 @@ urlpatterns = [
     path("rpc/<uuid:device_id>/", JsonRPCView.as_view(), name="json-rpc-view"),
     path("controller/file/", ControllerFileListView.as_view(), name="controller-file-view"),
     path("telemetry/<uuid:device_id>/<str:scope>/", RemoveAttribute.as_view(), name="remove-attribute-view"),
+    path("telemetry/<str:entity_type>/<uuid:entity_id>/", TsKvListView.as_view(), name="ts-kv-list-view"),
     path(
         "attributes-change/<str:entity_type>/<uuid:entity_id>/",
         AttributesChangeRPCView.as_view(),

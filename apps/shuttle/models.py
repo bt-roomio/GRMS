@@ -1,10 +1,9 @@
 import time
 
+from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
+from core.utils.files import controller_file
 from django.db import models
 from django.db.models import CASCADE
-
-from core.models import BaseModel, BaseModelTs, UpdateByModel, CreatedByModel
-from core.utils.files import controller_file
 from shuttle.querysets.attributes import AttributeKvQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
@@ -28,7 +27,7 @@ class TsKv(BaseModelTs):
             self.ts = time.time()
         super(TsKv, self).save(*args, **kwargs)
 
-    class Meta(BaseModel.Meta):
+    class Meta(BaseModelTs.Meta):
         db_table = "shuttle_ts_kv"
         unique_together = ("entity", "key", "ts")
 
@@ -54,7 +53,7 @@ class TsKvLatest(BaseModelTs):
 
     objects = TsKvLatestQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta):
+    class Meta(BaseModelTs.Meta):
         db_table = "shuttle_ts_kv_latest"
         unique_together = ("entity", "key")
 
@@ -86,7 +85,7 @@ class AttributeKv(BaseModel):
     def __str__(self):
         return str(self.attribute_key)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "shuttle_attribute_kv"
 
 
@@ -101,7 +100,7 @@ class Relation(BaseModel):
 
     objects = RelationQuerySet.as_manager()
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "shuttle_relation"
         unique_together = (("from_id", "from_type", "relation_type_group", "relation_type", "to_id", "to_type"),)
 
@@ -123,7 +122,7 @@ class ControllerFile(BaseModel, UpdateByModel, CreatedByModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     file_type = models.CharField(max_length=255, default="firmware")
 
-    class Meta:
+    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
         db_table = "shuttle_controller_file"
 
 
@@ -133,5 +132,5 @@ class Controller(BaseModel, UpdateByModel, CreatedByModel):
     file = models.ForeignKey(ControllerFile, CASCADE)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
-    class Meta:
+    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
         db_table = "shuttle_controller"

@@ -1,9 +1,8 @@
 import math
 
 from channels.consumer import database_sync_to_async
-from django.db.models import Avg, Min, F, ExpressionWrapper, IntegerField
+from django.db.models import Avg, ExpressionWrapper, F, IntegerField, Min
 from django.db.models.functions import Floor
-
 from shuttle.models import TsKv, TsKvDictionary
 
 
@@ -31,16 +30,15 @@ async def history_telemetry(cmd):
     end_ts = history.get("endTs")
     limit = history.get("limit")
     interval = history.get("interval")
-    keys = await get_ts_kv_dict(history.get("keys"))
+    keys = await database_sync_to_async(get_ts_kv_dict_ids)(history.get("keys"))
     return await ts_kv_history(start_ts, end_ts, interval, keys, limit)
 
 
-@database_sync_to_async
-def get_ts_kv_dict(keys):
+def get_ts_kv_dict_ids(keys):
     return list(TsKvDictionary.objects.filter(key__in=keys).values_list("key_id", flat=True))
 
 
 @database_sync_to_async
-def get_ts_kv(history, keys):
-    query = TsKv.objects.filter(ts__gte=history.get("startTs"), ts__lte=history.get("endTs"), key__in=keys)
+def get_ts_kv(start_ts, end_ts, keys):
+    query = TsKv.objects.filter(ts__gte=start_ts, ts__lte=end_ts, key__in=keys)
     return list(query)

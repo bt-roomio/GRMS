@@ -1,10 +1,9 @@
 import time
 import uuid
 
+from core.utils.unix_timestamp import UnixTimeStampField
 from django.db import models
 from django.db.models import SET_NULL
-
-from core.utils.unix_timestamp import UnixTimeStampField
 
 
 class BaseModel(models.Model):

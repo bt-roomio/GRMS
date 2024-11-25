@@ -53,21 +53,22 @@ class ReceiverConsumer(BaseConsumer):
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
-            if cmd.get("type") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
+            elif cmd.get("elif") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
                     del self.task_params[task_key]
 
-            """
-            - Attributes
-            """
-            if (
+            elif (
                 cmd.get("entityType") == "DEVICE"
                 and cmd.get("type") == "ATTRIBUTES"
                 and cmd.get("entityId")
                 and cmd.get("scope")
             ):
+                """
+                - Attributes
+                """
+
                 if cmd.get("scope") not in [item[0] for item in AttributeKv.ENTITY_TYPE]:
                     await self.send_json(response({}, 0, 1, "Incorrect scope!"))
                     return
@@ -84,21 +85,22 @@ class ReceiverConsumer(BaseConsumer):
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
-            if cmd.get("type") == "ATTRIBUTES_UNSUBSCRIBE" and cmd.get("entityId") and cmd.get("cmdId"):
+            elif cmd.get("type") == "ATTRIBUTES_UNSUBSCRIBE" and cmd.get("entityId") and cmd.get("cmdId"):
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
                     del self.task_params[task_key]
-            """
-            - Entity Data
-            """
-            # Gateway List
-            if (
+            elif (
                 cmd.get("type") == "ENTITY_DATA"
                 and cmd.get("latestCmd")
                 and cmd.get("query")
                 and cmd.get("scope") == "gateway"
             ):
+                """
+                - Entity Data
+                """
+                # Gateway List
+
                 result = response({}, cmd.get("cmdId"))
 
                 entity_fields = cmd.get("query").get("entityFields")
@@ -109,16 +111,16 @@ class ReceiverConsumer(BaseConsumer):
                 result["data"] = await gateway_list(entity_fields, attributes, user)
                 await self.send_json(result)
 
-            """
-            Connector list
-            """
-            if (
+            elif (
                 cmd.get("type") == "SCANNED_DEVICES"
                 and cmd.get("entityType") == "DEVICE"
                 and cmd.get("entityId")
                 and cmd.get("query")
                 and cmd.get("connectorName")
             ):
+                """
+                Connector list
+                """
                 # If cmdId same remove from tasks and re-write cmd
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
@@ -131,7 +133,7 @@ class ReceiverConsumer(BaseConsumer):
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
-            if (
+            elif (
                 cmd.get("type") == "SCANNED_DEVICES_UNSUBSCRIBE"
                 and cmd.get("entityType") == "DEVICE"
                 and cmd.get("entityId")
@@ -142,10 +144,10 @@ class ReceiverConsumer(BaseConsumer):
                     del self.tasks[task_key]
                     del self.task_params[task_key]
 
-            """
-            Statuses widgets
-            """
-            if cmd.get("type") == "CONTROLLER_STATUS" and cmd.get("entityType") == "DEVICE":
+            elif cmd.get("type") == "CONTROLLER_STATUS" and cmd.get("entityType") == "DEVICE":
+                """
+                Statuses widgets
+                """
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
@@ -157,7 +159,7 @@ class ReceiverConsumer(BaseConsumer):
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
-            if cmd.get("type") == "CONTROLLER_STATUS_UNSUBSCRIBE" and cmd.get("entityType") == "DEVICE":
+            elif cmd.get("type") == "CONTROLLER_STATUS_UNSUBSCRIBE" and cmd.get("entityType") == "DEVICE":
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
