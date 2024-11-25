@@ -16,15 +16,45 @@ class TsKvQuerySet(BaseQuerySet):
         query = self.filter(ts__gte=start_ts, ts__lte=end_ts, key__in=key_ids)
         query = (
             query.annotate(
-                interval_time=Floor(ExpressionWrapper((F("ts") / interval) * interval, output_field=IntegerField())),
-                avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
+                interval_time=Func(
+                    ExpressionWrapper((F("ts") / interval) * interval, output_field=FloatField()),
+                    function="FLOOR",
+                    output_field=IntegerField(),
+                ),
+                aggregated_value=agg_function(Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField())),
+                field_value=Coalesce(
+                    Cast(F("json_v"), TextField()),
+                    Cast(F("bool_v"), TextField()),
+                    F("str_v"),
+                    output_field=TextField(),
+                ),
             )
-            .values("key", "interval_time")
-            .annotate(count_per_group=Count("avail_field"))
-            .filter(count_per_group__gt=1)
+            .values("key", "interval_time", "field_value")
             .order_by("key", "interval_time")
         )
-        if agg_function is not None:
-            query = query.annotate(aggregated_value=agg_function("avail_field"))
 
         return query
+
+
+"""
+Raw query for historiy data
+SELECT
+	"shuttle_ts_kv"."key",
+	FLOOR(("shuttle_ts_kv"."ts" / 24) * 24) AS "interval_time",
+	AVG(COALESCE("shuttle_ts_kv"."dbl_v", "shuttle_ts_kv"."long_v")) AS "aggregated_value",
+	COALESCE(("shuttle_ts_kv"."json_v")::text, ("shuttle_ts_kv"."bool_v")::text, "shuttle_ts_kv"."str_v") AS "field_value"
+FROM
+	"shuttle_ts_kv"
+WHERE
+	"shuttle_ts_kv"."entity_id" IN ('9829490d-f742-400e-8f38-aae5155e0b27') -- '4b6ab65b-8cc5-44f3-b45c-312d5254cb86'
+	AND "shuttle_ts_kv"."key" IN (3)
+	AND "shuttle_ts_kv"."ts" >= 1732123722
+	AND "shuttle_ts_kv"."ts" <= 1732123794
+GROUP BY
+	"shuttle_ts_kv"."key",
+	FLOOR(("shuttle_ts_kv"."ts" / 24) * 24),
+	COALESCE(("shuttle_ts_kv"."json_v")::text, ("shuttle_ts_kv"."bool_v")::text, "shuttle_ts_kv"."str_v")
+ORDER BY
+	"shuttle_ts_kv"."key" ASC,
+	"interval_time" ASC;
+"""
