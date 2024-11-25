@@ -1,9 +1,8 @@
-from django.contrib.postgres.fields import ArrayField
-from django.db import models
-from django.db.models import CASCADE, SET_NULL, DO_NOTHING
-
 from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
+from django.contrib.postgres.fields import ArrayField
+from django.db import models
+from django.db.models import CASCADE, DO_NOTHING, SET_NULL
 from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
@@ -195,7 +194,7 @@ class RoomType(BaseModel):
 
 
 class Device(BaseModel):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     customer = models.ForeignKey("main.Customer", CASCADE, null=True, blank=True)
@@ -215,6 +214,7 @@ class Device(BaseModel):
 
     class Meta:
         db_table = "main_device"
+        unique_together = ("name", "tenant")
 
 
 class DeviceCredentials(BaseModel):
