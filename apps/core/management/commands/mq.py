@@ -4,12 +4,11 @@ import logging
 import time
 
 import pika
+from core.utils.random_letter import get_random_letter
 from django.conf import settings
 from django.core.management.base import BaseCommand
-
-from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
-from shuttle.models import AttributeKv, TsKv, TsKvDictionary, TsKvLatest, Relation, RPCMessage
+from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq_device_me
@@ -136,7 +135,7 @@ def callback(ch, method, properties, body):
 def consume():
     channel = connect_to_rabbitmq()
     channel.basic_consume(queue=rabbit_queues["toGRMSqueueName"], on_message_callback=callback, auto_ack=True)
-    logger.critical(f"Waiting for messages in topic. To exit press CTRL+C")
+    logger.critical("Waiting for messages in topic. To exit press CTRL+C")
     channel.start_consuming()
 
 
@@ -217,7 +216,7 @@ def get_or_create_device(name, from_id):
         )
 
     Relation.objects.get_or_create(
-        from_id_id=from_id,
+        from_id=from_id,
         to_id_id=device_to_id.id,
         from_type="DEVICE",
         to_type="DEVICE",
