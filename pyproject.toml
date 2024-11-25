@@ -7,6 +7,8 @@ force-exclude = '''(migrations)'''
 [tool.ruff]
 line-length = 120
 extend-exclude = ["migrations"]
+extend-select = ["I"]
+
 
 [tool.pyright]
 executionEnvironments = [{ root = "apps" }]

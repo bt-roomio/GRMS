@@ -1,10 +1,9 @@
-from rest_framework import serializers
-
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
-from main.models import Device, Tenant, DeviceCredentials
+from main.models import Device, DeviceCredentials, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
 from main.utils.has_roomio_node import has_roomio_node
+from rest_framework import serializers
 
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
@@ -40,11 +39,13 @@ class DeviceSerializer(serializers.ModelSerializer):
         )
         return data
 
-    def create(self, data):
-        if data.get("additional_info", {}).get("roomio_node") and has_roomio_node(data.get("tenant_id")):
+    def create(self, validated_data):
+        if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
+            validated_data.get("tenant_id")
+        ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
-        instance = super().create(data)
+        instance = super().create(validated_data)
         DeviceCredentials.objects.create(
             device=instance,
             credentials_id=get_random_letter(32),
@@ -52,11 +53,13 @@ class DeviceSerializer(serializers.ModelSerializer):
         )
         return instance
 
-    def update(self, instance, data):
-        if data.get("additional_info", {}).get("roomio_node") and has_roomio_node(data.get("tenant_id"), instance.id):
+    def update(self, instance, validated_data):
+        if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
+            validated_data.get("tenant_id"), instance.id
+        ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
-        return super().update(instance, data)
+        return super().update(instance, validated_data)
 
     class Meta:
         model = Device

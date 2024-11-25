@@ -1,12 +1,11 @@
+from core.utils.pagination import pagination
 from drf_yasg.utils import swagger_auto_schema
+from main.models import Device
+from main.serializers.device import DeviceFilterParams, DeviceSerializer
+from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from core.utils.pagination import pagination
-from main.models import Device
-from main.serializers.device import DeviceSerializer, DeviceFilterParams
-from main.swagger.device import DeviceSwagger, DeviceDetailSwagger
 
 
 class DeviceListView(APIView):
@@ -26,9 +25,12 @@ class DeviceListView(APIView):
 
     @swagger_auto_schema(responses=DeviceSwagger, request_body=DeviceSerializer)
     def post(self, request):
-        serializer = DeviceSerializer(data=request.data)
+        tenant_id = request.user.tenant_id
+        data = request.data.copy()
+        data["tenant"] = tenant_id
+        serializer = DeviceSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant_id=request.user.tenant_id)
+        serializer.save(tenant_id=tenant_id)
         return Response(serializer.data, 201)
 
 
