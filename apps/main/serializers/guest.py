@@ -1,8 +1,7 @@
-from rest_framework import serializers
-
 from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
+from rest_framework import serializers
 
 
 class GuestMoveRoomFilterParams(ValidatorSerializer):
@@ -58,6 +57,13 @@ class GuestSerializer(serializers.ModelSerializer):
                 new_room.state.remove(Room.Available)
             new_room.state.append(Room.CheckedIn)
             new_room.save()
+
+        if validated_data.get("is_active") == False:
+            room = Room.objects.filter(id=instance.room_id).first()
+            if room and Room.CheckedIn in room.state and len(room.guests.filter(is_active=True)) <= 1:
+                room.state.remove(Room.CheckedIn)
+                room.state.append(Room.Available)
+                room.save()
         return super().update(instance, validated_data)
 
     class Meta:
