@@ -1,7 +1,6 @@
 from channels.db import database_sync_to_async
-
 from main.models import Device
-from shuttle.models import AttributeKv
+from shuttle.models import AttributeKv, Controller
 from shuttle.utils.response import response
 
 
@@ -88,6 +87,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
             }
             address_map = address_maps[address_map_id.get("addressMapId")] if address_map_id else None
             found_device = Device.objects.filter(name=mac_address).first()
+            controller = Controller.objects.filter(mac_address=mac_address).last()
             data = {
                 "mac_address": mac_address,
                 "ip_address": value.get("ip"),
@@ -97,7 +97,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
                     if address_map_id.get("addressMapId")
                     else None
                 ),
-                "file": "",
+                "file": controller and controller.file.content.name,
                 "status": value.get("device_is_online"),
                 "exist_in_configuration": True,
                 "upload_file_status": value.get("upload_file_status"),
@@ -114,12 +114,13 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
             continue
         found_device = Device.objects.filter(name=device.get("macAddress")).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
+        controller = Controller.objects.filter(mac_address=device.get("macAddress")).last()
         data = {
             "mac_address": device.get("macAddress"),
             "ip_address": device.get("lastIp"),
             "room": found_device and str(found_device.room),
             "address_map": {"id": device.get("addressMapId"), "name": address_map},
-            "file": "",
+            "file": controller and controller.file.content.path,
             "status": False,
             "exist_in_configuration": False,
             "upload_file_status": None,
