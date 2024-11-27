@@ -99,7 +99,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
                 ),
                 "file": controller and controller.file.content.name,
                 "status": value.get("device_is_online"),
-                "exist_in_configuration": True,
+                "exist_in_configuration": False,
                 "upload_file_status": value.get("upload_file_status"),
             }
             result.append(data)
@@ -122,7 +122,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
             "address_map": {"id": device.get("addressMapId"), "name": address_map},
             "file": controller and controller.file.content.path,
             "status": False,
-            "exist_in_configuration": False,
+            "exist_in_configuration": True,
             "upload_file_status": None,
         }
         result.append(data)

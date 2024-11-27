@@ -8,7 +8,7 @@ class TsKvQuerySet(BaseQuerySet):
     def get_entity_ts_kv(self, entity):
         return self.filter(entity=entity)
 
-    def get_history(self, keys, start_ts, end_ts, interval, agg, limit):
+    def get_history(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         keys = self.get_ts_kv_type_of_field_and_key_id(keys)
         result = []
@@ -28,7 +28,8 @@ class TsKvQuerySet(BaseQuerySet):
                     .filter(count_per_group__gt=1)
                     .order_by("key", "interval_time")
                 )
-                query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
+                if agg_function is not None:
+                    query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
                 result.extend(query[:limit])
 
             if key_item["type"] in ["json_v", "str_v", "bool_v"]:

@@ -5,6 +5,7 @@ from shuttle.consumers.aggregations.controller_status import controller_status
 from shuttle.consumers.aggregations.gateway_list import gateway_list
 from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
 from shuttle.consumers.aggregations.scanned_devices import main_scanned_devices
+from shuttle.consumers.aggregations.ts_kv_history import history_ts_kv
 from shuttle.consumers.base import BaseConsumer
 from shuttle.models import AttributeKv
 from shuttle.utils.camel_to_snake import camel_to_snake
@@ -53,11 +54,24 @@ class ReceiverConsumer(BaseConsumer):
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
-            elif cmd.get("elif") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
+            elif cmd.get("type") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]
                     del self.task_params[task_key]
+
+            elif (
+                cmd.get("type") == "ENTITY_DATA"
+                and cmd.get("historyCmd")
+                and cmd.get("historyCmd").get("keys")
+                and cmd.get("historyCmd").get("startTs")
+                and cmd.get("historyCmd").get("endTs")
+            ):
+                """
+                - Latest Telemetry
+                """
+                data = await history_ts_kv(cmd, user)
+                await self.send_json(data)
 
             elif (
                 cmd.get("entityType") == "DEVICE"

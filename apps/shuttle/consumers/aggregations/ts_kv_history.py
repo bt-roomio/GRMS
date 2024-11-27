@@ -1,44 +1,24 @@
-import math
-
 from channels.consumer import database_sync_to_async
-from django.db.models import Avg, ExpressionWrapper, F, IntegerField, Min
-from django.db.models.functions import Floor
 from shuttle.models import TsKv, TsKvDictionary
+from shuttle.utils.camel_to_snake import camel_to_snake
+
+
+async def history_ts_kv(cmd, user):
+    avail_parameters = ["keys", "start_ts", "end_ts", "interval", "agg", "limit"]
+    history_cmd = {camel_to_snake(k): v for k, v in cmd.get("historyCmd", {}).items()}
+    history_cmd = {k: v for k, v in history_cmd.items() if k in avail_parameters}
+
+    data = await ts_kv_history(user, **history_cmd)
+    return data
 
 
 @database_sync_to_async
-def ts_kv_history(start_ts, end_ts, interval, keys, limit):
-    # Annotate and filter the queryset
-    filtered_data = TsKv.objects.filter(ts__gte=start_ts, ts__lte=end_ts, key__in=keys).annotate(
-        grp=Floor(ExpressionWrapper((F("ts") - start_ts) / interval, output_field=IntegerField()))
+def ts_kv_history(user, keys, start_ts, end_ts, interval, agg, limit):
+    data = TsKv.objects.filter(entity__tenant_id=user.tenant_id).get_history(
+        keys, start_ts, end_ts, interval, agg, limit
     )
-    length_of_data_in_one = math.floor(len(filtered_data) / limit)
-
-    # Group by 'grp' and annotate with 'start_ts' and 'avg_value'
-    grouped_data = (
-        filtered_data.values("grp").annotate(start_ts=Min("ts"), avg_value=Avg("long_v")).order_by("start_ts")[:limit]
-    )
-
-    return [
-        {"ts": entry["start_ts"], "value": entry["avg_value"], "count": length_of_data_in_one} for entry in grouped_data
-    ]
-
-
-async def history_telemetry(cmd):
-    history = cmd.get("historyCmd")
-    start_ts = history.get("startTs")
-    end_ts = history.get("endTs")
-    limit = history.get("limit")
-    interval = history.get("interval")
-    keys = await database_sync_to_async(get_ts_kv_dict_ids)(history.get("keys"))
-    return await ts_kv_history(start_ts, end_ts, interval, keys, limit)
+    return data
 
 
 def get_ts_kv_dict_ids(keys):
     return TsKvDictionary.objects.filter(key__in=keys).values("key_id", "key")
-
-
-@database_sync_to_async
-def get_ts_kv(start_ts, end_ts, keys):
-    query = TsKv.objects.filter(ts__gte=start_ts, ts__lte=end_ts, key__in=keys)
-    return list(query)
