@@ -1,18 +1,17 @@
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework.generics import get_object_or_404
-from rest_framework.views import APIView, Response
-
 from core.utils.pagination import pagination
+from drf_yasg.utils import swagger_auto_schema
 from main.models import WidgetType
 from main.serializers.widget_type import WidgetTypeFilterParams, WidgetTypeSerializer
 from main.swagger.widget_type import WidgetTypeDetailSwagger, WidgetTypeSwagger
+from rest_framework.generics import get_object_or_404
+from rest_framework.views import APIView, Response
 
 
 class WidgetTypeListView(APIView):
     @swagger_auto_schema(responses=WidgetTypeSwagger, query_serializer=WidgetTypeFilterParams())
     def get(self, request):
         params = WidgetTypeFilterParams.check(request.GET)
-        instance = WidgetType.objects.filter(tenant_id=request.user.tenant_id)
+        instance = WidgetType.objects.all()
         serializer = WidgetTypeSerializer(instance, many=True)
         data = pagination(instance, serializer, params.get("page"), params.get("size"))
         return Response(data)
