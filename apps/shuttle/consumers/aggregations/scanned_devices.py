@@ -111,6 +111,9 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
     result = []
     for device in not_temp_devices:
         if bool(list(filter(lambda x: x.get("mac_address") == device.get("macAddress"), scanned_devices))):
+            for x in scanned_devices:
+                if x.get("mac_address") == device.get("macAddress"):
+                    x["exist_in_configuration"] = True
             continue
         found_device = Device.objects.filter(name=device.get("macAddress")).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
