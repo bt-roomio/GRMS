@@ -35,7 +35,7 @@ async def history_telemetry(cmd):
 
 
 def get_ts_kv_dict_ids(keys):
-    return list(TsKvDictionary.objects.filter(key__in=keys).values_list("key_id", flat=True))
+    return TsKvDictionary.objects.filter(key__in=keys).values("key_id", "key")
 
 
 @database_sync_to_async
