@@ -62,16 +62,30 @@ class ReceiverConsumer(BaseConsumer):
 
             elif (
                 cmd.get("type") == "ENTITY_DATA"
+                and cmd.get("entityId")
                 and cmd.get("historyCmd")
                 and cmd.get("historyCmd").get("keys")
                 and cmd.get("historyCmd").get("startTs")
                 and cmd.get("historyCmd").get("endTs")
             ):
                 """
-                - Latest Telemetry
+                - History Telemetry
                 """
-                data = await history_ts_kv(cmd, user)
-                await self.send_json(data)
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+                def func():
+                    return self.periodically_task(
+                        history_ts_kv,
+                        cmd,
+                        user,
+                        temp_index=cmd.get("historyCmd").get("timeWindow", 60) * -1 + 5,
+                    )
+
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
 
             elif (
                 cmd.get("entityType") == "DEVICE"

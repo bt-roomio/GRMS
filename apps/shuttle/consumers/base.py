@@ -74,8 +74,8 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json(response({}, 0, 401, str(err)))
             return
 
-    async def periodically_task(self, func, *args):
-        index = 0
+    async def periodically_task(self, func, *args, temp_index=None):
+        index = temp_index or 0
         while True:
             try:
                 auth_cmd = self.context.get("authCmd", {})
@@ -103,7 +103,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
 
                 if index >= self.interval:
                     await self.send_json(result)
-                    index = 1
+                    index = temp_index or 1
                 await asyncio.sleep(1)
 
             except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:

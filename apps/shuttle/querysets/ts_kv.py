@@ -1,7 +1,8 @@
-from core.querysets.base_queryset import BaseQuerySet
-from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, TextField
 from django.db.models.functions import Cast, Coalesce, Floor, Round
+
+from core.querysets.base_queryset import BaseQuerySet
+from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -11,7 +12,8 @@ class TsKvQuerySet(BaseQuerySet):
     def get_history(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         keys = self.get_ts_kv_type_of_field_and_key_id(keys)
-        result = []
+        result = {item["key"]: [] for item in keys}
+        count_of_data = 0
 
         for key_item in keys:
             query = self.filter(ts__gte=start_ts, ts__lte=end_ts, key=key_item["key_id"])
@@ -30,7 +32,11 @@ class TsKvQuerySet(BaseQuerySet):
                 )
                 if agg_function is not None:
                     query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
-                result.extend(query[:limit])
+
+                query = query.annotate(ts=F("interval_time"), value=F("avail_field")).values("ts", "value")
+
+                result[key_item["key"]] = list(query[:limit])
+                count_of_data += query.count()
 
             if key_item["type"] in ["json_v", "str_v", "bool_v"]:
                 query = (
@@ -44,11 +50,15 @@ class TsKvQuerySet(BaseQuerySet):
                         ),
                     )
                     .values("key", "interval_time", "avail_field")
+                    .annotate(ts=F("interval_time"), value=F("avail_field"))
+                    .values("ts", "value")
                     .order_by("key", "interval_time")
                 )
-                result.extend(query[:limit])
 
-        return result
+                result[key_item["key"]] = list(query[:limit])
+                count_of_data += query.count()
+
+        return result, count_of_data
 
     def get_ts_kv_type_of_field_and_key_id(self, keys):
         from shuttle.consumers.aggregations.ts_kv_history import get_ts_kv_dict_ids
