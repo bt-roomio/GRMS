@@ -1,12 +1,13 @@
-from core.utils.pagination import pagination
 from django.db.models import F
 from drf_yasg.utils import swagger_auto_schema
-from main.models import Dashboard, Tenant
-from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer, DashboardTypeSerializer
-from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
+
+from core.utils.pagination import pagination
+from main.models import Dashboard, Tenant
+from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer, DashboardTypeSerializer
+from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 
 
 class DashboardListView(APIView):
@@ -20,9 +21,12 @@ class DashboardListView(APIView):
 
     @swagger_auto_schema(responses=DashboardSwagger, request_body=DashboardSerializer)
     def post(self, request):
-        serializer = DashboardSerializer(data=request.data)
+        tenant_id = request.user.tenant_id
+        data = request.data.copy()
+        data["tenant"] = tenant_id
+        serializer = DashboardSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant_id=request.user.tenant_id)
+        serializer.save()
         return Response(serializer.data, 201)
 
 

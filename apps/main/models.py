@@ -1,8 +1,9 @@
-from core.models import BaseModel, UpdateByModel
-from core.utils.unix_timestamp import UnixTimeStampField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CASCADE, DO_NOTHING, SET_NULL
+
+from core.models import BaseModel, UpdateByModel
+from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
@@ -280,7 +281,7 @@ class Dashboard(BaseModel):
     MAIN_DASHBOARD = "main_dashboard"
     PUBLIC_SPACE_DASHBOARD = "public_space_dashboard"
 
-    title = models.CharField(unique=True, max_length=255)
+    title = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     configuration = models.JSONField(blank=True, null=True)
     assigned_customers = models.CharField(max_length=255, blank=True, null=True)
@@ -296,6 +297,7 @@ class Dashboard(BaseModel):
 
     class Meta:
         db_table = "main_dashboard"
+        unique_together = (("title", "tenant"),)
 
 
 class WidgetType(BaseModel):

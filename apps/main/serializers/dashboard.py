@@ -36,6 +36,7 @@ class DashboardSerializer(serializers.ModelSerializer):
             "mobile_order",
             "image",
             "external_id",
+            "tenant",
         )
 
 
