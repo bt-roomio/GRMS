@@ -58,12 +58,13 @@ def prepare_mqtt_request(device, method, params, timeout):
     message = json.dumps(message, indent=2).encode("utf-8")
     channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
     start_time = 0
+    print("channel")
 
     while start_time < timeout:
         has_message = RPCMessage.objects.filter(id=request_id, received=True)
         if has_message:
             return has_message.first().additional_info
-        time.sleep(1)
+        time.sleep(0.3)
         start_time += 1
 
     return {"device": device.name, "data": {"success": False, "msg": "Timeout error"}}

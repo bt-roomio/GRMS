@@ -87,6 +87,12 @@ class ReceiverConsumer(BaseConsumer):
                 self.task_params[task_key] = func
                 self.tasks[task_key] = asyncio.create_task(func())
 
+            elif cmd.get("type") == "ENTITY_DATA_UNSUBSCRIBE":
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
             elif (
                 cmd.get("entityType") == "DEVICE"
                 and cmd.get("type") == "ATTRIBUTES"

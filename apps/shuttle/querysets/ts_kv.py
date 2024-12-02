@@ -28,7 +28,7 @@ class TsKvQuerySet(BaseQuerySet):
                     .values("key", "interval_time")
                     .annotate(count_per_group=Count("avail_field"))
                     .filter(count_per_group__gt=1)
-                    .order_by("key", "interval_time")
+                    .order_by("key", "-interval_time")
                 )
                 if agg_function is not None:
                     query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
@@ -52,7 +52,7 @@ class TsKvQuerySet(BaseQuerySet):
                     .values("key", "interval_time", "avail_field")
                     .annotate(ts=F("interval_time"), value=F("avail_field"))
                     .values("ts", "value")
-                    .order_by("key", "interval_time")
+                    .order_by("key", "-interval_time")
                 )
 
                 result[key_item["key"]] = list(query[:limit])
