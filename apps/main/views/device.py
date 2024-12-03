@@ -38,13 +38,13 @@ class DeviceListView(APIView):
 class DeviceDetailView(APIView):
     @swagger_auto_schema(responses=DeviceDetailSwagger)
     def get(self, request, pk):
-        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id)
+        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = DeviceSerializer(device)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=DeviceDetailSwagger, request_body=DeviceSerializer)
     def put(self, request, pk):
-        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id)
+        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = DeviceSerializer(device, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
@@ -52,7 +52,7 @@ class DeviceDetailView(APIView):
 
     @swagger_auto_schema(responses={})
     def delete(self, request, pk):
-        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id)
+        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         device.is_active = False
         device.save()
         return Response({}, 204)

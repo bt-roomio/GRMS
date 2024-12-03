@@ -1,6 +1,6 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import CASCADE, DO_NOTHING, SET_NULL
+from django.db.models import CASCADE, DO_NOTHING, SET_NULL, UniqueConstraint, Q
 
 from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
@@ -215,7 +215,9 @@ class Device(BaseModel):
 
     class Meta:
         db_table = "main_device"
-        unique_together = ("name", "tenant", "is_active")
+        constraints = [
+            UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_active_device")
+        ]
 
 
 class DeviceCredentials(BaseModel):
