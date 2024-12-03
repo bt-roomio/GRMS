@@ -39,8 +39,11 @@ class DashboardDetailView(APIView):
 
     @swagger_auto_schema(responses=DashboardDetailSwagger, request_body=DashboardSerializer)
     def put(self, request, pk):
+        tenant_id = request.user.tenant_id
+        data = request.data.copy()
+        data["tenant"] = tenant_id
         instance = get_object_or_404(Dashboard, id=pk)
-        serializer = DashboardSerializer(instance, data=request.data)
+        serializer = DashboardSerializer(instance, data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

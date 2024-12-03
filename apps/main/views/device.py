@@ -13,7 +13,7 @@ class DeviceListView(APIView):
     @swagger_auto_schema(responses=DeviceSwagger, query_serializer=DeviceFilterParams())
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
-        queryset = Device.objects.is_active().list(
+        queryset = Device.objects.list(
             tenant=request.user.tenant,
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),
