@@ -1,18 +1,19 @@
-from core.utils.pagination import pagination
 from drf_yasg.utils import swagger_auto_schema
-from main.models import Device
-from main.serializers.device import DeviceFilterParams, DeviceSerializer
-from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from core.utils.pagination import pagination
+from main.models import Device
+from main.serializers.device import DeviceFilterParams, DeviceSerializer
+from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 
 
 class DeviceListView(APIView):
     @swagger_auto_schema(responses=DeviceSwagger, query_serializer=DeviceFilterParams())
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
-        queryset = Device.objects.list(
+        queryset = Device.objects.is_active().list(
             tenant=request.user.tenant,
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),

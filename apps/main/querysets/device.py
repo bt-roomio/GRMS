@@ -14,4 +14,7 @@ class DeviceQuerySet(BaseQuerySet):
         return query
 
     def gateway_or_none(self, pk):
-        return self.filter(pk=pk, additional_info__gateway=True).first()
+        return self.filter(pk=pk, additional_info__gateway=True, is_active=True).first()
+
+    def is_active(self):
+        return self.filter(is_active=True)

@@ -88,7 +88,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
                 "addressMapId": i.get("addressMapId") for i in not_temp_devices if mac_address == i.get("macAddress")
             }
             address_map = address_maps[address_map_id.get("addressMapId")] if address_map_id else None
-            found_device = Device.objects.filter(name=mac_address, is_active=True).first()
+            found_device = Device.objects.is_active().filter(name=mac_address).first()
             controller = Controller.objects.filter(mac_address=mac_address).last()
             data = {
                 "mac_address": mac_address,
@@ -117,7 +117,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
                 if x.get("mac_address") == device.get("macAddress"):
                     x["exist_in_configuration"] = True
             continue
-        found_device = Device.objects.filter(name=device.get("macAddress"), is_active=True).first()
+        found_device = Device.objects.is_active().filter(name=device.get("macAddress")).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
         controller = Controller.objects.filter(mac_address=device.get("macAddress")).last()
         data = {

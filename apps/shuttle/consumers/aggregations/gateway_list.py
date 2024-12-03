@@ -11,7 +11,8 @@ def gateway_list(entity_fields, attributes, user):
     data = []
     attr = AttributeKv.objects.filter(attribute_key__in=attributes, attribute_type=AttributeKv.SHARED_SCOPE)
     devices = (
-        Device.objects.filter(tenant=user.tenant)
+        Device.objects.is_active()
+        .filter(tenant=user.tenant)
         .prefetch_related(Prefetch(queryset=attr, lookup="attribute_kvs"))
         .filter(additional_info__gateway=True)
     )

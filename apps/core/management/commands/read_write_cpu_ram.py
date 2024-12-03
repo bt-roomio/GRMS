@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
 def cpu_ram_save_db():
     keys = {"cpuUsage": get_cpu_usage(), "memoryUsage": get_ram_usage(), "diskUsage": get_disk_usage()}
-    device, _ = Device.objects.get_or_create(name="CPU RAM Usage")
+    device, _ = Device.objects.get_or_create(name="CPU RAM Usage", is_active=True)
 
     for key, value in keys.items():
         ts_kv_dict, _ = TsKvDictionary.objects.get_or_create(key=key)

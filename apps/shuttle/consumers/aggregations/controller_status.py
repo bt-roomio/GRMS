@@ -23,7 +23,7 @@ def get_status_rooms(user):
 
 @database_sync_to_async
 def get_status_devices(user):
-    queryset = Device.objects.filter(tenant=user.tenant, room__isnull=False)
+    queryset = Device.objects.is_active().filter(tenant=user.tenant, room__isnull=False)
     queryset = queryset.values("status")
     queryset = queryset.annotate(count=Count("status"))
     return list(queryset)
