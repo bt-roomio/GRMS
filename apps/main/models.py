@@ -215,7 +215,7 @@ class Device(BaseModel):
 
     class Meta:
         db_table = "main_device"
-        unique_together = ("name", "tenant")
+        unique_together = ("name", "tenant", "is_active")
 
 
 class DeviceCredentials(BaseModel):

@@ -1,4 +1,5 @@
 from channels.db import database_sync_to_async
+
 from main.models import Device
 from shuttle.models import AttributeKv, Controller
 from shuttle.utils.response import response
@@ -27,7 +28,7 @@ async def main_scanned_devices(cmd, connectors, user):
     temp_devices = [i.get("macAddress") for i in devices if i.get("tempDevice")]
     not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
 
-    scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps)
+    scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps, user)
     gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps, scanned_devices)
     upload_status, scan_status = await get_upload_scan_statuses(temp_devices)
 
@@ -68,11 +69,12 @@ def get_upload_scan_statuses(temp_devices):
 
 
 @database_sync_to_async
-def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
+def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
     result = []
     attrs = (
         AttributeKv.objects.select_related("entity")
         .filter(
+            entity__tenant=user.tenant,
             entity__name__in=temp_devices,
             attribute_type=AttributeKv.CLIENT_SCOPE,
             attribute_key="scanned_devices",
@@ -86,7 +88,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps):
                 "addressMapId": i.get("addressMapId") for i in not_temp_devices if mac_address == i.get("macAddress")
             }
             address_map = address_maps[address_map_id.get("addressMapId")] if address_map_id else None
-            found_device = Device.objects.filter(name=mac_address).first()
+            found_device = Device.objects.filter(name=mac_address, is_active=True).first()
             controller = Controller.objects.filter(mac_address=mac_address).last()
             data = {
                 "mac_address": mac_address,
@@ -115,7 +117,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
                 if x.get("mac_address") == device.get("macAddress"):
                     x["exist_in_configuration"] = True
             continue
-        found_device = Device.objects.filter(name=device.get("macAddress")).first()
+        found_device = Device.objects.filter(name=device.get("macAddress"), is_active=True).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
         controller = Controller.objects.filter(mac_address=device.get("macAddress")).last()
         data = {

@@ -60,10 +60,10 @@ def process_mq(body):
             rpc_msg.additional_info = data.get("data")
             rpc_msg.save()
     elif topic == "v1/gateway/connect":
-        device = Device.objects.filter(name=data.get("device")).first()
+        device = Device.objects.filter(name=data.get("device"), is_active=True).first()
         update_activity_device(device)
     elif topic == "v1/gateway/disconnect":
-        device = Device.objects.filter(name=data.get("device")).first()
+        device = Device.objects.filter(name=data.get("device"), is_active=True).first()
         update_activity_device(device, connected=False)
 
     elif topic.startswith("v1/devices/me/attributes/request") or topic.startswith("v1/gateway/attributes/request"):
@@ -167,7 +167,7 @@ def save_attribute_kv(device, data):
 
 
 def update_activity_gateway(device):
-    is_gateway = Device.objects.filter(id=device.id, additional_info__gateway=True).exists()
+    is_gateway = Device.objects.filter(id=device.id, tenant=device.tenant).exists()
     if is_gateway:
         update_activity_device(device)
 
