@@ -20,7 +20,12 @@ def get_attributes(cmd, device):
 
 
 async def main_scanned_devices(cmd, connectors, user):
+    result = response(
+        {"devices": [], "upload_status": False, "scan_status": False, "query": cmd.get("query")}, cmd.get("cmdId")
+    )
     device = await get_device(cmd, user)
+    if not device:
+        return result
     attrs = await get_attributes(cmd, device)
     configuration_json = attrs and attrs.json_v and attrs.json_v.get("configurationJson") or {}
     devices = configuration_json.get("devices") or {}
@@ -29,7 +34,7 @@ async def main_scanned_devices(cmd, connectors, user):
     not_temp_devices = list(filter(lambda x: not x.get("tempDevice"), devices))
 
     scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps, user)
-    gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps, scanned_devices)
+    gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps, scanned_devices, user)
     upload_status, scan_status = await get_upload_scan_statuses(temp_devices)
 
     if not connectors:
@@ -43,7 +48,6 @@ async def main_scanned_devices(cmd, connectors, user):
     count = len(connectors)
     page_link["count"] = count
 
-    result = response({}, cmd.get("cmdId"))
     result["data"]["devices"] = connectors[offset:limit]
     result["data"]["upload_status"] = upload_status
     result["data"]["scan_status"] = scan_status
@@ -88,7 +92,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
                 "addressMapId": i.get("addressMapId") for i in not_temp_devices if mac_address == i.get("macAddress")
             }
             address_map = address_maps[address_map_id.get("addressMapId")] if address_map_id else None
-            found_device = Device.objects.is_active().filter(name=mac_address).first()
+            found_device = Device.objects.is_active().filter(name=mac_address, tenant=user.tenant).first()
             controller = Controller.objects.filter(mac_address=mac_address).last()
             data = {
                 "mac_address": mac_address,
@@ -109,7 +113,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
 
 
 @database_sync_to_async
-def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
+def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices, user):
     result = []
     for device in not_temp_devices:
         if bool(list(filter(lambda x: x.get("mac_address") == device.get("macAddress"), scanned_devices))):
@@ -117,7 +121,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices):
                 if x.get("mac_address") == device.get("macAddress"):
                     x["exist_in_configuration"] = True
             continue
-        found_device = Device.objects.is_active().filter(name=device.get("macAddress")).first()
+        found_device = Device.objects.is_active().filter(name=device.get("macAddress"), tenant=user.tenant).first()
         address_map = address_maps.get(device.get("addressMapId"), None)
         controller = Controller.objects.filter(mac_address=device.get("macAddress")).last()
         data = {
