@@ -1,20 +1,17 @@
 import datetime
 
-from core.querysets.base_queryset import BaseQuerySet
 from django.db.models import Count, Func, Q
+
+from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import TsKvDictionary, TsKvLatest
 
 
 class RoomQuerySet(BaseQuerySet):
     def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None):
         query = self.filter(active=True, tenant=tenant)
-        query = query.filter(state__contains=[state]) if state and state not in [3, 4] is not None else query
-        if state in [3, 4]:
-            query = (
-                query.filter(id__in=get_dnd_mur_rooms(tenant, state)[state])
-                if get_dnd_mur_rooms(tenant, state).get(state)
-                else query
-            )
+        query = query.filter(state__contains=[state]) if state and state not in [3, 4] else query
+        query = query.filter(id__in=get_dnd_rooms(tenant)) if state == 3 else query
+        query = query.filter(id__in=get_mur_rooms(tenant)) if state == 4 else query
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__startswith": search_value}))
@@ -83,15 +80,21 @@ class RoomQuerySet(BaseQuerySet):
         return result
 
 
-def get_dnd_mur_rooms(tenant, state=3):
-    states = {3: "DND Relay", 4: "MUR Relay"}
-    ret = {state: {}}
-
-    key_dict = TsKvDictionary.objects.filter(key=states[state]).first()
+def get_dnd_rooms(tenant):
+    key_dict = TsKvDictionary.objects.filter(key="DND Relay").first()
     if key_dict is not None:
-        ret[state] = TsKvLatest.objects.filter(
+        return TsKvLatest.objects.filter(
+            long_v=1,
             entity__tenant=tenant,
             key=key_dict.key_id,
         ).values_list("entity__room_id", flat=True)
 
-    return ret
+
+def get_mur_rooms(tenant):
+    key_dict = TsKvDictionary.objects.filter(key="MUR Relay").first()
+    if key_dict is not None:
+        return TsKvLatest.objects.filter(
+            long_v=1,
+            entity__tenant=tenant,
+            key=key_dict.key_id,
+        ).values_list("entity__room_id", flat=True)
