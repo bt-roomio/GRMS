@@ -1,6 +1,6 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import CASCADE, DO_NOTHING, SET_NULL, UniqueConstraint, Q
+from django.db.models import CASCADE, SET_NULL, UniqueConstraint, Q
 
 from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
@@ -337,7 +337,7 @@ class Guest(BaseModel):
     check_out = UnixTimeStampField(null=True, blank=True)
     auto_check_out = models.BooleanField(default=False)
     reservation_number = models.CharField(max_length=255, null=True, blank=True)
-    room = models.ForeignKey("main.Room", DO_NOTHING, "guests", null=True, blank=True)
+    room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     additional_info = models.JSONField(blank=True, null=True)
 
