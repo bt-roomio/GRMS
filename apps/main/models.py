@@ -171,7 +171,7 @@ class RoomHistory(BaseModel, UpdateByModel):
 
 
 class RoomType(BaseModel):
-    title = models.CharField(max_length=255, unique=True)
+    title = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
     check_in_out_address = models.IntegerField(null=True, blank=True)
     check_in_value = models.IntegerField(null=True, blank=True)
@@ -192,6 +192,7 @@ class RoomType(BaseModel):
 
     class Meta:
         db_table = "main_room_type"
+        unique_together = (("title", "tenant"),)
 
 
 class Device(BaseModel):

@@ -13,7 +13,7 @@ class RoomTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RoomType
-        fields = ("id", "title", "check_in_out_address", "check_in_value", "check_out_value", "dashboard")
+        fields = ("id", "title", "check_in_out_address", "check_in_value", "check_out_value", "dashboard", "tenant")
 
 
 class RoomTypeFilterParams(ValidatorSerializer):

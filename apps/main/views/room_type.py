@@ -19,9 +19,11 @@ class RoomTypeListView(APIView):
 
     @swagger_auto_schema(responses=RoomTypeSwagger, request_body=RoomTypeSerializer)
     def post(self, request):
-        serializer = RoomTypeSerializer(data=request.data)
+        data = request.data.copy()
+        data["tenant"] = request.user.tenant_id
+        serializer = RoomTypeSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant=request.user.tenant)
+        serializer.save()
         return Response(serializer.data, 201)
 
 
@@ -34,8 +36,10 @@ class RoomTypeDetailView(APIView):
 
     @swagger_auto_schema(responses=RoomTypeDetailSwagger, request_body=RoomTypeSerializer)
     def put(self, request, pk):
+        data = request.data.copy()
+        data["tenant"] = request.user.tenant_id
         instance = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
-        serializer = RoomTypeSerializer(instance, data=request.data)
+        serializer = RoomTypeSerializer(instance, data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
