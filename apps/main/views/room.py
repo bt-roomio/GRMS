@@ -1,13 +1,8 @@
-import json
-
-from channels.db import database_sync_to_async
-from django.views import View
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.tests.uuid_encode import UUIDEncoder
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
 from main.models import Room
@@ -67,54 +62,3 @@ class RoomDetailView(APIView):
         instance = get_object_or_404(Room, id=pk)
         instance.delete()
         return Response({}, 204)
-
-
-class RoomEventStreamViewSet(View):
-    async def get(self, request):
-        import asyncio
-        import json
-
-        from django.conf import settings
-        from django.http import StreamingHttpResponse
-        from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
-        from jwt import decode as jwt_decode
-        from users.utils.get_user import get_user
-
-        token = request.GET.get("AUTH")
-        message = {"data": [], "detail": ""}
-        status = 200
-        try:
-            token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            user = await get_user(token)
-            request.user = user
-        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
-            message["detail"] = str(err)
-            status = 401
-            pass
-
-        async def event_stream():
-            while True:
-                if not message["detail"]:
-                    rooms = await get_rooms(request)
-                    message["data"] = rooms
-                yield "data: %s\n\n" % json.dumps(message)
-
-                await asyncio.sleep(3)
-
-        return StreamingHttpResponse(event_stream(), content_type="text/event-stream", status=status)
-
-
-@database_sync_to_async
-def get_rooms(request):
-    params = RoomFilterParams.check(request.GET)
-    queryset = Room.objects.list(
-        tenant=request.user.tenant,
-        state=params.get("state"),
-        status=params.get("status"),
-        search_field=params.get("search_field"),
-        search_value=params.get("search_value"),
-        sort_by=params.get("sort_by"),
-    )
-    serializer = RoomSerializer(queryset, many=True)
-    data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
-    return json.dumps(data, cls=UUIDEncoder)
