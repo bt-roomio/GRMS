@@ -15,6 +15,7 @@ class RoomSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
+        # TODO: status through devices.status
         if self.context.get("detail"):
             data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
         return data

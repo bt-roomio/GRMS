@@ -11,4 +11,4 @@ class DeviceFromConfListView(APIView):
         serializer = DeviceFromConfSerializer(data=request.data, context={"tenant": request.user.tenant})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response()
+        return Response(serializer.data)

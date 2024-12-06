@@ -1,9 +1,8 @@
 from rest_framework import serializers
 
-from core.serializers.camelcase import CamelCaseMixin
-from core.utils.serializers import ValidatorSerializer
 from main.models import DeviceProfile, Device
 from shuttle.models import TsKvDictionary, TsKvLatest, AttributeKv
+from shuttle.utils.camel_to_snake import to_snake_case_data
 
 
 class DeviceMacAddressSerializer(serializers.Serializer):
@@ -11,52 +10,57 @@ class DeviceMacAddressSerializer(serializers.Serializer):
     address_map_id = serializers.IntegerField()
 
 
-class TimeseriesSerializer(serializers.Serializer):
+class TagSerializer(serializers.Serializer):
     tag = serializers.CharField()
-    address = serializers.IntegerField()
 
 
-class AttributesSerializer(serializers.Serializer):
-    tag = serializers.CharField()
-    address = serializers.IntegerField()
+class AddressMapsSerializer(serializers.Serializer):
+    timeseries = TagSerializer(many=True, required=False)
+    attributes = TagSerializer(many=True, required=False)
+    attribute_updates = TagSerializer(many=True, required=False)
+    address_map_id = serializers.IntegerField()
 
 
-class DeviceFromConfSerializer(CamelCaseMixin, serializers.Serializer):
+class DeviceFromConfSerializer(serializers.Serializer):
     devices = DeviceMacAddressSerializer(many=True)
-    timeseries = TimeseriesSerializer(many=True, required=False)
-    attribute_updates = AttributesSerializer(many=True, required=False)
-    attributes = AttributesSerializer(many=True, required=False)
+    address_maps = AddressMapsSerializer(many=True)
+
+    def to_internal_value(self, data):
+        devices = [i for i in data.get("devices", []) if "macAddress" and "addressMapId" in i]
+        data["devices"] = devices
+        if not devices:
+            raise serializers.ValidationError({"detail": "No devices found"})
+
+        return super().to_internal_value(to_snake_case_data(data))
 
     def create(self, validated_data):
-        print(validated_data)
+        result = {
+            "devices": [],
+            "address_maps": [],
+        }
         tenant = self.context.get("tenant")
         devices = validated_data.pop("devices")
-        timeseries = validated_data.pop("timeseries")
-        attribute_updates = validated_data.pop("attribute_updates")
-        attributes = validated_data.pop("attributes")
+        address_maps = validated_data.pop("address_maps")
+        result["devices"] = devices
+        result["address_maps"] = address_maps
 
         device_profile = DeviceProfile.objects.filter(tenant=tenant, name="default").first()
         if not device_profile:
             raise serializers.ValidationError({"detail": "First create device profile!"})
 
-        result = {"devices": []}
         for device in devices:
             device_obj, _ = Device.objects.get_or_create(
                 name=device.get("mac_address"),
                 tenant=tenant,
                 defaults={"device_profile": device_profile, "type": "default"},
             )
-            if timeseries:
-                tags = [i for i in timeseries if device.get("address_map_id") == i.get("address")]
-                for tag in tags:
-                    dict_ts_kv_key_id = TsKvDictionary.objects.get_key_id(key=tag.get("tag"))
+            for address_map in address_maps:
+                for tag in address_map.get("timeseries"):
+                    dict_ts_kv_key_id, _ = TsKvDictionary.objects.get_or_create(key=tag.get("tag"))
                     TsKvLatest.objects.get_or_create(
-                        entity_id=device_obj.id, key=dict_ts_kv_key_id, defaults={"long_v": 0}
+                        entity_id=device_obj.id, key=dict_ts_kv_key_id.key_id, defaults={"long_v": 0}
                     )
-
-            if attribute_updates:
-                tags = [i for i in attribute_updates if device.get("address_map_id") == i.get("address")]
-                for tag in tags:
+                for tag in address_map.get("attribute_updates"):
                     AttributeKv.objects.get_or_create(
                         entity_type="DEVICE",
                         attribute_type="SHARED_SCOPE",
@@ -64,9 +68,7 @@ class DeviceFromConfSerializer(CamelCaseMixin, serializers.Serializer):
                         entity_id=device_obj.id,
                         defaults={"long_v": 0},
                     )
-            if attributes:
-                tags = [i for i in attributes if device.get("address_map_id") == i.get("address")]
-                for tag in tags:
+                for tag in address_map.get("attributes"):
                     AttributeKv.objects.get_or_create(
                         entity_type="DEVICE",
                         attribute_type="CLIENT_SCOPE",
@@ -75,7 +77,3 @@ class DeviceFromConfSerializer(CamelCaseMixin, serializers.Serializer):
                         defaults={"long_v": 0},
                     )
         return result
-
-
-class DeviceFromConfFilterParams(ValidatorSerializer):
-    devices = serializers.ListField(child=serializers.CharField())
