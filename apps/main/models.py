@@ -148,9 +148,6 @@ class Room(BaseModel, UpdateByModel):
         ]
 
 
-# Initialise button duplicate tenant
-
-
 class RoomHistory(BaseModel, UpdateByModel):
     number = models.IntegerField()
     floor = models.CharField(max_length=255)

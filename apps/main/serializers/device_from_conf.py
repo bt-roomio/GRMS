@@ -1,7 +1,6 @@
+from main.models import Device, DeviceProfile
 from rest_framework import serializers
-
-from main.models import DeviceProfile, Device
-from shuttle.models import TsKvDictionary, TsKvLatest, AttributeKv
+from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.camel_to_snake import to_snake_case_data
 
 
@@ -52,6 +51,7 @@ class DeviceFromConfSerializer(serializers.Serializer):
             device_obj, _ = Device.objects.get_or_create(
                 name=device.get("mac_address"),
                 tenant=tenant,
+                is_active=True,
                 defaults={"device_profile": device_profile, "type": "default"},
             )
             for address_map in address_maps:
