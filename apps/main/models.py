@@ -1,9 +1,8 @@
-from django.contrib.postgres.fields import ArrayField
-from django.db import models
-from django.db.models import CASCADE, SET_NULL, UniqueConstraint, Q
-
 from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
+from django.contrib.postgres.fields import ArrayField
+from django.db import models
+from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
 from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
@@ -142,7 +141,14 @@ class Room(BaseModel, UpdateByModel):
 
     class Meta:
         db_table = "main_room"
-        unique_together = ("number", "floor", "block", "tenant")
+        constraints = [
+            UniqueConstraint(
+                fields=["number", "floor", "block", "tenant"], condition=Q(active=True), name="unique_active_room"
+            )
+        ]
+
+
+# Initialise button duplicate tenant
 
 
 class RoomHistory(BaseModel, UpdateByModel):

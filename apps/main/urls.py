@@ -1,14 +1,13 @@
 from django.urls import path
-
 from main.views.alarm_settings import AlarmSettingsDetailView
 from main.views.dashboard import DashboardDetailView, DashboardListView, DashboardTypeView
-from main.views.device import DeviceListView, DeviceDetailView
+from main.views.device import DeviceDetailView, DeviceListView
 from main.views.device_credentials import DeviceCredentialsDetailView
 from main.views.device_from_conf import DeviceFromConfListView
-from main.views.device_profile import DeviceProfileListView, DeviceProfileDetailView
+from main.views.device_profile import DeviceProfileDetailView, DeviceProfileListView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
-from main.views.guest import GuestListView, GuestDetailView
+from main.views.guest import GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_status import RoomHistoryStatusView

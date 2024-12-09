@@ -7,7 +7,19 @@ force-exclude = '''(migrations)'''
 [tool.ruff]
 line-length = 120
 extend-exclude = ["migrations"]
+
+
+[tool.ruff.lint]
 extend-select = ["I"]
+
+
+[tool.isort]
+profile = "black"
+line_length = 120
+known_first_party = "config"
+known_third_party = "django,rest_framework"
+sections = "FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
+
 
 
 [tool.pyright]
