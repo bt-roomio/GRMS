@@ -1,10 +1,9 @@
+from core.utils.pagination import pagination
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from core.utils.pagination import pagination
 from shuttle.models import Relation
-from shuttle.serializers.relation import RelationSerializer, RelationFilterParams
+from shuttle.serializers.relation import RelationFilterParams, RelationSerializer
 
 
 class RelationListView(APIView):

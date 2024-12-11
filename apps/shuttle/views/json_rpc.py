@@ -2,14 +2,13 @@ import json
 import os
 import time
 
+from core.utils.helpers import b_encode, compress_data, read_binary
 from django.conf import settings
+from main.models import Device
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from core.utils.helpers import read_binary, compress_data, b_encode
-from main.models import Device
-from shuttle.models import Relation, RPCMessage, ControllerFile
+from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
 from shuttle.utils.send_to_rabbitmq import connect_to_rabbitmq
 
@@ -32,12 +31,12 @@ class JsonRPCView(APIView):
 
 def prepare_mqtt_request(device, method, params, timeout):
     relation = Relation.objects.filter(to_id_id=device.id).first()
-    device_id = relation and relation.from_id_id
-    gateway_or_none = Device.objects.gateway_or_none(device_id)
+    device_id = relation and relation.from_id.id
+    gateway_or_none = Device.objects.gateway_or_none(device.id)
     rpc_message = RPCMessage.objects.create(additional_info={})
     request_id = rpc_message.id
     message = {
-        "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device.id),
+        "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device_id),
         "topic": "v1/gateway/rpc",
         "data": {"device": str(device.name), "data": {"id": request_id, "method": method, "params": params}},
     }
@@ -58,7 +57,6 @@ def prepare_mqtt_request(device, method, params, timeout):
     message = json.dumps(message, indent=2).encode("utf-8")
     channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
     start_time = 0
-    print("channel")
 
     while start_time < timeout:
         has_message = RPCMessage.objects.filter(id=request_id, received=True)

@@ -3,9 +3,8 @@ import time
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from django.db import connection
-
 from core.utils.random_letter import get_random_letter
+from django.db import connection
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field

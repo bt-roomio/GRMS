@@ -1,9 +1,8 @@
 from django.urls import path
-
 from shuttle.views.attributes import AttributeListView, AttributesChangeRPCView
 from shuttle.views.controller_file import ControllerFileListView
 from shuttle.views.json_rpc import JsonRPCView
-from shuttle.views.relation import RelationListView, RelationDetailView
+from shuttle.views.relation import RelationDetailView, RelationListView
 from shuttle.views.remove_attribute import RemoveAttribute
 from shuttle.views.ts_kv import TsKvListView
 

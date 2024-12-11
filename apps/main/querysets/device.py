@@ -1,6 +1,5 @@
-from django.db.models import Q
-
 from core.querysets.base_queryset import BaseQuerySet
+from django.db.models import Q
 
 
 class DeviceQuerySet(BaseQuerySet):
