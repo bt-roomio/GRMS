@@ -1,6 +1,5 @@
 from channels.db import database_sync_to_async
 from django.db.models import Prefetch
-
 from main.models import Device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field

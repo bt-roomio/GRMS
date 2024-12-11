@@ -1,8 +1,7 @@
-from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, TextField
-from django.db.models.functions import Cast, Coalesce, Floor, Round
-
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, TextField
+from django.db.models.functions import Cast, Coalesce, Floor, Round
 
 
 class TsKvQuerySet(BaseQuerySet):

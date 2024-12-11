@@ -1,10 +1,9 @@
-from django.utils.translation import gettext_lazy as _
-from rest_framework import serializers
-
 from core.utils.serializers import ValidatorSerializer
+from django.utils.translation import gettext_lazy as _
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
 from main.serializers.room_type import RoomTypeSerializer
+from rest_framework import serializers
 
 
 class RoomSerializer(serializers.ModelSerializer):

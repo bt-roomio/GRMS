@@ -1,5 +1,4 @@
 from channels.consumer import database_sync_to_async
-
 from shuttle.models import TsKv, TsKvDictionary
 from shuttle.utils.camel_to_snake import camel_to_snake
 from shuttle.utils.response import response

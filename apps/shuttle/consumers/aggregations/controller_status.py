@@ -1,6 +1,5 @@
 from channels.db import database_sync_to_async
 from django.db.models import Count
-
 from main.models import Device, Room
 from shuttle.utils.response import response
 
