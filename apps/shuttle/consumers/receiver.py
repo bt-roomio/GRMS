@@ -1,32 +1,29 @@
 import asyncio
 
+from shuttle.consumers.aggregations.attribute_kv import attribute_kv
+from shuttle.consumers.aggregations.controller_status import controller_status
+from shuttle.consumers.aggregations.gateway_list import gateway_list
+from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
+from shuttle.consumers.aggregations.scanned_devices import main_scanned_devices
+from shuttle.consumers.aggregations.ts_kv_history import history_ts_kv
 from shuttle.consumers.base import BaseConsumer
 from shuttle.models import AttributeKv
+from shuttle.utils.camel_to_snake import camel_to_snake
 from shuttle.utils.response import response
-
-TASK_HANDLERS = {
-    "TIMESERIES": "handle_latest_telemetry",
-    "TIMESERIES_UNSUBSCRIBE": "unsubscribe_task",
-    "ENTITY_DATA": "handle_history_telemetry",
-    "ENTITY_DATA_UNSUBSCRIBE": "unsubscribe_task",
-    "ATTRIBUTES": "handle_attributes",
-    "ATTRIBUTES_UNSUBSCRIBE": "unsubscribe_task",
-    "SCANNED_DEVICES": "handle_scanned_devices",
-    "SCANNED_DEVICES_UNSUBSCRIBE": "unsubscribe_task",
-    "CONTROLLER_STATUS": "handle_controller_status",
-    "CONTROLLER_STATUS_UNSUBSCRIBE": "unsubscribe_task",
-    "ROOM_LIST": "handle_room_list",
-    "ROOM_LIST_UNSUBSCRIBE": "unsubscribe_task",
-}
 
 
 class ReceiverConsumer(BaseConsumer):
+    async def get_object_or_empty(self, queryset, *filter_args, **filter_kwargs):
+        from channels.db import database_sync_to_async
+
+        return await database_sync_to_async(queryset.filter)(*filter_args, **filter_kwargs)
+
     async def receive_json(self, content, **kwargs):
         cmds = content.get("cmds")
         user = self.scope["user"]
 
         if not user.tenant_id:
-            await self.send_json(response({}, 0, 1, "User does not have a tenant!"))
+            await self.send_json(response({}, 0, 1, "There is not tenant in user!"))
             return
 
         if not isinstance(cmds, list):
@@ -34,67 +31,170 @@ class ReceiverConsumer(BaseConsumer):
             return
 
         for cmd in cmds:
-            handler_name = TASK_HANDLERS.get(cmd.get("type"))
+            cmd_id = cmd.get("cmdId")
+            task_key = f"cmdId-{cmd_id}"
 
-            if handler_name and hasattr(self, handler_name):
-                await getattr(self, handler_name)(cmd, user)
-            else:
-                await self.send_json(response({}, cmd.get("cmdId"), 400, "Unsupported command type"))
+            """
+            - Latest Telemetry
+            """
+            if (
+                cmd.get("type") == "TIMESERIES"
+                and cmd.get("scope") == "LATEST_TELEMETRY"
+                and cmd.get("entityType") == "DEVICE"
+                and cmd.get("entityId")
+            ):
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
 
-    async def handle_latest_telemetry(self, cmd, user):
-        from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
+                def func():
+                    return self.periodically_task(latest_telemetry, cmd, user)
 
-        await self.manage_task(latest_telemetry, cmd, user)
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
 
-    async def handle_history_telemetry(self, cmd, user):
-        from shuttle.consumers.aggregations.ts_kv_history import history_ts_kv
+            elif cmd.get("type") == "TIMESERIES_UNSUBSCRIBE" and cmd.get("scope") == "LATEST_TELEMETRY":
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
 
-        await self.manage_task(
-            history_ts_kv, cmd, user, temp_index=cmd.get("historyCmd", {}).get("timeWindow", 60) * -1 + 5
-        )
+            elif (
+                cmd.get("type") == "ENTITY_DATA"
+                and cmd.get("entityId")
+                and cmd.get("historyCmd")
+                and cmd.get("historyCmd").get("keys")
+                and cmd.get("historyCmd").get("startTs")
+                and cmd.get("historyCmd").get("endTs")
+            ):
+                """
+                - History Telemetry
+                """
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
 
-    async def handle_attributes(self, cmd, user):
-        from shuttle.consumers.aggregations.attribute_kv import attribute_kv
+                def func():
+                    return self.periodically_task(
+                        history_ts_kv,
+                        cmd,
+                        user,
+                        temp_index=cmd.get("historyCmd").get("timeWindow", 60) * -1 + 5,
+                    )
 
-        scope = cmd.get("scope")
-        if scope not in [item[0] for item in AttributeKv.ENTITY_TYPE]:
-            await self.send_json(response({}, 0, 1, "Incorrect scope!"))
-            return
-        await self.manage_task(attribute_kv, cmd, user)
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
 
-    async def handle_scanned_devices(self, cmd, user):
-        from shuttle.consumers.aggregations.scanned_devices import main_scanned_devices
+            elif cmd.get("type") == "ENTITY_DATA_UNSUBSCRIBE":
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
 
-        await self.manage_task(main_scanned_devices, cmd, self.connectors, user)
+            elif (
+                cmd.get("entityType") == "DEVICE"
+                and cmd.get("type") == "ATTRIBUTES"
+                and cmd.get("entityId")
+                and cmd.get("scope")
+            ):
+                """
+                - Attributes
+                """
 
-    async def handle_controller_status(self, cmd, user):
-        from shuttle.consumers.aggregations.controller_status import controller_status
+                if cmd.get("scope") not in [item[0] for item in AttributeKv.ENTITY_TYPE]:
+                    await self.send_json(response({}, 0, 1, "Incorrect scope!"))
+                    return
 
-        await self.manage_task(controller_status, cmd, user)
+                #  If cmdId same remove from tasks and re-write cmd
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
 
-    async def handle_room_list(self, cmd, user):
-        from shuttle.consumers.aggregations.room_list import room_list
+                def func():
+                    return self.periodically_task(attribute_kv, cmd, user)
 
-        await self.manage_task(room_list, cmd, user)
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
 
-    async def unsubscribe_task(self, cmd, user):
-        task_key = f"cmdId-{cmd.get('cmdId')}"
-        if self.tasks.get(task_key):
-            self.tasks[task_key].cancel()
-            del self.tasks[task_key]
-            del self.task_params[task_key]
+            elif cmd.get("type") == "ATTRIBUTES_UNSUBSCRIBE" and cmd.get("entityId") and cmd.get("cmdId"):
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+            elif (
+                cmd.get("type") == "ENTITY_DATA"
+                and cmd.get("latestCmd")
+                and cmd.get("query")
+                and cmd.get("scope") == "gateway"
+            ):
+                """
+                - Entity Data
+                """
+                # Gateway List
 
-    async def manage_task(self, func, cmd, *args, temp_index=None):
-        task_key = f"cmdId-{cmd.get('cmdId')}"
-        if self.tasks.get(task_key):
-            await self.unsubscribe_task(cmd, None)
+                result = response({}, cmd.get("cmdId"))
 
-        if not func:
-            await self.send_json(response({}, cmd.get("cmdId"), 400, f"Unknown function: {func}"))
-            return
+                entity_fields = cmd.get("query").get("entityFields")
+                entity_fields = [camel_to_snake(i.get("key")) for i in entity_fields]
 
-        def task_func():
-            return self.periodically_task(func, cmd, *args, temp_index=temp_index)
+                attributes = [i.get("key") for i in cmd.get("latestCmd").get("keys") if i.get("type") == "ATTRIBUTE"]
 
-        self.task_params[task_key] = task_func
-        self.tasks[task_key] = asyncio.create_task(task_func())
+                result["data"] = await gateway_list(entity_fields, attributes, user)
+                await self.send_json(result)
+
+            elif (
+                cmd.get("type") == "SCANNED_DEVICES"
+                and cmd.get("entityType") == "DEVICE"
+                and cmd.get("entityId")
+                and cmd.get("query")
+                and cmd.get("connectorName")
+            ):
+                """
+                Connector list
+                """
+                # If cmdId same remove from tasks and re-write cmd
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+                def func():
+                    return self.periodically_task(main_scanned_devices, cmd, self.connectors, user)
+
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
+
+            elif (
+                cmd.get("type") == "SCANNED_DEVICES_UNSUBSCRIBE"
+                and cmd.get("entityType") == "DEVICE"
+                and cmd.get("entityId")
+                and cmd.get("connectorName")
+            ):
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+            elif cmd.get("type") == "CONTROLLER_STATUS" and cmd.get("entityType") == "DEVICE":
+                """
+                Statuses widgets
+                """
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+                def func():
+                    return self.periodically_task(controller_status, cmd, user)
+
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
+
+            elif cmd.get("type") == "CONTROLLER_STATUS_UNSUBSCRIBE" and cmd.get("entityType") == "DEVICE":
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
