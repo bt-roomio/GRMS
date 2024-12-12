@@ -198,13 +198,13 @@ def get_or_create_device(name, from_id):
             credentials_type="ACCESS_TOKEN", credentials_id=get_random_letter(), device=device_to_id
         )
 
-    Relation.objects.get_or_create(
-        from_id=from_id,
+    Relation.objects.update_or_create(
         to_id_id=device_to_id.id,
         from_type="DEVICE",
         to_type="DEVICE",
         relation_type_group="COMMON",
         relation_type="Created",
+        defaults={"from_id_id": from_id},
     )
 
     return device_to_id

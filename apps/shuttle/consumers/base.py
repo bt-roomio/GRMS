@@ -5,7 +5,6 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
-
 from shuttle.utils.response import response
 from users.utils.get_user import get_user
 
