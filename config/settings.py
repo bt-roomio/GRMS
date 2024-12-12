@@ -223,24 +223,29 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-LOGGING = os.getenv("LOGGING_QUERY") and {
+LOGGING = {
     "version": 1,
-    "filters": {
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
-        }
+    "disable_existing_loggers": False,
+    "formatters": {
+        "console": {"format": "%(name)-12s %(levelname)-8s %(message)s"},
+        "file": {"format": "%(asctime)s %(name)-12s %(levelname)-8s %(message)s"},
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
-            "filters": ["require_debug_true"],
             "class": "logging.StreamHandler",
-        }
+            "formatter": "console",
+        },
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "formatter": "file",
+            "filename": "debug.log",
+        },
     },
     "loggers": {
-        "django.db.backends": {
+        "main": {
             "level": "DEBUG",
-            "handlers": ["console"],
-        }
+            "handlers": ["console", "file"],
+        },
     },
 }

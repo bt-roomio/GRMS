@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import time
 
@@ -11,6 +12,8 @@ from rest_framework.views import APIView
 from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
 from shuttle.utils.send_to_rabbitmq import connect_to_rabbitmq
+
+logger = logging.getLogger("main")
 
 
 class JsonRPCView(APIView):
@@ -53,6 +56,7 @@ def prepare_mqtt_request(device, method, params, timeout):
                 b_encode(compress_data(read_binary(os.path.join(settings.MEDIA_ROOT, str(file.content)))))
             )
 
+    logger.debug(message)
     channel = connect_to_rabbitmq()
     message = json.dumps(message, indent=2).encode("utf-8")
     channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
