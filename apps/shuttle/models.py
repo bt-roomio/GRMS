@@ -89,7 +89,7 @@ class AttributeKv(BaseModel):
         db_table = "shuttle_attribute_kv"
 
 
-class Relation(BaseModel):
+class Relation(BaseModel, UpdateByModel):
     from_id = models.ForeignKey("main.Device", CASCADE, "from_relations")
     from_type = models.CharField(max_length=255)
     to_id = models.ForeignKey("main.Device", CASCADE, "to_relations")

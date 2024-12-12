@@ -204,7 +204,7 @@ def get_or_create_device(name, from_id):
         to_type="DEVICE",
         relation_type_group="COMMON",
         relation_type="Created",
-        defaults={"from_id_id": from_id},
+        defaults={"from_id_id": from_id, "updated_at": int(time.time())},
     )
 
     return device_to_id
