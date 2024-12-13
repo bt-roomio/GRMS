@@ -33,7 +33,7 @@ class JsonRPCView(APIView):
 
 
 def prepare_mqtt_request(device, method, params, timeout):
-    relation = Relation.objects.filter(to_id_id="3e158405-6b35-4225-ae80-c0696276eeaa").latest("updated_at")
+    relation = Relation.objects.filter(to_id_id=device.id).latest("updated_at")
     device_id = relation and relation.from_id.id
     gateway_or_none = Device.objects.gateway_or_none(device.id)
     rpc_message = RPCMessage.objects.create(additional_info={})
