@@ -4,6 +4,7 @@ from shuttle.consumers.aggregations.attribute_kv import attribute_kv
 from shuttle.consumers.aggregations.controller_status import controller_status
 from shuttle.consumers.aggregations.gateway_list import gateway_list
 from shuttle.consumers.aggregations.latest_telemetry import latest_telemetry
+from shuttle.consumers.aggregations.room_list import room_list
 from shuttle.consumers.aggregations.scanned_devices import main_scanned_devices
 from shuttle.consumers.aggregations.ts_kv_history import history_ts_kv
 from shuttle.consumers.base import BaseConsumer
@@ -65,8 +66,6 @@ class ReceiverConsumer(BaseConsumer):
                 and cmd.get("entityId")
                 and cmd.get("historyCmd")
                 and cmd.get("historyCmd").get("keys")
-                and cmd.get("historyCmd").get("startTs")
-                and cmd.get("historyCmd").get("endTs")
             ):
                 """
                 - History Telemetry
@@ -77,11 +76,18 @@ class ReceiverConsumer(BaseConsumer):
                     del self.task_params[task_key]
 
                 def func():
-                    return self.periodically_task(
-                        history_ts_kv,
-                        cmd,
-                        user,
-                        temp_index=cmd.get("historyCmd").get("timeWindow", 60) * -1 + 5,
+                    async def call_func():
+                        import time
+
+                        res = await history_ts_kv(cmd, user)
+                        if any(list(res.get("update", {}).values())):
+                            last_time = cmd.get("historyCmd").get("endTs", int(time.time() * 1000))
+                            cmd["historyCmd"]["startTs"] = last_time
+                        return res
+
+                    return self.periodically_task_new(
+                        call_func,
+                        sleep_time=cmd.get("historyCmd").get("timeWindow", 60),
                     )
 
                 self.task_params[task_key] = func
@@ -194,6 +200,27 @@ class ReceiverConsumer(BaseConsumer):
                 self.tasks[task_key] = asyncio.create_task(func())
 
             elif cmd.get("type") == "CONTROLLER_STATUS_UNSUBSCRIBE" and cmd.get("entityType") == "DEVICE":
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+            elif cmd.get("type") == "ROOM_LIST" and cmd.get("entityType") == "ROOMS":
+                """
+                Room list
+                """
+                if self.tasks.get(task_key):
+                    self.tasks[task_key].cancel()
+                    del self.tasks[task_key]
+                    del self.task_params[task_key]
+
+                def func():
+                    return self.periodically_task(room_list, cmd, user)
+
+                self.task_params[task_key] = func
+                self.tasks[task_key] = asyncio.create_task(func())
+
+            elif cmd.get("type") == "ROOM_LIST_UNSUBSCRIBE" and cmd.get("entityType") == "ROOMS":
                 if self.tasks.get(task_key):
                     self.tasks[task_key].cancel()
                     del self.tasks[task_key]

@@ -3,8 +3,8 @@ import json
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
-from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
-from jwt import decode as jwt_decode
+from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError, decode as jwt_decode
+
 from shuttle.utils.response import response
 from users.utils.get_user import get_user
 
@@ -113,3 +113,31 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
     async def resume_tasks(self):
         for task_key, func in self.task_params.items():
             self.tasks[task_key] = asyncio.create_task(func())
+
+    async def periodically_task_new(self, func, sleep_time=1):
+        while True:
+            try:
+                auth_cmd = self.context.get("authCmd", {})
+                token = auth_cmd.get("token")
+
+                if self.context.get("has_expired"):
+                    return
+
+                if not auth_cmd:
+                    await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
+                    return
+
+                if auth_cmd and token:
+                    jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
+                self.context.update({"has_expired": False})
+
+                result = await func()
+                await self.send_json(result)
+
+                await asyncio.sleep(sleep_time)
+
+            except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
+                self.context.update({"has_expired": True})
+                await self.send_json(response({}, 0, 401, str(err)))
+                return

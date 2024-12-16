@@ -1,7 +1,8 @@
-from core.querysets.base_queryset import BaseQuerySet
-from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, TextField
 from django.db.models.functions import Cast, Coalesce, Floor, Round
+
+from core.querysets.base_queryset import BaseQuerySet
+from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -20,13 +21,16 @@ class TsKvQuerySet(BaseQuerySet):
                 query = (
                     query.annotate(
                         interval_time=Floor(
-                            ExpressionWrapper((F("ts") / interval) * interval, output_field=IntegerField())
+                            ExpressionWrapper(
+                                (F("ts") / interval) * interval,
+                                output_field=IntegerField(),
+                            )
                         ),
                         avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
                     )
                     .values("key", "interval_time")
                     .annotate(count_per_group=Count("avail_field"))
-                    .filter(count_per_group__gt=1)
+                    .filter(count_per_group__gte=1)
                     .order_by("key", "-interval_time")
                 )
                 if agg_function is not None:
@@ -37,7 +41,7 @@ class TsKvQuerySet(BaseQuerySet):
                 result[key_item["key"]] = list(query[:limit])
                 count_of_data += query.count()
 
-            if key_item["type"] in ["json_v", "str_v", "bool_v"]:
+            elif key_item["type"] in ["json_v", "str_v", "bool_v"]:
                 query = (
                     query.annotate(
                         interval_time=F("ts"),

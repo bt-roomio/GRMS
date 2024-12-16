@@ -2,8 +2,9 @@ import json
 from uuid import UUID
 
 from channels.db import database_sync_to_async
-from core.utils.pagination import pagination
 from django.core.serializers.json import DjangoJSONEncoder
+
+from core.utils.pagination import pagination
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
 from shuttle.models import AttributeKv
@@ -40,7 +41,8 @@ def get_rooms(params, user):
         sort_by=params.get("sort_by"),
     )
     serializer = RoomSerializer(queryset, many=True)
-    return pagination(queryset, serializer, params.get("page"), params.get("size", 15))
+    data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
+    return json.loads(json.dumps(data, cls=UUIDEncoder))
 
 
 @database_sync_to_async
