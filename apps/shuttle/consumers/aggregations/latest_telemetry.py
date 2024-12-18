@@ -1,4 +1,5 @@
 from channels.db import database_sync_to_async
+
 from shuttle.models import TsKvDictionary, TsKvLatest
 from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.response import response
@@ -12,7 +13,7 @@ async def latest_telemetry(cmd, user):
 
     for d in ts_kv_latest:
         ts_kv_dict = await database_sync_to_async(get_ts_kv_dict)(d.key)
-        field, value = get_non_null_field(d)
+        _, value = get_non_null_field(d)
 
         result["data"][ts_kv_dict.key] = [[d.ts, value]]
         latest_values[ts_kv_dict.key] = d.ts

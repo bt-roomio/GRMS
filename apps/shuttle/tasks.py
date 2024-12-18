@@ -1,17 +1,18 @@
 import json
+import logging
 import time
 
 from celery import shared_task
-from celery.utils.log import get_task_logger
-from core.utils.random_letter import get_random_letter
 from django.db import connection
+
+from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq_device_me
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger("main")
 
 
 @shared_task
@@ -74,7 +75,7 @@ def process_mq(body):
         )
         response_keys = {}
         for attribute in attributes:
-            field, value = get_non_null_field(attribute)
+            _, value = get_non_null_field(attribute)
             response_keys[attribute.attribute_key] = value
         send_to_rabbitmq_device_me(device.id, response_keys, topic.replace("request", "response"), data.get("id"))
     elif topic.startswith("v1/gateway/") and data and isinstance(data, dict):
@@ -204,7 +205,7 @@ def get_or_create_device(name, from_id):
         to_type="DEVICE",
         relation_type_group="COMMON",
         relation_type="Created",
-        defaults={"from_id_id": from_id, "updated_at": int(time.time())},
+        defaults={"from_id_id": from_id.id, "updated_at": int(time.time())},
     )
 
     return device_to_id

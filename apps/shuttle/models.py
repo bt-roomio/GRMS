@@ -1,9 +1,10 @@
 import time
 
-from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
-from core.utils.files import controller_file
 from django.db import models
 from django.db.models import CASCADE
+
+from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
+from core.utils.files import controller_file
 from shuttle.querysets.attributes import AttributeKvQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
@@ -40,6 +41,7 @@ class TsKvDictionary(models.Model):
 
     class Meta:
         db_table = "shuttle_ts_kv_dictionary"
+        unique_together = ("key", "key_id")
 
 
 class TsKvLatest(BaseModelTs):
