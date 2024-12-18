@@ -1,0 +1,9 @@
+# Ignore Docker-related files
+Dockerfile
+docker-compose.yml
+logs/
+media/
+__pycache__/
+.env
+venv
+
