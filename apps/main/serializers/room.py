@@ -1,14 +1,16 @@
-from core.utils.serializers import ValidatorSerializer
 from django.utils.translation import gettext_lazy as _
+
+from rest_framework import serializers
+
+from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
 from main.serializers.room_type import RoomTypeSerializer
-from rest_framework import serializers
 
 
 class RoomSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
-    type = serializers.SlugRelatedField(queryset=RoomType.objects.all(), slug_field="title", required=False)
+    type = serializers.PrimaryKeyRelatedField(queryset=RoomType.objects.all(), required=False)
     devices = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), many=True, required=False)
 
     def to_representation(self, instance):
@@ -22,6 +24,8 @@ class RoomSerializer(serializers.ModelSerializer):
             )
         if self.context.get("detail"):
             data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
+        else:
+            data["type"] = instance.type and instance.type.title
         return data
 
     def update(self, instance, validated_data):

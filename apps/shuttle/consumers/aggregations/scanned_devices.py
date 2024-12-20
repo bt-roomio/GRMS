@@ -43,7 +43,7 @@ async def main_scanned_devices(cmd, connectors, user):
 
     page_link = cmd.get("query", {}).get("page_link")
     page = page_link.get("page") or 1
-    page_size = page_link.get("page_size")
+    page_size = page_link.get("size")
     offset = (page - 1) * page_size
     limit = offset + page_size
     count = len(connectors)
@@ -98,7 +98,7 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
             data = {
                 "mac_address": mac_address,
                 "ip_address": value.get("ip"),
-                "room": found_device and str(found_device.room),
+                "room": found_device and found_device.room and found_device.room.number,
                 "address_map": (
                     {"id": address_map_id.get("addressMapId"), "name": address_map}
                     if address_map_id.get("addressMapId")
@@ -128,7 +128,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices, user):
         data = {
             "mac_address": device.get("macAddress"),
             "ip_address": device.get("lastIp"),
-            "room": found_device and str(found_device.room),
+            "room": found_device and found_device.room and found_device.room.number,
             "address_map": {"id": device.get("addressMapId"), "name": address_map},
             "file": controller and controller.file.content.path,
             "status": False,

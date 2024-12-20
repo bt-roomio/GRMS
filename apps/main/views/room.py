@@ -1,12 +1,15 @@
-from core.utils.pagination import pagination
-from core.utils.permission import check_perms
 from drf_yasg.utils import swagger_auto_schema
-from main.models import Room
-from main.serializers.room import RoomFilterParams, RoomSerializer
-from main.swagger.room import RoomDetailSwagger, RoomSwagger
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from core.utils.pagination import pagination
+from core.utils.permission import check_perms
+from main.models import Room
+from main.serializers.room import RoomFilterParams, RoomSerializer
+from main.swagger.room import RoomDetailSwagger, RoomSwagger
+from main.views import tenant
 
 
 class RoomListView(APIView):
@@ -42,7 +45,7 @@ class RoomDetailView(APIView):
     @swagger_auto_schema(responses=RoomDetailSwagger)
     @check_perms(["main.view_room"])
     def get(self, request, pk):
-        queryset = get_object_or_404(Room, id=pk, active=True)
+        queryset = get_object_or_404(Room, id=pk, active=True, tenant_id=request.user.tenant_id)
         serializer = RoomSerializer(queryset, context={"detail": True})
         return Response(serializer.data)
 
@@ -58,6 +61,6 @@ class RoomDetailView(APIView):
     @swagger_auto_schema(responses={})
     @check_perms(["main.delete_room"])
     def delete(self, request, pk):
-        instance = get_object_or_404(Room, id=pk)
+        instance = get_object_or_404(Room, id=pk, tenant_id=request.user.tenant_id)
         instance.delete()
         return Response({}, 204)
