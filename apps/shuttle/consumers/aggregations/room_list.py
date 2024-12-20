@@ -19,9 +19,11 @@ class UUIDEncoder(DjangoJSONEncoder):
 
 
 async def room_list(cmd, user):
-    result = response({}, cmd.get("cmdId"))
+    result = response({}, cmd.get("cmd_id"))
     try:
-        params = RoomFilterParams.check(cmd.get("query", {}).get("filters"))
+        filters = cmd.get("query", {}).get("filters", {})
+        page_link = cmd.get("query", {}).get("page_link", {})
+        params = await database_sync_to_async(RoomFilterParams.check)({**filters, **page_link})
         rooms = await get_rooms(params, user)
         result["data"] = rooms
     except Exception as err:

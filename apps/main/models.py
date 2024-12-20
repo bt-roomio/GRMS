@@ -1,8 +1,9 @@
-from core.models import BaseModel, UpdateByModel
-from core.utils.unix_timestamp import UnixTimeStampField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
+
+from core.models import BaseModel, UpdateByModel
+from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet

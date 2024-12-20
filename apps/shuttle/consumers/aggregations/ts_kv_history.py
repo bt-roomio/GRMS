@@ -8,9 +8,9 @@ from shuttle.utils.response import response
 
 
 async def history_ts_kv(cmd, user):
-    result = response({}, cmd.get("cmdId"))
-    history_cmd = {camel_to_snake(k): v for k, v in cmd.get("historyCmd", {}).items()}
-    data, count_of_data = await ts_kv_history(user, entity_id=cmd.get("entityId"), **history_cmd)
+    result = response({}, cmd.get("cmd_id"))
+    history_cmd = {camel_to_snake(k): v for k, v in cmd.get("history_cmd", {}).items()}
+    data, count_of_data = await ts_kv_history(user, entity_id=cmd.get("entity_id"), **history_cmd)
 
     del result["data"]
     result["update"] = data

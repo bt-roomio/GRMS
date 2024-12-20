@@ -1,11 +1,12 @@
 from channels.db import database_sync_to_async
 from django.db.models import Count
+
 from main.models import Device, Room
 from shuttle.utils.response import response
 
 
 async def controller_status(cmd, user):
-    result = response({}, cmd.get("cmdId"))
+    result = response({}, cmd.get("cmd_id"))
     status_controllers = await get_status_devices(user)
     status_rooms = await get_status_rooms(user)
     result["data"]["status_controllers"] = status_rooms

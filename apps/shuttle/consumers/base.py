@@ -1,143 +1,122 @@
 import asyncio
-import json
+import logging
+import traceback
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
-from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError, decode as jwt_decode
+from jwt import decode as jwt_decode
 
+from core.utils.snake_case import convert_to_snake
 from shuttle.utils.response import response
 from users.utils.get_user import get_user
+
+logger = logging.getLogger("main")
 
 
 class BaseConsumer(AsyncJsonWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.data = {}
-        self.context = {}
-        self.tasks = {}  # For storing periodically tasks
-        self.task_params = {}  # Store parameters for tasks
-        self.last_cmds = []
-        self.interval = settings.WS_INTERVAL
-        self.connectors = []
+        self.tasks = {}
+        self.token = ""
+        self.user = None
+
+    async def cancel_task(self, task_key):
+        """
+        Safely cancel a task and remove it from the task list.
+        """
+        task_metadata = self.tasks.get(task_key)
+        if task_metadata:
+            task = task_metadata.get("task")
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    print(f"Task {task_key} cancelled successfully.")
+            del self.tasks[task_key]
+
+    async def resume_tasks(self):
+        """
+        Resume tasks after the token is updated.
+        """
+        for task_key, val in self.tasks.items():
+            if val["stopped"]:
+                func = val["func"]
+                self.tasks[task_key]["task"] = asyncio.create_task(self.send_periodic_data(func))
+                val["stopped"] = False
 
     async def disconnect(self, code):
         """
         - Cancel all tasks
         - Clear data, context, tasks, task_params
         """
-        for task in self.tasks.values():
-            task.cancel()
-
-        self.data = {}
-        self.context = {}
         self.tasks = {}
-        self.task_params = {}
-        self.last_cmds = []
-
         await super().disconnect(code)
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
-        """
-        - checking for correct json data
-        - checking for token and set user in scope
-        """
-        if text_data:
-            try:
-                self.data = json.loads(text_data)
-            except json.JSONDecodeError:
-                await self.send_json({"error": "Invalid JSON format"})
-                return
-
         try:
-            auth_cmd = self.data.get("authCmd", {})
-            token = auth_cmd.get("token")
-            if auth_cmd and token:
-                checked_token = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-                self.context["authCmd"] = self.data.get("authCmd")
+            data = await self.decode_json(text_data)
+            await self.validate_data(data)
+            converted_data = convert_to_snake(data)
+            await self.auth(converted_data)
+            await self.receive_json(converted_data, **kwargs)
+        except Exception as err:
+            tb = traceback.format_exc()
+            logger.debug(f"Error occurred: {err}")
+            logger.debug(f"Traceback: {tb}")
+            await self.send_json(response({}, None, 1, str(err)))
 
-                self.scope["user"] = await get_user(checked_token)
+    async def auth(self, data={}):
+        """
+        Checking for token, tenant and sets user
+        """
 
-                self.context["has_expired"] = False
+        auth_cmd = data.get("auth_cmd", {})
+        token = auth_cmd.get("token")
+        self.token = token or self.token
+        if not self.token:
+            raise ValueError("Token not found!")
 
-                # Resume tasks after successful re-authentication
-                await self.resume_tasks()
+        checked_token = jwt_decode(self.token, settings.SECRET_KEY, algorithms=["HS256"])
+        self.user = await get_user(checked_token)
 
-            if not self.context.get("authCmd"):
-                self.context["has_expired"] = True
-                await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
-                return
+        if not self.user.tenant_id:
+            raise ValueError("User doesn't have tenant!")
 
-            await self.receive_json(self.data)
-        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
-            self.context["has_expired"] = True
-            await self.send_json(response({}, 0, 401, str(err)))
-            return
+        await self.resume_tasks()
 
-    async def periodically_task(self, func, *args, temp_index=None):
-        index = temp_index or 0
-        while True:
-            try:
-                auth_cmd = self.context.get("authCmd", {})
-                token = auth_cmd.get("token")
+    async def send_periodic_data(self, func, sleep_time=5):
+        try:
+            while True:
+                if not await self.validate_auth():
+                    await self.send_json(response({}, None, 1, "User is not authenticated. Stopping periodic data."))
+                    break
 
-                if self.context.get("has_expired"):
-                    return
+                result = func()
+                if asyncio.iscoroutine(result):
+                    result = await result
 
-                if not auth_cmd:
-                    await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
-                    return
-
-                if auth_cmd and token:
-                    jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-                self.context.update({"has_expired": False})
-
-                result = await func(*args)
-
-                if result not in self.last_cmds:
-                    self.last_cmds.append(result)
-                    await self.send_json(result)
-
-                index += 1
-
-                if index >= self.interval:
-                    await self.send_json(result)
-                    index = temp_index or 1
-                await asyncio.sleep(1)
-
-            except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
-                self.context.update({"has_expired": True})
-                await self.send_json(response({}, 0, 401, str(err)))
-                return
-
-    async def resume_tasks(self):
-        for task_key, func in self.task_params.items():
-            self.tasks[task_key] = asyncio.create_task(func())
-
-    async def periodically_task_new(self, func, sleep_time=1):
-        while True:
-            try:
-                auth_cmd = self.context.get("authCmd", {})
-                token = auth_cmd.get("token")
-
-                if self.context.get("has_expired"):
-                    return
-
-                if not auth_cmd:
-                    await self.send_json(response({}, 0, 401, "Token is invalid or expired!"))
-                    return
-
-                if auth_cmd and token:
-                    jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-                self.context.update({"has_expired": False})
-
-                result = await func()
                 await self.send_json(result)
-
                 await asyncio.sleep(sleep_time)
+        except asyncio.CancelledError:
+            pass
 
-            except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError) as err:
-                self.context.update({"has_expired": True})
-                await self.send_json(response({}, 0, 401, str(err)))
-                return
+    async def validate_auth(self):
+        try:
+            if not self.token:
+                raise ValueError("Missing authentication token.")
+
+            jwt_decode(self.token, settings.SECRET_KEY, algorithms=["HS256"])
+        except Exception:
+            for _, val in self.tasks.items():
+                val["stopped"] = True
+            return False
+        return True
+
+    async def validate_data(self, data):
+        if not data:
+            raise ValueError("content is empty!")
+        if not isinstance(data, dict):
+            raise ValueError("content is not dict!")
+        if data.get("cmds") and not isinstance(data.get("cmds"), list):
+            raise ValueError("cmds is not list")

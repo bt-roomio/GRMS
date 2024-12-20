@@ -6,6 +6,7 @@ venv
 media
 config/settings_dev.py
 config/settings_prod.py
+__pycache__
 .DS_Store
 .vscode/settings.json
 .vscode/launch.json

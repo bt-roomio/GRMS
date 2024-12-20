@@ -6,27 +6,28 @@ from shuttle.utils.response import response
 
 
 @database_sync_to_async
-def get_device(cmd, user):
-    return Device.objects.filter(id=cmd.get("entityId"), additional_info__gateway=True, tenant=user.tenant).first()
+def get_device(entity_id, user):
+    return Device.objects.filter(id=entity_id, additional_info__gateway=True, tenant=user.tenant).first()
 
 
 @database_sync_to_async
-def get_attributes(cmd, device):
+def get_attributes(connector_name, device):
     return AttributeKv.objects.filter(
         entity=device,
         attribute_type=AttributeKv.SHARED_SCOPE,
-        attribute_key=cmd.get("connectorName"),
+        attribute_key=connector_name,
     ).first()
 
 
 async def main_scanned_devices(cmd, connectors, user):
     result = response(
-        {"devices": [], "upload_status": False, "scan_status": False, "query": cmd.get("query")}, cmd.get("cmdId")
+        {"devices": [], "upload_status": False, "scan_status": False, "query": cmd.get("query")}, cmd.get("cmd_id")
     )
-    device = await get_device(cmd, user)
+    device = await get_device(cmd.get("entity_id"), user)
     if not device:
         return result
-    attrs = await get_attributes(cmd, device)
+    attrs = await get_attributes(cmd.get("connector_name"), device)
+
     configuration_json = attrs and attrs.json_v and attrs.json_v.get("configurationJson") or {}
     devices = configuration_json.get("devices") or {}
     address_maps = {i.get("addressMapId"): i.get("addressMapName") for i in configuration_json.get("addressMaps", {})}
@@ -40,9 +41,9 @@ async def main_scanned_devices(cmd, connectors, user):
     if not connectors:
         connectors = [*scanned_devices, *gateway_devices]
 
-    page_link = cmd.get("query", {}).get("pageLink")
+    page_link = cmd.get("query", {}).get("page_link")
     page = page_link.get("page") or 1
-    page_size = page_link.get("pageSize")
+    page_size = page_link.get("page_size")
     offset = (page - 1) * page_size
     limit = offset + page_size
     count = len(connectors)

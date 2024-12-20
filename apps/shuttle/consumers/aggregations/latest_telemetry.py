@@ -6,7 +6,7 @@ from shuttle.utils.response import response
 
 
 async def latest_telemetry(cmd, user):
-    result = response({}, cmd.get("cmdId"))
+    result = response({}, cmd.get("cmd_id"))
     latest_values = {}
 
     ts_kv_latest = await get_ts_kv_latest(cmd, user)
@@ -28,5 +28,5 @@ def get_ts_kv_dict(key_id):
 
 @database_sync_to_async
 def get_ts_kv_latest(cmd, user):
-    ts_kv_latest = TsKvLatest.objects.filter(entity_id=cmd.get("entityId"), entity__tenant=user.tenant)
+    ts_kv_latest = TsKvLatest.objects.filter(entity_id=cmd.get("entity_id"), entity__tenant=user.tenant)
     return list(ts_kv_latest)

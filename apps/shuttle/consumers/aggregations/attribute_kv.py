@@ -6,12 +6,12 @@ from shuttle.utils.response import response
 
 
 async def attribute_kv(cmd, user):
-    result = response({}, cmd.get("cmdId"))
+    result = response({}, cmd.get("cmd_id"))
     latest_values = {}
 
     attributes = await get_attributes(cmd, user)
     for attribute in attributes:
-        field, value = get_non_null_field(attribute)
+        _, value = get_non_null_field(attribute)
         ts = attribute.last_update_ts
         result["data"][attribute.attribute_key] = [[ts, value]]
         latest_values[attribute.attribute_key] = ts
@@ -23,8 +23,8 @@ async def attribute_kv(cmd, user):
 @database_sync_to_async
 def get_attributes(cmd, user):
     result = AttributeKv.objects.filter(
-        entity_type=cmd.get("entityType"),
-        entity_id=cmd.get("entityId"),
+        entity_type=cmd.get("entity_type"),
+        entity_id=cmd.get("entity_id"),
         attribute_type=cmd.get("scope"),
         entity__tenant=user.tenant,
     ).order_by("created_at")
