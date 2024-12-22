@@ -41,9 +41,13 @@ async def main_scanned_devices(cmd, connectors, user):
     if not connectors:
         connectors = [*scanned_devices, *gateway_devices]
 
+    filter_room_type = cmd.get("query", {}).get("filters", {}).get("room_type")
+    if filter_room_type:
+        connectors = [con for con in connectors if con.get("room_type") == filter_room_type]
+
     page_link = cmd.get("query", {}).get("page_link")
     page = page_link.get("page") or 1
-    page_size = page_link.get("size")
+    page_size = page_link.get("size", 10)
     offset = (page - 1) * page_size
     limit = offset + page_size
     count = len(connectors)
@@ -99,6 +103,10 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
                 "mac_address": mac_address,
                 "ip_address": value.get("ip"),
                 "room": found_device and found_device.room and found_device.room.number,
+                "room_type": found_device
+                and found_device.room
+                and found_device.room.type
+                and found_device.room.type.title,
                 "address_map": (
                     {"id": address_map_id.get("addressMapId"), "name": address_map}
                     if address_map_id.get("addressMapId")
