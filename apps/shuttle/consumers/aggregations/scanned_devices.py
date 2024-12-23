@@ -137,6 +137,7 @@ def get_gateway_attrs(not_temp_devices, address_maps, scanned_devices, user):
             "mac_address": device.get("macAddress"),
             "ip_address": device.get("lastIp"),
             "room": found_device and found_device.room and found_device.room.number,
+            "room_type": found_device and found_device.room and found_device.room.type and found_device.room.type.title,
             "address_map": {"id": device.get("addressMapId"), "name": address_map},
             "file": controller and controller.file.content.path,
             "status": False,
