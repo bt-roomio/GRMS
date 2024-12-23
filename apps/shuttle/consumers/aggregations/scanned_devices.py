@@ -45,6 +45,23 @@ async def main_scanned_devices(cmd, connectors, user):
     if filter_room_type:
         connectors = [con for con in connectors if con.get("room_type") == filter_room_type]
 
+    search_field = cmd.get("query", {}).get("page_link", {}).get("search_field")
+    search_text = cmd.get("query", {}).get("page_link", {}).get("search_text")
+    available_search_fields = ("mac_address", "room", "room_type", "ip_address")
+
+    if search_text and search_field and search_field in available_search_fields:
+        connectors = [con for con in connectors if search_text in (con.get(search_field) or "")]
+
+    sort_by = cmd.get("query", {}).get("page_link", {}).get("sort_by")
+    if sort_by:
+        for sort_field in reversed(sort_by):
+            reverse = False
+            if sort_field.startswith("-"):
+                sort_field = sort_field[1:]
+                reverse = True
+
+            connectors = sorted(connectors, key=lambda d: d.get(sort_field) or "mac_address", reverse=reverse)
+
     page_link = cmd.get("query", {}).get("page_link")
     page = page_link.get("page") or 1
     page_size = page_link.get("size", 10)

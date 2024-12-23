@@ -9,7 +9,6 @@ from core.utils.permission import check_perms
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
 from main.swagger.room import RoomDetailSwagger, RoomSwagger
-from main.views import tenant
 
 
 class RoomListView(APIView):

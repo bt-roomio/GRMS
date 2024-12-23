@@ -5,6 +5,7 @@ include = '\.pyi?$'
 force-exclude = '''(migrations)'''
 
 [tool.pyright]
+typeCheckingMode = "basic"
 executionEnvironments = [{ root = "apps" }]
 
 reportUnusedImport = "warning"

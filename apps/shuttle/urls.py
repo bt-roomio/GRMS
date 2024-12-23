@@ -1,4 +1,5 @@
 from django.urls import path
+
 from shuttle.views.attributes import AttributeListView, AttributesChangeRPCView
 from shuttle.views.controller_file import ControllerFileListView
 from shuttle.views.json_rpc import JsonRPCView
