@@ -1,6 +1,6 @@
 import datetime
 
-from django.db.models import Count, Func, Q
+from django.db.models import Count, F, Func, Q
 
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import TsKvDictionary, TsKvLatest
@@ -81,6 +81,14 @@ class RoomQuerySet(BaseQuerySet):
                     elem["diff_previous_day"] = difference
 
         return result
+
+    def guest_checkout(self, room_id):
+        from main.models import Guest, Room
+
+        query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
+        guests = Guest.objects.filter(room_id=room_id, is_active=True).update(is_active=False)
+        query.update(state=Func(F("state"), Room.CheckedIn, function="array_remove"))
+        return guests
 
 
 def get_dnd_rooms(tenant):

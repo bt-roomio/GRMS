@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
-from main.models import Guest
-from main.serializers.guest import GuestFilterParams, GuestSerializer
-from main.swagger.guest import GuestDetailSwagger, GuestSwagger
+from main.models import Guest, Room
+from main.serializers.guest import GuestCheckoutParams, GuestFilterParams, GuestSerializer
+from main.swagger.guest import GuestDetailSwagger, GuestSwagger, swagger_guest_checkout
 
 
 class GuestListView(APIView):
@@ -41,3 +41,11 @@ class GuestDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)
+
+
+class GuestCheckoutView(APIView):
+    @swagger_guest_checkout()
+    def post(self, request):
+        params = GuestCheckoutParams.check(request.GET)
+        guests = Room.objects.guest_checkout(params.get("room").id)
+        return Response({"message": f"{guests} guests have left."})

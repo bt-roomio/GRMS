@@ -1,4 +1,5 @@
 from django.urls import path
+
 from main.views.alarm_settings import AlarmSettingsDetailView
 from main.views.dashboard import DashboardDetailView, DashboardListView, DashboardTypeView
 from main.views.device import DeviceDetailView, DeviceListView
@@ -7,7 +8,7 @@ from main.views.device_from_conf import DeviceFromConfListView
 from main.views.device_profile import DeviceProfileDetailView, DeviceProfileListView
 from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
-from main.views.guest import GuestDetailView, GuestListView
+from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_status import RoomHistoryStatusView
@@ -36,6 +37,7 @@ urlpatterns = [
     path("guest/", GuestListView.as_view(), name="guest-list"),
     path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
     path("guest/<uuid:pk>/", GuestDetailView.as_view(), name="guest-detail"),
+    path("checkout/", GuestCheckoutView.as_view(), name="guest-checkout-detail"),
     path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
     path("tenant/", TenantListView.as_view(), name="tenant-list"),
     path("devices-from-configuration/", DeviceFromConfListView.as_view(), name="device-from-conf-list"),

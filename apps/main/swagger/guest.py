@@ -1,6 +1,7 @@
 from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 
-from main.serializers.guest import GuestSerializer
+from main.serializers.guest import GuestCheckoutParams, GuestSerializer
 
 GuestSwagger = {
     200: openapi.Response(
@@ -11,3 +12,10 @@ GuestSwagger = {
 }
 
 GuestDetailSwagger = {200: GuestSerializer}
+
+
+def swagger_guest_checkout():
+    return swagger_auto_schema(
+        query_serializer=GuestCheckoutParams(),
+        responses={200: '{"message": "{Count} guests have left."}'},
+    )
