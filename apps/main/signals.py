@@ -1,5 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 from main.models import Device, Room
 from main.utils.remove_or_add_state import remove_or_add
 from shuttle.models import AttributeKv
@@ -34,6 +35,7 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
             attribute_key=instance.attribute_key,
             attribute_type=AttributeKv.SHARED_SCOPE,
             entity_id=instance.entity_id,
+            entity__tenant_id=instance.entity__tenant_id,
             defaults={"json_v": instance.json_v, "entity_type": "DEVICE"},
         )
 

@@ -33,3 +33,10 @@ def send_to_rabbitmq_device_me(device_id, attributes, topic, request_id=None):
     topic_name = "fromGRMS"
 
     channel.basic_publish(exchange="", routing_key=topic_name, body=message)
+
+
+def send_to_rabbitmq_gateway(device_id, attributes, topic, request_id=None):
+    message = {"targetDeviceUUID": str(device_id), "topic": topic, "data": attributes}
+    if request_id:
+        message["data"]["id"] = request_id
+    send_to_rabbitmq(message)
