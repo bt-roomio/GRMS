@@ -20,4 +20,4 @@ class DeviceQuerySet(BaseQuerySet):
         return self.filter(is_active=True)
 
     def find_device_by_room(self, room):
-        return self.is_active().filter(room=room).earliest("created_at")
+        return self.is_active().filter(room=room).order_by("created_at").first()

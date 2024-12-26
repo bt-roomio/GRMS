@@ -19,10 +19,11 @@ def attribute_room_state(room, state: StateEnum, bool_v=True):
 
     device = Device.objects.find_device_by_room(room)
 
-    AttributeKv.objects.update_or_create(
-        entity=device,
-        attribute_key=state.value,
-        entity_type="DEVICE",
-        attribute_type=AttributeKv.SHARED_SCOPE,
-        defaults={"last_update_ts": time.time(), "bool_v": bool_v},
-    )
+    if device:
+        AttributeKv.objects.update_or_create(
+            entity=device,
+            attribute_key=state.value,
+            entity_type="DEVICE",
+            attribute_type=AttributeKv.SHARED_SCOPE,
+            defaults={"last_update_ts": time.time(), "bool_v": bool_v},
+        )
