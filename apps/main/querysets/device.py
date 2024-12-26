@@ -1,5 +1,6 @@
-from core.querysets.base_queryset import BaseQuerySet
 from django.db.models import Q
+
+from core.querysets.base_queryset import BaseQuerySet
 
 
 class DeviceQuerySet(BaseQuerySet):
@@ -17,3 +18,6 @@ class DeviceQuerySet(BaseQuerySet):
 
     def is_active(self):
         return self.filter(is_active=True)
+
+    def find_device_by_room(self, room):
+        return self.is_active().filter(room=room).earliest("created_at")

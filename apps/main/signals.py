@@ -2,6 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from main.models import Device, Room
+from main.utils.default_state import StateEnum, attribute_room_state
 from main.utils.remove_or_add_state import remove_or_add
 from shuttle.models import AttributeKv
 
@@ -43,3 +44,10 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
 @receiver(post_save, sender=Room)
 def check_for_duplicate_state(instance, **kwargs):
     Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))
+
+    if Room.Available in instance.state:
+        attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS, False)
+        attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS)
+    elif Room.CheckedIn in instance.state:
+        attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS)
+        attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS, False)
