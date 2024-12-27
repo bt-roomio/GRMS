@@ -67,24 +67,26 @@ def process_mq(body):
         device = Device.objects.is_active().filter(name=data.get("device")).first()
         update_activity_device(device, connected=False)
 
-    elif topic.startswith("v1/gateway/attributes/request"):
-        print(f"Topic: {topic}, {data}")
+    elif topic.startswith("v1/gateway/attributes/request") and device:
+        print(f"Topic: {topic}, Data: {data}")
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
         sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
-        if sub_device:
-            attributes = AttributeKv.objects.filter(
-                attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=sub_device.id
-            )
-            response_keys = {}
-            for attribute in attributes:
-                _, value = get_non_null_field(attribute)
-                response_keys[attribute.attribute_key] = value
-            response_keys["device"] = str(sub_device.id)
-            send_to_rabbitmq_gateway(device.id, response_keys, topic.replace("request", "response"), data.get("id"))
+        if not sub_device:
+            return
 
-    elif topic.startswith("v1/devices/me/attributes/request"):
-        print(f"Topic: {topic}, {data}")
+        attributes = AttributeKv.objects.filter(
+            attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=sub_device.id
+        )
+        response_keys = {}
+        for attribute in attributes:
+            _, value = get_non_null_field(attribute)
+            response_keys[attribute.attribute_key] = value
+        response_keys["device"] = str(sub_device.id)
+        send_to_rabbitmq_gateway(device.id, response_keys, topic.replace("request", "response"), data.get("id"))
+
+    elif topic.startswith("v1/devices/me/attributes/request") and device:
+        print(f"Topic: {topic}, Data: {data}")
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
         attributes = AttributeKv.objects.filter(
@@ -94,7 +96,7 @@ def process_mq(body):
         for attribute in attributes:
             _, value = get_non_null_field(attribute)
             response_keys[attribute.attribute_key] = value
-        send_to_rabbitmq_device_me(device.id, response_keys, topic.replace("request", "response"), data.get("id"))
+        send_to_rabbitmq_gateway(device.id, response_keys, topic.replace("request", "response"), topic.split("/")[-1])
 
     elif topic.startswith("v1/gateway/") and data and isinstance(data, dict):
         for key, value in data.items():

@@ -1,7 +1,7 @@
 import json
 
-import pika
 from django.conf import settings
+import pika
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN
 RABBIT_PASSWORD = settings.RABBIT_PASSWORD
