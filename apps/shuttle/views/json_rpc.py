@@ -3,15 +3,17 @@ import logging
 import os
 import time
 
-from core.utils.helpers import b_encode, compress_data, read_binary
 from django.conf import settings
-from main.models import Device
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
+from core.utils.helpers import b_encode, compress_data, read_binary
+from main.models import Device
 from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
-from shuttle.utils.send_to_rabbitmq import connect_to_rabbitmq
 
 logger = logging.getLogger("main")
 
@@ -58,8 +60,7 @@ def prepare_mqtt_request(device, method, params, timeout):
 
     logger.debug(message)
     channel = connect_to_rabbitmq()
-    message = json.dumps(message, indent=2).encode("utf-8")
-    channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
+    send_to_rabbitmq(channel, message)
     start_time = 0
 
     while start_time < timeout:

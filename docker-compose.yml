@@ -8,7 +8,7 @@ services:
       - POSTGRES_USER=${DATABASE_USER}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
 
@@ -21,7 +21,7 @@ services:
       python /app/manage.py collectstatic --no-input &&
       supervisord -c /etc/supervisor/conf.d/supervisord.conf"
     ports:
-      - '8000:8000'
+      - "8000:8000"
     environment:
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=${DATABASE_USER}
@@ -45,7 +45,7 @@ services:
       - static_volume:/app/static/
       - media_volume:/app/media/
     ports:
-      - '9000:9000'
+      - "9000:9000"
     depends_on:
       - web
 
@@ -62,7 +62,6 @@ services:
       - redis
       - web
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
@@ -76,15 +75,14 @@ services:
       - redis
       - web
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - DATABASE_HOST=postgres
       - DATABASE_PORT=${DATABASE_PORT}
 
-
 volumes:
   static_volume:
   media_volume:
   pg_data:
+

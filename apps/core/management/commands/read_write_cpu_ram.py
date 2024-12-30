@@ -2,9 +2,9 @@ import time
 
 from django.core.management.base import BaseCommand
 
-from core.utils.read_cpu_ram import get_cpu_usage, get_ram_usage, get_disk_usage
+from core.utils.read_cpu_ram import get_cpu_usage, get_disk_usage, get_ram_usage
 from main.models import Device
-from shuttle.models import TsKvDictionary, TsKvLatest, TsKv
+from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 
 
 class Command(BaseCommand):
@@ -19,7 +19,12 @@ class Command(BaseCommand):
 
 def cpu_ram_save_db():
     keys = {"cpuUsage": get_cpu_usage(), "memoryUsage": get_ram_usage(), "diskUsage": get_disk_usage()}
-    device, _ = Device.objects.get_or_create(name="CPU RAM Usage", is_active=True)
+    device, _ = Device.objects.get_or_create(
+        name="CPU RAM Usage",
+        is_active=True,
+        tenant_id="5b2b6879-0791-4b14-8545-6abf61e73b68",
+        device_profile_id="be17d30b-9785-4415-bfa5-e7fdaf19e37c",
+    )
 
     for key, value in keys.items():
         ts_kv_dict, _ = TsKvDictionary.objects.get_or_create(key=key)

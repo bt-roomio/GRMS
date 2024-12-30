@@ -1,19 +1,18 @@
 from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView, Response
 
+from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device
 from main.utils.save_attributes import save_attributes
 from shuttle.consumers.aggregations.latest_telemetry import get_ts_kv_dict
-from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
-from shuttle.models import Relation
+from shuttle.models import AttributeKv, Relation, TsKvDictionary, TsKvLatest
 from shuttle.serializers.attributes import AttributeKvPath, AttributesChangeFilterPath, AttributesChangeSerializer
-from shuttle.serializers.tag import TagFilterPath, TagFilterParams
+from shuttle.serializers.tag import TagFilterParams, TagFilterPath
 from shuttle.swagger.attributes_change import swagger_attributes_change
 from shuttle.swagger.tag import tag_swagger
 from shuttle.utils.dynamic_model_query import dynamic_query
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
-from shuttle.utils.send_to_rabbitmq import send_to_rabbitmq
 from shuttle.views.json_rpc import prepare_mqtt_request
 
 
@@ -89,7 +88,8 @@ def send_rabbit_mq_attributes(path_device_id, available_fields):
             message["topic"] = "v1/devices/me/attributes"
             message["data"] = attributes
 
-        send_to_rabbitmq(message)
+        channel = connect_to_rabbitmq()
+        send_to_rabbitmq(channel, message)
 
 
 class AttributesChangeRPCView(APIView):
