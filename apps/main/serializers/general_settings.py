@@ -29,13 +29,13 @@ class GeneralSettingsSerializer(serializers.Serializer):
     )
 
     def validate_main_dashboard(self, value):
-        dashboard = Dashboard.objects.filter(title=value).first()
+        dashboard = Dashboard.objects.filter(id=value.id).first()
         if not dashboard:
             raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})
         return str(dashboard.id)
 
     def validate_public_space_dashboard(self, value):
-        dashboard = Dashboard.objects.filter(title=value).first()
+        dashboard = Dashboard.objects.filter(id=value.id).first()
         if not dashboard:
             raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})
         return str(dashboard.id)

@@ -41,8 +41,11 @@ class DashboardSerializer(serializers.ModelSerializer):
 
 
 class DashboardFilterParams(ValidatorSerializer):
+    SORT_FIELDS = ("title", "-title")
+
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class DashboardTypeSerializer(ValidatorSerializer):

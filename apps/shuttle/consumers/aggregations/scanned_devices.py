@@ -37,13 +37,12 @@ async def main_scanned_devices(cmd, connectors, user):
     scanned_devices = await get_scanned_devices(temp_devices, not_temp_devices, address_maps, user)
     gateway_devices = await get_gateway_attrs(not_temp_devices, address_maps, scanned_devices, user)
     upload_status, scan_status = await get_upload_scan_statuses(temp_devices)
-
     if not connectors:
         connectors = [*scanned_devices, *gateway_devices]
 
-    filter_room_type = cmd.get("query", {}).get("filters", {}).get("room_type")
-    if filter_room_type:
-        connectors = [con for con in connectors if con.get("room_type") == filter_room_type]
+    filters = cmd.get("query", {}).get("filters", {})
+    for fil_key, fil_val in filters.items():
+        connectors = [con for con in connectors if str(con.get(fil_key, "")).startswith(fil_val)]
 
     search_field = cmd.get("query", {}).get("page_link", {}).get("search_field")
     search_text = cmd.get("query", {}).get("page_link", {}).get("search_text")

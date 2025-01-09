@@ -50,7 +50,8 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         - Cancel all tasks
         - Clear data, context, tasks, task_params
         """
-        self.tasks = {}
+        for task_key in list(self.tasks.keys()):
+            await self.cancel_task(task_key)
         await super().disconnect(code)
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):

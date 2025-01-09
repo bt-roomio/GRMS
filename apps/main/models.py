@@ -84,15 +84,13 @@ class Room(BaseModel, UpdateByModel):
     Available = 0
     CheckedIn = 1
     Occupied = 2
-    DoNotDisturb = 3
-    MakeUpRoom = 4
+    Reserved = 3
 
     STATE = (
         (Available, "Available"),
         (CheckedIn, "CheckedIn"),
         (Occupied, "Occupied"),
-        (DoNotDisturb, "DoNotDisturb"),
-        (MakeUpRoom, "MakeUpRoom"),
+        (Reserved, "Reserved"),
     )
 
     ON = "ON"
@@ -187,7 +185,7 @@ class RoomType(BaseModel):
     vip_status_on_value = models.IntegerField(null=True, blank=True)
     vip_status_off_value = models.IntegerField(null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
-    dashboard = models.ForeignKey("main.Dashboard", CASCADE, null=True, blank=True)
+    dashboard = models.ForeignKey("main.Dashboard", CASCADE, "room_types", null=True, blank=True)
 
     objects = RoomTypeQuerySet.as_manager()
 
@@ -351,3 +349,6 @@ class Guest(BaseModel):
     class Meta:
         db_table = "main_guest"
         ordering = ["created_at"]
+
+
+message = {""}

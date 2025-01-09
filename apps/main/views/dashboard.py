@@ -1,5 +1,6 @@
 from django.db.models import F
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -14,7 +15,7 @@ class DashboardListView(APIView):
     @swagger_auto_schema(responses=DashboardSwagger, query_serializer=DashboardFilterParams())
     def get(self, request):
         params = DashboardFilterParams.check(request.GET)
-        queryset = Dashboard.objects.filter(tenant_id=request.user.tenant_id)
+        queryset = Dashboard.objects.list(tenant_id=request.user.tenant_id, sort_by=params.get("sort_by", []))
         serializer = DashboardSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
