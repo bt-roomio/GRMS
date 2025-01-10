@@ -27,7 +27,7 @@ def attribute_room_state(room, state: StateEnum, bool_v=True):
     device = Device.objects.find_device_by_room(room)
 
     if not device:
-        raise ValueError("Not found device by room!")
+        return None, None, None
 
     AttributeKv.objects.update_or_create(
         entity=device,

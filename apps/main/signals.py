@@ -51,17 +51,21 @@ def check_for_duplicate_state(instance, **kwargs):
     channel = connect_to_rabbitmq()
 
     if Room.Available in instance.state:
-        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS, False)
-        send_msg_status_room(channel, attr, device_id, device_name)
+        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS, False)
+        if attr_device_id_device_name:
+            send_msg_status_room(channel, *attr_device_id_device_name)
 
-        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS)
-        send_msg_status_room(channel, attr, device_id, device_name)
+        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS)
+        if attr_device_id_device_name:
+            send_msg_status_room(channel, *attr_device_id_device_name)
     elif Room.CheckedIn in instance.state:
-        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS)
-        send_msg_status_room(channel, attr, device_id, device_name)
+        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS)
+        if attr_device_id_device_name:
+            send_msg_status_room(channel, *attr_device_id_device_name)
 
-        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS, False)
-        send_msg_status_room(channel, attr, device_id, device_name)
+        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS, False)
+        if attr_device_id_device_name:
+            send_msg_status_room(channel, *attr_device_id_device_name)
 
 
 def send_msg_status_room(channel, attr, device_id, device_name):
