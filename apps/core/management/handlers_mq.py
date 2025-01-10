@@ -40,7 +40,6 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         update_activity_device(device, connected=False)
 
     elif topic.startswith("v1/gateway/attributes/request") and device:
-        print(f"Topic: {topic}, Data: {data}")
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
         sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
@@ -63,7 +62,6 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         send_to_rabbitmq(ch, message)
 
     elif topic.startswith("v1/devices/me/attributes/request") and device:
-        print(f"Topic: {topic}, Data: {data}")
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
         attributes = AttributeKv.objects.filter(
@@ -85,10 +83,8 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
             data = value
             if data and isinstance(data, dict):
                 if topic.endswith("attributes"):
-                    print("save_attribute_kv", data)
                     save_attribute_kv(device_to_id, data)
                 if topic.endswith("telemetry"):
-                    print("save_telemetry_kv", data)
                     save_telemetry_kv(device_to_id, data, ts)
 
             elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
@@ -97,18 +93,16 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
                         ts = res.get("ts")
                         res = res.get("values")
                     if topic.endswith("attributes"):
-                        print("save_attribute_kv")
                         save_attribute_kv(device_to_id, res)
                     if topic.endswith("telemetry"):
-                        print("save_telemetry_kv")
                         save_telemetry_kv(device_to_id, res, ts)
 
     if not device:
-        print("Device not found")
+        logger.warn("Device not found")
         return
 
     if not data:
-        print("No data found")
+        logger.warn("No data found")
         return
 
     if data and isinstance(data, dict) and data.get("ts") and data.get("values"):
@@ -117,19 +111,15 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
 
     if data and isinstance(data, dict):
         if topic == "v1/devices/me/attributes":
-            print("save_attribute_kv")
             save_attribute_kv(device, data)
         if topic == "v1/devices/me/telemetry":
-            print("save_telemetry_kv")
             save_telemetry_kv(device, data, ts)
 
     elif data and isinstance(data, list) and all([isinstance(item, dict) for item in data]):
         for res in data:
             if topic == "v1/devices/me/attributes":
-                print("save_attribute_kv")
                 save_attribute_kv(device, res)
             if topic == "v1/devices/me/telemetry":
-                print("save_telemetry_kv")
                 save_telemetry_kv(device, res, ts)
 
 

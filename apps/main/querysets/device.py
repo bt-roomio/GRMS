@@ -21,3 +21,17 @@ class DeviceQuerySet(BaseQuerySet):
 
     def find_device_by_room(self, room):
         return self.is_active().filter(room=room).order_by("created_at").first()
+
+    def get_relation_or_gateway(self, pk):
+        from shuttle.models import Relation
+
+        relation = Relation.objects.filter(to_id_id=pk).first()
+        from_id = relation and relation.from_id.id
+        gateway = self.gateway_or_none(pk)
+
+        if from_id is not None:
+            return from_id
+        elif gateway:
+            return gateway.id
+
+        return pk

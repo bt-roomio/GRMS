@@ -10,9 +10,9 @@ RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
 
-def send_to_rabbitmq(channel: BlockingChannel, message):
+def send_to_rabbitmq(channel: BlockingChannel, message, routing_key="fromGRMS"):
     message = json.dumps(message).encode("utf-8")
-    channel.basic_publish(exchange="", routing_key="fromGRMS", body=message)
+    channel.basic_publish(exchange="", routing_key=routing_key, body=message)
     return channel
 
 

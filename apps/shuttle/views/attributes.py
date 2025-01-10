@@ -32,7 +32,7 @@ class AttributeListView(APIView):
                 entity__tenant_id=request.user.tenant_id,
             )
             for attribute in queryset:
-                field, value = get_non_null_field(attribute)
+                _, value = get_non_null_field(attribute)
                 ts = attribute.last_update_ts
                 result["data"][attribute.attribute_key] = [[ts, value]]
                 result["latestValues"][attribute.attribute_key] = ts
@@ -46,7 +46,7 @@ class AttributeListView(APIView):
             )
             for d in queryset:
                 ts_kv_dict = get_ts_kv_dict(d.key)
-                field, value = get_non_null_field(d)
+                _, value = get_non_null_field(d)
                 result["data"][ts_kv_dict.key] = [[d.ts, value]]
                 result["latestValues"][ts_kv_dict.key] = d.ts
 

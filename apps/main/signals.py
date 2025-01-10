@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device, Room
 from main.utils.default_state import StateEnum, attribute_room_state
 from main.utils.remove_or_add_state import remove_or_add
@@ -43,11 +44,30 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Room)
 def check_for_duplicate_state(instance, **kwargs):
+    # Disabling duplicate state
     Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))
 
+    # Updating AttributeKv CheckedIn and CheckedOut, then sending message
+    channel = connect_to_rabbitmq()
+
     if Room.Available in instance.state:
-        attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS, False)
-        attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS)
+        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS, False)
+        send_msg_status_room(channel, attr, device_id, device_name)
+
+        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS)
+        send_msg_status_room(channel, attr, device_id, device_name)
     elif Room.CheckedIn in instance.state:
-        attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS)
-        attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS, False)
+        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS)
+        send_msg_status_room(channel, attr, device_id, device_name)
+
+        attr, device_id, device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS, False)
+        send_msg_status_room(channel, attr, device_id, device_name)
+
+
+def send_msg_status_room(channel, attr, device_id, device_name):
+    message = {
+        "targetDeviceUUID": device_id,
+        "topic": "v1/gateway/attributes",
+        "data": {"device": device_name, "data": attr},
+    }
+    send_to_rabbitmq(channel, message, routing_key="fromGRMS")
