@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -46,6 +47,9 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
 def check_for_duplicate_state(instance, **kwargs):
     # Disabling duplicate state
     Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))
+
+    if settings.TESTING:
+        return
 
     # Updating AttributeKv CheckedIn and CheckedOut, then sending message
     channel = connect_to_rabbitmq()
