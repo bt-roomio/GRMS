@@ -24,7 +24,7 @@ table_status = {
 def attribute_room_state(room, state: StateEnum, bool_v=True):
     from main.models import Device
 
-    device = Device.objects.find_device_by_room(room)
+    device = Device.objects.find_device_by_room(room)  # pyright: ignore
 
     if not device:
         return None, None, None
@@ -36,5 +36,5 @@ def attribute_room_state(room, state: StateEnum, bool_v=True):
         attribute_type=AttributeKv.SHARED_SCOPE,
         defaults={"last_update_ts": time.time(), "bool_v": bool_v},
     )
-    device_gateway = Device.objects.get_relation_or_gateway(device.id)
-    return ({table_status[state]: bool_v}, str(device_gateway), device.name)
+    device_gateway = Device.objects.get_relation_or_gateway(device.id)  # pyright: ignore
+    return ({state.value: table_status[state]}, str(device_gateway), device.name)
