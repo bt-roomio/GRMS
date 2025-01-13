@@ -1,6 +1,8 @@
 import time
 
 from django.core.management.base import BaseCommand
+
+from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv, Relation
 
 
@@ -9,7 +11,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         while True:
-            print("Checking Attributes SERVER_SCOPE", int(time.time()))
+            print("Checking Attributes SERVER_SCOPE", get_mil_sec())
             active_attribute_server_scope()
             time.sleep(10)
 
@@ -26,7 +28,7 @@ def active_attribute_server_scope():
 def check_activity_time(attribute_kv):
     for attr_active in attribute_kv:
         attr = AttributeKv.objects.get(entity_id=attr_active.entity, attribute_key="lastActivityTime")
-        if attr.long_v < int(time.time()) - 60:
+        if attr.long_v < get_mil_sec() - 60000:
             attr_active.bool_v = False
             attr_active.save()
             print(f"Gateway: {attr.entity_id}")

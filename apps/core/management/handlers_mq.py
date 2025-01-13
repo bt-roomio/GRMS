@@ -1,10 +1,10 @@
 import json
 import logging
-import time
 
 from pika.adapters.blocking_connection import BlockingChannel
 
 from core.rabbitmq.config import send_to_rabbitmq
+from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
@@ -131,13 +131,13 @@ def save_telemetry_kv(device, data, ts):
         TsKv.objects.update_or_create(
             entity=device,
             key=ts_kv_dict.key_id,
-            ts=ts or int(time.time()),
+            ts=ts or get_mil_sec(),
             defaults=fields,
         )
         TsKvLatest.objects.update_or_create(
             entity=device,
             key=ts_kv_dict.key_id,
-            defaults={**fields, "ts": int(time.time())},
+            defaults={**fields, "ts": get_mil_sec()},
         )
 
     update_activity_gateway(device)
@@ -152,7 +152,7 @@ def save_attribute_kv(device, data):
             entity__tenant_id=device.tenant_id,
             attribute_type=AttributeKv.CLIENT_SCOPE,
             attribute_key=key,
-            defaults={**fields, "entity_type": "DEVICE", "last_update_ts": int(time.time())},
+            defaults={**fields, "entity_type": "DEVICE", "last_update_ts": get_mil_sec()},
         )
 
     update_activity_gateway(device)
@@ -165,7 +165,7 @@ def update_activity_gateway(device):
 
 
 def update_activity_device(device, connected=True):
-    server_data = {"active": connected, "lastActivityTime": int(time.time())}
+    server_data = {"active": connected, "lastActivityTime": get_mil_sec()}
     for key, item in find_compatible_field(server_data).items():
         fields = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None}
         fields[item[0]] = item[1]
@@ -174,7 +174,7 @@ def update_activity_device(device, connected=True):
             entity__tenant_id=device.tenant_id,
             attribute_type=AttributeKv.SERVER_SCOPE,
             attribute_key=key,
-            defaults={**fields, "entity_type": "DEVICE", "last_update_ts": int(time.time())},
+            defaults={**fields, "entity_type": "DEVICE", "last_update_ts": get_mil_sec()},
         )
 
 
@@ -197,7 +197,7 @@ def get_or_create_device(name, from_id):
         to_type="DEVICE",
         relation_type_group="COMMON",
         relation_type="Created",
-        defaults={"from_id_id": from_id.id, "updated_at": int(time.time())},
+        defaults={"from_id_id": from_id.id, "updated_at": get_mil_sec()},
     )
 
     return device_to_id

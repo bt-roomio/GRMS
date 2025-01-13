@@ -12,11 +12,11 @@ def save_attributes(devices, available_fields, scope):
         fields[field] = value
 
         for device in devices:
-            attribute_kv, _ = AttributeKv.objects.update_or_create(
+            AttributeKv.objects.update_or_create(
                 entity_id=device,
                 attribute_type=scope,
                 attribute_key=key,
-                defaults={"entity_type": "DEVICE", **fields, "last_update_ts": int(time.time())},
+                defaults={"entity_type": "DEVICE", **fields, "last_update_ts": time.time()},
             )
             attributes[str(device)] = attributes.get(str(device), {})
             attributes[str(device)][key] = value

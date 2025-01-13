@@ -73,13 +73,13 @@ class ReceiverConsumer(BaseConsumer):
 
     @periodic_task()
     async def handle_history_telemetry(self, cmd):
-        import time
-
+        from core.utils.get_time import get_mil_sec
         from shuttle.consumers.aggregations.ts_kv_history import history_ts_kv
 
         res = await history_ts_kv(cmd, self.user)
+
         if any(list(res.get("update", {}).values())):
-            last_time = cmd.get("history_cmd", {}).get("end_ts", int(time.time() * 1000))
+            last_time = cmd.get("history_cmd", {}).get("end_ts", get_mil_sec())
             cmd["history_cmd"]["start_ts"] = last_time
             return res
         return res

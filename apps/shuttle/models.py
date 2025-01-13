@@ -1,10 +1,12 @@
 import time
+from uuid import UUID
 
 from django.db import models
 from django.db.models import CASCADE
 
 from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
 from core.utils.files import controller_file
+from core.utils.get_time import get_mil_sec
 from shuttle.querysets.attributes import AttributeKvQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
@@ -14,6 +16,7 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 class TsKv(BaseModelTs):
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
+    entity_id = UUID
     key = models.IntegerField()
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.CharField(max_length=255, blank=True, null=True)
@@ -68,6 +71,7 @@ class AttributeKv(BaseModel):
 
     entity_type = models.CharField(max_length=255)
     entity = models.ForeignKey("main.Device", CASCADE, "attribute_kvs")
+    entity_id: UUID
     attribute_type = models.CharField(max_length=255, choices=ENTITY_TYPE, default=SERVER_SCOPE)
     attribute_key = models.CharField(max_length=255)
     bool_v = models.BooleanField(blank=True, null=True)
@@ -81,7 +85,7 @@ class AttributeKv(BaseModel):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            self.last_update_ts = time.time()
+            self.last_update_ts = get_mil_sec()
         return super(AttributeKv, self).save(*args, **kwargs)
 
     def __str__(self):

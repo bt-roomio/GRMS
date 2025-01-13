@@ -1,6 +1,5 @@
-import time
-
-from shuttle.models import TsKvDictionary, TsKv, TsKvLatest
+from core.utils.get_time import get_mil_sec
+from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 
@@ -21,7 +20,7 @@ def save_telemetry_kv(devices, data):
         for ts_kv_latest in ts_kvs_latest:
             for k, v in fields.items():
                 setattr(ts_kv_latest, k, v)
-            ts_kv_latest.ts = int(time.time())
+            ts_kv_latest.ts = get_mil_sec()
             ts_kv_latest.save()
 
     return telemetry

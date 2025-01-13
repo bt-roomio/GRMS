@@ -1,9 +1,11 @@
 import time
 import uuid
 
-from core.utils.unix_timestamp import UnixTimeStampField
 from django.db import models
 from django.db.models import SET_NULL
+
+from core.utils.get_time import get_mil_sec
+from core.utils.unix_timestamp import UnixTimeStampField
 
 
 class BaseModel(models.Model):
@@ -39,7 +41,7 @@ class UpdateByModel(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            self.updated_at = time.time()
+            self.updated_at = get_mil_sec()
         return super(UpdateByModel, self).save(*args, **kwargs)
 
     class Meta:
