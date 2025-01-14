@@ -35,8 +35,9 @@ class TsKvQuerySet(BaseQuerySet):
                 )
                 if agg_function is not None:
                     query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
-
-                query = query.annotate(ts=F("interval_time"), value=F("aggreagted_field")).values("ts", "value")
+                    query = query.annotate(ts=F("interval_time"), value=F("aggreagted_field")).values("ts", "value")
+                else:
+                    query = query.annotate(ts=F("interval_time"), value=F("avail_field")).values("ts", "value")
 
                 result[key_item["key"]] = list(query[:limit])
                 count_of_data += query.count()
