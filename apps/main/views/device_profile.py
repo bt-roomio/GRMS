@@ -1,12 +1,13 @@
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
 from main.models import DeviceProfile
-from main.serializers.device_profile import DeviceProfileSerializer, DeviceProfileFilterParams
-from main.swagger.device_profile import DeviceProfileSwagger, DeviceProfileDetailSwagger
+from main.serializers.device_profile import DeviceProfileFilterParams, DeviceProfileSerializer
+from main.swagger.device_profile import DeviceProfileDetailSwagger, DeviceProfileSwagger
 
 
 class DeviceProfileListView(APIView):
@@ -25,9 +26,12 @@ class DeviceProfileListView(APIView):
 
     @swagger_auto_schema(responses=DeviceProfileSwagger, request_body=DeviceProfileSerializer)
     def post(self, request):
-        serializer = DeviceProfileSerializer(data=request.data)
+        tenant_id = request.user.tenant_id
+        data = request.data.copy()
+        data["tenant"] = tenant_id
+        serializer = DeviceProfileSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant_id=request.user.tenant_id)
+        serializer.save()
         return Response(serializer.data, 201)
 
 

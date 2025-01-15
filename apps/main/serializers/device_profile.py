@@ -24,9 +24,6 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
             "provision_device_key",
             "external_id",
         )
-        extra_kwargs = {
-            "tenant": {"required": False},
-        }
 
 
 class DeviceProfileFilterParams(ValidatorSerializer):

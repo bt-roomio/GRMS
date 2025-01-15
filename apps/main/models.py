@@ -255,8 +255,9 @@ class DeviceProfile(BaseModel):
     def __str__(self):
         return str(self.name)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_device_profile"
+        unique_together = ("name", "tenant")
 
 
 class Customer(BaseModel):
