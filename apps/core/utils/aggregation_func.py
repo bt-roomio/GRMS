@@ -6,5 +6,6 @@ AGGREGATION_FUNCTIONS = {
     "Avg": Avg,
     "Sum": Sum,
     "Count": Count,
+    "Change": "Change",
     "None": None,  # Special case for no aggregation
 }

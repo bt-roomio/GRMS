@@ -78,7 +78,7 @@ class ReceiverConsumer(BaseConsumer):
 
         res = await history_ts_kv(cmd, self.user)
 
-        if any(list(res.get("update", {}).values())):
+        if any(list(res.get("update", {}).values())) and cmd.get("history_cmd", {}).get("agg") != "Change":
             last_time = cmd.get("history_cmd", {}).get("end_ts", get_mil_sec())
             cmd["history_cmd"]["start_ts"] = last_time
             return res

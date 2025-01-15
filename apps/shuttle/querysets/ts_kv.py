@@ -1,5 +1,5 @@
-from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, TextField
-from django.db.models.functions import Cast, Coalesce, Floor, Round
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, TextField, Window
+from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
@@ -17,7 +17,20 @@ class TsKvQuerySet(BaseQuerySet):
 
         for key_item in keys:
             query = self.filter(ts__gte=start_ts, ts__lte=end_ts, key=key_item["key_id"])
-            if key_item["type"] in ["dbl_v", "long_v"]:
+            if key_item["type"] in ["dbl_v", "long_v"] and agg_function == "Change":
+                query = (
+                    query.annotate(
+                        prev_dbl_v=Window(
+                            expression=Lag(key_item["type"]), partition_by=F("entity_id"), order_by=F("ts").asc()
+                        )
+                    )
+                    .exclude(dbl_v=F("prev_dbl_v"))
+                    .values("ts", values=F("dbl_v"))
+                )
+                result[key_item["key"]] = list(query[:limit])
+                count_of_data += query.count()
+
+            elif key_item["type"] in ["dbl_v", "long_v"] and agg_function != "Change":
                 query = (
                     query.annotate(
                         interval_time=Floor(
@@ -42,7 +55,7 @@ class TsKvQuerySet(BaseQuerySet):
                 result[key_item["key"]] = list(query[:limit])
                 count_of_data += query.count()
 
-            elif key_item["type"] in ["json_v", "str_v", "bool_v"]:
+            elif key_item["type"] in ["json_v", "str_v", "bool_v"] and agg_function != "Change":
                 query = (
                     query.annotate(
                         interval_time=F("ts"),
