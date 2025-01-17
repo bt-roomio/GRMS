@@ -16,6 +16,7 @@ logger = logging.getLogger("main")
 
 def handlers_mq(ch: BlockingChannel, body: bytes):
     msg = json.loads(body)
+    logger.debug(msg)
 
     device = Device.objects.filter(id=msg.get("sourceDeviceUUID")).first()
     if not device:
@@ -33,10 +34,10 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
             rpc_msg.additional_info = data.get("data")
             rpc_msg.save()
     elif topic == "v1/gateway/connect":
-        device = Device.objects.is_active().filter(name=data.get("device")).first()
+        device = Device.objects.is_active().filter(name=data.get("device"), tenant_id=device.tenant_id).first()
         update_activity_device(device)
     elif topic == "v1/gateway/disconnect":
-        device = Device.objects.is_active().filter(name=data.get("device")).first()
+        device = Device.objects.is_active().filter(name=data.get("device"), tenant_id=device.tenant_id).first()
         update_activity_device(device, connected=False)
 
     elif topic.startswith("v1/gateway/attributes/request") and device:

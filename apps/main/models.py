@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
@@ -201,6 +203,7 @@ class Device(BaseModel):
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+    tenant_id: UUID
     customer = models.ForeignKey("main.Customer", CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
