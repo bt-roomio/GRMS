@@ -14,6 +14,7 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
             "type",
             "state",
             "tenant",
+            "active",
             "image",
             "transport_type",
             "provision_type",
@@ -24,6 +25,7 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
             "provision_device_key",
             "external_id",
         )
+        read_only_fields = ("active",)
 
 
 class DeviceProfileFilterParams(ValidatorSerializer):

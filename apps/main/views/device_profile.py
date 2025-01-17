@@ -1,3 +1,4 @@
+from django.db.models import Count
 from drf_yasg.utils import swagger_auto_schema
 
 from rest_framework.generics import get_object_or_404
@@ -38,14 +39,28 @@ class DeviceProfileListView(APIView):
 class DeviceProfileDetailView(APIView):
     @swagger_auto_schema(responses=DeviceProfileDetailSwagger)
     def get(self, request, pk):
-        instance = get_object_or_404(DeviceProfile, pk=pk, tenant_id=request.user.tenant_id)
+        instance = get_object_or_404(DeviceProfile, pk=pk, tenant_id=request.user.tenant_id, active=True)
         serializer = DeviceProfileSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(responses=DeviceProfileDetailSwagger, request_body=DeviceProfileSerializer)
     def put(self, request, pk):
-        instance = get_object_or_404(DeviceProfile, pk=pk, tenant_id=request.user.tenant_id)
-        serializer = DeviceProfileSerializer(instance, data=request.data)
+        tenant_id = request.user.tenant_id
+        data = request.data.copy()
+        data["tenant"] = tenant_id
+        instance = get_object_or_404(DeviceProfile, pk=pk, tenant_id=request.user.tenant_id, active=True)
+        serializer = DeviceProfileSerializer(instance, data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)
+
+    @swagger_auto_schema(responses={})
+    def delete(self, request, pk):
+        instance = get_object_or_404(
+            DeviceProfile.objects.annotate(devices_count=Count("devices")).filter(id=pk, active=True)
+        )
+        if instance.devices_count > 0:  # pyright: ignore
+            return Response({"detail": "In this device_profile has the device(s)."}, 400)
+        instance.active = False
+        instance.save()
+        return Response({}, 204)

@@ -203,7 +203,7 @@ class Device(BaseModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     customer = models.ForeignKey("main.Customer", CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    device_profile = models.ForeignKey("main.DeviceProfile", CASCADE)
+    device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", SET_NULL, "devices", null=True, blank=True)
     label = models.CharField(max_length=255, null=True, blank=True)
@@ -237,9 +237,10 @@ class DeviceCredentials(BaseModel):
 
 class DeviceProfile(BaseModel):
     name = models.CharField(max_length=255)
+    active = models.BooleanField(default=True)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
     type = models.CharField(max_length=255)
     state = models.BooleanField(default=True)
-    tenant = models.ForeignKey("main.Tenant", CASCADE)
     image = models.CharField(max_length=1000000, blank=True, null=True)
     transport_type = models.CharField(max_length=255, blank=True, null=True)
     provision_type = models.CharField(max_length=255, blank=True, null=True)
@@ -257,7 +258,9 @@ class DeviceProfile(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_device_profile"
-        unique_together = ("name", "tenant")
+        constraints = [
+            UniqueConstraint(fields=["name", "tenant"], condition=Q(active=True), name="unique_active_device_profile")
+        ]
 
 
 class Customer(BaseModel):
