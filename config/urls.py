@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 
 from .yasg import urlpatterns as doc_path
 
@@ -14,6 +14,7 @@ urlpatterns = [
                 path("users/", include(("users.urls", "users"), namespace="users")),
                 path("main/", include(("main.urls", "main"), namespace="main")),
                 path("shuttle/", include(("shuttle.urls", "shuttle"), namespace="shuttle")),
+                path("card/", include(("card.urls", "card"), namespace="card")),
             ]
         ),
     ),

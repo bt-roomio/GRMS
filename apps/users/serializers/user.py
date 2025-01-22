@@ -1,9 +1,16 @@
 from drf_yasg import openapi
+
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from users.models import User, Role
+from users.models import Role, User
 from users.serializers.role import RoleSimpleSerializer
+
+
+class SimpleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "email")
 
 
 class AdditionalInfoField(serializers.JSONField):

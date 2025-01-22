@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "users",
     "main",
     "shuttle",
+    "card",
 ]
 
 MIDDLEWARE = [

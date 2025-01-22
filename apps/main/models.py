@@ -36,7 +36,7 @@ class Tenant(BaseModel):
 
     objects = TenantQuerySet.as_manager()
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_tenant"
 
 
@@ -48,7 +48,7 @@ class TenantProfile(BaseModel):
     isolated_tb_core = models.BooleanField(default=False)
     isolated_tb_rule_engine = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_tenant_profile"
 
 
@@ -57,7 +57,7 @@ class AdminSettings(BaseModel):
     key = models.CharField(max_length=255)
     json_value = models.JSONField(null=True, blank=True)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_admin_settings"
 
 
@@ -73,7 +73,7 @@ class EmailConfiguration(BaseModel, UpdateByModel):
 
     tenant = models.OneToOneField("main.Tenant", CASCADE)
 
-    class Meta:
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_email_configuration"
         default_related_name = "email_configurations"
 
@@ -140,7 +140,7 @@ class Room(BaseModel, UpdateByModel):
                 )
         super().save(*args, **kwargs)
 
-    class Meta:
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room"
         constraints = [
             UniqueConstraint(
@@ -169,7 +169,7 @@ class RoomHistory(BaseModel, UpdateByModel):
     def __str__(self):
         return str(self.number)
 
-    class Meta:
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room_history"
         default_related_name = "room_history"
 
@@ -194,7 +194,7 @@ class RoomType(BaseModel):
     def __str__(self):
         return str(self.title)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_room_type"
         unique_together = (("title", "tenant"),)
 
@@ -213,13 +213,14 @@ class Device(BaseModel):
     additional_info = models.JSONField(null=True, blank=True)
     device_data = models.JSONField(null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
+    card = models.ForeignKey("card.Card", SET_NULL, null=True, blank=True)
 
     objects = DeviceQuerySet.as_manager()
 
     def __str__(self):
         return str(self.name)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_device"
         constraints = [
             UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_active_device")
@@ -234,7 +235,7 @@ class DeviceCredentials(BaseModel):
 
     objects = DeviceCredentialsQuerySet.as_manager()
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_device_credentials"
 
 
@@ -285,7 +286,7 @@ class Customer(BaseModel):
     def __str__(self):
         return str(self.title)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_customer"
 
 
@@ -307,7 +308,7 @@ class Dashboard(BaseModel):
     def __str__(self):
         return str(self.title)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_dashboard"
         unique_together = (("title", "tenant"),)
 
@@ -328,7 +329,7 @@ class WidgetType(BaseModel):
     def __str__(self):
         return str(self.name)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_widget_type"
         ordering = ["created_at"]
         unique_together = ("name", "tenant")
@@ -353,9 +354,6 @@ class Guest(BaseModel):
 
     objects = GuestQuerySet.as_manager()
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "main_guest"
         ordering = ["created_at"]
-
-
-message = {""}
