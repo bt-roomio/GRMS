@@ -6,4 +6,4 @@ class RoomTypeQuerySet(BaseQuerySet):
         query = self.filter(tenant=tenant)
         query = query.filter(title__icontains=search) if search else query
 
-        return query
+        return query.order_by("created_at")
