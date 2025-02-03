@@ -212,7 +212,7 @@ WS_INTERVAL = os.getenv("WS_INTERVAL", 5)
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": os.getenv("CACHE_LOCATION", "redis://localhost:6379/1"),
+        "LOCATION": os.getenv("CACHE_LOCATION", "redis://redis:6379/1"),
     }
 }
 
@@ -241,17 +241,11 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "console",
         },
-        "file": {
-            "level": "DEBUG",
-            "class": "logging.FileHandler",
-            "formatter": "file",
-            "filename": "debug.log",
-        },
     },
     "loggers": {
         "main": {
             "level": "DEBUG",
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
         },
     },
 }

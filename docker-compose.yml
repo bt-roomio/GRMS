@@ -8,20 +8,21 @@ services:
       - POSTGRES_USER=${DATABASE_USER}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
 
   web:
     build: .
     container_name: django
+    restart: always
     command: >
       /bin/bash -c "
       python /app/manage.py migrate &&
       python /app/manage.py collectstatic --no-input &&
       supervisord -c /etc/supervisor/conf.d/supervisord.conf"
     ports:
-      - "8000:8000"
+      - "8000"
     environment:
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=${DATABASE_USER}
@@ -41,6 +42,7 @@ services:
       context: ./docker/nginx/
     image: nginx:latest
     container_name: nginx
+    restart: always
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/
@@ -52,12 +54,14 @@ services:
   redis:
     image: redis:latest
     container_name: redis
+    restart: always
     ports:
       - "6379:6379"
 
   celery:
     build: .
     command: celery -A config worker --loglevel=info
+    restart: always
     depends_on:
       - redis
       - web
@@ -71,6 +75,7 @@ services:
   celery-beat:
     build: .
     command: celery -A config beat --loglevel=info
+    restart: always
     depends_on:
       - redis
       - web
@@ -85,4 +90,3 @@ volumes:
   static_volume:
   media_volume:
   pg_data:
-
