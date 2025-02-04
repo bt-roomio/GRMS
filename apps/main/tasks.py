@@ -27,6 +27,6 @@ def auto_check_out():
     for room in rooms_with_active_guest_counts:
         room.state = safely_remove(room.state, Room.CheckedIn)
         room.state.append(Room.Available)
-        room.save()
+        room.save(update_fields=["state"])
 
     logger.info("auto checkout task successfully finish.")

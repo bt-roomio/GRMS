@@ -18,7 +18,7 @@ class GuestMoveRoomSerializer(serializers.Serializer):
         from_room = validated_data.pop("from_room")
         from_room.state.append(Room.Available)
         from_room.state = safely_remove(from_room.state, Room.CheckedIn)
-        from_room.save()
+        from_room.save(update_fields=["state"])
 
         for guest in instance:
             guest.room = validated_data.get("to_room")
@@ -27,7 +27,7 @@ class GuestMoveRoomSerializer(serializers.Serializer):
         to_room = validated_data.pop("to_room")
         to_room.state.append(Room.CheckedIn)
         to_room.state = safely_remove(to_room.state, Room.Available)
-        to_room.save()
+        to_room.save(update_fields=["state"])
 
         return instance
 
@@ -40,27 +40,27 @@ class GuestSerializer(serializers.ModelSerializer):
         if room:
             room.state = safely_remove(room.state, Room.Available)
             room.state.append(Room.CheckedIn)
-            room.save()
+            room.save(update_fields=["state"])
         return instance
 
     def update(self, instance, validated_data):
         old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
         if old_room and len(old_room.guests.all()) == 1:
             old_room.state = safely_remove(old_room.state, Room.Available)
-            old_room.save()
+            old_room.save(update_fields=["state"])
 
         new_room = validated_data.get("room") and Room.objects.filter(id=validated_data.get("room").id).first()
         if new_room and not new_room.guests.exists():
             new_room.state = safely_remove(new_room.state, Room.Available)
             new_room.state.append(Room.CheckedIn)
-            new_room.save()
+            new_room.save(update_fields=["state"])
 
         if validated_data.get("is_active") == False:
             room = Room.objects.filter(id=instance.room_id).first()
             if room and len(room.guests.filter(is_active=True)) <= 1:
                 room.state = safely_remove(room.state, Room.CheckedIn)
                 room.state.append(Room.Available)
-                room.save()
+                room.save(update_fields=["state"])
         return super().update(instance, validated_data)
 
     class Meta:
