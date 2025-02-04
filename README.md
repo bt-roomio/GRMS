@@ -1,19 +1,13 @@
-# Docker
+# Deploy backend
 
-Configure postgresql image:
+## Requirements
 
-1. `docker run --name postgres -p 5432:5432 -e POSTGRES_USER=DB_USER -e POSTGRES_PASSWORD=DB_PASSWORD -d postgres`
-2. `docker exec -it postgres bash`
-3. `psql -U DB_USER`
-4. `create database DB_NAME owner DB_USER;`
-5. `exit`
+- Linux ( Debian/Ubuntu )
+- docker
+- docker-compose
 
--- For checking db before `exit` write `\l`
-
-# Celery
-
-### Commands
-
-```celery -A config worker -l INFO```
-
-```celery -A config beat -l INFO```
+1. Clone repository
+2. Checkout to stable branch
+3. Write variables in `.env` file. Run this command in terminal `cp .env.example .env`
+4. For running project in docker `docker-compose up --build -d`
+5. Finish. Checking <http://localhost:9000/>

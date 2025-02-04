@@ -1,8 +1,16 @@
+image: docker:git
+services:
+  - docker:dind
+
 stages:
   - lint
   - test
+  - build
   - production
 
+variables:
+  IMAGE_NAME: registry.gitlab.com/yroomio/grms
+  IMAGE_TAG: latest
 
 lint:
   image: python:3.12-alpine
@@ -10,7 +18,6 @@ lint:
   script:
     - pip install black==24.4.2
     - black . --check
-
 
 test:
   stage: test
@@ -34,6 +41,14 @@ test:
     - mkdir -p logs
     - ./manage.py test
 
+build-image:
+  stage: build
+  when: manual
+  script:
+    - echo $CI_REGISTRY_USER
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
 
 production:
   stage: production
