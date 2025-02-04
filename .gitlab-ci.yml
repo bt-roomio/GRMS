@@ -41,7 +41,7 @@ variables:
 #     - mkdir -p logs
 #     - ./manage.py test
 
-build-image:
+build:
   stage: build
   when: manual
   script:
