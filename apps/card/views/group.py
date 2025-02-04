@@ -15,7 +15,7 @@ class GroupListView(APIView):
         params = GroupFilterParams.check(request.GET)
         queryset = Group.objects.list(
             tenant_id=request.user.tenant_id,
-            sort_by=params.get("sort_by"),
+            sort_by=params.get("sort_by", []),
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),
         )

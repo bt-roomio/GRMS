@@ -47,7 +47,7 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
 def check_for_duplicate_state(instance, **kwargs):
     # Disabling duplicate state
     Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))
-    update_fields = kwargs.get("update_fields", [])
+    update_fields = kwargs.get("update_fields", []) or []
 
     if settings.TESTING or "state" not in update_fields:
         return
