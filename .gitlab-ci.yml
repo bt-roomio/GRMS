@@ -29,6 +29,12 @@ production:
   script:
     - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $PROD_USER@$PROD_HOST -p $PROD_PORT "
-      cd /;
+      mkdir -p /app;
+      cd /app;
       docker login -u '$CI_REGISTRY_USER' -p '$CI_REGISTRY_PASSWORD' $CI_REGISTRY;
-      docker pull $IMAGE_NAME:$IMAGE_TAG;"
+      docker pull $IMAGE_NAME:$IMAGE_TAG;
+      docker-compose down;
+      docker-compose build;
+      docker-compose up -d;
+      docker image prune -f;
+      "
