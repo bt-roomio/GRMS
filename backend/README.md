@@ -1,13 +1,24 @@
-# Deploy backend
+# Deployment
 
-## Requirements
+# Build project for gitlab.registry.com
 
-- Linux ( Debian/Ubuntu )
-- docker
-- docker-compose
+`docker buildx build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/yroomio/grms:latest --push .`
 
-1. Clone repository
-2. Checkout to stable branch
-3. Write variables in `.env` file. Run this command in terminal `cp .env.example .env`
-4. For running project in docker `docker-compose up --build -d`
-5. Finish. Checking <http://localhost:9000/>
+## if you don't want to --push change this to --load for locally build
+
+### Usefull commands and snippets
+
+`
+
+- docker ps
+- docker ps -a
+- docker images
+- docker images -a
+- docker run --rm -it registry.gitlab.com/yroomio/grms:latest bash
+- docker logs -f container_name
+- docker compose logs -f service_name
+- docker exec -it django bash
+- docker compose up --build -d
+- docker compose down
+
+`
