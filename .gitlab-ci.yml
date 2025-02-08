@@ -29,12 +29,10 @@ production:
   script:
     - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $PROD_USER@$PROD_HOST -p $PROD_PORT "
-      sudo su $PROD_USER;
-      mkdir -p ~/app;
-      cd ~/app;
+      mkdir -p ~/GRMS;
+      cd ~/GRMS;
       docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY;
-      docker compose down;
-      docker rmi -f $IMAGE_NAME:$IMAGE_TAG || true;
-      docker pull $IMAGE_NAME:$IMAGE_TAG &&
+      docker compose down &&
+      docker compose pull &&
       docker compose up -d;
       "
