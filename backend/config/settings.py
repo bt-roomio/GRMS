@@ -111,11 +111,11 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DATABASE_NAME", "postgres"),
-        "USER": os.getenv("DATABASE_USER", "postgres"),
-        "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
-        "HOST": os.getenv("DATABASE_HOST", "localhost"),
-        "PORT": os.getenv("DATABASE_PORT", 5432),
+        "NAME": os.getenv("POSTGRES_NAME", "postgres"),
+        "USER": os.getenv("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
+        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "PORT": os.getenv("POSTGRES_PORT", 5432),
     }
 }
 
@@ -201,9 +201,9 @@ CHANNEL_LAYERS = {
     },
 }
 
+RABBIT_TYPE = os.getenv("RABBIT_TYPE", "rabbitMQ")
 RABBIT_HOST = os.getenv("RABBIT_MQ_HOST", "localhost")
 RABBIT_PORT = os.getenv("RABBIT_MQ_PORT", 5672)
-RABBIT_TYPE = os.getenv("RABBIT_TYPE", "rabbitMQ")
 RABBIT_LOGIN = os.getenv("RABBIT_LOGIN", "guest")
 RABBIT_PASSWORD = os.getenv("RABBIT_PASSWORD", "guest")
 

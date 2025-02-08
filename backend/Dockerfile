@@ -14,4 +14,3 @@ RUN chmod -R 755 /var/log/django
 COPY . .
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-

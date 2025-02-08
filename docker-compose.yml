@@ -1,8 +1,18 @@
 services:
-  web:
-    build: .
-    container_name: django
+  postgres:
+    image: postgres:16
     restart: always
+    container_name: postgres
+    env_file:
+      - prod.env
+    ports:
+      - "5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  backend:
+    image: registry.gitlab.com/yroomio/grms:latest
+    container_name: django
     command: >
       /bin/bash -c "
       python /app/manage.py migrate &&
@@ -10,18 +20,66 @@ services:
       supervisord -c /etc/supervisor/conf.d/supervisord.conf"
     ports:
       - "8000"
-    environment:
-      - DATABASE_NAME=${DATABASE_NAME}
-      - DATABASE_USER=${DATABASE_USER}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=${DATABASE_PORT}
+    restart: always
+    env_file:
+      - prod.env
     volumes:
-      - .:/app
       - static_volume:/app/static/
       - media_volume:/app/media/
+    depends_on:
+      - postgres
+
+  frontend:
+    image: registry.gitlab.com/grms1/grms_front:latest
+    container_name: vue
+    env_file:
+      - prod.env
+    command: >
+      /bin/bash -c "yarn build && cp -r dist/* /front"
+    volumes:
+      - front:/front
+
+  nginx:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./nginx/
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    volumes:
+      - front:/usr/share/nginx/html
+      - static_volume:/app/static/
+      - media_volume:/app/media/
+    ports:
+      - "9000:8080"
+      - "8095:80"
+    depends_on:
+      - backend
+      - frontend
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: always
+    env_file:
+      - prod.env
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    ports:
+      - 15672:15672
+      - 5672:5672
 
 volumes:
   static_volume:
   media_volume:
   pg_data:
+  front:
+  rabbitmq:

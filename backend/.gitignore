@@ -14,8 +14,7 @@ __pycache__
 pytest.ini
 data
 uploads
-*.env
-!prod.env.example
+.env
 vandelay-py.js
 .envrc
 files
