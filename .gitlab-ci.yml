@@ -32,6 +32,6 @@ production:
     - ssh -o "StrictHostKeyChecking=no" -i publickey $PROD_USER@$PROD_HOST -p $PROD_PORT "
       mkdir -p ~/GRMS;
       cd ~/GRMS;
-      echo $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY
+      echo $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY;
       docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY;
       "
