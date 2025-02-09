@@ -40,7 +40,7 @@ production:
     - echo "$PROD_PRIVATE_KEY" > publickey && chmod 600 publickey
     # Use a heredoc to pass a multi-line script to the remote host.
     - |
-      ssh -o StrictHostKeyChecking=no -i publickey "$PROD_USER@$PROD_HOST" -p "$PROD_PORT" <<'EOF'
+      ssh -t -o StrictHostKeyChecking=no -i publickey "$PROD_USER@$PROD_HOST" -p "$PROD_PORT" <<'EOF'
       set -e
       cd ~/GRMS
       docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
