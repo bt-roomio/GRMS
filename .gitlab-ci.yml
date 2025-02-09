@@ -42,9 +42,8 @@ production:
     - |
       ssh -o StrictHostKeyChecking=no -i publickey "$PROD_USER@$PROD_HOST" -p "$PROD_PORT" <<'EOF'
       set -e
-      cd ~/app
+      cd ~/GRMS
       docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-      docker compose down
-      docker rmi -f "$IMAGE_NAME:$IMAGE_TAG" || true
-      docker pull "$IMAGE_NAME:$IMAGE_TAG"
-      docker compose up -d"
+      docker compose down &&
+      docker compose pull &&
+      docker compose up --build -d"
