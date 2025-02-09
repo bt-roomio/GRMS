@@ -1,48 +1,39 @@
 image: docker:git
-
 services:
   - docker:dind
 
 stages:
+  # - lint
+  # - test
   - build
   - production
 
 variables:
-  # Ensure Docker can talk to the DinD service.
-  DOCKER_DRIVER: overlay2
-  DOCKER_HOST: tcp://docker:2375/
-  DOCKER_TLS_CERTDIR: ""
-  
-  # Docker image details.
   IMAGE_NAME: registry.gitlab.com/yroomio/grms
   IMAGE_TAG: latest
 
 build:
   stage: build
-  when: manual  # Trigger this job manually, or change to 'always' if desired.
+  when: manual
   script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" .
-    - docker push "$IMAGE_NAME:$IMAGE_TAG"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
 
 production:
   stage: production
+  when: manual
   image: alpine:latest
-  rules:
-    # Adjust the branch name as needed.
-    - if: '$CI_COMMIT_BRANCH == "Umarov"'
-      when: manual
-  before_script:
-    # Install SSH client on Alpine.
-    - apk add --no-cache openssh-client
+  only:
+    - Umarov
   script:
-    # Write the private key to a file and secure it.
-    - echo "$PROD_PRIVATE_KEY" > publickey && chmod 600 publickey
-    # Use a heredoc to pass a multi-line script to the remote host.
+    - apk add --no-cache openssh-client
+    - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $PROD_USER@$PROD_HOST -p $PROD_PORT "
-      set -e
-      cd ~/GRMS
-      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+      mkdir -p ~/GRMS;
+      cd ~/GRMS;
+      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
       docker compose down &&
       docker compose pull &&
-      docker compose up --build -d"
+      docker compose up -d;
+      "
