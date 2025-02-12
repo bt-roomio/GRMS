@@ -9,6 +9,8 @@ services:
       - "5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    networks:
+      - roomio_net
 
   backend:
     image: registry.gitlab.com/yroomio/grms:latest
@@ -28,6 +30,8 @@ services:
       - media_volume:/app/media/
     depends_on:
       - postgres
+    networks:
+      - roomio_net
 
   frontend:
     image: registry.gitlab.com/grms1/grms_front:latest
@@ -38,6 +42,8 @@ services:
       sh -c "yarn && yarn build && cp -r dist/* /frontend"
     volumes:
       - frontend:/frontend
+    networks:
+      - roomio_net
 
   nginx:
     image: nginx:latest
@@ -54,6 +60,8 @@ services:
     depends_on:
       - backend
       - frontend
+    networks:
+      - roomio_net
 
   redis:
     image: redis:latest
@@ -61,23 +69,62 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    networks:
+      - roomio_net
 
-  # rabbitmq:
-  #   image: rabbitmq:3.10.7-management
-  #   container_name: rabbitmq
-  #   hostname: rabbitmq
-  #   restart: always
-  #   env_file:
-  #     - prod.env
-  #   volumes:
-  #     - rabbitmq:/var/lib/rabbitmq
-  #   ports:
-  #     - 15672:15672
-  #     - 5672:5672
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    container_name: rabbitmq
+    restart: always
+    environment:
+      - RABBITMQ_NODENAME=rabbit@rabbitmq
+      - RABBITMQ_DEFAULT_USER=yanis
+      - RABBITMQ_DEFAULT_PASS=grms
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log_levels [{connection,error},{default,error}] disk_free_limit 2147483648
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    ports:
+      - 15672:15672
+      - 8097:5672
+    networks:
+      - roomio_net
+
+  mqtt:
+    restart: unless-stopped
+    image: registry.gitlab.com/grms1/mqtt-broker
+    hostname: mqtt-broker
+    ports:
+      - 9003:9999 # port forwarding
+    command: python MqttTransportHandler.py
+    volumes:
+      - ./mqtt_logs:/mqtt/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "3"
+        max-size: "50m"
+    environment:
+      - GRMS_HOST=vesna.tais.su
+      - GRMS_PORT=9000
+      - QUEUE_TYPE=rabbitMQ
+      - QUEUE_HOST=vesna.tais.su
+      - QUEUE_PORT=8097
+      - QUEUE_LOGIN=yanis
+      - QUEUE_PASSWORD=grms
+      - MAX_LOG_DAYS=7
+      - LOGGING_LEVEL=DEBUG
+    networks:
+      - roomio_net
+    depends_on:
+      - rabbitmq
+      - backend
 
 volumes:
   static_volume:
   media_volume:
   pg_data:
   frontend:
-  # rabbitmq:
+  rabbitmq:
+
+networks:
+  roomio_net:
