@@ -93,3 +93,6 @@ After deployment, check that everything is running correctly:
 ---
 
 Your application should now be deployed successfully. If you run into any issues, double-check your configuration files and environment variables. Happy deploying!
+
+Usefull commands
+`docker compose pull && docker compose down && docker compose up -d;`

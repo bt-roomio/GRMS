@@ -1,6 +1,6 @@
-from card.models import Group
-from card.serializers.group import GroupFilterParams, GroupSerializer
-from card.swagger.group import group_swagger
+from access_manager.models import Group
+from access_manager.serializers.group import GroupFilterParams, GroupSerializer
+from access_manager.swagger.group import group_swagger
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response

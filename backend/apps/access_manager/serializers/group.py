@@ -1,4 +1,4 @@
-from card.models import Group
+from access_manager.models import Group
 
 from rest_framework import serializers
 

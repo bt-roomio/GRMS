@@ -213,7 +213,7 @@ class Device(BaseModel):
     additional_info = models.JSONField(null=True, blank=True)
     device_data = models.JSONField(null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
-    card = models.ForeignKey("card.Card", SET_NULL, null=True, blank=True)
+    card = models.ForeignKey("access_manager.Card", SET_NULL, null=True, blank=True)
 
     objects = DeviceQuerySet.as_manager()
 

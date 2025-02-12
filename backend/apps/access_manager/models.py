@@ -1,4 +1,4 @@
-from card.querysets.group import GroupQuerySet
+from access_manager.querysets.group import GroupQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q, UniqueConstraint
@@ -58,7 +58,7 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
     objects = GroupQuerySet.as_manager()
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
-        db_table = "card_groups"
+        db_table = "access_manager_groups"
         constraints = [
             UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_card_group")
         ]
@@ -76,7 +76,7 @@ class Card(BaseModel, CreatedByModel, UpdateByModel):
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
-        db_table = "card_cards"
+        db_table = "access_manager_cards"
         constraints = [UniqueConstraint(fields=["number", "tenant"], condition=Q(is_active=True), name="unique_card")]
 
     def __str__(self):
@@ -94,17 +94,17 @@ class PublicSpace(BaseModel, CreatedByModel):
         return self.name
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "card_public_areas"
+        db_table = "access_manager_public_spaces"
 
 
 class NeedSyncDevice(BaseModel, CreatedByModel):
     device = models.ForeignKey("main.Device", models.CASCADE)
-    card = models.ForeignKey("card.Card", models.CASCADE)
+    card = models.ForeignKey("access_manager.Card", models.CASCADE)
     need_sync = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "card_need_sync_devices"
+        db_table = "access_manager_need_sync_devices"
 
 
 class Staff(BaseModel, CreatedByModel):
@@ -118,7 +118,7 @@ class Staff(BaseModel, CreatedByModel):
         return f"{self.first_name} {self.last_name}"
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "card_staff"
+        db_table = "access_manager_staff"
         constraints = [
             UniqueConstraint(
                 fields=["tenant", "first_name", "last_name"], condition=Q(is_active=True), name="unique_staff"
@@ -127,26 +127,26 @@ class Staff(BaseModel, CreatedByModel):
 
 
 class GroupRoom(BaseModel, CreatedByModel):
-    group = models.ForeignKey("card.Group", models.CASCADE)
+    group = models.ForeignKey("access_manager.Group", models.CASCADE)
     room = models.ForeignKey("main.Room", models.CASCADE)
-    staff = models.ForeignKey("card.Staff", models.CASCADE)
+    staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "card_group_rooms"
+        db_table = "access_manager_group_rooms"
 
     def __str__(self):
         return f"{self.group} -> {self.room}"
 
 
 class GroupPublicSpace(BaseModel, CreatedByModel):
-    group = models.ForeignKey("card.Group", models.CASCADE)
-    public_space = models.ForeignKey("card.PublicSpace", models.CASCADE)
-    staff = models.ForeignKey("card.Staff", models.CASCADE)
+    group = models.ForeignKey("access_manager.Group", models.CASCADE)
+    public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE)
+    staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "card_group_public_spaces"
+        db_table = "access_manager_group_public_spaces"
 
     def __str__(self):
         return f"{self.group} -> {self.public_space}"
@@ -154,11 +154,11 @@ class GroupPublicSpace(BaseModel, CreatedByModel):
 
 class GuestPublicSpace(BaseModel):
     guest = models.ForeignKey("main.Guest", models.CASCADE)
-    public_space = models.ForeignKey("card.PublicSpace", models.CASCADE)
+    public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta):
-        db_table = "card_guest_public_spaces"
+        db_table = "access_manager_guest_public_spaces"
 
     def __str__(self):
         return f"{self.guest} -> {self.public_space}"

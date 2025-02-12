@@ -1,4 +1,4 @@
-from card.views.group import GroupDetailView, GroupListView
+from access_manager.views.group import GroupDetailView, GroupListView
 from django.urls import path
 
 urlpatterns = [
