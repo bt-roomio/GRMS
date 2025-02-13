@@ -1,4 +1,5 @@
 from access_manager.querysets.group import GroupQuerySet
+from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q, UniqueConstraint
@@ -108,11 +109,14 @@ class NeedSyncDevice(BaseModel, CreatedByModel):
 
 
 class Staff(BaseModel, CreatedByModel):
-    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
+
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+
+    objects = StaffQuerySet.as_manager()
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -126,17 +130,26 @@ class Staff(BaseModel, CreatedByModel):
         ]
 
 
+class StaffCard(BaseModel, CreatedByModel):
+    staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
+    card = models.OneToOneField("access_manager.Card", models.CASCADE)
+    is_active = models.BooleanField(default=True)
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+        db_table = "access_manager_staff_cards"
+
+
 class GroupRoom(BaseModel, CreatedByModel):
     group = models.ForeignKey("access_manager.Group", models.CASCADE)
     room = models.ForeignKey("main.Room", models.CASCADE)
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "access_manager_group_rooms"
-
     def __str__(self):
         return f"{self.group} -> {self.room}"
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+        db_table = "access_manager_group_rooms"
 
 
 class GroupPublicSpace(BaseModel, CreatedByModel):

@@ -10,7 +10,7 @@ from core.utils.perform_request import with_tenant
 
 
 class GroupListView(APIView):
-    @group_swagger()
+    @group_swagger("list")
     def get(self, request):
         params = GroupFilterParams.check(request.GET)
         queryset = Group.objects.list(
@@ -23,6 +23,7 @@ class GroupListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
+    @group_swagger()
     def post(self, request):
         data = with_tenant(request)
         serializer = GroupSerializer(data=data)
@@ -32,11 +33,13 @@ class GroupListView(APIView):
 
 
 class GroupDetailView(APIView):
+    @group_swagger()
     def get(self, request, pk):
         instance = get_object_or_404(Group, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GroupSerializer(instance)
         return Response(serializer.data)
 
+    @group_swagger()
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
@@ -45,6 +48,7 @@ class GroupDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @group_swagger()
     def delete(self, request, pk):
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         instance.is_active = False
