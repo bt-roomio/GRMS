@@ -17,7 +17,7 @@ class RoomQuerySet(BaseQuerySet):
         query = query.filter(id__in=get_mur_rooms(tenant)) if state == 4 else query
 
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__startswith": search_value}))
+            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
         if sort_by:
             for item in sort_by:
