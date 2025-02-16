@@ -13,14 +13,14 @@ class GroupListView(APIView):
     @group_swagger("list")
     def get(self, request):
         params = GroupFilterParams.check(request.GET)
-        queryset = Group.objects.list(
+        queryset = Group.objects.list(  # pyright: ignore
             tenant_id=request.user.tenant_id,
-            sort_by=params.get("sort_by", []),
-            search_field=params.get("search_field"),
-            search_value=params.get("search_value"),
+            sort_by=params.get("sort_by", []),  # pyright: ignore
+            search_field=params.get("search_field"),  # pyright: ignore
+            search_value=params.get("search_value"),  # pyright: ignore
         )
         serializer = GroupSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size"))
+        data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
         return Response(data)
 
     @group_swagger()

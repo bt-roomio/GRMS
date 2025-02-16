@@ -6,6 +6,12 @@ from core.utils.serializers import ValidatorSerializer
 from users.serializers.user import SimpleUserSerializer
 
 
+class SimpleGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ("id", "name")
+
+
 class GroupSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, read_only=True)
     created_by = SimpleUserSerializer(read_only=True)

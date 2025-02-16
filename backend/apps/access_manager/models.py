@@ -130,6 +130,18 @@ class Staff(BaseModel, CreatedByModel):
         ]
 
 
+class GroupStaff(BaseModel, CreatedByModel):
+    group = models.ForeignKey("access_manager.Group", models.CASCADE)
+    staff = models.OneToOneField("access_manager.Staff", models.CASCADE)
+    additional_info = models.JSONField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.group} -> {self.staff}"
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+        db_table = "access_manager_group_staff"
+
+
 class StaffCard(BaseModel, CreatedByModel):
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     card = models.OneToOneField("access_manager.Card", models.CASCADE)
@@ -142,7 +154,6 @@ class StaffCard(BaseModel, CreatedByModel):
 class GroupRoom(BaseModel, CreatedByModel):
     group = models.ForeignKey("access_manager.Group", models.CASCADE)
     room = models.ForeignKey("main.Room", models.CASCADE)
-    staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
     def __str__(self):
@@ -155,7 +166,6 @@ class GroupRoom(BaseModel, CreatedByModel):
 class GroupPublicSpace(BaseModel, CreatedByModel):
     group = models.ForeignKey("access_manager.Group", models.CASCADE)
     public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE)
-    staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
