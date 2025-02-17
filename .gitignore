@@ -20,3 +20,4 @@ vandelay-py.js
 .envrc
 files
 logs
+mqtt_logs

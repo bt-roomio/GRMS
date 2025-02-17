@@ -14,3 +14,11 @@ RUN chmod -R 755 /var/log/django
 COPY . .
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["/entrypoint.sh"]
+

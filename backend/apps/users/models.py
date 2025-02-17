@@ -24,9 +24,7 @@ class User(AbstractUser, BaseModel):
         "users.Role",
         verbose_name=_("roles"),
         blank=True,
-        help_text=_(
-            "The roles this user belongs to. A user will get all permissions " "granted to each of their roles."
-        ),
+        help_text=_("The roles this user belongs to. A user will get all permissions granted to each of their roles."),
         related_name="user_set",
         related_query_name="user",
     )

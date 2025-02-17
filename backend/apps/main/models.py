@@ -34,6 +34,9 @@ class Tenant(BaseModel):
     title = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=255, null=True, blank=True)
 
+    def __str__(self) -> str:
+        return self.title
+
     objects = TenantQuerySet.as_manager()
 
     class Meta(BaseModel.Meta):

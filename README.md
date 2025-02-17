@@ -96,3 +96,8 @@ Your application should now be deployed successfully. If you run into any issues
 
 Usefull commands
 `docker compose pull && docker compose down && docker compose up -d;`
+
+# Creating a new Tenant
+
+After starting all services, you can run this command to create new Tenant
+`docker exec -it django python manage.py create_tenant`
