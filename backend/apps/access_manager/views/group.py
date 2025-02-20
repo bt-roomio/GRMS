@@ -1,4 +1,4 @@
-from access_manager.models import Group
+from access_manager.models import Group, GroupRoom
 from access_manager.serializers.group import GroupFilterParams, GroupSerializer
 from access_manager.swagger.group import group_swagger
 
@@ -45,12 +45,13 @@ class GroupDetailView(APIView):
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GroupSerializer(instance, data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(updated_by=request.user)
         return Response(serializer.data)
 
     @group_swagger()
     def delete(self, request, pk):
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         instance.is_active = False
-        instance.save()
+        instance.save(updated_by=request.user)
+        GroupRoom.objects.filter(group=instance).delete()
         return Response({}, 204)

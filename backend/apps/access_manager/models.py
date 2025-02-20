@@ -1,4 +1,5 @@
 from access_manager.querysets.group import GroupQuerySet
+from access_manager.querysets.public_space import PublicSpaceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -91,11 +92,14 @@ class PublicSpace(BaseModel, CreatedByModel):
     dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
 
+    objects = PublicSpaceQuerySet.as_manager()
+
     def __str__(self) -> str:
         return self.name
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_public_spaces"
+        unique_together = ("name", "tenant")
 
 
 class NeedSyncDevice(BaseModel, CreatedByModel):
@@ -152,20 +156,20 @@ class StaffCard(BaseModel, CreatedByModel):
 
 
 class GroupRoom(BaseModel, CreatedByModel):
-    group = models.ForeignKey("access_manager.Group", models.CASCADE)
-    room = models.ForeignKey("main.Room", models.CASCADE)
+    group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
+    room = models.ForeignKey("main.Room", models.CASCADE, "group_room")
     additional_info = models.JSONField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.group} -> {self.room}"
+        return str(self.id)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_group_rooms"
 
 
 class GroupPublicSpace(BaseModel, CreatedByModel):
-    group = models.ForeignKey("access_manager.Group", models.CASCADE)
-    public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE)
+    group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
+    public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):

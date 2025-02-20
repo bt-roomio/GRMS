@@ -53,13 +53,3 @@ class StaffFilterParams(ValidatorSerializer):
     search_field = serializers.ChoiceField(choices=("first_name", "last_name"), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
-
-
-"""
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["group"] = instance.groupstaff.group.name if instance.groupstaff else None
-        return data
-
-
-"""
