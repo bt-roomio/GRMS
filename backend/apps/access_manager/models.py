@@ -1,3 +1,4 @@
+from access_manager.querysets.card import CardQuerySet
 from access_manager.querysets.group import GroupQuerySet
 from access_manager.querysets.public_space import PublicSpaceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
@@ -72,17 +73,18 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
 class Card(BaseModel, CreatedByModel, UpdateByModel):
     number = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
-    is_active = models.BooleanField(default=True)
 
     KNX = models.IntegerField(null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
-        db_table = "access_manager_cards"
-        constraints = [UniqueConstraint(fields=["number", "tenant"], condition=Q(is_active=True), name="unique_card")]
+    objects = CardQuerySet.as_manager()
 
     def __str__(self):
-        return f"Card #{self.number}"
+        return self.id
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+        db_table = "access_manager_cards"
+        unique_together = ("number", "tenant")
 
 
 class PublicSpace(BaseModel, CreatedByModel):

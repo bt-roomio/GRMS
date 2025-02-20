@@ -1,3 +1,4 @@
+from access_manager.views.card import CardDetailView, CardListView
 from access_manager.views.group import GroupDetailView, GroupListView
 from access_manager.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from access_manager.views.staff import StaffDetailView, StaffListView
@@ -13,4 +14,7 @@ urlpatterns = [
     # Public space
     path("public-space/", PublicSpaceListView.as_view(), name="public-space-list"),
     path("public-space/<uuid:pk>/", PublicSpaceDetailView.as_view(), name="public-space-detail"),
+    # Public space
+    path("card/", CardListView.as_view(), name="card-list"),
+    path("card/<uuid:pk>/", CardDetailView.as_view(), name="card-detail"),
 ]
