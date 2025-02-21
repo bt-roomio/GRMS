@@ -21,9 +21,9 @@ def send_reset_link_email(user, send_activation_mail=True):
     reset_key = ResetPassword.objects.create(user=user)
 
     host = config.frontend_host or "localhost"
-    port = config.frontend_port or 3000
+    port = ":" + config.frontend_port if config.frontend_port else ""
 
-    url = f"{host}:{port}" + "/password/new/" + "?key=" + reset_key.key
+    url = f"{host}{port}" + "/password/new/" + "?key=" + reset_key.key
 
     if not send_activation_mail:
         return bytes(url, encoding="utf-8")

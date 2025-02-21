@@ -1,16 +1,72 @@
-{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Room.io Password</title>
+  <style type="text/css">
+    /* Общие сбросы для Outlook */
+    table { border-collapse: collapse; }
+    /* Для мобильных устройств */
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <!-- Основной контейнер -->
+        <table class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+          <!-- Шапка письма -->
+          <tr>
+            <td align="center" style="padding: 20px 0;">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJgAAAAcCAYAAACd43bvAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUATWljcm9zb2Z0IE9mZmljZX/tNXEAABCVSURBVHhe7ZsNdJTVmcffr/mCBBqF1WhlFRVIQEBQlti1xdb4QdfIEs0kO7pZt56uX/W7Vdvdcmhdi2eV1dqtenRrOT2zYWgDMbqYqluUusXjFpcCEgXa3eLWSougpk4mM+/H/p73nQmZzEzmzUDAnsM9DDOZ997nPvd///e5z/PcO8by5cuV4SWR6LxKVY37Hcc5iVfBc/lCVbUMb+sUJXV9NBrdX7TSsS8/dgjE452nBQLGzSiWdpzUSuZu71gqaRSSq3uuqgZ+oCiOUopc0sZx7EAgEGzJZIJp/rx6LJU8JvvwILBqVfeEUEh/WdeNU0Qic9cYj8cXxmIxmcMxKQUEM017SihkKKYpBmrkYtu2VJhRrt6x5x8PBAwjc7ymGad4c6tiJJTZplk9TqzZWGlYQLDqam1jMpl5C+s0PUugon2rqve146iPj5Vyx+QeXgR27tz66xkz5sbZemLeDmU/0t7e9P7h7SVfmkuwRKLrcpg91bYHXopGm/971arEp3Vdb7cs+/hSnauqaimK+dO2tuYezGzIMKrbNE2ZkEz2d7a3R38zlkofk10ZAvjbsuVcxXw/pShaprX1LzdWJsl/K4PO7mFPvs9rErA6OrouhSAv8Mc/+REDuQK6Pu4Zw9AbZVWEQqG7E4nuhmi06dd+2h+rc+QRiEaX/MeR6tVgH/6mZZmuQ2/AEt6uo3MhmK+C5ZrNdtmYyXjbuGEEajMZ8wo+PuhLQLYSRA3iD0wKhxUtlTpwoL29/aPRtB9ad9myZVp9ff0kRYlE+D41Zcrk9xoaGsxK5Q1vl0g8fxxiq1IpBZk1+9vbz08dquxVq1aND4drapBpG0bfPj+Odzy+iZ1jj4xTZaT7m5qakoeqR6n2lWIqWySk8lIR8s6rwC8bSWkcxnEQc7CKyLBtSybWV8HaXUzP1xjG+D8zDGsyPp0eCk3cj2X9BWY8jiWM+xEEAGp9/dlNOK9X1NXNOxc9ahXFCtN2YM+evXv37Hn6dZ51mmZfl5/JKyRV96fQs5XX+bxOYZgQQgj2nuj6Bro+AznW4NPs86Ov1EFnHZ2vQq/WcHjiHHyimnDYsR1n/N5E4umf4YJ8D5flJ0V0uURR7C8A+wJFCU2inZpMKvvXrHl6C+MGsyUdpXQgBdWiaQE36mfuHsHFeX4EUoHpuWBqgelcMFULMLVtda1t960F06JRIczIz3NhjdzQ0H8JUD9fhqbp+GcjF1ZsNaA+oWlalMlxK3uBg/wn+TflJD5cCtBf5Lt2iPa/pSSyrV84c+a8FfiF83lJdJSV5bYI8nc172fwaoHIb1D/79valnSV01GeMyHTyAk+gNjL0HWIbFfPEP+NR76E/ZdEItbXOzq6V7S1NT1UTnY8npiDzk8i85xcqlF095xv5TQ+nmbbgVgise6pVGrSDWIlJc0QidiP06ZVVfW8cdLmZBqfTLvPr1nTdaPjWH8LOXcO18Nx9LN0PfAX8j0E+zFvRQnGovmch6lzDjlP+tKKYgokLbYtmHb+A2QlL5pfRmWtyoHm9/lDD3VHamsnPIfv9ymsnQuqbTvbGMw2gJKVcCav8yCqApifps4GLN15kOy3w/tgYHcBGEB4TwhMRN6brORevvuAz9WsvOlM3iwhCGDNZOWvW7167f2trUvvHklnZF+Gjj+gzUTPMruR19t8Rlfld3wV4nUGYucSJAVYKCcEAto/syg+E4mosVJbFqSdFwiEf4JOrlzLsmSFbuK1WzwV3mfqujZHFhtjuyYU2ncyCdLrQiEtjvVpkOhecKPtZur2yt5DXRnjAiED5MPaKhvj8e4LYrEmnh8s1EyJS+QVfaDY+D1MDVmw7tyIeoz7Lf7YUQxTcJ3Ja+3q1V1guiQP06NCsBNPtO4DOJdcgCSZ5C+iWPfQwUKo+QzqUSbtXCLaU03TfILn7srLFQEiEAitYIIAFdNr2+upf/+OHa+/ko2YBusibyEEuZ16VwpRDCN41+rV6zQiqa+UAPkiSNPFM9e8InsrXdybSn2wfrh/KFaOsfwd1W5Dtoq+S0j1dG3fvv3SWbNm5VlzLHdVKDThR5qmTszKhWj2nRK954+tq1HTnH+BS2dCmot0Xfk578cJucBlG2rd1NralBcFoscCCPQw9RZCshN03VyDb3sO21dRIhUfd9dX8jG1nqOvFb29W4pg2rmALfIOxoIVc334AkyPOMESicQpqhq8wSOXgnNsLQZc/KP8grXazJbQGA7bWxjEqVizzwtJ+P5Vqck2t0gsl6xGWbUA/1V8j295UnAbCuVJuxZM/3WQ7FFpxyr9MiR9FdO+dhi5a+mvA0JpnmwzPjDw4bUQq6gzn92K7mCCn8UqdDK2GoKdxu3bd30LguUROBiceD0TwfYnVsje1Nt7wsXLlxcGIGzhLzD+RWyJr6Ev2596nBgUyPVL3MpFxY7n0OM1dofP1dbaP0PvOegwS1Wr/4ax+cpVgi/pKe3+g5haZTBtfg3ZUTDdUArTI04w2w5dQrAa9FZvJt7aWkiu3GTjMH8AkR4IhQLfEQuVTqeu4dmr4hzX1c35dnY7EDkrotGlWXIVW5cHv4OEj0EqApPgg0yWbMEPd3d39wzdzvBfvsHkHCfPAfsFrByOePnCBG9A36VsmS/STkfnO5m077ModkhrCURIdMY8K4Rnrmq3FCPXkPG/g67L0OVJaeOR3bmrra302e+ttzYlmfA7oOKLoj8LWBz6sgSTKBHdHmFuZIuVbVu2u4oxxXI+K8GU4TnFeU76aEmnF4G+pAzAzx4tOQzEKRnB5GRq2kB3JqM2oCdblbpLvp82bX4jW8ZZ2Yj1rd7eX3xNUZaWZ0C2BhZrJT7YlWyBC3l98qOPrGYecf6qKCSZTw6Fgld7vqHSj08nW5/vguV5qaNj3WNYqRuBVmVrv4nGN4iAqVPnTyI/fbpYIgjzS4j7X+UE43Oth6wpLGoYnd5Pp/UXy7UxzY9+Sm7yHbZqCZamybaM9f3DSO1mzJjdCLlmH8T0TDD1XzxM112Bng2CqaaNv5DW68mDOftYxZNkhYhTDXPf8y9W8l7Kvlz0J8qJI82qebeUDPoxpB/htG3rZXNdbAVvIyvPgui6EMJw/S76fHS4v+VHf6IiLKCyUOpCdGGnS7Bw2LgYgIgOxbk1u2Ox5v/xI29oHcb3sPhkrAlZaIslx+euZiNThT8jkaeU3/uRS37rg2RSPcBYSREo782fP3VEoohM6YvJlnQJkbgTCYfDct44Yjt0JXfJihjENN939KMrwZRg2pDFtMUlmGWpX4ATcdheRdi6kxXryyzmOhTzz4p9gL0bZ09TSbi+mE5/mCilEAMYYi4tLz8x+jLXizxthz4L8kR+xGEZX7Gs4ABkkAk/a9my7fry5bMsQDrXay9gaz1+ZA2vAya7mOC3AHsmz6YYRvhU3ney1bEe3IjR68BHOXDggEpQMFizr6/PVzvwydUrft9qWN8seKJWD1Pb1jb4UK2gykFM3UW0SCoYsdiSbhxvwuLqk0Ihc2tT0xL28M4/59iIfVwSn8OSXIKMS3TV5NnLmON7WTFfps33HScyjsimrNmvRPlcm02bNolVOF4sILOVVNX+31UiLxKJ7EsmXWst+baa+fN/Ra5s1vuM7gSR5/kv2p5KZHvtnbeFYJCUbVKfLASrVNZYt6urq2Ohr3PPnQVTw+iv6I5YKpXah3uxL5uT+1OXYPIf25AA6YKJU3oqybjnDUOLyG2cXH5p+CDle/yMz6AS+R+FaKOZbPbYl+pq0lrOb91VKTuyRHqV9Ipl0EKh6lxbkefKxMAOJppZzRXJ9uSIz+gV3IhRJq8rGVHlbVpaWpS6urMPGdOamhotmTRdn1zSe4MEG6oapCIJaET83AfzBKkc9ShfrXx4o2speSXC/70Qayo7MnpGJINdkIAtJ7WqqupE09Q4x3PJ8PvNmzf3EUmyRSi/ETfS44clCd+yTvXwviRa5Gjl9KyVxa01S/qk5fQ8Es/Fh2VLF6t1Oi4Hx3yRT1aCaSaTOZEIlEDGNUy7ixIMcDcDCGYyMK7cfTCcYSYkVTYSHAOQyL+oRCuS6bcWI//no+3DNBUSmbprwclUv34wUNAko86VYlnQtiTUSPaOrtTXzz4b/aZ6rZzdO3dOr3irHV3Ph1RbMOX0ROUIyboUSaN2ddJpRSLRbAbBdhdmQTpBrtlwxHARsEsuRQ5Si2itMbESgWc2mmZ/9qrPIQ1uVI1ZJQn2yVuEBCyI6wjDV5YLw4d2QIadA37tNhmbZ6ns1bnnOKrP4/x/yEqeAAEb5VinWCJ4JIWRfTdBj7tLYr7WSvAwqgEehcpgugZMb60UUwmScOUGMeV0wsW0aL6K86v/5Jm8PpaFRbCJyHUDPuAFmOLaYHDCYyjqKxkqA9q2bedKLPQ0AZNVsvXNN6dzxOQVyZB3dKz9LuS6Gwuu8+8pErENfq/CkBi9mhOGK718kplMp9Pf/ViCOEypLKYvgeki/NDacHiCJGe5+eqv1NXtepCTkeleeiezrbd3K/xpLk4wfyKPbi1Ns78EAeSIKQgoMQ5a+999V7uZTHZ/Kc286zHzVlD/Zi8zTpyo6dcPtzDpdN8/atpEkobaGVii2f39dg/BT4xJkJxcyUIWn5SP8biQi7SPMjBg3sPlzf87ukj57x1MbyJ/J9eaguDyV2Ca9IEpd+/mrWC8t+QwhaA34HK4QcNos/b+tR3jmhK1Yi3+GmuxWrY6Bnhtba11HsckXHTUnht684IzvcmcaV5IpHS7dz3GPSISX+OmtrbLuXeVX2S7ZWtcSgDzMvtcDXXPFzIjeyWyf7Rjx+bdOQC9a0c157HN3kjkfZkc+gq5TDP9vVhs6bfHGIbDKj4fU3ccLqYsnJXptPYcR3fv5DoktfUn3EUTTG8rxLT5lVy9P1qCyQA4nkjE4z/kBmjwSazRBHyeet7/Fb+nj6iIDLzDdR21iouBp7EiP5EbNAZmgDpf4lhHbmgULYC9Dav1WciYAGjuhGlER+p9BEDfqK+fszubKQ9yOXIKK5boyctKiJNMnZVcBcKH/eMrgikLiXNS9QmwnCiYkmYBX+sPjPlXOUy5sACmWllMjwLBnCq5Aevdg8q4h96HUmKxK38IEbhxYd/L4Dlf1LkuY8gFw9lD5cp2KHfFIMO/Q7qvYbm4MTtywQpuwfotIAG9DKCvhTzVyBbM8n6q591ycG8DSwS+nEl6pphkgiJdfkwq42crGpycMmpIRv54aYNsrmr7K+jEjQ7pxxYsBnNyXAEavIGMBZcbvwWFCwEupuA1FFOOuYpjivWWa1KC6Zbhwo44wZjgf0unLbLacl1FKVDIH3z5teRohm+inZ2d95B+IAJWP8uUz2TOmUSnj7/f4PNG2w72xGKL5eKc7yI3Oqh8O0S7Lxy25AC3EVlzkSsZfy5HqruYTLaEYE80uliur5Qsphng3Ne+03EkGan6+uUVJBlgq74tnTariE4P9PT02Py+wIf+ztdpMxmMB8aPj3x4sIH+LPjLmMBfK/mrohym8fj6e/jZpGB6AWOelcOUBbcDd+BlZPw4Frv8zVIKHXGCZe+YV3R+WA7V5uZmTLgiEaW8DmvJ3rWX0HswpTHaDrJkHdWPYbJ33YdEokt8dQvO/DStsEi0yLfy8lVYkIeE6f8DKL7JcMV8xCIAAAAASUVORK5CYII=" alt="Room.io Logo" width="150" style="display: block; border: 0; outline: none;" />
+            </td>
+          </tr>
+          <!-- Основное содержимое -->
+          <tr>
+            <td style="padding: 20px; text-align: center; font-family: Arial, sans-serif; color: #333333; font-size: 16px; line-height: 24px;">
+              <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: bold;">Reset Your Password</h2>
+              <p style="margin: 0 0 20px 0;">
+                We received a request to reset your Room.io account password. Click the button below to set a new password:
+              </p>
+              <!-- Кнопка -->
+              <table cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 30px 0; width: 100%;">
+                <tr>
+                  <td align="center" style="border-radius: 5px; text-align: center;">
+                    <a href="{{url}}" target="_blank" style="display: inline-block; background-color: #007bff; padding: 12px 24px; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #ffffff; text-decoration: none; border-radius: 5px;">
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px 0;">This link will expire in 24 hours for security reasons.</p>
+              <p style="margin: 0;">
+                If you didn’t request a password reset, please ignore this email or contact our support team at
+                <a href="mailto:support@room.io" style="color: #007bff; text-decoration: none;">support@room.io</a>.
+              </p>
+            </td>
+          </tr>
+          <!-- Футер -->
+          <tr>
+            <td style="padding: 20px; text-align: center; font-family: Arial, sans-serif; font-size: 12px; color: #777777;">
+              <p style="margin: 0;">&copy; 2025 Room.io. All rights reserved.</p>
+              <p style="margin: 5px 0 0 0;">
+                <a href="https://room.io" style="color: #007bff; text-decoration: none;">room.io</a> | 
+                <a href="https://room.io/privacy" style="color: #007bff; text-decoration: none;">Privacy Policy</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+        <!-- // Конец основного контейнера -->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 
-<div style="width: 35rem; margin-left: auto; margin-right: auto;">
-    <div style="border: none; border-bottom: solid 1px #d0d0d0; text-align: center;">
-        <img src="{% static 'images/../static/images/logo.jpeg' %}" alt="Logo room.io" style="margin-bottom: 1rem; text-align: center; width: 12rem; margin-left: auto; margin-right: auto;" />
-    </div>
 
-    <div>{% block body %}{% endblock %}</div>
 
-    <div style="margin-top: 3rem;">
-        <div style="color: #636363; text-align: center;">
-            Made by <a href="https://room.io">Room.io</a> team.<br />
-            All rights reserved
-        </div>
-    </div>
-</div>
+
