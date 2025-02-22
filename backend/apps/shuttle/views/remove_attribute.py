@@ -3,11 +3,11 @@ from rest_framework.views import APIView
 
 from shuttle.models import AttributeKv
 from shuttle.serializers.remove_attribute import RemoveAttributeFilterParams, RemoveAttributeFilterPath
-from shuttle.swagger.remove_attribute import swagger
+from shuttle.swagger.remove_attribute import remove_attribute_swagger
 
 
 class RemoveAttribute(APIView):
-    @swagger()
+    @remove_attribute_swagger()
     def delete(self, request, *args, **kwargs):
         path = RemoveAttributeFilterPath.check(kwargs)
         params = RemoveAttributeFilterParams.check(request.GET)

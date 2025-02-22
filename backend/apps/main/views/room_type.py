@@ -10,7 +10,7 @@ from main.swagger.room_type import RoomTypeDetailSwagger, RoomTypeSwagger
 
 
 class RoomTypeListView(APIView):
-    @swagger_auto_schema(responses=RoomTypeSwagger, query_serializer=RoomTypeFilterParams())
+    @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeSwagger, query_serializer=RoomTypeFilterParams())
     def get(self, request):
         params = RoomTypeFilterParams.check(request.GET)
         queryset = RoomType.objects.list(
@@ -22,7 +22,7 @@ class RoomTypeListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
-    @swagger_auto_schema(responses=RoomTypeSwagger, request_body=RoomTypeSerializer)
+    @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeSwagger, request_body=RoomTypeSerializer)
     def post(self, request):
         data = request.data.copy()
         data["tenant"] = request.user.tenant_id
@@ -33,13 +33,13 @@ class RoomTypeListView(APIView):
 
 
 class RoomTypeDetailView(APIView):
-    @swagger_auto_schema(responses=RoomTypeDetailSwagger)
+    @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeDetailSwagger)
     def get(self, request, pk):
         room_type = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         serializer = RoomTypeSerializer(room_type)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=RoomTypeDetailSwagger, request_body=RoomTypeSerializer)
+    @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeDetailSwagger, request_body=RoomTypeSerializer)
     def put(self, request, pk):
         data = request.data.copy()
         data["tenant"] = request.user.tenant_id
@@ -49,7 +49,7 @@ class RoomTypeDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={})
+    @swagger_auto_schema(tags=["Main, RoomType"], responses={})
     def delete(self, request, pk):
         instance = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         instance.delete()

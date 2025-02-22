@@ -1,4 +1,5 @@
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,7 +11,7 @@ from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 
 
 class DeviceListView(APIView):
-    @swagger_auto_schema(responses=DeviceSwagger, query_serializer=DeviceFilterParams())
+    @swagger_auto_schema(tags=["Main, Device"], responses=DeviceSwagger, query_serializer=DeviceFilterParams())
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
         queryset = Device.objects.list(
@@ -24,7 +25,7 @@ class DeviceListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
-    @swagger_auto_schema(responses=DeviceSwagger, request_body=DeviceSerializer)
+    @swagger_auto_schema(tags=["Main, Device"], responses=DeviceSwagger, request_body=DeviceSerializer)
     def post(self, request):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
@@ -36,13 +37,13 @@ class DeviceListView(APIView):
 
 
 class DeviceDetailView(APIView):
-    @swagger_auto_schema(responses=DeviceDetailSwagger)
+    @swagger_auto_schema(tags=["Main, Device"], responses=DeviceDetailSwagger)
     def get(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = DeviceSerializer(device)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=DeviceDetailSwagger, request_body=DeviceSerializer)
+    @swagger_auto_schema(tags=["Main, Device"], responses=DeviceDetailSwagger, request_body=DeviceSerializer)
     def put(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = DeviceSerializer(device, data=request.data, partial=True)
@@ -50,7 +51,7 @@ class DeviceDetailView(APIView):
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={})
+    @swagger_auto_schema(tags=["Main, Device"], responses={})
     def delete(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         device.is_active = False

@@ -52,6 +52,7 @@ class AttributeListView(APIView):
 
         return Response(result)
 
+    @tag_swagger()
     def post(self, request, *args, **kwargs):
         path = AttributeKvPath(data=kwargs)
         path.is_valid(raise_exception=True)

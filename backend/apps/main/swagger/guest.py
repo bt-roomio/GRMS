@@ -16,6 +16,7 @@ GuestDetailSwagger = {200: GuestSerializer}
 
 def swagger_guest_checkout():
     return swagger_auto_schema(
+        tags=["Main, Checkout"],
         query_serializer=GuestCheckoutParams(),
         responses={200: '{"message": "{Count} guests have left."}'},
     )

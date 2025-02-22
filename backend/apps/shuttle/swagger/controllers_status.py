@@ -5,6 +5,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 def controller_status_swagger():
     return swagger_auto_schema(
+        tags=["Shuttle, Controller Status"],
         responses={
             200: Schema(
                 type=openapi.TYPE_OBJECT,

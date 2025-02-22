@@ -1,7 +1,6 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-
 ControllerFileSwagger = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
@@ -20,6 +19,7 @@ ControllerFileSwagger = openapi.Schema(
 
 def controller_file_swagger():
     return swagger_auto_schema(
+        tags=["Shuttle, Controller File"],
         request_body=ControllerFileSwagger,
         responses={
             200: '{"message": "Removed [keys]}',

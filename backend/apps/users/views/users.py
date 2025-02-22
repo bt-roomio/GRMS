@@ -1,16 +1,17 @@
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
 from users.models import User
-from users.serializers.user import UserParams, UserSerializer, UserDetailSerializer
+from users.serializers.user import UserDetailSerializer, UserParams, UserSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
 
 
 class UserListView(APIView):
-    @swagger_auto_schema(responses=UserSwagger, query_serializer=UserParams)
+    @swagger_auto_schema(tags=["Users, User"], responses=UserSwagger, query_serializer=UserParams)
     def get(self, request):
         params = UserParams.check(request.GET)
         queryset = User.objects.list(
@@ -23,7 +24,7 @@ class UserListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
-    @swagger_auto_schema(responses=UserSwagger, request_body=UserSerializer)
+    @swagger_auto_schema(tags=["Users, User"], responses=UserSwagger, request_body=UserSerializer)
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -32,14 +33,14 @@ class UserListView(APIView):
 
 
 class UserDetailView(APIView):
-    @swagger_auto_schema(responses=UserDetailSwagger)
+    @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger)
     def get(self, request, pk):
         queryset = User.objects.prefetch_related("roles", "roles__permissions")
         instance = get_object_or_404(queryset, id=pk, tenant=request.user.tenant_id)
         serializer = UserDetailSerializer(instance)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=UserDetailSwagger, request_body=UserSerializer)
+    @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger, request_body=UserSerializer)
     def put(self, request, pk):
         instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
         serializer = UserSerializer(instance, data=request.data)
@@ -47,7 +48,7 @@ class UserDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={})
+    @swagger_auto_schema(tags=["Users, User"], responses={})
     def delete(self, request, pk):
         instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
         instance.delete()

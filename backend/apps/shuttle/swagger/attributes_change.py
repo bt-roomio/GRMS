@@ -5,6 +5,7 @@ from shuttle.serializers.attributes import AttributesChangeFilterPath, Attribute
 
 def swagger_attributes_change():
     return swagger_auto_schema(
+        tags=["Shuttle, Attributes Change"],
         query_serializer=AttributesChangeFilterPath(),
         responses={
             200: AttributesChangeSerializer(many=True),

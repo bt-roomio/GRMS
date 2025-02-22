@@ -1,11 +1,11 @@
-from access_manager.models import Group, GroupPublicSpace, GroupRoom, PublicSpace
+from access_manager.models import Group, GroupPublicSpace, GroupRoom
 from access_manager.serializers.group_room import SimpleGroupPublicSpaceSerializer, SimpleGroupRoomSerializer
 from django.db.models import Q
 
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import Room
+from main.models import PublicSpace, Room
 from users.serializers.user import SimpleUserSerializer
 
 

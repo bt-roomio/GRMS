@@ -1,5 +1,6 @@
 from django.http import Http404
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,13 +10,15 @@ from main.swagger.email_configuration import EmailConfigSwagger, EmailConfigUpda
 
 
 class EmailConfigDetailView(APIView):
-    @swagger_auto_schema(responses=EmailConfigSwagger)
+    @swagger_auto_schema(responses=EmailConfigSwagger, tags=["Main, Email Configuration"])
     def get(self, request):
         instance = EmailConfiguration.objects.filter(tenant=request.user.tenant).first()
         serializer = EmailConfigSerializer(instance)
         return Response(serializer.data)
 
-    @swagger_auto_schema(request_body=EmailConfigSerializer, responses=EmailConfigUpdateSwagger)
+    @swagger_auto_schema(
+        request_body=EmailConfigSerializer, responses=EmailConfigUpdateSwagger, tags=["Main, Email Configuration"]
+    )
     def put(self, request):
         if not request.user.tenant:
             raise Http404("The tenant does not exist in the user!")

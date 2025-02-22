@@ -1,12 +1,11 @@
-from access_manager.models import PublicSpace
-from access_manager.serializers.public_space import PublicSpaceFilterParams, PublicSpaceSerializer
-from access_manager.swagger.public_space import public_space_swagger
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
+from main.models import PublicSpace
+from main.serializers.public_space import PublicSpaceFilterParams, PublicSpaceSerializer
+from main.swagger.public_space import public_space_swagger
 
 
 class PublicSpaceListView(APIView):

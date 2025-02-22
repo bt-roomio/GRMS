@@ -11,7 +11,7 @@ from main.swagger.guest import GuestDetailSwagger, GuestSwagger, swagger_guest_c
 
 
 class GuestListView(APIView):
-    @swagger_auto_schema(responses=GuestSwagger, query_serializer=GuestFilterParams())
+    @swagger_auto_schema(tags=["Main, Guest"], responses=GuestSwagger, query_serializer=GuestFilterParams())
     def get(self, request):
         params = GuestFilterParams.check(request.GET)
         queryset = Guest.objects.list(tenant_id=request.user.tenant_id, room=params.get("room"))
@@ -19,7 +19,7 @@ class GuestListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
 
-    @swagger_auto_schema(responses=GuestSwagger, request_body=GuestSerializer)
+    @swagger_auto_schema(tags=["Main, Guest"], responses=GuestSwagger, request_body=GuestSerializer)
     def post(self, request):
         serializer = GuestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -28,13 +28,13 @@ class GuestListView(APIView):
 
 
 class GuestDetailView(APIView):
-    @swagger_auto_schema(responses=GuestDetailSwagger)
+    @swagger_auto_schema(tags=["Main, Guest"], responses=GuestDetailSwagger)
     def get(self, request, pk):
         instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GuestSerializer(instance)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=GuestDetailSwagger, request_body=GuestSerializer)
+    @swagger_auto_schema(tags=["Main, Guest"], responses=GuestDetailSwagger, request_body=GuestSerializer)
     def put(self, request, pk):
         instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GuestSerializer(instance, data=request.data, partial=True)

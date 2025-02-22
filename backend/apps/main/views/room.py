@@ -12,7 +12,7 @@ from main.swagger.room import RoomDetailSwagger, RoomSwagger
 
 
 class RoomListView(APIView):
-    @swagger_auto_schema(responses=RoomSwagger, query_serializer=RoomFilterParams())
+    @swagger_auto_schema(tags=["Main, Room"], responses=RoomSwagger, query_serializer=RoomFilterParams())
     @check_perms(["main.view_room"])
     def get(self, request):
         params = RoomFilterParams.check(request.GET)
@@ -28,7 +28,7 @@ class RoomListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
 
-    @swagger_auto_schema(responses=RoomSwagger, request_body=RoomSerializer)
+    @swagger_auto_schema(tags=["Main, Room"], responses=RoomSwagger, request_body=RoomSerializer)
     @check_perms(["main.add_room"])
     def post(self, request):
         tenant_id = request.user.tenant_id
@@ -41,14 +41,14 @@ class RoomListView(APIView):
 
 
 class RoomDetailView(APIView):
-    @swagger_auto_schema(responses=RoomDetailSwagger)
+    @swagger_auto_schema(tags=["Main, Room"], responses=RoomDetailSwagger)
     @check_perms(["main.view_room"])
     def get(self, request, pk):
         queryset = get_object_or_404(Room, id=pk, active=True, tenant_id=request.user.tenant_id)
         serializer = RoomSerializer(queryset, context={"detail": True})
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=RoomDetailSwagger, request_body=RoomSerializer)
+    @swagger_auto_schema(tags=["Main, Room"], responses=RoomDetailSwagger, request_body=RoomSerializer)
     @check_perms(["main.change_room"])
     def put(self, request, pk):
         instance = get_object_or_404(Room, id=pk, active=True)
@@ -57,7 +57,7 @@ class RoomDetailView(APIView):
         serializer.save(updated_by=request.user)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={})
+    @swagger_auto_schema(tags=["Main, Room"], responses={})
     @check_perms(["main.delete_room"])
     def delete(self, request, pk):
         instance = get_object_or_404(Room, id=pk, tenant_id=request.user.tenant_id)

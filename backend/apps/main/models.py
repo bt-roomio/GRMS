@@ -4,7 +4,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
 
-from core.models import BaseModel, UpdateByModel
+from core.models import BaseModel, CreatedByModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
@@ -12,6 +12,7 @@ from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.device_profile import DeviceProfileQuerySet
 from main.querysets.guest import GuestQuerySet
+from main.querysets.public_space import PublicSpaceQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
@@ -360,3 +361,20 @@ class Guest(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "main_guest"
         ordering = ["created_at"]
+
+
+class PublicSpace(BaseModel, CreatedByModel):
+    name = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    device = models.ForeignKey("main.Device", models.CASCADE)
+    dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
+
+    objects = PublicSpaceQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+        db_table = "main_public_spaces"
+        unique_together = ("name", "tenant")

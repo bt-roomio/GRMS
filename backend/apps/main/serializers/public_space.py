@@ -1,8 +1,7 @@
-from access_manager.models import PublicSpace
-
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
+from main.models import PublicSpace
 
 
 class PublicSpaceSerializer(serializers.ModelSerializer):

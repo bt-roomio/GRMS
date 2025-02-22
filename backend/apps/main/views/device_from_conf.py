@@ -1,7 +1,8 @@
-from main.serializers.device_from_conf import DeviceFromConfSerializer
-from main.swagger.device_from_conf import device_from_conf_swagger
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from main.serializers.device_from_conf import DeviceFromConfSerializer
+from main.swagger.device_from_conf import device_from_conf_swagger
 
 
 class DeviceFromConfListView(APIView):

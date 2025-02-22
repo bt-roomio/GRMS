@@ -1,13 +1,15 @@
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.models import Guest
-from main.serializers.guest import GuestMoveRoomSerializer, GuestMoveRoomFilterParams
+from main.serializers.guest import GuestMoveRoomFilterParams, GuestMoveRoomSerializer
 
 
 class GuestMoveRoomListView(APIView):
     @swagger_auto_schema(
+        tags=["Main, Guest Move Room"],
         responses={
             200: '"detail": "Guests moved successfully!"',
             404: '"detail": "\'from_room\' guests doesn\'t exist!"',

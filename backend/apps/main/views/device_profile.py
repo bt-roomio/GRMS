@@ -12,7 +12,9 @@ from main.swagger.device_profile import DeviceProfileDetailSwagger, DeviceProfil
 
 
 class DeviceProfileListView(APIView):
-    @swagger_auto_schema(responses=DeviceProfileSwagger, query_serializer=DeviceProfileFilterParams())
+    @swagger_auto_schema(
+        tags=["Main, Device Profile"], responses=DeviceProfileSwagger, query_serializer=DeviceProfileFilterParams()
+    )
     def get(self, request):
         params = DeviceProfileFilterParams.check(request.GET)
         queryset = DeviceProfile.objects.list(
@@ -25,7 +27,9 @@ class DeviceProfileListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
-    @swagger_auto_schema(responses=DeviceProfileSwagger, request_body=DeviceProfileSerializer)
+    @swagger_auto_schema(
+        tags=["Main, Device Profile"], responses=DeviceProfileSwagger, request_body=DeviceProfileSerializer
+    )
     def post(self, request):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
@@ -37,13 +41,15 @@ class DeviceProfileListView(APIView):
 
 
 class DeviceProfileDetailView(APIView):
-    @swagger_auto_schema(responses=DeviceProfileDetailSwagger)
+    @swagger_auto_schema(tags=["Main, Device Profile"], responses=DeviceProfileDetailSwagger)
     def get(self, request, pk):
         instance = get_object_or_404(DeviceProfile, pk=pk, tenant_id=request.user.tenant_id, active=True)
         serializer = DeviceProfileSerializer(instance)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=DeviceProfileDetailSwagger, request_body=DeviceProfileSerializer)
+    @swagger_auto_schema(
+        tags=["Main, Device Profile"], responses=DeviceProfileDetailSwagger, request_body=DeviceProfileSerializer
+    )
     def put(self, request, pk):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
@@ -54,7 +60,7 @@ class DeviceProfileDetailView(APIView):
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={})
+    @swagger_auto_schema(tags=["Main, Device Profile"], responses={})
     def delete(self, request, pk):
         instance = get_object_or_404(
             DeviceProfile.objects.annotate(devices_count=Count("devices")).filter(id=pk, active=True)

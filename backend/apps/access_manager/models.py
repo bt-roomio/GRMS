@@ -1,6 +1,5 @@
 from access_manager.querysets.card import CardQuerySet
 from access_manager.querysets.group import GroupQuerySet
-from access_manager.querysets.public_space import PublicSpaceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -87,23 +86,6 @@ class Card(BaseModel, CreatedByModel, UpdateByModel):
         unique_together = ("number", "tenant")
 
 
-class PublicSpace(BaseModel, CreatedByModel):
-    name = models.CharField(max_length=255)
-    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
-    device = models.ForeignKey("main.Device", models.CASCADE)
-    dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)
-    additional_info = models.JSONField(null=True, blank=True)
-
-    objects = PublicSpaceQuerySet.as_manager()
-
-    def __str__(self) -> str:
-        return self.name
-
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "access_manager_public_spaces"
-        unique_together = ("name", "tenant")
-
-
 class NeedSyncDevice(BaseModel, CreatedByModel):
     device = models.ForeignKey("main.Device", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
@@ -171,7 +153,7 @@ class GroupRoom(BaseModel, CreatedByModel):
 
 class GroupPublicSpace(BaseModel, CreatedByModel):
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
-    public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE, "group_public_space")
+    public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
@@ -183,7 +165,7 @@ class GroupPublicSpace(BaseModel, CreatedByModel):
 
 class GuestPublicSpace(BaseModel):
     guest = models.ForeignKey("main.Guest", models.CASCADE)
-    public_space = models.ForeignKey("access_manager.PublicSpace", models.CASCADE)
+    public_space = models.ForeignKey("main.PublicSpace", models.CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta):

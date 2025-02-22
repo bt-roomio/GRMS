@@ -1,12 +1,13 @@
-from access_manager.serializers.public_space import PublicSpaceFilterParams, PublicSpaceSerializer
 from drf_yasg.utils import swagger_auto_schema
+
+from main.serializers.public_space import PublicSpaceFilterParams, PublicSpaceSerializer
 
 
 def public_space_swagger():
     return swagger_auto_schema(
         query_serializer=PublicSpaceFilterParams(),
         responses={200: PublicSpaceSerializer()},
-        tags=["Access manager, PublicSpace"],
+        tags=["Main, PublicSpace"],
         operation_description="""
 
         **This endpoint retrieves a list of `public_space` objects filtered by the current tenant and the provided query parameters.**

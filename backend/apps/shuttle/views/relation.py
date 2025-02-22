@@ -1,3 +1,5 @@
+from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +11,7 @@ from shuttle.swagger.relation import relation_swagger
 
 
 class RelationListView(APIView):
-    @relation_swagger()
+    @relation_swagger(query_serializer=RelationFilterParams())
     def get(self, request):
         params = RelationFilterParams.check(request.GET)
         queryset = Relation.objects.select_related("from_id").filter(
@@ -20,6 +22,7 @@ class RelationListView(APIView):
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
 
+    @relation_swagger(request_body=RelationSerializer)
     def post(self, request):
         serializer = RelationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -28,6 +31,7 @@ class RelationListView(APIView):
 
 
 class RelationDetailView(APIView):
+    @relation_swagger(request_body=RelationSerializer)
     def put(self, request, pk):
         instance = get_object_or_404(Relation, pk=pk, from_id__tenant=request.user.tenant, from_id__is_active=True)
         serializer = RelationSerializer(instance, data=request.data)
@@ -35,6 +39,7 @@ class RelationDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @swagger_auto_schema(responses={204: ""}, tags=["Shuttle, Relation"])
     def delete(self, request, pk):
         instance = get_object_or_404(Relation, pk=pk, from_id__tenant=request.user.tenant, from_id__is_active=True)
         instance.delete()

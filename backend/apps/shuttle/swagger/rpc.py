@@ -33,6 +33,7 @@ RPCRequestSwagger = openapi.Schema(
 
 def json_rpc_swagger():
     return swagger_auto_schema(
+        tags=["Shuttle, JSON RPC"],
         request_body=RPCRequestSwagger,
         responses={200: RPCSwagger},
         operation_description="""

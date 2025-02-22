@@ -27,6 +27,7 @@ response_200 = openapi.Schema(
 
 def tag_swagger():
     return swagger_auto_schema(
+        tags=["Shuttle, Tag"],
         query_serializer=TagFilterParams(),
         responses={200: response_200},
         operation_description="""""",

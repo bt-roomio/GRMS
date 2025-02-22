@@ -1,3 +1,5 @@
+from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -6,6 +8,7 @@ from shuttle.serializers.ts_kv import TsKvFilterParams, TsKvFilterPath
 
 
 class TsKvListView(APIView):
+    @swagger_auto_schema(tags=["Shuttle, TsKv"])
     def get(self, request, *args, **kwargs):
         path = TsKvFilterPath.check(kwargs)
         params = TsKvFilterParams.check(request.GET)

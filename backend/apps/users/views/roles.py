@@ -1,4 +1,5 @@
 from drf_yasg.utils import swagger_auto_schema
+
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -6,11 +7,11 @@ from rest_framework.views import APIView, Response
 from core.utils.permission import check_perms
 from users.models import Role
 from users.serializers.role import RoleSerializer, RoleSimpleSerializer
-from users.swagger.roles import RolesSwagger, RoleDetailSwagger
+from users.swagger.roles import RoleDetailSwagger, RolesSwagger
 
 
 class RolesListView(APIView):
-    @swagger_auto_schema(operation_description="Getting all user roles.", responses=RolesSwagger)
+    @swagger_auto_schema(tags=["Users, Role"], operation_description="Getting all user roles.", responses=RolesSwagger)
     @check_perms(["users.view_role"])
     def get(self, request):
         instance = Role.objects.list(tenant=request.user.tenant, is_superuser=request.user.is_superuser)
@@ -18,6 +19,7 @@ class RolesListView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(
+        tags=["Users, Role"],
         operation_description="Creating a role for exactly tenant.",
         responses=RoleDetailSwagger,
         request_body=RoleSerializer,
@@ -35,7 +37,7 @@ class RolesListView(APIView):
 
 
 class RoleDetailView(APIView):
-    @swagger_auto_schema(responses=RoleDetailSwagger)
+    @swagger_auto_schema(tags=["Users, Role"], responses=RoleDetailSwagger)
     @check_perms(["users.view_role"])
     def get(self, request, pk):
         if request.user.is_superuser:
@@ -45,7 +47,7 @@ class RoleDetailView(APIView):
         serializer = RoleSimpleSerializer(instance)
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses=RoleDetailSwagger)
+    @swagger_auto_schema(tags=["Users, Role"], responses=RoleDetailSwagger)
     @check_perms(["users.change_role"])
     def put(self, request, pk):
         if request.user.is_superuser:
@@ -57,7 +59,7 @@ class RoleDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
-    @swagger_auto_schema(responses={})
+    @swagger_auto_schema(tags=["Users, Role"], responses={})
     @check_perms(["users.delete_role"])
     def delete(self, request, pk):
         if request.user.is_superuser:
