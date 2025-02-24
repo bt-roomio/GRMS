@@ -1,3 +1,5 @@
+import random
+
 from access_manager.models import Card
 from access_manager.serializers.card import CardFilterParams, CardSerializer
 from access_manager.swagger.card import card_swagger
@@ -26,6 +28,8 @@ class CardListView(APIView):
     @card_swagger()
     def post(self, request):
         data = with_tenant(request)
+        card_number = random.randint(1, 99999999)
+        data["number"] = card_number
         serializer = CardSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save(created_by=request.user)

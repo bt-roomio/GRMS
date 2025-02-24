@@ -8,7 +8,7 @@ from core.utils.serializers import ValidatorSerializer
 
 
 class CardSerializer(serializers.ModelSerializer):
-    staff_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Staff.objects.all(), required=False)
+    staff_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Staff.objects.all())
     staff = SimpleStaffSerializer(source="staffcard.staff", read_only=True)
 
     def create(self, validated_data):
