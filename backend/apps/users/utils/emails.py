@@ -23,6 +23,7 @@ def send_reset_link_email(user, send_activation_mail=True):
     host = config.frontend_host or "localhost"
     port = ":" + config.frontend_port if config.frontend_port else ""
 
+    host = host.rstrip("/")
     url = f"{host}{port}" + "/password/new/" + "?key=" + reset_key.key
 
     if not send_activation_mail:

@@ -17,5 +17,5 @@ class SendLinkView(APIView):
     def post(self, request):
         params = SendLinkParams(data=request.data)
         params.is_valid(raise_exception=True)
-        send_reset_link_email(params.validated_data["user"])
+        send_reset_link_email(params.validated_data["user"])  # pyright: ignore
         return HttpResponse(b"Email sent")
