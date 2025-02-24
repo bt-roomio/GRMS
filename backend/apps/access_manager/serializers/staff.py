@@ -7,6 +7,12 @@ from rest_framework.fields import ValidationError
 from core.utils.serializers import ValidatorSerializer
 
 
+class SimpleStaffSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Staff
+        fields = ("id", "first_name", "last_name")
+
+
 class StaffSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, read_only=True)
     group_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Group.objects.all(), required=False)
