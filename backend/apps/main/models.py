@@ -224,6 +224,9 @@ class Device(BaseModel):
     def __str__(self):
         return str(self.name)
 
+    def __repr__(self) -> str:
+        return str(self.id)
+
     class Meta(BaseModel.Meta):
         db_table = "main_device"
         constraints = [

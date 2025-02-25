@@ -44,9 +44,13 @@ class GeneralSettingsSerializer(serializers.Serializer):
         return str(dashboard.id)
 
     def update(self, instance, validated_data):
-        general_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
-        instance.additional_info = {"general_settings": {**general_settings, **validated_data}}
+        additional_info = instance.additional_info or {}
+        g_settings = additional_info.get("general_settings", {})
+        g_settings = {**g_settings, **validated_data}
+        additional_info["general_settings"] = g_settings
+        instance.additional_info = additional_info
         instance.save()
+
         return instance
 
     def to_representation(self, instance):

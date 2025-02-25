@@ -10,6 +10,7 @@ from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
+from main.views.integration_settings import IntegrationSettingsDetailView
 from main.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_status import RoomHistoryStatusView
@@ -20,6 +21,7 @@ from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
 urlpatterns = [
     path("email-config/", EmailConfigDetailView.as_view(), name="email-config-detail"),
     path("general-settings/", GeneralSettingsDetailView.as_view(), name="general-settings-detail"),
+    path("integration-settings/", IntegrationSettingsDetailView.as_view(), name="integration-settings-detail"),
     path("alarm-settings/", AlarmSettingsDetailView.as_view(), name="alarm-settings"),
     path("room/", RoomListView.as_view(), name="room-list"),
     path("room/<uuid:pk>/", RoomDetailView.as_view(), name="room-detail"),
@@ -40,9 +42,10 @@ urlpatterns = [
     path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
     path("checkout/", GuestCheckoutView.as_view(), name="guest-checkout-detail"),
     path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
-    path("tenant/", TenantListView.as_view(), name="tenant-list"),
     path("devices-from-configuration/", DeviceFromConfListView.as_view(), name="device-from-conf-list"),
     # Public space
     path("public-space/", PublicSpaceListView.as_view(), name="public-space-list"),
     path("public-space/<uuid:pk>/", PublicSpaceDetailView.as_view(), name="public-space-detail"),
+    # For SuperUser
+    path("tenant/", TenantListView.as_view(), name="tenant-list"),
 ]
