@@ -11,7 +11,7 @@ class GroupQuerySet(BaseQuerySet):
             .is_active()
         )
 
-        query = query.annotate(count_staff=Count("groupstaff"))
+        query = query.annotate(count_staff=Count("staff"))
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))

@@ -1,8 +1,7 @@
-from access_manager.models import Group, GroupStaff, Staff
+from access_manager.models import Group, Staff
 from access_manager.serializers.group import SimpleGroupSerializer
 
 from rest_framework import serializers
-from rest_framework.fields import ValidationError
 
 from core.utils.serializers import ValidatorSerializer
 
@@ -15,25 +14,12 @@ class SimpleStaffSerializer(serializers.ModelSerializer):
 
 class StaffSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, read_only=True)
-    group_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Group.objects.all(), required=False)
-    group = SimpleGroupSerializer(source="groupstaff.group", read_only=True)
+    group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), allow_null=True)
 
-    def create(self, validated_data):
-        group = validated_data.pop("group_id") if validated_data.get("group_id") else None
-        instance = super().create(validated_data)
-        try:
-            if group:
-                GroupStaff.objects.create(staff=instance, group=group)
-        except Exception as err:
-            raise ValidationError(str(err))
-        return instance
-
-    def update(self, instance, validated_data):
-        group = validated_data.pop("group_id") if validated_data.get("group_id") else None
-        if group:
-            GroupStaff.objects.filter(staff=instance).delete()
-            GroupStaff.objects.create(staff=instance, group=group)
-        return super().update(instance, validated_data)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["group"] = SimpleGroupSerializer(instance.group).data if instance.group else None
+        return data
 
     class Meta:
         model = Staff
@@ -43,7 +29,6 @@ class StaffSerializer(serializers.ModelSerializer):
             "created_by",
             "first_name",
             "last_name",
-            "group_id",
             "group",
             "is_active",
             "tenant",
@@ -59,3 +44,5 @@ class StaffFilterParams(ValidatorSerializer):
     search_field = serializers.ChoiceField(choices=("first_name", "last_name"), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    in_group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), required=False)
+    not_in_group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), required=False)

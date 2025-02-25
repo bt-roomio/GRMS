@@ -1,4 +1,4 @@
-from access_manager.models import GroupStaff, Staff
+from access_manager.models import Staff
 from access_manager.serializers.staff import StaffFilterParams, StaffSerializer
 from access_manager.swagger.staff import staff_swagger
 
@@ -18,6 +18,8 @@ class StaffListView(APIView):
             sort_by=params.get("sort_by", []),  # pyright: ignore
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
+            in_group=params.get("in_group"),  # pyright: ignore
+            not_in_group=params.get("not_in_group"),  # pyright: ignore
         )
         serializer = StaffSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
@@ -53,5 +55,4 @@ class StaffDetailView(APIView):
         instance = get_object_or_404(Staff, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         instance.is_active = False
         instance.save()
-        GroupStaff.objects.filter(staff=instance).delete()
         return Response({}, 204)

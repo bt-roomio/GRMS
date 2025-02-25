@@ -155,6 +155,19 @@ services:
       - rabbitmq
       - backend
 
+  node-red:
+    image: registry.gitlab.com/grms1/node-red-nodes:latest
+    ports:
+      - "1880:1880"
+    environment:
+      API_URL: "http://django:8000"
+      TENANT_ID: "TENANT_ID"
+    restart: always
+    volumes:
+      - node-red-data:/data
+    networks:
+      - roomio_net
+
 volumes:
   static_volume:
   media_volume:
@@ -164,6 +177,7 @@ volumes:
   certs:
   vhost:
   html:
+  node-red-data:
 
 networks:
   roomio_net:

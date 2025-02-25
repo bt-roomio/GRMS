@@ -59,14 +59,14 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
 
     objects = GroupQuerySet.as_manager()
 
+    def __str__(self):
+        return str(self.id)
+
     class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_groups"
         constraints = [
             UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_card_group")
         ]
-
-    def __str__(self):
-        return f"{self.name} (Tenant: {self.tenant})"
 
 
 class Card(BaseModel, CreatedByModel, UpdateByModel):
@@ -100,6 +100,7 @@ class Staff(BaseModel, CreatedByModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
+    group = models.ForeignKey("access_manager.Group", models.SET_NULL, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
 
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
@@ -107,7 +108,7 @@ class Staff(BaseModel, CreatedByModel):
     objects = StaffQuerySet.as_manager()
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return str(self.id)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_staff"
@@ -116,18 +117,6 @@ class Staff(BaseModel, CreatedByModel):
                 fields=["tenant", "first_name", "last_name"], condition=Q(is_active=True), name="unique_staff"
             )
         ]
-
-
-class GroupStaff(BaseModel, CreatedByModel):
-    group = models.ForeignKey("access_manager.Group", models.CASCADE)
-    staff = models.OneToOneField("access_manager.Staff", models.CASCADE)
-    additional_info = models.JSONField(null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.group} -> {self.staff}"
-
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
-        db_table = "access_manager_group_staff"
 
 
 class StaffCard(BaseModel, CreatedByModel):
