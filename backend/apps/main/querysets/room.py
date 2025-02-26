@@ -19,22 +19,9 @@ class RoomQuerySet(BaseQuerySet):
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
-        if sort_by:
-            for item in sort_by:
-                if item in ["number", "-number"]:
-                    query = query.order_by(item)
-                    continue
-                dash = "-" if item.startswith("-") else ""
-                item = item.replace("-", "")
-                try:
-                    query = query.extra(
-                        select={f"{item}_as_int": f"CAST(substring({item} FROM '^[0-9]+') AS INTEGER)"}
-                    ).order_by(f"{dash}{item}_as_int")
-                except Exception:
-                    pass
         query = query.filter(status=status) if status else query
 
-        return query
+        return query.order_by(*sort_by or ["number"])
 
     def room_status(self, tenant):
         from main.models import Room

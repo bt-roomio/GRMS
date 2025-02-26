@@ -34,7 +34,7 @@ async def room_list(cmd, user):
 
 @database_sync_to_async
 def get_rooms(params, user):
-    queryset = Room.objects.list(
+    queryset = Room.objects.list(  # pyright: ignore
         tenant=user.tenant,
         state=params.get("state"),
         status=params.get("status"),
