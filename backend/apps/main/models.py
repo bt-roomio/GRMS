@@ -367,6 +367,8 @@ class Guest(BaseModel):
 
 
 class PublicSpace(BaseModel, CreatedByModel):
+    floor = models.CharField(max_length=255)
+    block = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     device = models.ForeignKey("main.Device", models.CASCADE)
@@ -375,8 +377,8 @@ class PublicSpace(BaseModel, CreatedByModel):
 
     objects = PublicSpaceQuerySet.as_manager()
 
-    def __str__(self) -> str:
-        return self.name
+    def __str__(self):
+        return str(self.name)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "main_public_spaces"

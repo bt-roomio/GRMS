@@ -1,5 +1,5 @@
 from access_manager.querysets.card import CardQuerySet
-from access_manager.querysets.group import GroupQuerySet
+from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -79,7 +79,7 @@ class Card(BaseModel, CreatedByModel, UpdateByModel):
     objects = CardQuerySet.as_manager()
 
     def __str__(self):
-        return self.id
+        return str(self.id)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_cards"
@@ -132,6 +132,8 @@ class GroupRoom(BaseModel, CreatedByModel):
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
     room = models.ForeignKey("main.Room", models.CASCADE, "group_room")
     additional_info = models.JSONField(null=True, blank=True)
+
+    objects = GroupRoomQuerySet.as_manager()
 
     def __str__(self):
         return str(self.id)

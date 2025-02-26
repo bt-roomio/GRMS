@@ -1,6 +1,7 @@
 from access_manager.models import Group, GroupRoom
 from access_manager.serializers.group import GroupFilterParams, GroupSerializer
 from access_manager.swagger.group import group_swagger
+from django.db.models import Count, Q
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -35,7 +36,13 @@ class GroupListView(APIView):
 class GroupDetailView(APIView):
     @group_swagger()
     def get(self, request, pk):
-        instance = get_object_or_404(Group, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
+        instance = get_object_or_404(
+            Group.objects.filter(
+                pk=pk,
+                tenant_id=request.user.tenant_id,
+                is_active=True,
+            ).annotate(count_staff=Count("staff", filter=Q(staff__is_active=True))),
+        )
         serializer = GroupSerializer(instance)
         return Response(serializer.data)
 

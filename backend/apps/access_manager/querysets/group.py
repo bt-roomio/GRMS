@@ -20,3 +20,7 @@ class GroupQuerySet(BaseQuerySet):
 
     def is_active(self):
         return self.filter(is_active=True)
+
+
+class GroupRoomQuerySet(BaseQuerySet):
+    pass

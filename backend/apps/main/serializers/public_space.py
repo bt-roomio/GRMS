@@ -12,6 +12,8 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             "created_at",
             "created_by",
             "name",
+            "floor",
+            "block",
             "device",
             "tenant",
             "dashboard",
