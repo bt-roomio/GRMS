@@ -1,5 +1,7 @@
-from core.utils.serializers import ValidatorSerializer
 from rest_framework import serializers
+from rest_framework.fields import RegexValidator
+
+from core.utils.serializers import ValidatorSerializer
 
 
 class ActivationLinkParams(ValidatorSerializer):
@@ -8,11 +10,13 @@ class ActivationLinkParams(ValidatorSerializer):
 
 class ResetPasswordValidator(ValidatorSerializer):
     key = serializers.CharField(required=True)
-    new_password = serializers.RegexField(
-        regex=r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$",
+    new_password = serializers.CharField(
         write_only=True,
-        error_messages={
-            "invalid": "Password must be at least 8 characters long with at least one capital letter and symbol"
-        },
+        validators=[
+            RegexValidator(
+                regex=r"^(?=.*[A-Z])(?=.*\d).{9,}$",
+                message="Password must be more than 8 characters, include at least one uppercase letter, and one number",
+            )
+        ],
     )
     confirm_password = serializers.CharField(write_only=True, required=True)
