@@ -89,7 +89,7 @@ class AttributeKv(BaseModel):
         return super(AttributeKv, self).save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.attribute_key)
+        return str(self.id)
 
     class Meta(BaseModel.Meta):
         db_table = "shuttle_attribute_kv"

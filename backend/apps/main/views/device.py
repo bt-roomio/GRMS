@@ -1,5 +1,4 @@
 from drf_yasg.utils import swagger_auto_schema
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -46,7 +45,7 @@ class DeviceDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceDetailSwagger, request_body=DeviceSerializer)
     def put(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
-        serializer = DeviceSerializer(device, data=request.data, partial=True)
+        serializer = DeviceSerializer(device, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)

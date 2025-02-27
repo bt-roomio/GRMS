@@ -1,9 +1,10 @@
+from rest_framework import serializers
+
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DeviceCredentials, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
 from main.utils.has_roomio_node import has_roomio_node
-from rest_framework import serializers
 
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
@@ -82,7 +83,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 
 class DeviceFilterParams(ValidatorSerializer):
-    SORT_FIELDS = ("name", "-name", "status", "-status")
+    SORT_FIELDS = ("created_at", "-created_at", "name", "-name", "status", "-status")
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)

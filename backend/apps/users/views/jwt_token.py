@@ -14,7 +14,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         # Normalize the email/email to lowercase.
         email = attrs.get("email")
-        print(email)
         if email:
             attrs["email"] = email.lower()
         return super().validate(attrs)
