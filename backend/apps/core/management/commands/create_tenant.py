@@ -5,7 +5,7 @@ from django.contrib.auth.models import Permission
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from main.models import Tenant, TenantProfile
+from main.models import DeviceProfile, Tenant, TenantProfile
 from users.models import Role, User
 
 
@@ -43,6 +43,9 @@ class Command(BaseCommand):
 
                 user = User.objects.create(tenant=new_tenant, email=email, password=make_password(password))
                 user.roles.add(role)
+
+                for name in ["Default", "Integration Devices", "Card Reader"]:
+                    DeviceProfile.objects.get_or_create(name=name, tenant=new_tenant, type="DEFAULT")
 
             self.stdout.write(self.style.SUCCESS(f"Successfully created Tenant: {new_tenant} and User: {user}"))
 
