@@ -35,6 +35,11 @@ class User(AbstractUser, BaseModel):
 
     objects = UsersManager()
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+        super().save(*args, **kwargs)
+
     class Meta(AbstractUser.Meta):
         db_table = "users_users"
         default_related_name = "users"

@@ -1,5 +1,4 @@
 from drf_yasg import openapi
-
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
@@ -31,6 +30,21 @@ class AdditionalInfoField(serializers.JSONField):
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all())
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
+
+    def validate_email(self, value):
+        # Normalize the email by converting it to lowercase
+        normalized_email = value.lower()
+
+        # Check for uniqueness in a case-insensitive manner
+        if self.instance:
+            # Exclude the current instance if updating
+            if User.objects.filter(email__iexact=normalized_email).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError("user with this email already exists.")
+        else:
+            if User.objects.filter(email__iexact=normalized_email).exists():
+                raise serializers.ValidationError("user with this email already exists.")
+
+        return normalized_email
 
     def create(self, validated_data):
         roles_data = validated_data.pop("roles")
