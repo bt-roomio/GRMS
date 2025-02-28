@@ -2,9 +2,17 @@ from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
 from main.models import PublicSpace
+from main.serializers.dashboard import SimpleDashboardSerializer
+from main.serializers.device import SimpleDeviceSerializer
 
 
 class PublicSpaceSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["device"] = SimpleDeviceSerializer(instance.device).data if instance.device else None
+        data["dashboard"] = SimpleDashboardSerializer(instance.dashboard).data if instance.dashboard else None
+        return data
+
     class Meta:
         model = PublicSpace
         fields = (
