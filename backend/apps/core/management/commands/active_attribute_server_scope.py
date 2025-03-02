@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
 def active_attribute_server_scope():
     attribute_kv = AttributeKv.objects.select_related("entity").filter(
-        entity__additional_info__gateway=True,
+        # entity__additional_info__gateway=True,  # Checking all devices
         attribute_key="active",
         bool_v=True,
     )
@@ -31,14 +31,15 @@ def check_activity_time(attribute_kv):
         if attr.long_v < get_mil_sec() - 60000:
             attr_active.bool_v = False
             attr_active.save()
-            print(f"Gateway: {attr.entity_id}")
+            print(f"Device id: {attr.entity_id}")
 
-            relations = Relation.objects.filter(from_id=attr_active.entity_id)
-            relation_devices = list(relations.values_list("to_id_id", flat=True))
-            relation_attrs = AttributeKv.objects.filter(
-                entity_id__in=relation_devices, attribute_key="active", bool_v=True
-            )
-            for relation_attr in relation_attrs:
-                print(f"Relation: {relation_attr.entity_id}")
-                relation_attr.bool_v = False
-                relation_attr.save()
+            if attr.entity.additional_info and attr.entity.additional_info.get("gateway"):
+                relations = Relation.objects.filter(from_id=attr_active.entity_id)
+                relation_devices = list(relations.values_list("to_id_id", flat=True))
+                relation_attrs = AttributeKv.objects.filter(
+                    entity_id__in=relation_devices, attribute_key="active", bool_v=True
+                )
+                for relation_attr in relation_attrs:
+                    print(f"Relation: {relation_attr.entity_id}")
+                    relation_attr.bool_v = False
+                    relation_attr.save()
