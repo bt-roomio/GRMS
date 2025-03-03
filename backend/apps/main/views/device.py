@@ -13,15 +13,15 @@ class DeviceListView(APIView):
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceSwagger, query_serializer=DeviceFilterParams())
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
-        queryset = Device.objects.list(
+        queryset = Device.objects.list(  # pyright: ignore
             tenant=request.user.tenant,
-            search_field=params.get("search_field"),
-            search_value=params.get("search_value"),
-            status=params.get("status"),
-            sort_by=params.get("sort_by"),
+            search_field=params.get("search_field"),  # pyright: ignore
+            search_value=params.get("search_value"),  # pyright: ignore
+            status=params.get("status"),  # pyright: ignore
+            sort_by=params.get("sort_by"),  # pyright: ignore
         )
         serializer = DeviceSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size"))
+        data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
         return Response(data)
 
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceSwagger, request_body=DeviceSerializer)

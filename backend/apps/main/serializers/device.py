@@ -4,6 +4,7 @@ from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DeviceCredentials, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
+from main.serializers.device_profile import SimpleDeviceProfileSerializer
 from main.utils.has_roomio_node import has_roomio_node
 
 
@@ -38,6 +39,7 @@ class DeviceSerializer(serializers.ModelSerializer):
             if hasattr(instance, "credentials")
             else None
         )
+        data["device_profile"] = SimpleDeviceProfileSerializer(instance.device_profile).data
         return data
 
     def create(self, validated_data):
@@ -87,7 +89,7 @@ class DeviceFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search_field = serializers.ChoiceField(choices=("name",), required=False)
+    search_field = serializers.ChoiceField(choices=("name", "device_profile__name"), required=False)
     search_value = serializers.CharField(required=False)
     status = serializers.BooleanField(allow_null=True, required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)

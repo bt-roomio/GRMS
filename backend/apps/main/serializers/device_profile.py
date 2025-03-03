@@ -4,6 +4,16 @@ from core.utils.serializers import ValidatorSerializer
 from main.models import DeviceProfile
 
 
+class SimpleDeviceProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceProfile
+        fields = (
+            "id",
+            "name",
+            "tenant",
+        )
+
+
 class DeviceProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeviceProfile
