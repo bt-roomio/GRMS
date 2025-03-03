@@ -18,9 +18,7 @@ class Command(BaseCommand):
 
 def active_attribute_server_scope():
     attribute_kv = AttributeKv.objects.select_related("entity").filter(
-        # entity__additional_info__gateway=True,  # Checking all devices
-        attribute_key="active",
-        bool_v=True,
+        entity__additional_info__gateway=True, attribute_key="active"
     )
     check_activity_time(attribute_kv)
 
