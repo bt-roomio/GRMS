@@ -1,5 +1,4 @@
 from drf_yasg.utils import swagger_auto_schema
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,12 +13,14 @@ class RelationListView(APIView):
     @relation_swagger(query_serializer=RelationFilterParams())
     def get(self, request):
         params = RelationFilterParams.check(request.GET)
-        queryset = Relation.objects.select_related("from_id").filter(
-            from_id__tenant=request.user.tenant, from_id__is_active=True
+        queryset = Relation.objects.list(  # pyright: ignore
+            tenant=request.user.tenant,
+            from_id=params.get("from_id"),  # pyright: ignore
+            to_id=params.get("to_id"),  # pyright: ignore
         )
-        queryset = queryset.filter(from_id=params.get("from_id")) if params.get("from_id") else queryset
+        print(queryset)
         serializer = RelationSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
+        data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))  # pyright: ignore
         return Response(data)
 
     @relation_swagger(request_body=RelationSerializer)

@@ -1,5 +1,3 @@
-from django.views.decorators.csrf import requires_csrf_token
-
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
@@ -47,3 +45,4 @@ class RelationFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
     from_id = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), required=False)
+    to_id = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), required=False)
