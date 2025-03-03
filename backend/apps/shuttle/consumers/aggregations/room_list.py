@@ -1,21 +1,13 @@
 import json
-from uuid import UUID
 
 from channels.db import database_sync_to_async
-from django.core.serializers.json import DjangoJSONEncoder
 
+from core.tests.uuid_encode import UUIDEncoder
 from core.utils.pagination import pagination
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
 from shuttle.models import AttributeKv
 from shuttle.utils.response import response
-
-
-class UUIDEncoder(DjangoJSONEncoder):
-    def default(self, o):
-        if isinstance(o, UUID):
-            return str(o)
-        return super().default(o)
 
 
 async def room_list(cmd, user):

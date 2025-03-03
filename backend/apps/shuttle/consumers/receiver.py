@@ -16,6 +16,7 @@ class ReceiverConsumer(BaseConsumer):
             "ROOM_LIST": self.handle_room_list,
             "GATEWAY_LIST": self.handle_gateway_list,
             "GUEST_LIST": self.handle_guest_list,
+            "CARD_LIST": self.handle_card_list,
         }
 
     async def receive_json(self, content, **kwargs):
@@ -34,6 +35,12 @@ class ReceiverConsumer(BaseConsumer):
         from shuttle.consumers.aggregations.guest_list import guest_list
 
         return await guest_list(cmd, self.user)
+
+    @periodic_task()
+    async def handle_card_list(self, cmd):
+        from shuttle.consumers.aggregations.card_list import card_list
+
+        return await card_list(cmd, self.user)
 
     @periodic_task()
     async def handle_room_list(self, cmd):

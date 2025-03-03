@@ -43,10 +43,10 @@ class CardSerializer(serializers.ModelSerializer):
 
 
 class CardFilterParams(ValidatorSerializer):
-    SORT_FIELDS = ("name", "-name")
+    SORT_FIELDS = ("number", "-number")
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search_field = serializers.ChoiceField(choices=("name"), required=False)
+    search_field = serializers.ChoiceField(choices=("number",), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)

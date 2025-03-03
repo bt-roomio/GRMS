@@ -1,21 +1,21 @@
 import json
 
+from access_manager.models import Card
+from access_manager.serializers.card import CardFilterParams, CardSerializer
 from channels.db import database_sync_to_async
 
 from core.utils.pagination import pagination
-from main.models import Guest
-from main.serializers.guest import GuestFilterParams, GuestSerializer
 from shuttle.consumers.utils.encoders import UUIDEncoder
 from shuttle.utils.response import response
 
 
-async def guest_list(cmd, user):
+async def card_list(cmd, user):
     result = response({}, cmd.get("cmd_id"))
     try:
         filters = cmd.get("query", {}).get("filters", {})
         page_link = cmd.get("query", {}).get("page_link", {})
-        params = await database_sync_to_async(GuestFilterParams.check)({**filters, **page_link})
-        rooms = await get_guests(params, user)
+        params = await database_sync_to_async(CardFilterParams.check)({**filters, **page_link})
+        rooms = await get_cards(params, user)
         result["data"] = rooms
     except Exception as err:
         result["error_msg"] = str(err)
@@ -24,8 +24,13 @@ async def guest_list(cmd, user):
 
 
 @database_sync_to_async
-def get_guests(params, user):
-    queryset = Guest.objects.list(tenant_id=user.tenant_id, room=params.get("room"))  # pyright: ignore
-    serializer = GuestSerializer(queryset, many=True)
+def get_cards(params, user):
+    queryset = Card.objects.list(  # pyright: ignore
+        tenant_id=user.tenant_id,
+        sort_by=params.get("sort_by", []),  # pyright: ignore
+        search_field=params.get("search_field"),  # pyright: ignore
+        search_value=params.get("search_value"),  # pyright: ignore
+    )
+    serializer = CardSerializer(queryset, many=True)
     data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
     return json.loads(json.dumps(data, cls=UUIDEncoder))
