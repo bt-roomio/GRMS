@@ -371,7 +371,7 @@ class PublicSpace(BaseModel, CreatedByModel):
     block = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
-    device = models.ForeignKey("main.Device", models.CASCADE)
+    device = models.ForeignKey("main.Device", models.CASCADE, null=True, blank=True)
     dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
 
