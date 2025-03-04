@@ -3,6 +3,9 @@ from uuid import UUID
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
+from django.db.models.functions import Lower
+
+from rest_framework.exceptions import ValidationError
 
 from core.models import BaseModel, CreatedByModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
@@ -227,10 +230,29 @@ class Device(BaseModel):
     def __repr__(self) -> str:
         return str(self.id)
 
+    def clean(self):
+        super().clean()
+        if self.is_active:
+            qs = Device.objects.filter(
+                tenant=self.tenant,
+                is_active=True,
+                name__iexact=self.name,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError({"name": "A device with this name, tenant, and active status already exists."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # This will raise ValidationError if clean() fails.
+        super().save(*args, **kwargs)
+
     class Meta(BaseModel.Meta):
         db_table = "main_device"
         constraints = [
-            UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_active_device")
+            UniqueConstraint(
+                Lower("name"), "tenant", condition=Q(is_active=True), name="unique_device_name_tenant_is_active"
+            ),
         ]
 
 
@@ -264,13 +286,32 @@ class DeviceProfile(BaseModel):
 
     objects = DeviceProfileQuerySet.as_manager()
 
+    def clean(self):
+        super().clean()
+        if self.active:
+            qs = DeviceProfile.objects.filter(
+                tenant=self.tenant,
+                active=True,
+                name__iexact=self.name,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    {"name": "A device profile with this name, tenant, and active status already exists."}
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # This will raise ValidationError if clean() fails.
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return str(self.name)
 
     class Meta(BaseModel.Meta):
         db_table = "main_device_profile"
         constraints = [
-            UniqueConstraint(fields=["name", "tenant"], condition=Q(active=True), name="unique_active_device_profile")
+            UniqueConstraint(Lower("name"), "tenant", condition=Q(active=True), name="unique_active_device_profile")
         ]
 
 
@@ -312,12 +353,27 @@ class Dashboard(BaseModel):
 
     objects = DashboardQuerySet.as_manager()
 
+    def clean(self):
+        super().clean()
+        qs = Dashboard.objects.filter(
+            tenant=self.tenant,
+            title__iexact=self.title,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if qs.exists():
+            raise ValidationError({"name": "A dashboard with this title and tenant already exists."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # This will raise ValidationError if clean() fails.
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return str(self.title)
 
     class Meta(BaseModel.Meta):
         db_table = "main_dashboard"
-        unique_together = (("title", "tenant"),)
+        constraints = [UniqueConstraint(Lower("title"), "tenant", name="unique_dashboard_title_tenant")]
 
 
 class WidgetType(BaseModel):
