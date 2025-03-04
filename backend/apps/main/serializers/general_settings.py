@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from rest_framework import serializers
 
 from main.models import Dashboard
@@ -27,17 +25,8 @@ class GeneralSettingsSerializer(serializers.Serializer):
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
     main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
-    public_space_dashboard = serializers.PrimaryKeyRelatedField(
-        queryset=Dashboard.objects.all(), required=False, many=False
-    )
 
     def validate_main_dashboard(self, value):
-        dashboard = Dashboard.objects.filter(id=value.id).first()
-        if not dashboard:
-            raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})
-        return str(dashboard.id)
-
-    def validate_public_space_dashboard(self, value):
         dashboard = Dashboard.objects.filter(id=value.id).first()
         if not dashboard:
             raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})
@@ -57,8 +46,6 @@ class GeneralSettingsSerializer(serializers.Serializer):
         g_settings = instance.additional_info.get("general_settings", {}) if instance.additional_info else {}
         for field_name, field in self.fields.items():
             if field_name == "main_dashboard":
-                g_settings[field_name] = g_settings.get(field_name, None)
-            elif field_name == "public_space_dashboard":
                 g_settings[field_name] = g_settings.get(field_name, None)
             elif field_name == "door_lock":
                 g_settings[field_name] = g_settings.get(field_name, field.to_representation(field.get_default()))
