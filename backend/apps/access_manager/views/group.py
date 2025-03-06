@@ -59,6 +59,7 @@ class GroupDetailView(APIView):
     def delete(self, request, pk):
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         instance.is_active = False
-        instance.save(updated_by=request.user)
+        instance.updated_by = request.user
+        instance.save()
         GroupRoom.objects.filter(group=instance).delete()
         return Response({}, 204)
