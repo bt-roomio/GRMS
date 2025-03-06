@@ -55,7 +55,7 @@ class TsKvQuerySet(BaseQuerySet):
                 result[key_item["key"]] = list(query[:limit])
                 count_of_data += query.count()
 
-            elif key_item["type"] in ["json_v", "str_v", "bool_v"] and agg_function != "Change":
+            elif key_item["type"] in ["json_v", "str_v", "bool_v"] and agg_function == "Change":
                 query = (
                     query.annotate(
                         interval_time=F("ts"),
