@@ -18,12 +18,10 @@ class SimpleGroupSerializer(serializers.ModelSerializer):
 class GroupSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, read_only=True)
     created_by = SimpleUserSerializer(read_only=True)
-    rooms_ids = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Room.objects.all(), write_only=True, required=False
-    )
+    rooms_ids = serializers.PrimaryKeyRelatedField(many=True, queryset=Room.objects.all(), write_only=True)
     rooms = SimpleGroupRoomSerializer(source="group_room", read_only=True, many=True)
     public_spaces_ids = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=PublicSpace.objects.all(), write_only=True, required=False
+        many=True, queryset=PublicSpace.objects.all(), write_only=True
     )
     public_spaces = SimpleGroupPublicSpaceSerializer(source="group_public_space", read_only=True, many=True)
 
@@ -33,8 +31,9 @@ class GroupSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        rooms = validated_data.pop("rooms_ids") if validated_data.get("rooms_ids") else []
-        public_spaces = validated_data.pop("public_spaces_ids") if validated_data.get("public_spaces_ids") else []
+        rooms = validated_data.pop("rooms_ids")
+        public_spaces = validated_data.pop("public_spaces_ids")
+
         instance = super().create(validated_data)
 
         for room in rooms:
