@@ -10,7 +10,6 @@ class DoorLockSerializer(serializers.Serializer):
 
 class GeneralSettingsSerializer(serializers.Serializer):
     lang = serializers.CharField(max_length=255, default="en")
-    hotelId = serializers.CharField(max_length=255, default="")
     roomio_node_url = serializers.CharField(max_length=255, default="")
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)

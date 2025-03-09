@@ -43,7 +43,10 @@ class CheckInSerializer(serializers.Serializer):
     def validate(self, attrs):
         attrs = self.convert_fields(attrs)
 
-        tenant = Tenant.objects.filter(additional_info__general_settings__hotelId=attrs.get("hotel_id")).first()
+        tenant = Tenant.objects.filter(
+            additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
+            additional_info__integration_settings__hoteza__enable=True,
+        ).first()
         if not tenant:
             raise JsonValidationError({"result": 9, "message": "Your hotelId not registered!"})
 

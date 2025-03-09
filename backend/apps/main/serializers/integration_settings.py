@@ -3,7 +3,13 @@ from rest_framework import serializers
 from main.models import Device
 
 
+class HotezaSerializer(serializers.Serializer):
+    hotel_id = serializers.CharField(required=False, default="")
+    enable = serializers.BooleanField(default=False)
+
+
 class IntegrationSettingsSerializer(serializers.Serializer):
+    hoteza = HotezaSerializer(required=False, default={"hotel_id": "", "enable": False})
     PMS_type = serializers.ChoiceField(choices=("FIAS",), default=None, allow_null=True)
     integration_device = serializers.PrimaryKeyRelatedField(
         queryset=Device.objects.all(), default=None, allow_null=True
