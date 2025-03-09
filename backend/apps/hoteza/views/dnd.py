@@ -1,8 +1,12 @@
+import logging
+
+from hoteza.serializers.dnd import DNDSerializer
+
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from hoteza.serializers.dnd import DNDSerializer
+logger = logging.getLogger(__name__)
 
 
 class DNDListView(APIView):
@@ -10,6 +14,11 @@ class DNDListView(APIView):
 
     def post(self, request):
         serializer = DNDSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            logger.error("Validation error: %s", e)
+            logger.error("Request data: %s", request.data)
+            raise
         serializer.save()
         return Response({"result": 0, "message": "Status of the room has been successfully changed to dnd!"})

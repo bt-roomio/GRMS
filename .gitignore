@@ -21,3 +21,5 @@ vandelay-py.js
 files
 logs
 mqtt_logs
+logs
+*.log

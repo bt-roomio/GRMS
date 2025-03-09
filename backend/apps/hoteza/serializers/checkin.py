@@ -1,7 +1,8 @@
+from hoteza.utils.exception import JsonValidationError
+
 from rest_framework import serializers
 
-from hoteza.utils.exception import JsonValidationError
-from main.models import Tenant, Room
+from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
 
 
@@ -10,7 +11,7 @@ class CheckInSerializer(serializers.Serializer):
     roomNumber = serializers.CharField()
     guestName = serializers.CharField()
     guestFirstName = serializers.CharField()
-    guestTitle = serializers.CharField()
+    guestTitle = serializers.CharField(allow_null=True, allow_blank=True)
     pmsRegNum = serializers.CharField()
     arrivalDateTS = serializers.CharField()
     departureDateTS = serializers.CharField()
@@ -18,7 +19,7 @@ class CheckInSerializer(serializers.Serializer):
     roomShare = serializers.CharField()
     swapFlag = serializers.CharField()
     nopost = serializers.CharField()
-    profileNum = serializers.CharField()
+    profileNum = serializers.CharField(allow_null=True, allow_blank=True)
 
     @staticmethod
     def convert_fields(attrs):
@@ -46,9 +47,17 @@ class CheckInSerializer(serializers.Serializer):
         if not tenant:
             raise JsonValidationError({"result": 9, "message": "Your hotelId not registered!"})
 
+        guest = Guest.objects.filter(
+            additional_info__pms_reg_num=attrs.get("pms_reg_num"),
+            is_active=True,
+        )
+        if guest:
+            raise JsonValidationError({"result": 9, "message": "This guest already exists!"})
+
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()
         if not room:
             raise JsonValidationError({"result": 9, "message": "Room not found!"})
+
         attrs["tenant"] = tenant
         attrs["room"] = room
         return attrs
@@ -65,8 +74,8 @@ class CheckInSerializer(serializers.Serializer):
                 "room": validated_data.pop("room"),
                 "language": validated_data.pop("language"),
                 "title": validated_data.pop("title"),
-                "additional_info": validated_data,
                 "tenant": validated_data.pop("tenant"),
+                "additional_info": validated_data,
             }
         )
         return instance

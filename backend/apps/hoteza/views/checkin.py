@@ -13,8 +13,12 @@ class CheckInListView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        logger.debug(request.data)
         serializer = CheckInSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            logger.error("Validation error: %s", e)
+            logger.error("Request data: %s", request.data)
+            raise
         serializer.save()
         return Response({"result": 0, "message": "Successfully checkin!"})

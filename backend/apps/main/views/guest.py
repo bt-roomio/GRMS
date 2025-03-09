@@ -1,5 +1,6 @@
-from drf_yasg.utils import swagger_auto_schema
+import logging
 
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,6 +9,8 @@ from core.utils.pagination import pagination
 from main.models import Guest, Room
 from main.serializers.guest import GuestCheckoutParams, GuestFilterParams, GuestSerializer
 from main.swagger.guest import GuestDetailSwagger, GuestSwagger, swagger_guest_checkout
+
+logger = logging.getLogger(__name__)
 
 
 class GuestListView(APIView):

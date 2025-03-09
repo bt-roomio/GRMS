@@ -10,10 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-from datetime import timedelta
 import os
-from pathlib import Path
 import sys
+from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -233,19 +233,58 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "console": {"format": "%(name)-12s %(levelname)-8s %(message)s"},
-        "file": {"format": "%(asctime)s %(name)-12s %(levelname)-8s %(message)s"},
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        },
     },
     "handlers": {
         "console": {
+            "level": "INFO",
+            "filters": ["require_debug_true"],
             "class": "logging.StreamHandler",
-            "formatter": "console",
+            "formatter": "simple",
+        },
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "fail_request.log",
+            "formatter": "verbose",
+            "maxBytes": 1024 * 1024 * 15,  # 1 MB
+            "backupCount": 3,
+        },
+        "file_hoteza_app": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "fail_request_hoteza.log",
+            "formatter": "verbose",
+            "maxBytes": 1024 * 1024 * 15,  # 1 MB
+            "backupCount": 3,
         },
     },
     "loggers": {
-        "main": {
-            "level": "DEBUG",
+        "django": {
             "handlers": ["console"],
+            "propagate": True,
+        },
+        "django.request": {
+            "handlers": ["file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "hoteza": {
+            "handlers": ["file_hoteza_app"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
 }

@@ -19,3 +19,4 @@ vandelay-py.js
 .envrc
 files
 logs
+*.log
