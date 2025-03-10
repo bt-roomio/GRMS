@@ -94,12 +94,14 @@ class Room(BaseModel, UpdateByModel):
     CheckedIn = 1
     Occupied = 2
     Reserved = 3
+    MakeUpRoom = 4
 
     STATE = (
         (Available, "Available"),
         (CheckedIn, "CheckedIn"),
         (Occupied, "Occupied"),
         (Reserved, "Reserved"),
+        (MakeUpRoom, "MakeUpRoom"),
     )
 
     ON = "ON"
