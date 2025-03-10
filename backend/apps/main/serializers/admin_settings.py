@@ -8,7 +8,7 @@ class JsonValueSerializer(serializers.Serializer):
 
 
 class AdminSettingsSerializer(serializers.ModelSerializer):
-    json_value = JsonValueSerializer(default=dict)
+    json_value = JsonValueSerializer(default={"hoteza_whitelist": []})
 
     def to_representation(self, instance):
         if not instance.json_value.get("hoteza_whitelist"):
