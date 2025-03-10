@@ -26,7 +26,7 @@ def check_perms(perms):
 
 
 class IsSuperUser(BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view):  # pyright: ignore
         return bool(request.user and request.user.is_active and request.user.is_superuser)
 
 

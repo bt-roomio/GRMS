@@ -1,8 +1,8 @@
 import logging
 
 from hoteza.serializers.checkin import CheckInSerializer
+from hoteza.utils.permissions import SafelistPermission
 
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class CheckInListView(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (SafelistPermission,)
 
     def post(self, request):
         serializer = CheckInSerializer(data=request.data)

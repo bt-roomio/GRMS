@@ -1,14 +1,13 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-from main.serializers.alarm_settings import AlarmSettingsSerializer
+from main.serializers.admin_settings import AdminSettingsSerializer
 
 
-def alarm_settings_swagger():
+def admin_settings_swagger():
     return swagger_auto_schema(
-        query_serializer=AlarmSettingsSerializer,
         responses={
-            200: AlarmSettingsSerializer(),
+            200: AdminSettingsSerializer(),
             400: openapi.Response(
                 description="Bad request",
                 examples={
@@ -21,5 +20,5 @@ def alarm_settings_swagger():
                 },
             ),
         },
-        tags=["Main, Alarm Settings"],
+        tags=["Main, Admin Settings"],
     )

@@ -1,0 +1,17 @@
+from django.conf import settings
+
+from rest_framework import exceptions, permissions
+
+from main.models import AdminSettings
+
+
+class SafelistPermission(permissions.BasePermission):
+
+    def has_permission(self, request, view) -> bool:  # pyright: ignore
+        admin_settings = AdminSettings.objects.first()
+        admin_settings = admin_settings and admin_settings.json_value.get("hoteza_whitelist") or []
+        remote_addr = request.META.get("REMOTE_ADDR", "")
+        for valid_ip in [*settings.HOTEZA_WHITELIST, *admin_settings]:
+            if remote_addr == valid_ip or remote_addr.startswith(valid_ip):
+                return True
+        raise exceptions.PermissionDenied(detail="Your IP address is not allowed.")

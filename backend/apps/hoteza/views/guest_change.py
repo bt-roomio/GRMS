@@ -1,8 +1,8 @@
 import logging
 
 from hoteza.serializers.guest_change import GuestChangeSerializer
+from hoteza.utils.permissions import SafelistPermission
 
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class GuestChangeListView(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (SafelistPermission,)
 
     def post(self, request):
         serializer = GuestChangeSerializer(data=request.data)

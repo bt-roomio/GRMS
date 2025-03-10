@@ -228,6 +228,8 @@ CELERY_BEAT_SCHEDULE = {
     }
 }
 
+HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
+
 
 LOGGING = {
     "version": 1,
@@ -275,11 +277,6 @@ LOGGING = {
         "django": {
             "handlers": ["console"],
             "propagate": True,
-        },
-        "django.request": {
-            "handlers": ["file"],
-            "level": "ERROR",
-            "propagate": False,
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
