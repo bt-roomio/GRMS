@@ -64,7 +64,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
             await self.receive_json(converted_data, **kwargs)
 
         except ExpiredSignatureError as err:
-            await self.send_json(response({}, None, 401, str(err)))
+            await self.send_json(response({}, 0, 401, str(err)))
 
         except Exception as err:
             tb = traceback.format_exc()
@@ -95,7 +95,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         try:
             while True:
                 if not await self.validate_auth():
-                    await self.send_json(response({}, None, 401, "User is not authenticated. Stopping periodic data."))
+                    await self.send_json(response({}, 0, 401, "User is not authenticated. Stopping periodic data."))
                     break
 
                 result = func()
