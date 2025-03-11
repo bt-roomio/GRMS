@@ -4,6 +4,7 @@ import traceback
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
+from jwt import ExpiredSignatureError
 from jwt import decode as jwt_decode
 
 from core.utils.snake_case import convert_to_snake
@@ -61,11 +62,15 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
             converted_data = convert_to_snake(data)
             await self.auth(converted_data)
             await self.receive_json(converted_data, **kwargs)
+
+        except ExpiredSignatureError as err:
+            await self.send_json(response({}, None, 401, str(err)))
+
         except Exception as err:
             tb = traceback.format_exc()
-            logger.debug(f"Error occurred: {err}")
-            logger.debug(f"Traceback: {tb}")
-            await self.send_json(response({}, None, 1, str(err)))
+            logger.warning(f"Error occurred: {err}")
+            logger.warning(f"Traceback: {tb}")
+            await self.send_json(response({}, None, 400, str(err)))
 
     async def auth(self, data={}):
         """
@@ -76,7 +81,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         token = auth_cmd.get("token")
         self.token = token or self.token
         if not self.token:
-            raise ValueError("Token not found!")
+            raise ExpiredSignatureError("Token not found!")
 
         checked_token = jwt_decode(self.token, settings.SECRET_KEY, algorithms=["HS256"])
         self.user = await get_user(checked_token)
@@ -90,7 +95,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         try:
             while True:
                 if not await self.validate_auth():
-                    await self.send_json(response({}, None, 1, "User is not authenticated. Stopping periodic data."))
+                    await self.send_json(response({}, None, 401, "User is not authenticated. Stopping periodic data."))
                     break
 
                 result = func()
@@ -105,7 +110,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
     async def validate_auth(self):
         try:
             if not self.token:
-                raise ValueError("Missing authentication token.")
+                raise ExpiredSignatureError("Missing authentication token.")
 
             jwt_decode(self.token, settings.SECRET_KEY, algorithms=["HS256"])
         except Exception:

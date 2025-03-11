@@ -18,6 +18,7 @@ async def guest_list(cmd, user):
         rooms = await get_guests(params, user)
         result["data"] = rooms
     except Exception as err:
+        result["error_code"] = 400
         result["error_msg"] = str(err)
         return result
     return result
