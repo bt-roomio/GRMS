@@ -42,7 +42,10 @@ class CheckOutSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        guests = Guest.objects.filter(room=validated_data.get("room"))
+        guests = Guest.objects.filter(
+            additional_info__pms_reg_num=validated_data.get("pms_reg_num"),
+            is_active=True,
+        )
         for guest in guests:
             data = {"is_active": False, "tenant": validated_data.get("tenant"), "room": validated_data.get("room")}
             serializer = GuestSerializer()
