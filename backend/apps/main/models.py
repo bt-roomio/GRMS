@@ -127,27 +127,61 @@ class Room(BaseModel, UpdateByModel):
     def __str__(self):
         return str(self.number)
 
+    def clean(self):
+        super().clean()
+        if self.state is not None:
+            if self.Available in self.state and self.CheckedIn in self.state:
+                raise ValidationError(
+                    {"state": "Поле state не может содержать одновременно состояния Available и CheckedIn."}
+                )
+
     def save(self, *args, **kwargs):
-        if self.pk:
-            if Room.objects.filter(pk=self.pk).exists():
+        self.full_clean()
+        super().save(*args, **kwargs)
+        old_room_history_query = RoomHistory.objects.filter(room_id=self.pk)
+        old_room_history = old_room_history_query and old_room_history_query.latest("created_at")
+
+        if old_room_history:
+            fields_to_check = ["number", "floor", "block", "active", "state", "status"]
+            has_changed = any(getattr(old_room_history, field) != getattr(self, field) for field in fields_to_check)
+            if has_changed:
                 RoomHistory.objects.create(
                     number=self.number,
                     floor=self.floor,
                     block=self.block,
                     active=self.active,
                     state=self.state,
+                    status=self.status,
+                    tenant=self.tenant,
                     public_area_id=self.public_area_id,
                     pan_id=self.pan_id,
                     building=self.building,
                     door_lock_id=self.door_lock_id,
-                    type=self.type,
+                    room_type=self.type,
                     suite=self.suite,
-                    tenant=self.tenant,
-                    status=self.status,
                     updated_at=self.updated_at,
                     updated_by=self.updated_by,
+                    room_id=str(self.pk),
                 )
-        super().save(*args, **kwargs)
+        else:
+            RoomHistory.objects.create(
+                number=self.number,
+                floor=self.floor,
+                block=self.block,
+                active=self.active,
+                state=self.state,
+                status=self.status,
+                tenant=self.tenant,
+                public_area_id=self.public_area_id,
+                pan_id=self.pan_id,
+                building=self.building,
+                door_lock_id=self.door_lock_id,
+                room_type=self.type,
+                suite=self.suite,
+                updated_at=self.updated_at,
+                updated_by=self.updated_by,
+                room_id=str(self.pk),
+            )
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room"
@@ -168,10 +202,12 @@ class RoomHistory(BaseModel, UpdateByModel):
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
     door_lock_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
-    type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
+    room_type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     status = models.CharField(max_length=255, choices=Room.STATUS, default=Room.OFF)
+    room = models.ForeignKey("main.Room", CASCADE)
+    additional_info = models.JSONField(null=True, blank=True)
 
     objects = RoomHistoryQuerySet.as_manager()
 

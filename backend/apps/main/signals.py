@@ -23,8 +23,6 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
     devices = Device.objects.filter(id=instance.entity_id)
     if devices:
         for device in devices:
-            if instance.attribute_key == "dnd" and device.room:
-                remove_or_add(instance.bool_v, device.room, Room.DoNotDisturb)
             if instance.attribute_key == "mur" and device.room:
                 remove_or_add(instance.bool_v, device.room, Room.MakeUpRoom)
             if instance.attribute_key == "active" and instance.attribute_type == AttributeKv.SERVER_SCOPE:
