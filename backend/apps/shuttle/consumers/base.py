@@ -33,7 +33,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
                 try:
                     await task
                 except asyncio.CancelledError:
-                    print(f"Task {task_key} cancelled successfully.")
+                    logger.info(f"Task {task_key} cancelled successfully.")
             del self.tasks[task_key]
 
     async def resume_tasks(self):
@@ -95,7 +95,9 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         try:
             while True:
                 if not await self.validate_auth():
-                    await self.send_json(response({}, 0, 401, "User is not authenticated. Stopping periodic data."))
+                    if self.token:
+                        await self.send_json(response({}, 0, 401, "User is not authenticated. Stopping periodic data."))
+                    self.token = ""
                     break
 
                 result = func()
