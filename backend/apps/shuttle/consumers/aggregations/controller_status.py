@@ -22,7 +22,7 @@ async def controller_status(cmd, user):
 @database_sync_to_async
 def get_status_rooms(user):
     rooms = Room.objects.statuses(tenant=user.tenant)  # pyright: ignore
-    rooms_history = RoomHistory.objects.terday_statuses(tenant=user.tenant)  # pyright: ignore
+    rooms_history = RoomHistory.objects.yesterday_statuses(tenant=user.tenant)  # pyright: ignore
     data = merge_statuses(rooms, rooms_history)
     return data
 
@@ -37,14 +37,24 @@ def get_status_devices(user):
 
 def merge_statuses(today, yesterday):
     merged = {}
+
     for record in today:
         status = record["status"]
-        merged[status] = record.copy()
+        merged[status] = {
+            "status": status,
+            "last_24_hour": record.get("today", 0),
+            "diff_pervious_day": 0,
+        }
 
     for record in yesterday:
         status = record["status"]
         if status in merged:
-            merged[status].update(record)
+            merged[status]["diff_pervious_day"] = record.get("yesterday", 0)
         else:
-            merged[status] = record.copy()
+            merged[status] = {
+                "status": status,
+                "last_24_hour": 0,
+                "diff_pervious_day": record.get("yesterday", 0),
+            }
+
     return list(merged.values())

@@ -36,7 +36,6 @@ def update_state_of_room_and_status_device(sender, instance, **kwargs):
             attribute_key=instance.attribute_key,
             attribute_type=AttributeKv.SHARED_SCOPE,
             entity_id=instance.entity_id,
-            entity__tenant_id=instance.entity__tenant_id,
             defaults={"json_v": instance.json_v, "entity_type": "DEVICE"},
         )
 

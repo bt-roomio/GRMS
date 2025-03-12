@@ -11,12 +11,12 @@ from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictiona
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 
-logger = logging.getLogger("main")
+logger = logging.getLogger("django")
 
 
 def handlers_mq(ch: BlockingChannel, body: bytes):
     msg = json.loads(body)
-    logger.debug(msg)
+    logger.info(msg)
 
     device = Device.objects.filter(id=msg.get("sourceDeviceUUID")).first()
     if not device:
@@ -34,10 +34,18 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
             rpc_msg.additional_info = data.get("data")
             rpc_msg.save()
     elif topic == "v1/gateway/connect":
-        device = Device.objects.is_active().filter(name=data.get("device"), tenant_id=device.tenant_id).first()
+        device = (
+            Device.objects.is_active()  # pyright: ignore
+            .filter(name=data.get("device"), tenant_id=device.tenant_id)
+            .first()
+        )
         update_activity_device(device)
     elif topic == "v1/gateway/disconnect":
-        device = Device.objects.is_active().filter(name=data.get("device"), tenant_id=device.tenant_id).first()
+        device = (
+            Device.objects.is_active()  # pyright: ignore
+            .filter(name=data.get("device"), tenant_id=device.tenant_id)
+            .first()
+        )
         update_activity_device(device, connected=False)
 
     elif topic.startswith("v1/gateway/attributes/request") and device:
@@ -64,10 +72,10 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
 
     elif topic.startswith("v1/devices/me/attributes/request") and device:
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
-        shared_keys = shared_keys.split(",")
-        attributes = AttributeKv.objects.filter(
-            attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=device.id
-        )
+        shared_keys = shared_keys.split(",") if shared_keys else []
+        attributes = AttributeKv.objects.filter(attribute_type=AttributeKv.SHARED_SCOPE, entity_id=device.id)
+        attributes = attributes.filter(attribute_key__in=shared_keys) if shared_keys else attributes
+
         message = {
             "targetDeviceUUID": str(device.id),
             "topic": topic.replace("request", "response"),
