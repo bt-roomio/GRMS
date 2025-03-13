@@ -14,6 +14,7 @@ class ReceiverConsumer(BaseConsumer):
             "SCANNED_DEVICES": self.handle_scanned_devices,
             "CONTROLLER_STATUS": self.handle_controller_status,
             "ROOM_LIST": self.handle_room_list,
+            "ROOM_DETAIL": self.handle_room_detail,
             "GATEWAY_LIST": self.handle_gateway_list,
             "GUEST_LIST": self.handle_guest_list,
             "CARD_LIST": self.handle_card_list,
@@ -47,6 +48,12 @@ class ReceiverConsumer(BaseConsumer):
         from shuttle.consumers.aggregations.room_list import room_list
 
         return await room_list(cmd, self.user)
+
+    @periodic_task()
+    async def handle_room_detail(self, cmd):
+        from shuttle.consumers.aggregations.room_detail import room_detail
+
+        return await room_detail(cmd, self.user)
 
     @periodic_task()
     async def handle_latest_telemetry(self, cmd):
