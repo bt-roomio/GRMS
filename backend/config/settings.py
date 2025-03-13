@@ -280,7 +280,7 @@ LOGGING = {
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
-            "level": "ERROR",
+            "level": "WARNING",
             "propagate": False,
         },
     },
