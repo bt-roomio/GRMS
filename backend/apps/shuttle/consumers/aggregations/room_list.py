@@ -21,8 +21,8 @@ async def room_list(cmd, user):
     except Exception as err:
         result["error_code"] = 400
         result["error_msg"] = str(err)
+    finally:
         return result
-    return result
 
 
 @database_sync_to_async

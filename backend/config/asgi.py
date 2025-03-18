@@ -11,7 +11,7 @@ django.setup()
 
 from apps.shuttle.consumers.receiver import ReceiverConsumer  # noqa: E402
 
-BASE_URLS = URLRouter([path("api/ws/", ReceiverConsumer.as_asgi())])  # noqa: F821
+BASE_URLS = URLRouter([path("api/ws/", ReceiverConsumer.as_asgi())])  # noqa: F821  # pyright: ignore
 
 application = ProtocolTypeRouter(
     {
