@@ -106,12 +106,13 @@ class Relation(BaseModel, UpdateByModel):
 
     objects = RelationQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "shuttle_relation"
         unique_together = (("from_id", "from_type", "relation_type_group", "relation_type", "to_id", "to_type"),)
 
 
 class RPCMessage(models.Model):
+    id: int
     created_at = models.DateTimeField(auto_now_add=True)
     received = models.BooleanField(default=False)
     additional_info = models.JSONField(blank=True, null=True)

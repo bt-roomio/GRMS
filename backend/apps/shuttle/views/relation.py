@@ -18,7 +18,6 @@ class RelationListView(APIView):
             from_id=params.get("from_id"),  # pyright: ignore
             to_id=params.get("to_id"),  # pyright: ignore
         )
-        print(queryset)
         serializer = RelationSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))  # pyright: ignore
         return Response(data)

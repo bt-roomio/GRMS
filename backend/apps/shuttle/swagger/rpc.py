@@ -5,7 +5,6 @@ RPCSwagger = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
         "device": openapi.Schema(type=openapi.TYPE_STRING, description="Device name"),
-        "id": openapi.Schema(type=openapi.TYPE_STRING, description="Message ID"),
         "data": openapi.Schema(
             type=openapi.TYPE_OBJECT,
             description="Response data (optional)",
@@ -17,16 +16,9 @@ RPCSwagger = openapi.Schema(
 RPCRequestSwagger = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
-        "device": openapi.Schema(type=openapi.TYPE_STRING, description="Device name"),
-        "data": openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            description="Response data (optional)",
-            properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, description="ID"),
-                "method": openapi.Schema(type=openapi.TYPE_STRING, description="RPC method"),
-                "params": openapi.Schema(type=openapi.TYPE_OBJECT, description="RPC params"),
-            },
-        ),
+        "method": openapi.Schema(type=openapi.TYPE_STRING, description="RPC method"),
+        "params": openapi.Schema(type=openapi.TYPE_OBJECT, description="RPC params"),
+        "timeout": openapi.Schema(type=openapi.TYPE_INTEGER, description="Timeout"),
     },
 )
 

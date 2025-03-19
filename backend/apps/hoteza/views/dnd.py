@@ -1,7 +1,7 @@
 import logging
 
 from hoteza.serializers.dnd import DNDSerializer
-from hoteza.utils.permissions import SafelistPermission
+from hoteza.utils.permissions import WhiteListPermission
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class DNDListView(APIView):
-    permission_classes = (SafelistPermission,)
+    permission_classes = (WhiteListPermission,)
 
     def post(self, request):
         serializer = DNDSerializer(data=request.data)

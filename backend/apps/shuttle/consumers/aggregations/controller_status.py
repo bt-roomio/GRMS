@@ -43,18 +43,18 @@ def merge_statuses(today, yesterday):
         merged[status] = {
             "status": status,
             "last_24_hour": record.get("today", 0),
-            "diff_pervious_day": 0,
+            "diff_previous_day": 0,
         }
 
     for record in yesterday:
         status = record["status"]
         if status in merged:
-            merged[status]["diff_pervious_day"] = record.get("yesterday", 0)
+            merged[status]["diff_previous_day"] = record.get("yesterday", 0)
         else:
             merged[status] = {
                 "status": status,
                 "last_24_hour": 0,
-                "diff_pervious_day": record.get("yesterday", 0),
+                "diff_previous_day": record.get("yesterday", 0),
             }
 
     return list(merged.values())

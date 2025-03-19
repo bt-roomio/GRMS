@@ -20,4 +20,11 @@ urlpatterns = [
         AttributesChangeRPCView.as_view(),
         name="attributes-change-view",
     ),
+    # For Hoteza
+    path("rpc/<uuid:tenant_id>/<uuid:room_id>/", JsonRPCView.as_view(), name="hoteza-json-rpc-view"),
+    path(
+        "telemetry/<str:entity_type>/<uuid:tenant_id>/<uuid:room_id>/",
+        TsKvListView.as_view(),
+        name="hoteza-ts-kv-list-view",
+    ),
 ]

@@ -1,11 +1,10 @@
-import json
 import logging
 import os
 import time
 
 from django.conf import settings
+from django.db.models import Q
 
-from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -14,14 +13,23 @@ from core.utils.helpers import b_encode, compress_data, read_binary
 from main.models import Device
 from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
+from shuttle.utils.permissions import WhiteListOrIsAuthenticated
 
 logger = logging.getLogger("main")
 
 
 class JsonRPCView(APIView):
+    permission_classes = (WhiteListOrIsAuthenticated,)
+
     @json_rpc_swagger()
-    def post(self, request, device_id):
-        device = get_object_or_404(Device, id=device_id)
+    def post(self, request, **kwargs):
+        device = Device.objects.filter(
+            Q(id=kwargs.get("device_id"))  # pyright: ignore
+            | Q(Q(tenant_id=kwargs.get("tenant_id")) & Q(room_id=kwargs.get("room_id")))  # pyright: ignore
+        ).first()
+        if not device:
+            return Response({"detail": "Not found device."}, 404)
+
         try:
             method = request.data["method"]
             params = request.data["params"]
@@ -35,9 +43,9 @@ class JsonRPCView(APIView):
 
 
 def prepare_mqtt_request(device, method, params, timeout):
-    relation = Relation.objects.filter(to_id_id=device.id).latest("updated_at")
+    relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     device_id = relation and relation.from_id.id
-    gateway_or_none = Device.objects.gateway_or_none(device.id)
+    gateway_or_none = Device.objects.gateway_or_none(device.id)  # pyright: ignore
     rpc_message = RPCMessage.objects.create(additional_info={})
     request_id = rpc_message.id
     message = {
@@ -65,8 +73,9 @@ def prepare_mqtt_request(device, method, params, timeout):
 
     while start_time < timeout:
         has_message = RPCMessage.objects.filter(id=request_id, received=True)
+        has_message = has_message.first()
         if has_message:
-            return has_message.first().additional_info
+            return has_message.additional_info
         time.sleep(0.3)
         start_time += 1
 
