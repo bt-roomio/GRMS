@@ -14,7 +14,7 @@ class RoomListView(APIView):
     @swagger_auto_schema(tags=["Main, Room"], responses=RoomSwagger, query_serializer=RoomFilterParams())
     @check_perms(["main.view_room"])
     def get(self, request):
-        params = RoomFilterParams.check(request.GET)
+        params = RoomFilterParams.check(request.query_params)
         queryset = Room.objects.list(  # pyright: ignore
             tenant=request.user.tenant,
             state=params.get("state"),  # pyright: ignore
@@ -24,7 +24,7 @@ class RoomListView(APIView):
             sort_by=params.get("sort_by"),  # pyright: ignore
         )
         serializer = RoomSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))  # pyright: ignore
+        data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
 
     @swagger_auto_schema(tags=["Main, Room"], responses=RoomSwagger, request_body=RoomSerializer)

@@ -3,7 +3,6 @@ import os
 import time
 
 from django.conf import settings
-from django.db.models import Q
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,10 +22,8 @@ class JsonRPCView(APIView):
 
     @json_rpc_swagger()
     def post(self, request, **kwargs):
-        device = Device.objects.filter(
-            Q(id=kwargs.get("device_id"))  # pyright: ignore
-            | Q(Q(tenant_id=kwargs.get("tenant_id")) & Q(room_id=kwargs.get("room_id")))  # pyright: ignore
-        ).first()
+        kwargs = self.handle_params(**kwargs)
+        device = Device.objects.filter(**kwargs).first()
         if not device:
             return Response({"detail": "Not found device."}, 404)
 
@@ -40,6 +37,21 @@ class JsonRPCView(APIView):
         result = prepare_mqtt_request(device, method, params, timeout / 1000)
 
         return Response(result)
+
+    def handle_params(self, **kwargs):
+        result = {}
+        if kwargs.get("hotel_id") and kwargs.get("room_id"):
+            result["tenant__additional_info__general_settings__hotelId"] = kwargs.get("hotel_id")
+            result["room_id"] = kwargs.get("room_id")
+            return result
+        elif kwargs.get("device_id"):
+            result["id"] = kwargs.get("device_id")
+            return result
+        elif kwargs.get("tenant_id") and kwargs.get("room_id"):
+            result["tenant_id"] = kwargs.get("tenant_id")
+            result["room_id"] = kwargs.get("room_id")
+            return result
+        return result
 
 
 def prepare_mqtt_request(device, method, params, timeout):

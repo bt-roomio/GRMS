@@ -3,6 +3,7 @@ from django.urls import path
 from shuttle.views.attributes import AttributeListView, AttributesChangeRPCView
 from shuttle.views.controller_file import ControllerFileListView
 from shuttle.views.json_rpc import JsonRPCView
+from shuttle.views.latest_ts_kv import LatestTsKvListView
 from shuttle.views.relation import RelationDetailView, RelationListView
 from shuttle.views.remove_attribute import RemoveAttribute
 from shuttle.views.ts_kv import TsKvListView
@@ -20,11 +21,17 @@ urlpatterns = [
         AttributesChangeRPCView.as_view(),
         name="attributes-change-view",
     ),
-    # For Hoteza
-    path("rpc/<uuid:tenant_id>/<uuid:room_id>/", JsonRPCView.as_view(), name="hoteza-json-rpc-view"),
+    # Integration
+    path("rpc/<uuid:tenant_id>/<uuid:room_id>/", JsonRPCView.as_view(), name="tenant-id-room-id-json-rpc-view"),
+    path("rpc/<str:hotel_id>/<uuid:room_id>/", JsonRPCView.as_view(), name="hoteza-hotel-id-json-rpc-view"),
     path(
-        "telemetry/<str:entity_type>/<uuid:tenant_id>/<uuid:room_id>/",
-        TsKvListView.as_view(),
-        name="hoteza-ts-kv-list-view",
+        "latest-telemetry/<uuid:tenant_id>/<uuid:room_id>/",
+        LatestTsKvListView.as_view(),
+        name="tenant-id-room-id-latest-ts-kv-list-view",
+    ),
+    path(
+        "latest-telemetry/<str:hotel_id>/<uuid:room_id>/",
+        LatestTsKvListView.as_view(),
+        name="tenant-id-room-id-latest-ts-kv-list-view",
     ),
 ]
