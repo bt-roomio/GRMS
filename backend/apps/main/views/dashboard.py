@@ -1,6 +1,6 @@
 from django.db.models import F
-from drf_yasg.utils import swagger_auto_schema
 
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -25,12 +25,9 @@ class DashboardListView(APIView):
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardSwagger, request_body=DashboardSerializer)
     def post(self, request):
-        tenant_id = request.user.tenant_id
-        data = request.data.copy()
-        data["tenant"] = tenant_id
-        serializer = DashboardSerializer(data=data)
+        serializer = DashboardSerializer(data=request.data, context={"tenant_id": request.user.tenant_id})
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data, 201)
 
 
@@ -43,18 +40,15 @@ class DashboardDetailView(APIView):
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardDetailSwagger, request_body=DashboardSerializer)
     def put(self, request, pk):
-        tenant_id = request.user.tenant_id
-        data = request.data.copy()
-        data["tenant"] = tenant_id
-        instance = get_object_or_404(Dashboard, id=pk)
-        serializer = DashboardSerializer(instance, data=data)
+        instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
+        serializer = DashboardSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses={})
     def delete(self, request, pk):
-        instance = get_object_or_404(Dashboard, id=pk)
+        instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
         instance.delete()
         return Response({}, 204)
 

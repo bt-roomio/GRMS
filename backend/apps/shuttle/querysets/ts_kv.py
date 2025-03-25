@@ -21,7 +21,7 @@ class TsKvQuerySet(BaseQuerySet):
                 query = (
                     query.annotate(prev_value=Window(expression=Lag(key_item["type"]), order_by=F("ts").desc()))
                     .filter(Q(prev_value__isnull=True) | ~Q(dbl_v=F("prev_value")))
-                    .values("ts", key_item["type"])
+                    .values("ts", values=F(key_item["type"]))
                 )
                 result[key_item["key"]] = list(query[:limit])
                 count_of_data += query.count()
