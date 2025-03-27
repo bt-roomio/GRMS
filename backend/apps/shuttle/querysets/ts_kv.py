@@ -65,7 +65,7 @@ class TsKvQuerySet(BaseQuerySet):
                     .values("key", "interval_time", "avail_field")
                     .annotate(ts=F("interval_time"), value=F("avail_field"))
                     .values("ts", "value")
-                    .order_by("ts", "-interval_time")
+                    .order_by("-ts", "-interval_time")
                 )
 
                 result[key_item["key"]] = list(query[:limit])
