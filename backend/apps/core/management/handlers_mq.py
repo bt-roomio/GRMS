@@ -193,7 +193,7 @@ def get_or_create_device(name, from_id):
         is_active=True,
         type="default",
         tenant_id=from_id.tenant_id,
-        device_profile_id=from_id.device_profile_id,
+        defaults={"device_profile_id": from_id.device_profile_id},
     )
     if created:
         DeviceCredentials.objects.create(
