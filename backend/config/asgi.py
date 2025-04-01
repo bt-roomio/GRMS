@@ -9,13 +9,20 @@ from django.urls import path
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from apps.shuttle.consumers.receiver import ReceiverConsumer  # noqa: E402
+from apps.shuttle.consumers.receiver import ReceiverConsumer  # v1 consumer  #noqa
+from apps.shuttle.demultiplexer import Demultiplexer  # v2 consumer  #noqa
+from apps.shuttle.utils.jwt_auth import JWTAuthMiddlewareStack  # noqa
 
-BASE_URLS = URLRouter([path("api/ws/", ReceiverConsumer.as_asgi())])  # noqa: F821  # pyright: ignore
+websocket_urlpatterns = [
+    # v1 endpoint: no custom token middleware
+    path("api/ws/", ReceiverConsumer.as_asgi()),  # pyright: ignore
+    # v2 endpoint: wrapped with token middlewares
+    path("api/ws/v2/", JWTAuthMiddlewareStack(Demultiplexer.as_asgi())),  # pyright: ignore
+]
 
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
-        "websocket": AllowedHostsOriginValidator(BASE_URLS),
+        "websocket": AllowedHostsOriginValidator(URLRouter(websocket_urlpatterns)),
     }
 )

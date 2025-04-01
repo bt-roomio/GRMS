@@ -1,4 +1,3 @@
-import time
 from uuid import UUID
 
 from django.db import models
@@ -28,7 +27,7 @@ class TsKv(BaseModelTs):
 
     def save(self, *args, **kwargs):
         if self.ts is None:
-            self.ts = time.time()
+            self.ts = get_mil_sec()
         super(TsKv, self).save(*args, **kwargs)
 
     class Meta(BaseModelTs.Meta):

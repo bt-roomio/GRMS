@@ -10,7 +10,7 @@ from core.utils.unix_timestamp import UnixTimeStampField
 
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = UnixTimeStampField(default=time.time, editable=False, null=True)
+    created_at = UnixTimeStampField(default=get_mil_sec, editable=False, null=True)
 
     class Meta:
         abstract = True
@@ -19,7 +19,7 @@ class BaseModel(models.Model):
 
 class BaseModelTs(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    ts = UnixTimeStampField(default=time.time, null=True)
+    ts = UnixTimeStampField(default=get_mil_sec, null=True)
 
     class Meta:
         abstract = True

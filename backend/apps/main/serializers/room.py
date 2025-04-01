@@ -62,7 +62,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
 
 class RoomFilterParams(ValidatorSerializer):
-    SORT_FIELDS = ("number", "floor", "block", "-number", "-floor", "-block")
+    SORT_FIELDS = ("created_at", "-created_at", "number", "floor", "block", "-number", "-floor", "-block")
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
