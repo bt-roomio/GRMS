@@ -1,4 +1,3 @@
-import time
 from uuid import UUID
 
 from django.db import models
@@ -17,7 +16,7 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 class TsKv(BaseModelTs):
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     entity_id = UUID
-    key = models.IntegerField()
+    key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.CharField(max_length=255, blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
@@ -28,7 +27,7 @@ class TsKv(BaseModelTs):
 
     def save(self, *args, **kwargs):
         if self.ts is None:
-            self.ts = time.time()
+            self.ts = get_mil_sec()
         super(TsKv, self).save(*args, **kwargs)
 
     class Meta(BaseModelTs.Meta):

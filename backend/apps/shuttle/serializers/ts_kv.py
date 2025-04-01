@@ -6,6 +6,13 @@ from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from core.utils.serializers import ValidatorSerializer
 from core.utils.unix_timestamp import TimestampField
 from main.models import Room, Tenant
+from shuttle.models import TsKv
+
+
+class TsKvSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TsKv
+        fields = ("id", "ts", "entity_id", "key", "bool_v", "str_v", "long_v", "dbl_v", "json_v")
 
 
 class TsKvFilterPath(ValidatorSerializer):

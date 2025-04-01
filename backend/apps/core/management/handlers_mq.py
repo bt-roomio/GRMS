@@ -139,13 +139,13 @@ def save_telemetry_kv(device, data, ts):
         fields[item[0]] = item[1]
         TsKv.objects.update_or_create(
             entity=device,
-            key=ts_kv_dict.key_id,
+            key=ts_kv_dict,
             ts=ts or get_mil_sec(),
             defaults=fields,
         )
         TsKvLatest.objects.update_or_create(
             entity=device,
-            key=ts_kv_dict.key_id,
+            key=ts_kv_dict,
             defaults={**fields, "ts": get_mil_sec()},
         )
 
@@ -193,7 +193,7 @@ def get_or_create_device(name, from_id):
         is_active=True,
         type="default",
         tenant_id=from_id.tenant_id,
-        device_profile_id=from_id.device_profile_id,
+        defaults={"device_profile_id": from_id.device_profile_id},
     )
     if created:
         DeviceCredentials.objects.create(

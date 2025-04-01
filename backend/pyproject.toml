@@ -14,7 +14,7 @@ reportUnusedVariable = "warning"
 [tool.isort]
 profile = "black"
 known_drf = ["rest_framework", "rest_framework_simplejwt", "drf_yasg"]
-known_apps = ["main", "shuttle", "users", "core"]
+known_apps = ["main", "shuttle", "users", "core", "services"]
 known_config = ["config"]
 sections = [
   "FUTURE",

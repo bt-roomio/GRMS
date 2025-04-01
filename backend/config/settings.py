@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_yasg",
     "channels",
+    "channels_demultiplexer",
     # APPS
     "core",
     "users",
