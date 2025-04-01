@@ -3,8 +3,6 @@ from rest_framework import serializers
 
 
 class EmailConfigSerializer(serializers.ModelSerializer):
-    tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
-
     class Meta:
         model = EmailConfiguration
         fields = (
@@ -19,3 +17,6 @@ class EmailConfigSerializer(serializers.ModelSerializer):
             "frontend_host",
             "frontend_port",
         )
+        extra_kwargs = {"id": {"required": False}, "tenant": {"required": False}, "email": {"required": False},
+                        "host": {"required": False}, "username": {"required": False}, "password": {"required": False},
+                        "port": {"required": False}, "use_tls": {"required": False}}

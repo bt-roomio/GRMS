@@ -15,18 +15,15 @@ def send_reset_link_email(user, send_activation_mail=True):
 
     config = EmailConfiguration.objects.filter(tenant=user.tenant).first()
 
-    if not config:
-        raise ValidationError({"detail": "EmailConfiguration not found."})
-
     reset_key = ResetPassword.objects.create(user=user)
 
-    host = config.frontend_host or "localhost"
-    port = ":" + config.frontend_port if config.frontend_port else ""
+    host = config.frontend_host if config and config.frontend_host else "localhost"
+    port = ":" + config.frontend_port if config and config.frontend_port else ""
 
     host = host.rstrip("/")
     url = f"{host}{port}" + "/password/new/" + "?key=" + reset_key.key
 
-    if not send_activation_mail:
+    if not send_activation_mail or not config:
         return bytes(url, encoding="utf-8")
 
     body = render_to_string("../templates/base_email.html", {"user": user, "url": url})
