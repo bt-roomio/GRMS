@@ -20,7 +20,7 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
 
     device = Device.objects.filter(id=msg.get("sourceDeviceUUID")).first()
     if not device:
-        logger.warn("Device not found!")
+        logger.warning("Device not found!")
         return
 
     data = msg.get("data")
@@ -148,7 +148,6 @@ def save_telemetry_kv(device, data, ts):
             key=ts_kv_dict,
             defaults={**fields, "ts": get_mil_sec()},
         )
-
     update_activity_gateway(device)
 
 

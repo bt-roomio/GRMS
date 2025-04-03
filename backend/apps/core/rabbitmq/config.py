@@ -1,7 +1,7 @@
 import json
 
-from django.conf import settings
 import pika
+from django.conf import settings
 from pika.adapters.blocking_connection import BlockingChannel
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN

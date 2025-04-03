@@ -18,9 +18,11 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)
 
-    def pagination(self, queryset, page=1, size=15):
+    def pagination(self, queryset, page, size=15):
+
         page = page or 1
         offset = (page - 1) * size
         limit = offset + size
+
         queryset = queryset[offset:limit]
         return queryset
