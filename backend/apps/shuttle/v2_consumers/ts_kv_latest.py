@@ -31,7 +31,7 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         query = TsKvLatest.objects.filter(id=id).first()
         if query:
             result["ts"] = query.ts
-            result["entity_id"] = query.entity_id
+            result["key_name"] = query.key.key
             _, val = get_non_null_field(query)
             result["value"] = val
         return result
