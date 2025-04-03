@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from core.serializers.dynamic import DynamicField
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device
 from shuttle.models import TsKvLatest
@@ -8,7 +9,7 @@ from shuttle.models import TsKvLatest
 class TsKvLatestSerializer(serializers.Serializer):
     ts = serializers.IntegerField()
     key_name = serializers.CharField()
-    value = serializers.CharField()
+    value = DynamicField()
 
 
 class TsKvLatestIntegrationSerializer(serializers.ModelSerializer):
