@@ -4,3 +4,6 @@ from django.apps import AppConfig
 class ShuttleConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "shuttle"
+
+    def ready(self):
+        import shuttle.signals  # noqa # pyright: ignore

@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from core.utils.pagination import pagination
 from main.models import Device
 from shuttle.models import TsKvLatest
-from shuttle.serializers.ts_kv_latest import TsKvLatestFilterParams, TsKvLatestSerializer
+from shuttle.serializers.ts_kv_latest import TsKvLatestIntegrationFilterParams, TsKvLatestIntegrationSerializer
 from shuttle.utils.permissions import WhiteListOrIsAuthenticated
 
 
@@ -18,9 +18,9 @@ class LatestTsKvListView(APIView):
     def get(self, request, **kwargs):
         kwargs = self.make_kwargs(**kwargs)
         device = get_list_or_404(Device, **kwargs)[0]
-        params = TsKvLatestFilterParams.check(request.query_params)
+        params = TsKvLatestIntegrationFilterParams.check(request.query_params)
         queryset = TsKvLatest.objects.get_entity(device).get_by_keys(params.get("keys"))  # pyright: ignore
-        serializer = TsKvLatestSerializer(queryset, many=True)
+        serializer = TsKvLatestIntegrationSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
 

@@ -6,6 +6,7 @@ from shuttle.views.json_rpc import JsonRPCView
 from shuttle.views.latest_ts_kv import LatestTsKvListView
 from shuttle.views.relation import RelationDetailView, RelationListView
 from shuttle.views.remove_attribute import RemoveAttribute
+from shuttle.views.temp_change import TempAPIChangeTsKvLatest
 from shuttle.views.ts_kv import TsKvListView
 
 urlpatterns = [
@@ -33,5 +34,11 @@ urlpatterns = [
         "latest-telemetry/<str:hotel_id>/<uuid:room_id>/",
         LatestTsKvListView.as_view(),
         name="tenant-id-room-id-latest-ts-kv-list-view",
+    ),
+    # Temp API
+    path(
+        "temp-api/<uuid:entity_id>/",
+        TempAPIChangeTsKvLatest.as_view(),
+        name="temp-api-change-ts-kv-latest",
     ),
 ]
