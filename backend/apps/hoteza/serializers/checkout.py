@@ -7,7 +7,8 @@ from main.serializers.guest import GuestSerializer
 
 
 class CheckOutSerializer(serializers.Serializer):
-    hotelId = serializers.CharField()
+    hotelId = serializers.CharField(required=False)
+    tenantId = serializers.CharField(required=False)
     roomNumber = serializers.CharField()
     pmsRegNum = serializers.CharField()
     roomShare = serializers.CharField()
@@ -17,6 +18,7 @@ class CheckOutSerializer(serializers.Serializer):
     def convert_fields(attrs):
         ret = {
             "hotelId": "hotel_id",
+            "tenantId": "tenant_id",
             "roomNumber": "room_number",
             "pmsRegNum": "pms_reg_num",
             "roomShare": "room_share",
@@ -26,13 +28,18 @@ class CheckOutSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         attrs = self.convert_fields(attrs)
+        tenant = None
+        if attrs.get("hotel_id"):
+            tenant = Tenant.objects.filter(
+                additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
+                additional_info__integration_settings__hoteza__enable=True,
+            ).first()
 
-        tenant = Tenant.objects.filter(
-            additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
-            additional_info__integration_settings__hoteza__enable=True,
-        ).first()
+        if not tenant and attrs.get("tenant_id"):
+            tenant = Tenant.objects.filter(id=attrs.get("tenant_id")).first()
+
         if not tenant:
-            raise JsonValidationError({"result": 9, "message": "Your hotelId not registered!"})
+            raise JsonValidationError({"result": 9, "message": "Tenant not found!"})
 
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()
         if not room:

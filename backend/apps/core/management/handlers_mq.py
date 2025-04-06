@@ -3,6 +3,7 @@ import logging
 
 from pika.adapters.blocking_connection import BlockingChannel
 
+from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
@@ -148,6 +149,8 @@ def save_telemetry_kv(device, data, ts):
             key=ts_kv_dict,
             defaults={**fields, "ts": get_mil_sec()},
         )
+    if data.get("messageFromFIAS"):
+        handle_fias(data.get("messageFromFIAS"), device)
     update_activity_gateway(device)
 
 
