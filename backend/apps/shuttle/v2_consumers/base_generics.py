@@ -1,6 +1,7 @@
 import json
 from uuid import UUID
 
+from asgiref.sync import sync_to_async
 from djangochannelsrestframework.generics import GenericAsyncAPIConsumer
 
 
@@ -17,6 +18,15 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     @classmethod
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)
+
+    def get_data(self, **kwargs):
+        queryset = self.get_queryset(query_params=kwargs.get("query_params"))
+        serializer = self.get_serializer(instance=queryset, many=True, action_kwargs=kwargs)
+        return serializer.data
+
+    async def send_list(self, action, query_params, request_id, **kwargs):
+        data = await sync_to_async(self.get_data)(query_params=query_params, **kwargs)
+        await self.reply(data=data, action=action, request_id=request_id)
 
     def pagination(self, queryset, page, size=15):
 

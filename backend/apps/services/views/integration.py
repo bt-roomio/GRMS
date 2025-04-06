@@ -1,3 +1,9 @@
+from django_filters.rest_framework import DjangoFilterBackend
+
+from rest_framework import filters
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.response import Response
+
 from services.models import Integration
 from services.serializers.integration import IntegrationSerializer
 from services.swagger.integration import (
@@ -6,14 +12,14 @@ from services.swagger.integration import (
     integration_swagger_update,
 )
 
-from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
-from rest_framework.response import Response
-
 
 class InegrationListView(ListAPIView):
     model = Integration
     queryset = Integration.objects.filter(is_active=True, enable=True)
     serializer_class = IntegrationSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ["name"]
+    search_fields = ["name", "type"]
 
     @integration_swagger_list()
     def get(self, request, *args, **kwargs):

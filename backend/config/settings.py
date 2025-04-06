@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # Libraries
     "celery",
     "rest_framework",
+    "django_filters",
     "django_celery_results",
     "django_celery_beat",
     "corsheaders",
