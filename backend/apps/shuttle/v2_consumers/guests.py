@@ -27,7 +27,7 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
         return query
 
     @model_observer(Guest, serializer_class=GuestSerializer)
-    async def guest_latest_activity(self, message, action, **kwargs):
+    async def get_latest_activity(self, message, action, **kwargs):
         for request_id, params in self.request_ids.items():
             room = params.get("room")
             if room == message.get("room"):
@@ -35,15 +35,15 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
 
     @action()
     async def subscribe(self, request_id, query_params, **kwargs):
-        await self.guest_latest_activity.subscribe(request_id=request_id, **kwargs)
+        await self.get_latest_activity.subscribe(request_id=request_id, **kwargs)
         self.request_ids[request_id] = query_params
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
-        await self.guest_latest_activity.unsubscribe(request_id=request_id, **kwargs)
+        await self.get_latest_activity.unsubscribe(request_id=request_id, **kwargs)
 
     @model_observer(Guest, serializer_class=GuestSerializer)
-    async def guest_list_activity(self, message, action, **kwargs):
+    async def get_list_activity(self, message, action, **kwargs):
         for request_id, params in self.request_ids.items():
             room = params.get("room")
             if room == message.get("room"):
@@ -53,9 +53,9 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
         await self.send_list(action, query_params, request_id, **kwargs)
-        await self.guest_list_activity.subscribe(request_id=request_id, **kwargs)
+        await self.get_list_activity.subscribe(request_id=request_id, **kwargs)
         self.request_ids[request_id] = query_params
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
-        await self.guest_list_activity.unsubscribe(request_id=request_id, **kwargs)
+        await self.get_list_activity.unsubscribe(request_id=request_id, **kwargs)

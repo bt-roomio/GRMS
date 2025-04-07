@@ -15,6 +15,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
         if hasattr(instance, "count_online_devices"):
             data["status"] = (
@@ -64,8 +65,8 @@ class RoomSerializer(serializers.ModelSerializer):
 class RoomFilterParams(ValidatorSerializer):
     SORT_FIELDS = ("created_at", "-created_at", "number", "floor", "block", "-number", "-floor", "-block")
 
-    page = serializers.IntegerField(default=1)
-    size = serializers.IntegerField(default=50)
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=50, max_value=200)
     state = serializers.ChoiceField(choices=Room.STATE, required=False)
     status = serializers.ChoiceField(
         choices=Room.STATUS,

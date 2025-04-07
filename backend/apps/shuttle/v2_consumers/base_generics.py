@@ -4,6 +4,8 @@ from uuid import UUID
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.generics import GenericAsyncAPIConsumer
 
+from users.models import User
+
 
 class UUIDEncoder(json.JSONEncoder):
     def default(self, o):
@@ -18,6 +20,9 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     @classmethod
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)
+
+    def get_user(self):
+        return User.objects.filter(pk=self.scope["user"].id).values().first()
 
     def get_data(self, **kwargs):
         queryset = self.get_queryset(query_params=kwargs.get("query_params"))

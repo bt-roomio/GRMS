@@ -6,6 +6,18 @@ from main.models import Device
 from shuttle.models import TsKvLatest
 
 
+class SimpleTsKvLatestSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["entity"] = str(instance.entity_id)
+        data["key"] = instance.key.key
+        return data
+
+    class Meta:
+        model = TsKvLatest
+        fields = ("id", "ts", "entity", "key", "bool_v", "str_v", "long_v", "dbl_v", "json_v")
+
+
 class TsKvLatestSerializer(serializers.Serializer):
     ts = serializers.IntegerField()
     key_name = serializers.CharField()
