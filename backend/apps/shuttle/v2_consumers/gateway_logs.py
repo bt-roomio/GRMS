@@ -11,7 +11,13 @@ class GatewayLogsConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     queryset = TsKv.objects.all()
     serializer_class = GatewayLogsSerializer
 
+    @action()
+    async def list(self, **kwargs):  # pyright: ignore
+        res = await super().list(**kwargs)  # pyright: ignore
+        return {"results": res[0], "count": self.count}, 200
+
     async def accept(self, *args, **kwargs):
+        self.count = 0
         self.request_ids = {}
         await super().accept(*args, **kwargs)
 
@@ -29,8 +35,8 @@ class GatewayLogsConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 sort_by=params.get("sort_by", []),
             )
         )
-        query = self.pagination(query, params.get("page", 1), params.get("size", 25))
-        return query
+        self.count = query[1]
+        return self.pagination(query[0], params.get("page", 1), params.get("size", 25))
 
     async def get_latest_activity(self, message, **kwargs):
         entity = message.get("entity")

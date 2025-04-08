@@ -13,7 +13,6 @@ class TsKvQuerySet(BaseQuerySet):
         return self.filter(entity=entity)
 
     def gateway_logs(self, key, start_ts, end_ts, sort_by=[]):
-
         query = (
             self.select_related("key")
             .filter(ts__gte=start_ts, ts__lte=end_ts, key__key=key)
@@ -27,7 +26,7 @@ class TsKvQuerySet(BaseQuerySet):
             {(k if k in ["ts", "key_name"] else "value"): v for k, v in record.items()} for record in cleaned_query
         ]
 
-        return cleaned_query
+        return cleaned_query, query.count()
 
     def get_history_v2(self, keys, start_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
