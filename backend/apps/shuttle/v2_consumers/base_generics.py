@@ -29,6 +29,11 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
         serializer = self.get_serializer(instance=queryset, many=True, action_kwargs=kwargs)
         return serializer.data
 
+    async def send_json(self, content, close=False):
+        if isinstance(content.get("data"), list):
+            content["count"] = len(content.get("data"))
+        return await super().send_json(content, close)
+
     async def send_list(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data)(query_params=query_params, **kwargs)
         await self.reply(data=data, action=action, request_id=request_id)

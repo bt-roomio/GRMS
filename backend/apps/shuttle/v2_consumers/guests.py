@@ -21,7 +21,7 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
         user = self.scope["user"]
         params = GuestFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant_id=user.tenant_id, room=params.get("room"), sort_by=params.get("sort_by", [])
+            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
         )
         query = self.pagination(query, params.get("page", 1), params.get("size", 15))
         return query
