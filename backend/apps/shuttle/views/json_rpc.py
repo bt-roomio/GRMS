@@ -40,16 +40,16 @@ class JsonRPCView(APIView):
 
     def handle_params(self, **kwargs):
         result = {}
-        if kwargs.get("hotel_id") and kwargs.get("room_id"):
-            result["tenant__additional_info__general_settings__hotelId"] = kwargs.get("hotel_id")
-            result["room_id"] = kwargs.get("room_id")
+        if kwargs.get("hotel_id") and kwargs.get("room_number"):
+            result["tenant__additional_info__integration_settings__hoteza__hotel_id"] = kwargs.get("hotel_id")
+            result["room__number"] = kwargs.get("room_number")
             return result
         elif kwargs.get("device_id"):
             result["id"] = kwargs.get("device_id")
             return result
-        elif kwargs.get("tenant_id") and kwargs.get("room_id"):
+        elif kwargs.get("tenant_id") and kwargs.get("room_number"):
             result["tenant_id"] = kwargs.get("tenant_id")
-            result["room_id"] = kwargs.get("room_id")
+            result["room__number"] = kwargs.get("room_number")
             return result
         return result
 

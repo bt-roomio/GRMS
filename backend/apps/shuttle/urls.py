@@ -23,15 +23,15 @@ urlpatterns = [
         name="attributes-change-view",
     ),
     # Integration
-    path("rpc/<uuid:tenant_id>/<uuid:room_id>/", JsonRPCView.as_view(), name="tenant-id-room-id-json-rpc-view"),
-    path("rpc/<str:hotel_id>/<uuid:room_id>/", JsonRPCView.as_view(), name="hoteza-hotel-id-json-rpc-view"),
+    path("rpc/<uuid:tenant_id>/<int:room_number>/", JsonRPCView.as_view(), name="tenant-id-room-id-json-rpc-view"),
+    path("rpc/<str:hotel_id>/<int:room_number>/", JsonRPCView.as_view(), name="hoteza-hotel-id-json-rpc-view"),
     path(
-        "latest-telemetry/<uuid:tenant_id>/<uuid:room_id>/",
+        "latest-telemetry/<uuid:tenant_id>/<int:room_number>/",
         LatestTsKvListView.as_view(),
         name="tenant-id-room-id-latest-ts-kv-list-view",
     ),
     path(
-        "latest-telemetry/<str:hotel_id>/<uuid:room_id>/",
+        "latest-telemetry/<str:hotel_id>/<int:room_number>/",
         LatestTsKvListView.as_view(),
         name="tenant-id-room-id-latest-ts-kv-list-view",
     ),
