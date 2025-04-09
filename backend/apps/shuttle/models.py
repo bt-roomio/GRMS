@@ -6,6 +6,7 @@ from django.db.models import CASCADE
 from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
 from core.utils.files import controller_file
 from core.utils.get_time import get_mil_sec
+from core.utils.unix_timestamp import UnixTimeStampField
 from shuttle.querysets.attributes import AttributeKvQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
@@ -79,7 +80,7 @@ class AttributeKv(BaseModel):
     long_v = models.BigIntegerField(blank=True, null=True)
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.JSONField(blank=True, null=True)
-    last_update_ts = models.BigIntegerField(blank=True, null=True)
+    last_update_ts = UnixTimeStampField(default=get_mil_sec)
 
     objects = AttributeKvQuerySet.as_manager()
 

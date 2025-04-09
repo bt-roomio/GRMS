@@ -28,7 +28,7 @@ class BaseModelTs(models.Model):
 
 class UpdateByModel(models.Model):
     updated_at = UnixTimeStampField(
-        default=time.time,
+        default=get_mil_sec,
         null=True,
     )
     updated_by = models.ForeignKey(
