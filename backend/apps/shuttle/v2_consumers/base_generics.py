@@ -45,10 +45,8 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
         await self.reply(data=data, action=action, request_id=request_id)
 
     def pagination(self, queryset, page, size=15):
-
         page = page or 1
         offset = (page - 1) * size
         limit = offset + size
-
         queryset = queryset[offset:limit]
         return queryset

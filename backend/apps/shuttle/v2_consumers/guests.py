@@ -16,6 +16,11 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
         self.request_ids = {}
         await super().accept(*args, **kwargs)
 
+    @action()
+    def list(self, **kwargs):  # pyright: ignore
+        res = self.get_data_paginated(**kwargs)
+        return res, 200
+
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         user = self.scope["user"]
@@ -23,7 +28,6 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
         query = query.list(  # pyright: ignore
             tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
         )
-        query = self.pagination(query, params.get("page", 1), params.get("size", 15))
         return query
 
     @model_observer(Guest, serializer_class=GuestSerializer)
@@ -47,12 +51,13 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
         for request_id, params in self.request_ids.items():
             room = params.get("room")
             if room == message.get("room"):
-                data = await sync_to_async(self.get_data)(query_params=params, **kwargs)
-                await self.reply(data=data, action=action, request_id=request_id)
+                data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
+                if any([message.get("id") == i["id"] for i in data.get("results", [])]):
+                    await self.reply(data=data, action=action, request_id=request_id)
 
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
-        await self.send_list(action, query_params, request_id, **kwargs)
+        await self.send_list_paginated(action, query_params, request_id, **kwargs)
         await self.get_list_activity.subscribe(request_id=request_id, **kwargs)
         self.request_ids[request_id] = query_params
 
