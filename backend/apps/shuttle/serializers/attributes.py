@@ -6,6 +6,29 @@ from main.models import Device
 from shuttle.models import AttributeKv
 
 
+class SimpleAttributeSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["entity"] = str(instance.entity_id)
+        return data
+
+    class Meta:
+        model = AttributeKv
+        fields = (
+            "id",
+            "entity_type",
+            "entity",
+            "attribute_type",
+            "attribute_key",
+            "bool_v",
+            "str_v",
+            "long_v",
+            "dbl_v",
+            "json_v",
+            "last_update_ts",
+        )
+
+
 class AttributesChangeSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["ATTRIBUTES", "TELEMETRY"])
     scope = serializers.ChoiceField(choices=AttributeKv.ENTITY_TYPE, allow_null=True, required=False)
@@ -31,8 +54,10 @@ class AttributeSerializer(serializers.Serializer):
 class AttributeFilterParams(ValidatorSerializer):
     SORT_FIELDS = ("last_update_ts", "-last_update_ts", "key_name", "-key_name")
 
-    page = serializers.IntegerField(default=1)
-    size = serializers.IntegerField(default=25)
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=25, max_value=500)
     sort_by = serializers.ListField(child=serializers.CharField(), required=False)
-    scope = serializers.ChoiceField(choices=[AttributeKv.SHARED_SCOPE, AttributeKv.SERVER_SCOPE])
+    scope = serializers.ChoiceField(
+        choices=[AttributeKv.SHARED_SCOPE, AttributeKv.SERVER_SCOPE, AttributeKv.CLIENT_SCOPE]
+    )
     device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())

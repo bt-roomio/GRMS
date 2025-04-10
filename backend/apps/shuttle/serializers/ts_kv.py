@@ -2,11 +2,33 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 
+from core.serializers.dynamic import DynamicField
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from core.utils.serializers import ValidatorSerializer
 from core.utils.unix_timestamp import TimestampField
-from main.models import Room, Tenant
+from main.models import Device, Room, Tenant
 from shuttle.models import TsKv
+
+
+class GatewayLogsSerializer(serializers.Serializer):
+    ts = serializers.IntegerField()
+    key_name = serializers.CharField()
+    value = DynamicField()
+
+
+class GatewayLogsFilterParams(ValidatorSerializer):
+    SORT_FIELDS = (
+        "ts",
+        "-ts",
+    )
+
+    device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+    key = serializers.CharField()
+    start_ts = TimestampField()
+    end_ts = TimestampField(required=False)
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=15, max_value=500)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class TsKvSerializer(serializers.ModelSerializer):

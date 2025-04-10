@@ -46,7 +46,7 @@ def check_for_duplicate_state(instance, **kwargs):
     Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))
     update_fields = kwargs.get("update_fields", []) or []
 
-    if settings.TESTING or "state" not in update_fields:
+    if settings.TESTING or settings.DEBUG or "state" not in update_fields:
         return
 
     # Updating AttributeKv CheckedIn and CheckedOut, then sending message

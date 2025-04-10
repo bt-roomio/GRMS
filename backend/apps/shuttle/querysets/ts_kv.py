@@ -6,17 +6,36 @@ from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 
 
 class TsKvQuerySet(BaseQuerySet):
-    def get_entity_ts_kv(self, entity):
+    def by_tenant(self, tenant):
+        return self.filter(entity__tenant=tenant)
+
+    def by_device(self, entity):
         return self.filter(entity=entity)
 
-    def get_history_v2(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
+    def gateway_logs(self, key, start_ts, end_ts, sort_by=[]):
+        query = (
+            self.select_related("key")
+            .filter(ts__gte=start_ts, ts__lte=end_ts, key__key=key)
+            .annotate(key_name=F("key__key"))
+            .values("ts", "key_name", "str_v", "bool_v", "json_v", "long_v", "dbl_v")
+            .order_by(*sort_by)
+        )
+
+        cleaned_query = [{k: v for k, v in record.items() if v is not None} for record in query]
+        cleaned_query = [
+            {(k if k in ["ts", "key_name"] else "value"): v for k, v in record.items()} for record in cleaned_query
+        ]
+
+        return cleaned_query, query.count()
+
+    def get_history_v2(self, keys, start_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         keys = self.get_ts_kv_type_of_field_and_key_id(keys)
         result = {item["key"]: [] for item in keys}
         count_of_data = 0
 
         for key_item in keys:
-            query = self.filter(ts__gte=start_ts, ts__lte=end_ts, key=key_item["key_id"])
+            query = self.filter(ts__gte=start_ts, ts__lte=start_ts + (interval * limit), key=key_item["key_id"])
 
             if key_item["type"] in ["dbl_v", "long_v"]:
                 query = (

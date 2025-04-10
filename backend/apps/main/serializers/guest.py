@@ -33,6 +33,11 @@ class GuestMoveRoomSerializer(serializers.Serializer):
 
 
 class GuestSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["room"] = str(instance.room_id) if instance.room_id else None
+        return data
+
     def create(self, validated_data):
         instance = super().create(validated_data)
 
@@ -45,19 +50,19 @@ class GuestSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
-        if old_room and len(old_room.guests.all()) == 1:
+        if old_room and len(old_room.guests.all()) == 1:  # pyright: ignore
             old_room.state = safely_remove(old_room.state, Room.Available)
             old_room.save(update_fields=["state"])
 
         new_room = validated_data.get("room") and Room.objects.filter(id=validated_data.get("room").id).first()
-        if new_room and not new_room.guests.exists():
+        if new_room and not new_room.guests.exists():  # pyright: ignore
             new_room.state = safely_remove(new_room.state, Room.Available)
             new_room.state.append(Room.CheckedIn)
             new_room.save(update_fields=["state"])
 
         if validated_data.get("is_active") == False:
             room = Room.objects.filter(id=instance.room_id).first()
-            if room and len(room.guests.filter(is_active=True)) <= 1:
+            if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)
                 room.state.append(Room.Available)
                 room.save(update_fields=["state"])
@@ -67,6 +72,7 @@ class GuestSerializer(serializers.ModelSerializer):
         model = Guest
         fields = (
             "id",
+            "created_at",
             "name",
             "lastname",
             "gender",
@@ -90,9 +96,23 @@ class GuestSerializer(serializers.ModelSerializer):
 
 
 class GuestFilterParams(ValidatorSerializer):
+    SORT_FIELDS = (
+        "created_at",
+        "-created_at",
+        "name",
+        "-name",
+        "lastname",
+        "-lastname",
+        "gender",
+        "-gender",
+        "nationality",
+        "-nationality",
+    )
+
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)
+    room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all())
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class GuestCheckoutParams(ValidatorSerializer):

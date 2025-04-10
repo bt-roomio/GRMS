@@ -24,5 +24,5 @@ class TsKvListView(APIView):
             return Response({"detail": "Not found device."}, 404)
 
         params = TsKvFilterParams.check(request.GET)
-        queryset, _ = TsKv.objects.get_entity_ts_kv(device).get_history(**params)  # pyright: ignore
+        queryset, _ = TsKv.objects.by_device(device).get_history(**params)  # pyright: ignore
         return Response(queryset)

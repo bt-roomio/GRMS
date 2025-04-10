@@ -1,19 +1,19 @@
 from asgiref.sync import sync_to_async
-from djangochannelsrestframework.mixins import ListModelMixin, action
+from djangochannelsrestframework.mixins import ListModelMixin
 from djangochannelsrestframework.observer import model_observer
+from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
 
-from main.models import Room
-from main.serializers.room import RoomFilterParams, RoomSerializer
+from main.models import Guest
+from main.serializers.guest import GuestFilterParams, GuestSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
-    queryset = Room.objects.all()
-    serializer_class = RoomSerializer
+class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncAPIConsumer):
+    queryset = Guest.objects.all()
+    serializer_class = GuestSerializer
 
     async def accept(self, *args, **kwargs):
         self.request_ids = {}
-        self.scope["user"] = await sync_to_async(self.get_user)()
         await super().accept(*args, **kwargs)
 
     @action()
@@ -24,15 +24,17 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         user = self.scope["user"]
-        params = RoomFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(tenant=user.get("tenant_id"), sort_by=params.get("sort_by"))  # pyright: ignore
+        params = GuestFilterParams.check(data=kwargs.get("query_params", {}))
+        query = query.list(  # pyright: ignore
+            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
+        )
         return query
 
-    @model_observer(Room, serializer_class=RoomSerializer)
+    @model_observer(Guest, serializer_class=GuestSerializer)
     async def get_latest_activity(self, message, action, **kwargs):
-        for request_id, _ in self.request_ids.items():
-            tenant_id = self.scope["user"].get("tenant_id")
-            if str(tenant_id) == message.get("tenant"):
+        for request_id, params in self.request_ids.items():
+            room = params.get("room")
+            if room == message.get("room"):
                 await self.reply(data=message, action=action, request_id=request_id)
 
     @action()
@@ -44,11 +46,11 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     async def unsubscribe(self, request_id, **kwargs):
         await self.get_latest_activity.unsubscribe(request_id=request_id, **kwargs)
 
-    @model_observer(Room, serializer_class=RoomSerializer)
+    @model_observer(Guest, serializer_class=GuestSerializer)
     async def get_list_activity(self, message, action, **kwargs):
         for request_id, params in self.request_ids.items():
-            tenant_id = self.scope["user"].get("tenant_id")
-            if str(tenant_id) == message.get("tenant"):
+            room = params.get("room")
+            if room == message.get("room"):
                 data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
                 if any([message.get("id") == i["id"] for i in data.get("results", [])]):
                     await self.reply(data=data, action=action, request_id=request_id)

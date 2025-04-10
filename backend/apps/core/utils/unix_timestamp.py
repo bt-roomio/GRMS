@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 
 from django.db import models
+
 from rest_framework import serializers
 
 
@@ -36,6 +37,6 @@ class TimestampField(serializers.Field):
         if data is None:
             return None
 
-        if isinstance(data, str) and data.isdigit():
+        if isinstance(data, int) or isinstance(data, str) and data.isdigit():
             return int(data)
         raise serializers.ValidationError("This field requires an integer Unix timestamp.")
