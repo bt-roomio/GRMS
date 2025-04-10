@@ -14,6 +14,7 @@ from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.integration_settings import IntegrationSettingsDetailView
 from main.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from main.views.room import RoomDetailView, RoomListView
+from main.views.room_from_conf import RoomFromConfListView
 from main.views.room_status import RoomHistoryStatusView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.tenant import TenantListView
@@ -45,6 +46,7 @@ urlpatterns = [
     path("checkout/", GuestCheckoutView.as_view(), name="guest-checkout-detail"),
     path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
     path("devices-from-configuration/", DeviceFromConfListView.as_view(), name="device-from-conf-list"),
+    path("rooms-from-configuration/", RoomFromConfListView.as_view(), name="room-from-conf-list"),
     # Public space
     path("public-space/", PublicSpaceListView.as_view(), name="public-space-list"),
     path("public-space/<uuid:pk>/", PublicSpaceDetailView.as_view(), name="public-space-detail"),
