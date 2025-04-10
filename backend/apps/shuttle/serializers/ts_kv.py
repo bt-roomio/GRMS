@@ -1,7 +1,10 @@
+from itertools import groupby
+
 from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 
+from core.serializers.base import BaseModelSerializer
 from core.serializers.dynamic import DynamicField
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from core.utils.serializers import ValidatorSerializer
@@ -31,10 +34,29 @@ class GatewayLogsFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
-class TsKvSerializer(serializers.ModelSerializer):
+class UniqueListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        representations = super().to_representation(data)
+        return [next(group) for _, group in groupby(representations, key=lambda record: record["value"])]
+
+
+class TsKvSerializer(BaseModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["key"] = instance.key.key
+        data["value"] = self.get_first_non_none(
+            instance.bool_v,
+            instance.str_v,
+            instance.long_v,
+            instance.dbl_v,
+            instance.json_v,
+        )
+        return data
+
     class Meta:
         model = TsKv
-        fields = ("id", "ts", "entity_id", "key", "bool_v", "str_v", "long_v", "dbl_v", "json_v")
+        fields = ("ts", "key")
+        list_serializer_class = UniqueListSerializer
 
 
 class TsKvFilterPath(ValidatorSerializer):
@@ -62,6 +84,19 @@ class TsKvFilterPath(ValidatorSerializer):
             raise serializers.ValidationError("You must provide either 'entity_id' or both 'tenant_id' and 'room_id'.")
 
         return data
+
+
+class TagLogsFilterParams(ValidatorSerializer):
+    SORT_FIELDS = (
+        "ts",
+        "-ts",
+    )
+    device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+    key = serializers.CharField()
+    start_ts = TimestampField()
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=15, max_value=500)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class TsKvFilterParams(ValidatorSerializer):

@@ -28,6 +28,10 @@ class TsKvQuerySet(BaseQuerySet):
 
         return cleaned_query, query.count()
 
+    def tag_logs(self, entity, key, start_ts, sort_by=[]):
+        query = self.select_related("key").by_device(entity).filter(ts__gte=start_ts, key__key=key).order_by(*sort_by)
+        return query
+
     def get_history_v2(self, keys, start_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         keys = self.get_ts_kv_type_of_field_and_key_id(keys)
@@ -81,7 +85,6 @@ class TsKvQuerySet(BaseQuerySet):
 
                 result[key_item["key"]] = list(query[:limit])
                 count_of_data += query.count()
-
         return result
 
     def get_history(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
