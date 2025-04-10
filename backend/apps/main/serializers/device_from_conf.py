@@ -1,5 +1,6 @@
-from main.models import Device, DeviceProfile
 from rest_framework import serializers
+
+from main.models import Device, DeviceProfile
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.camel_to_snake import to_snake_case_data
 
@@ -43,7 +44,7 @@ class DeviceFromConfSerializer(serializers.Serializer):
         result["devices"] = devices
         result["address_maps"] = address_maps
 
-        device_profile = DeviceProfile.objects.filter(tenant=tenant, name="default").first()
+        device_profile = DeviceProfile.objects.filter(tenant=tenant, name__iexact="Default").first()
         if not device_profile:
             raise serializers.ValidationError({"detail": "First create device profile!"})
 
@@ -58,7 +59,7 @@ class DeviceFromConfSerializer(serializers.Serializer):
                 for tag in address_map.get("timeseries"):
                     dict_ts_kv_key_id, _ = TsKvDictionary.objects.get_or_create(key=tag.get("tag"))
                     TsKvLatest.objects.get_or_create(
-                        entity_id=device_obj.id, key=dict_ts_kv_key_id.key_id, defaults={"long_v": 0}
+                        entity_id=device_obj.id, key=dict_ts_kv_key_id, defaults={"long_v": 0}
                     )
                 for tag in address_map.get("attribute_updates"):
                     AttributeKv.objects.get_or_create(

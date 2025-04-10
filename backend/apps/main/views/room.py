@@ -1,4 +1,7 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,7 +38,10 @@ class RoomListView(APIView):
         data["tenant"] = tenant_id
         serializer = RoomSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        try:
+            serializer.save()
+        except DjangoValidationError as e:
+            raise DRFValidationError(e.message_dict)
         return Response(serializer.data, 201)
 
 
