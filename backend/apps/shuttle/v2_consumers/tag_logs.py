@@ -49,10 +49,15 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
 
         for request_id, params in self.subscribers.items():
             query_params = params.get("query_params")
-            if query_params.get("device") == entity and query_params.get("key") == key and value != self.last_value:
+            if (
+                query_params.get("device") == entity
+                and key in query_params.get("keys", [])
+                and value != self.last_value
+            ):
                 # Checking entity and key and last value is equal to new_value
                 data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
                 await self.reply(data=data, action="subscribe", request_id=request_id)
+                self.last_value = value
 
     @action()
     async def list_subscribe(self, **kwargs):
