@@ -15,21 +15,29 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
         super().__init__(*args, **kwargs)
         self.subscribers = {}
         self.last_value = None
+        self.count = 0
+
+    def get_data_paginated(self, query_params, **kwargs):
+        queryset = self.get_queryset(query_params=query_params)
+        queryset = self.pagination(queryset, query_params.get("page", 1), query_params.get("size", 15))
+        serializer = self.get_serializer(instance=queryset, many=True, action_kwargs=kwargs)
+        return {"results": serializer.data, "count": self.count}
 
     async def send_list_paginated(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
-        self.last_value = data.get("results", [])[0].get("value")
+        self.last_value = data.get("results", []) and data.get("results", [])[0].get("value")
         await self.reply(data=data, action=action, request_id=request_id)
 
-    def get_queryset(self, **kwargs):
+    def get_queryset(self, **kwargs):  # pyright: ignore
         query = super().get_queryset(**kwargs)
         params = TagLogsFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.tag_logs(  # pyright: ignore
             entity=params.get("device"),
-            key=params.get("key"),
+            keys=params.get("keys"),
             start_ts=params.get("start_ts"),
             sort_by=params.get("sort_by", []),
         )
+        self.count = query.count()
         return query
 
     async def get_latest_activity(self, message, **kwargs):

@@ -1,4 +1,4 @@
-from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, Q, TextField, Window
+from django.db.models import Avg, CharField, Count, ExpressionWrapper, F, FloatField, IntegerField, Q, TextField, Window
 from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
 from core.querysets.base_queryset import BaseQuerySet
@@ -28,8 +28,48 @@ class TsKvQuerySet(BaseQuerySet):
 
         return cleaned_query, query.count()
 
-    def tag_logs(self, entity, key, start_ts, sort_by=[]):
-        query = self.select_related("key").by_device(entity).filter(ts__gte=start_ts, key__key=key).order_by(*sort_by)
+    def tag_logs(self, entity, keys, start_ts, sort_by=[]):
+        query = (
+            self.select_related("key")
+            .by_device(entity)
+            .filter(ts__gte=start_ts, key__key__in=keys)
+            .annotate(
+                # Use Window expression with the Lag function to get the previous dbl_v.
+                prev_dbl_v=Window(
+                    expression=Lag("dbl_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                ),
+                prev_json_v=Window(
+                    expression=Lag("json_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                ),
+                prev_long_v=Window(
+                    expression=Lag("long_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                ),
+                prev_str_v=Window(
+                    expression=Lag("str_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                ),
+                prev_bool_v=Window(
+                    expression=Lag("bool_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                ),
+                key_name=F("key__key"),
+                value=Coalesce(
+                    Cast(F("dbl_v"), output_field=CharField()),
+                    Cast(F("long_v"), output_field=CharField()),
+                    F("str_v"),
+                    Cast(F("bool_v"), output_field=CharField()),
+                    Cast(F("json_v"), output_field=CharField()),
+                    output_field=CharField(),
+                ),
+            )
+            .filter(
+                Q(Q(prev_dbl_v__isnull=True) | ~Q(dbl_v=F("prev_dbl_v")))
+                & Q(Q(prev_json_v__isnull=True) | ~Q(json_v=F("prev_json_v")))
+                & Q(Q(prev_long_v__isnull=True) | ~Q(long_v=F("prev_long_v")))
+                & Q(Q(prev_str_v__isnull=True) | ~Q(str_v=F("prev_str_v")))
+                & Q(Q(prev_bool_v__isnull=True) | ~Q(bool_v=F("prev_bool_v")))
+            )
+            .values("ts", "key_name", "value")
+            .order_by(*sort_by)
+        )
         return query
 
     def get_history_v2(self, keys, start_ts, interval=10, agg="Avg", limit=100):

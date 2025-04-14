@@ -1,16 +1,12 @@
-from itertools import groupby
-
 from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 
-from core.serializers.base import BaseModelSerializer
 from core.serializers.dynamic import DynamicField
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from core.utils.serializers import ValidatorSerializer
 from core.utils.unix_timestamp import TimestampField
 from main.models import Device, Room, Tenant
-from shuttle.models import TsKv
 
 
 class GatewayLogsSerializer(serializers.Serializer):
@@ -34,29 +30,10 @@ class GatewayLogsFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
-class UniqueListSerializer(serializers.ListSerializer):
-    def to_representation(self, data):
-        representations = super().to_representation(data)
-        return [next(group) for _, group in groupby(representations, key=lambda record: record["value"])]
-
-
-class TsKvSerializer(BaseModelSerializer):
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["key"] = instance.key.key
-        data["value"] = self.get_first_non_none(
-            instance.bool_v,
-            instance.str_v,
-            instance.long_v,
-            instance.dbl_v,
-            instance.json_v,
-        )
-        return data
-
-    class Meta:
-        model = TsKv
-        fields = ("ts", "key")
-        list_serializer_class = UniqueListSerializer
+class TsKvSerializer(serializers.Serializer):
+    ts = serializers.IntegerField()
+    key_name = serializers.CharField()
+    value = DynamicField()
 
 
 class TsKvFilterPath(ValidatorSerializer):
@@ -92,7 +69,7 @@ class TagLogsFilterParams(ValidatorSerializer):
         "-ts",
     )
     device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
-    key = serializers.CharField()
+    keys = serializers.ListField(child=serializers.CharField())
     start_ts = TimestampField()
     page = serializers.IntegerField(default=1, min_value=1)
     size = serializers.IntegerField(default=15, max_value=500)
