@@ -1,5 +1,6 @@
-from main.models import EmailConfiguration, Tenant
 from rest_framework import serializers
+
+from main.models import EmailConfiguration
 
 
 class EmailConfigSerializer(serializers.ModelSerializer):
@@ -17,6 +18,13 @@ class EmailConfigSerializer(serializers.ModelSerializer):
             "frontend_host",
             "frontend_port",
         )
-        extra_kwargs = {"id": {"required": False}, "tenant": {"required": False}, "email": {"required": False},
-                        "host": {"required": False}, "username": {"required": False}, "password": {"required": False},
-                        "port": {"required": False}, "use_tls": {"required": False}}
+        extra_kwargs = {
+            "id": {"required": False},
+            "tenant": {"required": False},
+            "email": {"required": False},
+            "host": {"required": False},
+            "username": {"required": False},
+            "password": {"required": False},
+            "port": {"required": False},
+            "use_tls": {"required": False},
+        }

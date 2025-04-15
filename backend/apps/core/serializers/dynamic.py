@@ -10,19 +10,18 @@ class DynamicField(serializers.Field):
     decode it as JSON. If that fails, it returns the string as is.
     """
 
-    def to_internal_value(self, data):
-        # If it's a string, try to decode it as JSON.
-        if isinstance(data, str):
+    @staticmethod
+    def convert_data(value):
+        if isinstance(value, str):
             try:
-                # Attempt to load JSON from the string.
-                parsed = json.loads(data)
+                parsed = json.loads(value)
                 return parsed
             except json.JSONDecodeError:
-                # If decoding fails, keep it as a string.
-                return data
-        # For non-string types, just return the data directly.
-        return data
+                return value
+        return value
+
+    def to_internal_value(self, data):
+        return self.convert_data(data)
 
     def to_representation(self, value):
-        # For output, simply return the value.
-        return value
+        return self.convert_data(value)

@@ -7,7 +7,6 @@ from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from core.utils.serializers import ValidatorSerializer
 from core.utils.unix_timestamp import TimestampField
 from main.models import Device, Room, Tenant
-from shuttle.models import TsKv
 
 
 class GatewayLogsSerializer(serializers.Serializer):
@@ -31,10 +30,10 @@ class GatewayLogsFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
-class TsKvSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TsKv
-        fields = ("id", "ts", "entity_id", "key", "bool_v", "str_v", "long_v", "dbl_v", "json_v")
+class TsKvSerializer(serializers.Serializer):
+    ts = serializers.IntegerField()
+    key_name = serializers.CharField()
+    value = DynamicField()
 
 
 class TsKvFilterPath(ValidatorSerializer):
@@ -62,6 +61,19 @@ class TsKvFilterPath(ValidatorSerializer):
             raise serializers.ValidationError("You must provide either 'entity_id' or both 'tenant_id' and 'room_id'.")
 
         return data
+
+
+class TagLogsFilterParams(ValidatorSerializer):
+    SORT_FIELDS = (
+        "ts",
+        "-ts",
+    )
+    device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+    keys = serializers.ListField(child=serializers.CharField())
+    start_ts = TimestampField()
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=15, max_value=500)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class TsKvFilterParams(ValidatorSerializer):

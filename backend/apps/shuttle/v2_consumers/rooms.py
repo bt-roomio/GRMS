@@ -25,7 +25,14 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         query = super().get_queryset(**kwargs)
         user = self.scope["user"]
         params = RoomFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(tenant=user.get("tenant_id"), sort_by=params.get("sort_by"))  # pyright: ignore
+        query = query.list(  # pyright: ignore
+            tenant=user.get("tenant_id"),
+            state=params.get("state"),
+            status=params.get("status"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+            sort_by=params.get("sort_by"),
+        )
         return query
 
     @model_observer(Room, serializer_class=RoomSerializer)

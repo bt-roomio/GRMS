@@ -20,7 +20,7 @@ def gateway_list(cmd, user):
     data = []
     attr = AttributeKv.objects.filter(attribute_key__in=attributes, attribute_type=AttributeKv.SHARED_SCOPE)
     devices = (
-        Device.objects.is_active()
+        Device.objects.is_active()  # pyright: ignore
         .filter(tenant=user.tenant)
         .prefetch_related(Prefetch(queryset=attr, lookup="attribute_kvs"))
         .filter(additional_info__gateway=True)
