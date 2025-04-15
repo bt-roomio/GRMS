@@ -1,0 +1,7 @@
+- model: "services.Integration"
+  pk: ""
+  fields:
+      name:
+      type:
+      description:
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"

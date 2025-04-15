@@ -11,5 +11,5 @@ class RoomFromConfListView(APIView):
     def post(self, request):
         serializer = RoomFromConfSerializer(data=request.data, context={"tenant": request.user.tenant})
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        result = serializer.save()
+        return Response(result)

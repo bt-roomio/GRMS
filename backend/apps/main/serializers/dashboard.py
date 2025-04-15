@@ -57,6 +57,8 @@ class DashboardFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
+    search_field = serializers.ChoiceField(choices=("title",), required=False)
+    search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 

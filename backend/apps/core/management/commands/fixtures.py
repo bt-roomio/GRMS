@@ -14,4 +14,5 @@ class Command(BaseCommand):
             "tenant_profile",
             "tenant",
             "users",
+            # "integrations"
         )

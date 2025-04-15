@@ -1,60 +1,87 @@
-from main.models import Room, RoomType
+from main.models import Room, RoomType, Device
 from rest_framework import serializers
-from shuttle.utils.camel_to_snake import to_snake_case_data
 
 
 class RoomConfigSerializer(serializers.Serializer):
-    room_number = serializers.CharField()
-    floor = serializers.CharField()
-    block = serializers.CharField()
-    room_type_name = serializers.CharField()
-    public_area_id = serializers.IntegerField(required=False, allow_null=True)
-    pan_id = serializers.CharField(required=False, allow_null=True)
-    building = serializers.CharField(required=False, allow_null=True)
-    door_lock_id = serializers.CharField(required=False, allow_null=True)
+    number = serializers.IntegerField(required=True)
+    floor = serializers.CharField(required=True)
+    block = serializers.CharField(required=True)
+    type = serializers.CharField(required=False, allow_null=True)
+    devices = serializers.ListField(child=serializers.CharField(), required=False, default=[])
+
+    def validate(self, attrs):
+        missing_fields = [field for field in ["number", "floor", "block"] if not attrs.get(field)]
+        if missing_fields:
+            raise serializers.ValidationError(
+                {field: f"{field.capitalize()} is a required field." for field in missing_fields}
+            )
+        return attrs
 
 
 class RoomFromConfSerializer(serializers.Serializer):
-    rooms = RoomConfigSerializer(many=True)
+    rooms = serializers.ListField(child=serializers.DictField(), allow_empty=False)
 
-    def to_internal_value(self, data):
-        rooms = [
-            i
-            for i in data.get("rooms", [])
-            if all(key in i for key in ["roomNumber", "floor", "block", "roomTypeName"])
-        ]
-        data["rooms"] = rooms
-        if not rooms:
-            raise serializers.ValidationError({"detail": "No rooms found"})
+    def validate(self, attrs):
+        self._validated_rooms = []
+        self._invalid_rooms = []
 
-        return super().to_internal_value(to_snake_case_data(data))
+        for room_data in attrs["rooms"]:
+            serializer = RoomConfigSerializer(data=room_data)
+            if serializer.is_valid():
+                self._validated_rooms.append(serializer.validated_data)
+            else:
+                self._invalid_rooms.append(
+                    {"room_number": room_data.get("number", "Unknown"), "errors": serializer.errors}
+                )
+
+        return attrs
 
     def create(self, validated_data):
-        result = {
-            "rooms": [],
-            "room_types": [],
-        }
         tenant = self.context.get("tenant")
-        rooms = validated_data.pop("rooms")
-        result["rooms"] = rooms
+        result = {"rooms": [], "errors": self._invalid_rooms[:], "device_errors": []}
 
-        for room in rooms:
-            room_type_name = room.get("room_type_name")
-            room_type_obj, _ = RoomType.objects.get_or_create(title=room_type_name, tenant=tenant)
+        for room_data in self._validated_rooms:
+            try:
+                room_type_obj = None
+                if room_data.get("type"):
+                    room_type_obj, _ = RoomType.objects.get_or_create(title=room_data["type"], tenant=tenant)
 
-            Room.objects.get_or_create(
-                number=room.get("room_number"),
-                floor=room.get("floor"),
-                block=room.get("block"),
-                tenant=tenant,
-                defaults={
-                    "type": room_type_obj,
-                    "public_area_id": room.get("public_area_id"),
-                    "pan_id": room.get("pan_id"),
-                    "building": room.get("building"),
-                    "door_lock_id": room.get("door_lock_id"),
-                    "state": [Room.Available],
-                    "status": "OFF",
-                },
-            )
+                room, created = Room.objects.update_or_create(
+                    number=room_data["number"],
+                    floor=room_data["floor"],
+                    block=room_data["block"],
+                    tenant=tenant,
+                    defaults={
+                        "type": room_type_obj,
+                        "state": [Room.Available],
+                        "status": "OFF",
+                    },
+                )
+
+                valid_device_found = False
+                for device_mac in room_data.get("devices", []):
+                    try:
+                        device = Device.objects.get(tenant=tenant, name=device_mac, is_active=True)
+                        device.room = room
+                        device.save()
+                        valid_device_found = True
+                    except Device.DoesNotExist:
+                        result["device_errors"].append(
+                            {
+                                "room_number": room.number,
+                                "floor": room.floor,
+                                "block": room.block,
+                                "device_mac": device_mac,
+                                "message": "Device not found",
+                            }
+                        )
+
+                if valid_device_found or not room_data.get("devices"):
+                    result["rooms"].append(
+                        {"number": room.number, "floor": room.floor, "block": room.block, "status": "success"}
+                    )
+
+            except Exception as e:
+                result["errors"].append({"room_number": room_data.get("number", "Unknown"), "message": str(e)})
+
         return result

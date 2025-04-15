@@ -17,6 +17,8 @@ class DashboardListView(APIView):
         params = DashboardFilterParams.check(request.GET)
         queryset = Dashboard.objects.list(  # pyright: ignore
             tenant_id=request.user.tenant_id,
+            search_field=params.get("search_field"),  # pyright: ignore
+            search_value=params.get("search_value"),  # pyright: ignore
             sort_by=params.get("sort_by", []),  # pyright: ignore
         )
         serializer = DashboardSerializer(queryset, many=True)
