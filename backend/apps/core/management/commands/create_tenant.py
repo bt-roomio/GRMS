@@ -33,6 +33,7 @@ class Command(BaseCommand):
             with transaction.atomic():
                 tenant_profile, _ = TenantProfile.objects.get_or_create(name="Default", defaults={"is_default": True})
                 new_tenant, created = Tenant.objects.get_or_create(tenant_profile=tenant_profile, title=title)
+                Tenant.objects.get_or_create(tenant_profile=tenant_profile, title="Default")
 
                 role, _ = Role.objects.get_or_create(name="SYS_ADMIN", tenant=new_tenant)
                 all_permissions = Permission.objects.all()

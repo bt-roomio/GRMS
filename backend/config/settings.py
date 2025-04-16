@@ -177,7 +177,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "core.utils.pagination.PageSizePagination",
     "PAGE_SIZE": 15,
-    "DATETIME_FORMAT": "%s.%f",
 }
 
 SIMPLE_JWT = {

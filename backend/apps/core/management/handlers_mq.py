@@ -1,10 +1,12 @@
 import json
 import logging
 
+from django.utils import timezone
 from pika.adapters.blocking_connection import BlockingChannel
 
 from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
+from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
@@ -108,7 +110,7 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
                         save_telemetry_kv(device_to_id, res, ts)
 
     if not device:
-        logger.warn("Device not found")
+        logger.warning("Sub Device not found")
         return
 
     if not data:
@@ -141,7 +143,7 @@ def save_telemetry_kv(device, data, ts):
         TsKv.objects.update_or_create(
             entity=device,
             key=ts_kv_dict,
-            ts=ts or get_mil_sec(),
+            ts=unix_to_datetime(ts) or timezone.now(),
             defaults=fields,
         )
         TsKvLatest.objects.update_or_create(

@@ -1,74 +1,53 @@
 from asgiref.sync import sync_to_async
-from djangochannelsrestframework.mixins import ListModelMixin, action
-from djangochannelsrestframework.observer import model_observer
+from djangochannelsrestframework.mixins import action
 
+from core.utils.date import convert_datetime
 from shuttle.models import TsKv
-from shuttle.serializers.ts_kv import TsKvFilterParams, TsKvSerializer
-from shuttle.utils.get_non_null_field import get_non_null_column, get_non_null_field
+from shuttle.querysets.ts_kv_history import TsKvHistoryFilterParams, TsKvHistorySerializer
+from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class TsKvConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
+class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
     queryset = TsKv.objects.all()
-    serializer_class = TsKvSerializer
+    serializer_class = TsKvHistorySerializer
 
     async def accept(self, *args, **kwargs):
-        self.request_ids = {}
+        self.subscribers = {}
         await super().accept(*args, **kwargs)
-
-    @action()
-    def list(self, **kwargs):  # pyright: ignore
-        return self.filter_queryset(self.get_queryset(**kwargs), **kwargs), 200
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
-        params = TsKvFilterParams.check(data=kwargs.get("query_params", {}))
-        result = query.get_history_v2(**params)  # pyright: ignore
-        return result
+        params = TsKvHistoryFilterParams.check(data=kwargs.get("query_params", {}))
+        query = query.by_device(entity=params.get("device")).get_history_v2(  # pyright: ignore
+            keys=params.get("keys"),
+            start_ts=convert_datetime(params.get("start_ts")),
+            interval=params.get("interval"),
+            agg=params.get("agg"),
+            limit=params.get("limit"),
+        )
+        return query
 
-    async def get_latest_activity(self, message, action, **kwargs):
-        for request_id, params in self.request_ids.items():
-            print(message)
-            # device = params.get("device")
-            # if device == message.get("entity"):
-            #     _, value = get_non_null_column(message)
-            #     message = {
-            #         "key_name": message.get("key"),
-            #         "ts": message.get("ts"),
-            #         "value": value,
-            #     }
-            #     await self.reply(data=message, action=action, request_id=request_id)
+    async def get_latest_activity(self, message, **kwargs):
+        entity = message.pop("entity")
+        key = message.pop("key")
+        _, value = get_non_null_column(message)
+        del message["ts"]
+        del message["type"]
+
+        for request_id, params in self.subscribers.items():
+            query_params = params.get("query_params")
+            if query_params.get("device") == entity and key in query_params.get("keys", []):
+                data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
+                await self.reply(data=data, action="subscribe", request_id=request_id)
+                self.last_value = value
 
     @action()
-    async def subscribe(self, request_id, query_params, **kwargs):
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("tskv_updates", self.channel_name)
-            self.request_ids[request_id] = {"query_params": query_params, "action": action}
+    async def list_subscribe(self, **kwargs):
+        await self.send_list_paginated(**kwargs)
+        await self.add_group("tskv_updates")
+        self.subscribers[kwargs.get("request_id")] = kwargs
 
     @action()
-    async def unsubscribe(self, request_id, **kwargs):
-        self.request_ids.pop(request_id, None)
-
-    # @sync_to_async
-    # def get_last_updated_obj(self, id, params):
-    #     result = {}
-    #     query = TsKv.objects.filter(id=id, key__key__in=params.get("keys")).first()
-    #     if query:
-    #         result["ts"] = query.ts
-    #         _, val = get_non_null_field(query)
-    #         result["value"] = val
-    #     return result
-    #
-    # async def tskv_update(self, event):
-    #     instance_id = event.get("instance_id")
-    #
-    #     if not self.query_params.get("end_ts"):
-    #         result = await self.get_last_updated_obj(id=instance_id, params=self.query_params)
-    #         await self.send_json({"message": result, "request_id": self.request_id})
-    #
-    # @action()
-    # async def subscribe(self, request_id, **kwargs):
-    #     if self.channel_layer is not None:
-    #         await self.channel_layer.group_add("tskv_updates", self.channel_name)
-    #         self.request_id = request_id
-    #         self.query_params = kwargs.get("query_params", {})
+    async def list_unsubscribe(self, request_id, **kwargs):
+        self.subscribers.pop(request_id, None)

@@ -9,3 +9,13 @@ AGGREGATION_FUNCTIONS = {
     "Change": "Change",
     "None": None,  # Special case for no aggregation
 }
+
+INTERVALS = {
+    "year": "year",
+    "month": "month",
+    "day": "day",
+    "hour": "hour",
+    "minute": "minute",
+    "second": "second",
+    "millisecond": "millisecond",
+}

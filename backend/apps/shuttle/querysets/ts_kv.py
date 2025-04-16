@@ -1,8 +1,22 @@
-from django.db.models import Avg, CharField, Count, ExpressionWrapper, F, FloatField, IntegerField, Q, TextField, Window
+from django.db.models import (
+    Avg,
+    CharField,
+    Count,
+    DateTimeField,
+    ExpressionWrapper,
+    F,
+    FloatField,
+    Func,
+    IntegerField,
+    Q,
+    TextField,
+    Value,
+    Window,
+)
 from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
 from core.querysets.base_queryset import BaseQuerySet
-from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
+from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, INTERVALS
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -28,28 +42,38 @@ class TsKvQuerySet(BaseQuerySet):
 
         return cleaned_query, query.count()
 
-    def tag_logs(self, entity, keys, start_ts, sort_by=[]):
-        query = (
+    def tag_logs(self, entity, keys, start_ts, sort_by=None):
+        if sort_by is None:
+            sort_by = ["-ts"]
+
+        # Base queryset: filter early and include select_related for join optimizations.
+        qs = (
             self.select_related("key")
             .by_device(entity)
             .filter(ts__gte=start_ts, key__key__in=keys)
             .annotate(
-                # Use Window expression with the Lag function to get the previous dbl_v.
+                # Create window functions for each value field.
                 prev_dbl_v=Window(
-                    expression=Lag("dbl_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                    expression=Lag("dbl_v"),
+                    order_by=F("ts").asc(),
                 ),
                 prev_json_v=Window(
-                    expression=Lag("json_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                    expression=Lag("json_v"),
+                    order_by=F("ts").asc(),
                 ),
                 prev_long_v=Window(
-                    expression=Lag("long_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                    expression=Lag("long_v"),
+                    order_by=F("ts").asc(),
                 ),
                 prev_str_v=Window(
-                    expression=Lag("str_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                    expression=Lag("str_v"),
+                    order_by=F("ts").asc(),
                 ),
                 prev_bool_v=Window(
-                    expression=Lag("bool_v"), order_by=F("ts").asc()  # This matches OVER(ORDER BY ts) in SQL.
+                    expression=Lag("bool_v"),
+                    order_by=F("ts").asc(),
                 ),
+                # Annotate key name and a merged value across possible types.
                 key_name=F("key__key"),
                 value=Coalesce(
                     Cast(F("dbl_v"), output_field=CharField()),
@@ -60,72 +84,38 @@ class TsKvQuerySet(BaseQuerySet):
                     output_field=CharField(),
                 ),
             )
-            .filter(
-                Q(Q(prev_dbl_v__isnull=True) | ~Q(dbl_v=F("prev_dbl_v")))
-                & Q(Q(prev_json_v__isnull=True) | ~Q(json_v=F("prev_json_v")))
-                & Q(Q(prev_long_v__isnull=True) | ~Q(long_v=F("prev_long_v")))
-                & Q(Q(prev_str_v__isnull=True) | ~Q(str_v=F("prev_str_v")))
-                & Q(Q(prev_bool_v__isnull=True) | ~Q(bool_v=F("prev_bool_v")))
+        )
+
+        # Dynamically build filter conditions for detecting change in values.
+        filter_conditions = Q()
+        for field in ["dbl_v", "json_v", "long_v", "str_v", "bool_v"]:
+            filter_conditions &= Q(**{f"prev_{field}__isnull": True}) | ~Q(**{field: F(f"prev_{field}")})
+
+        qs = qs.filter(filter_conditions).values("ts", "key_name", "value").order_by(*sort_by)
+        return qs
+
+    def get_history_v2(self, keys, start_ts, interval, agg, limit):
+        agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
+        interval = INTERVALS.get(interval, "hour")
+        limit = limit or 100
+        agg_function = Avg if agg in ["Change", None] else agg_function
+
+        query = (
+            self.filter(ts__gte=start_ts, key__key__in=keys)
+            .annotate(
+                interval_ts=Func(
+                    Value(interval),  # bin width
+                    F("ts"),  # timestamp field
+                    function="date_trunc",
+                    output_field=DateTimeField(),
+                ),
+                avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
             )
-            .values("ts", "key_name", "value")
-            .order_by(*sort_by)
+            .values("interval_ts")
+            .annotate(value=Floor(agg_function("avail_field")), ts=F("interval_ts"), key_name=F("key__key"))
+            .order_by("-interval_ts")[:limit]
         )
         return query
-
-    def get_history_v2(self, keys, start_ts, interval=10, agg="Avg", limit=100):
-        agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
-        keys = self.get_ts_kv_type_of_field_and_key_id(keys)
-        result = {item["key"]: [] for item in keys}
-        count_of_data = 0
-
-        for key_item in keys:
-            query = self.filter(ts__gte=start_ts, ts__lte=start_ts + (interval * limit), key=key_item["key_id"])
-
-            if key_item["type"] in ["dbl_v", "long_v"]:
-                query = (
-                    query.annotate(
-                        interval_time=Floor(
-                            ExpressionWrapper(
-                                (F("ts") / interval) * interval,
-                                output_field=IntegerField(),
-                            )
-                        ),
-                        avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
-                    )
-                    .values("key", "interval_time")
-                    .annotate(count_per_group=Count("avail_field"))
-                    .filter(count_per_group__gte=1)
-                    .order_by("-key", "-interval_time")
-                )
-                if agg_function not in [None, "Change"]:
-                    query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
-                    query = query.annotate(ts=F("interval_time"), value=F("aggreagted_field")).values("ts", "value")
-                else:
-                    query = query.annotate(ts=F("interval_time"), value=F("avail_field")).values("ts", "value")
-
-                result[key_item["key"]] = list(query[:limit])
-                count_of_data += query.count()
-
-            elif key_item["type"] in ["json_v", "str_v", "bool_v"]:
-                query = (
-                    query.annotate(
-                        interval_time=F("ts"),
-                        avail_field=Coalesce(
-                            Cast("json_v", TextField()),
-                            Cast("bool_v", TextField()),
-                            F("str_v"),
-                            output_field=TextField(),
-                        ),
-                    )
-                    .values("key", "interval_time", "avail_field")
-                    .annotate(ts=F("interval_time"), value=F("avail_field"))
-                    .values("ts", "value")
-                    .order_by("-ts")
-                )
-
-                result[key_item["key"]] = list(query[:limit])
-                count_of_data += query.count()
-        return result
 
     def get_history(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)

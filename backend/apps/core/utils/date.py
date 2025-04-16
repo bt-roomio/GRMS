@@ -1,6 +1,7 @@
 import time
 from calendar import monthrange
 from datetime import date, datetime
+from datetime import timezone as tz
 
 from django.utils import timezone
 
@@ -44,5 +45,72 @@ def datetime_unix(date_time: datetime):
     return time.mktime(date_time.timetuple())
 
 
-def unix_datetime(timestamp: int):
-    return datetime.fromtimestamp(timestamp)
+def unix_to_datetime(timestamp):
+    """
+    Convert a Unix timestamp (seconds or milliseconds) to a timezone-aware datetime object in UTC.
+
+    Args:
+        timestamp (int, float, or str): Unix timestamp in seconds (10-digit) or milliseconds (13-digit).
+    Returns:
+        datetime: Timezone-aware datetime in UTC.
+    """
+    ts = float(timestamp)
+
+    if ts > 1e10:
+        ts /= 1000.0
+
+    return datetime.fromtimestamp(ts, tz=tz.utc)
+
+
+def convert_datetime(input_value):
+    """
+    Convert a dynamic datetime input (either a datetime string or a Unix timestamp)
+    to a string in the format "YYYY-MM-DD HH:MM:SS".
+
+    Args:
+        input_value (str, int, float, datetime.datetime): The datetime input. It can be:
+            - A string of format "YYYY-MM-DD HH:MM:SS".
+            - A string or number representing a Unix timestamp in milliseconds.
+            - Optionally, a Unix timestamp in seconds.
+
+    Returns:
+        str: The formatted datetime string "YYYY-MM-DD HH:MM:SS".
+
+    Raises:
+        ValueError: If the input cannot be parsed as a valid datetime.
+    """
+
+    # If the input is already a datetime object, just format it.
+    if isinstance(input_value, datetime):
+        return input_value.strftime("%Y-%m-%d %H:%M:%S")
+
+    # If the input is an int or float, assume it's a Unix timestamp.
+    if isinstance(input_value, (int, float)):
+        timestamp = float(input_value)
+        # Check if the timestamp is in milliseconds (length > 10 digits or value is high)
+        if timestamp > 1e10:
+            timestamp /= 1000.0
+        dt = datetime.fromtimestamp(timestamp)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # If the input is a string, check if it is a digit string or a datetime string.
+    if isinstance(input_value, str):
+        input_value = input_value.strip()
+        # If the string is all digits, treat it as a timestamp.
+        if input_value.isdigit():
+            timestamp = float(input_value)
+            # If the string length is more than 10 digits, assume it's milliseconds.
+            if len(input_value) > 10:
+                timestamp /= 1000.0
+            dt = datetime.fromtimestamp(timestamp)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            # Otherwise, try parsing it as a datetime string.
+            try:
+                dt = datetime.strptime(input_value, "%Y-%m-%d %H:%M:%S")
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                raise ValueError(f"Unrecognized datetime format for input: {input_value}")
+
+    # If the input doesn't match any of the expected types, raise an error.
+    raise ValueError("Input type must be a string, int, float, or datetime.datetime.")

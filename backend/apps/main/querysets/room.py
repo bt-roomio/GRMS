@@ -18,8 +18,7 @@ class RoomQuerySet(BaseQuerySet):
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
         query = query.filter(status=status) if status else query
-
-        return query.order_by(*sort_by or ["number"])
+        return query.order_by(*(sort_by or ["number"]) + ["id"])
 
     def statuses(self, tenant):
         from main.models import Room

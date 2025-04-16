@@ -2,6 +2,7 @@ from uuid import UUID
 
 from django.db import models
 from django.db.models import CASCADE
+from django.utils import timezone
 
 from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
 from core.utils.files import controller_file
@@ -15,6 +16,7 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 
 class TsKv(BaseModelTs):
+    ts = models.DateTimeField(default=timezone.now)
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     entity_id = UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")

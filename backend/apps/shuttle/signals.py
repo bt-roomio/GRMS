@@ -13,7 +13,7 @@ def tskv_signal_handler(sender, instance, **kwargs):
         message = {
             "entity": str(instance.entity_id),
             "key": instance.key.key,
-            "ts": instance.ts,
+            "ts": instance.ts.isoformat(),
             "bool_v": instance.bool_v,
             "str_v": instance.str_v,
             "long_v": instance.long_v,

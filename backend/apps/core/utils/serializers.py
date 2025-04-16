@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, cast
 
+from rest_framework import serializers
 from rest_framework.generics import CreateAPIView
 from rest_framework.serializers import Serializer
 
@@ -37,3 +38,8 @@ class BaseCreateAPIView(CreateAPIView):
             else:
                 kwargs["data"] = tenant_data
         return super().get_serializer(*args, **kwargs)
+
+
+class MillisecondDateTimeField(serializers.DateTimeField):
+    def to_representation(self, value):
+        return int(value.timestamp() * 1000)
