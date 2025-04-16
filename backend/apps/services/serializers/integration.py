@@ -1,8 +1,8 @@
+from rest_framework import serializers
 from services.models import Integration
-from services.utils.serializers import BaseModelSerializer
 
 
-class IntegrationSerializer(BaseModelSerializer):
+class IntegrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Integration
         fields = (
@@ -22,5 +22,4 @@ class IntegrationSerializer(BaseModelSerializer):
         extra_kwargs = {
             "tenant": {"required": False, "allow_null": True},
             "is_active": {"read_only": True},
-            "enable": {"read_only": True},
         }

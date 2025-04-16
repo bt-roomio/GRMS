@@ -1,7 +1,7 @@
 from django.urls import path
-from services.views.integration import InegrationDetailView, InegrationListView
+from services.views.integration import IntegrationListView, IntegrationDetailView
 
 urlpatterns = [
-    path("integrations/", InegrationListView.as_view(), name="integration-list"),
-    path("integration/<uuid:pk>/", InegrationDetailView.as_view(), name="integration-detail"),
+    path("integrations/", IntegrationListView.as_view(), name="integration-list"),
+    path("integration/<uuid:pk>/", IntegrationDetailView.as_view(), name="integration-detail"),
 ]
