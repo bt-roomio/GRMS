@@ -13,9 +13,10 @@ AGGREGATION_FUNCTIONS = {
 INTERVALS = {
     "year": "year",
     "month": "month",
+    "week": "week",
     "day": "day",
     "hour": "hour",
     "minute": "minute",
     "second": "second",
-    "millisecond": "millisecond",
+    "milliseconds": "milliseconds",
 }

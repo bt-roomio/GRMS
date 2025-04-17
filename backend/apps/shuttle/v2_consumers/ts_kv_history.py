@@ -3,7 +3,7 @@ from djangochannelsrestframework.mixins import action
 
 from core.utils.date import convert_datetime
 from shuttle.models import TsKv
-from shuttle.querysets.ts_kv_history import TsKvHistoryFilterParams, TsKvHistorySerializer
+from shuttle.serializers.ts_kv_history import TsKvHistoryFilterParams, TsKvHistorySerializer
 from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 

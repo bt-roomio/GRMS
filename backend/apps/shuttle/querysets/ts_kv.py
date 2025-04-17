@@ -100,9 +100,11 @@ class TsKvQuerySet(BaseQuerySet):
         limit = limit or 100
         agg_function = Avg if agg in ["Change", None] else agg_function
 
+        query = self.filter(ts__gte=start_ts, key__key__in=keys)
+        print(start_ts, query.count())
+
         query = (
-            self.filter(ts__gte=start_ts, key__key__in=keys)
-            .annotate(
+            query.annotate(
                 interval_ts=Func(
                     Value(interval),  # bin width
                     F("ts"),  # timestamp field
@@ -112,7 +114,7 @@ class TsKvQuerySet(BaseQuerySet):
                 avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
             )
             .values("interval_ts")
-            .annotate(value=Floor(agg_function("avail_field")), ts=F("interval_ts"), key_name=F("key__key"))
+            .annotate(value=agg_function("avail_field"), ts=F("interval_ts"), key_name=F("key__key"))
             .order_by("-interval_ts")[:limit]
         )
         return query
