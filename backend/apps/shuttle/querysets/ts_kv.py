@@ -1,3 +1,5 @@
+import datetime
+
 from django.db.models import (
     Avg,
     CharField,
@@ -15,8 +17,12 @@ from django.db.models import (
 )
 from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
+from rest_framework.fields import pytz
+
 from core.querysets.base_queryset import BaseQuerySet
-from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, INTERVALS
+from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
+
+origin_dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -94,30 +100,38 @@ class TsKvQuerySet(BaseQuerySet):
         qs = qs.filter(filter_conditions).values("ts", "key_name", "value").order_by(*sort_by)
         return qs
 
-    def get_history_v2(self, keys, start_ts, interval, agg, limit):
+    def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by):
+        sort_by = ["interval_ts"] if sort_by is None else sort_by
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
-        interval = INTERVALS.get(interval, "hour")
+        interval = make_interval(*interval.split(" "))
         limit = limit or 100
         agg_function = Avg if agg in ["Change", None] else agg_function
+        result = {}
 
-        query = self.filter(ts__gte=start_ts, key__key__in=keys)
-        print(start_ts, query.count())
-
-        query = (
-            query.annotate(
-                interval_ts=Func(
-                    Value(interval),  # bin width
-                    F("ts"),  # timestamp field
-                    function="date_trunc",
-                    output_field=DateTimeField(),
-                ),
-                avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
+        for key in keys:
+            query = self.filter(ts__gte=start_ts, key__key=key)
+            result[key] = (
+                query.annotate(
+                    interval_ts=Func(
+                        Value(interval),  # bin width
+                        F("ts"),  # timestamp field
+                        Value(origin_dt),
+                        function="date_bin",
+                        output_field=DateTimeField(),
+                    ),
+                    avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
+                )
+                .values("interval_ts")
+                .annotate(
+                    value=Round(agg_function("avail_field")),
+                    ts=F("interval_ts"),
+                    key_name=F("key__key"),
+                    count=Count("interval_ts"),
+                )
+                .values("value", "ts", "key_name", "count")
+                .order_by(*sort_by)[:limit]
             )
-            .values("interval_ts")
-            .annotate(value=agg_function("avail_field"), ts=F("interval_ts"), key_name=F("key__key"))
-            .order_by("-interval_ts")[:limit]
-        )
-        return query
+        return result
 
     def get_history(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)

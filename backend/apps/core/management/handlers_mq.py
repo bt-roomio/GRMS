@@ -143,7 +143,7 @@ def save_telemetry_kv(device, data, ts):
         TsKv.objects.update_or_create(
             entity=device,
             key=ts_kv_dict,
-            ts=unix_to_datetime(ts) or timezone.now(),
+            ts=ts and unix_to_datetime(ts) or timezone.now(),
             defaults=fields,
         )
         TsKvLatest.objects.update_or_create(
