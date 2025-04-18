@@ -46,7 +46,14 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
     elif topic.endswith("/attributes"):
         _handle_attribute_saving(device, data)
     elif topic.endswith("/telemetry"):
-        _handle_telemetry(device, data)
+        # Gateway-level telemetry: data contains sub-device entries
+        if topic.startswith("v1/gateway/") and isinstance(data, dict):
+            for sub_name, telemetry_list in data.items():
+                sub_device = _get_or_create_device(sub_name, device)
+                _handle_telemetry(sub_device, telemetry_list)
+        else:
+            # Direct device telemetry
+            _handle_telemetry(device, data)
     else:
         logger.debug("Unhandled topic: %s", topic)
 
