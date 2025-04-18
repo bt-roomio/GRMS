@@ -103,15 +103,26 @@ class TsKvQuerySet(BaseQuerySet):
     def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by):
         sort_by = ["interval_ts"] if sort_by is None else sort_by
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
-        interval = make_interval(*interval.split(" "))
+        interval = make_interval(*interval.split(" ")) if len(interval.split(" ")) > 1 else interval
         limit = limit or 100
         agg_function = Avg if agg in ["Change", None] else agg_function
         result = {}
 
         for key in keys:
             query = self.filter(ts__gte=start_ts, key__key=key)
-            result[key] = (
-                query.annotate(
+
+            if interval in ["month", "year"]:
+                query = query.annotate(
+                    interval_ts=Func(
+                        Value(interval),  # bin width
+                        F("ts"),  # timestamp field
+                        function="date_trunc",
+                        output_field=DateTimeField(),
+                    ),
+                    avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
+                )
+            else:
+                query = query.annotate(
                     interval_ts=Func(
                         Value(interval),  # bin width
                         F("ts"),  # timestamp field
@@ -121,7 +132,9 @@ class TsKvQuerySet(BaseQuerySet):
                     ),
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
                 )
-                .values("interval_ts")
+
+            result[key] = (
+                query.values("interval_ts")
                 .annotate(
                     value=Round(agg_function("avail_field")),
                     ts=F("interval_ts"),

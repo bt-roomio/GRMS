@@ -24,7 +24,6 @@ IntervalUnit = Literal[
 ]
 
 INTERVALS: dict[IntervalUnit, str] = {
-    "year": "1 year",
     "week": "1 week",
     "day": "1 day",
     "hour": "1 hour",
