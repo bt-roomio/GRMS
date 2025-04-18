@@ -12,6 +12,7 @@ from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
+from shuttle.utils.get_non_null_field import get_non_null_field
 
 logger = logging.getLogger("django")
 _tskv_dict_cache = {}
@@ -41,8 +42,44 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         _handle_rpc(data)
     elif topic in ("v1/gateway/connect", "v1/gateway/disconnect"):
         _handle_connect_disconnect(device, topic, data)
-    elif topic.endswith("/attributes/request"):
-        _handle_attribute_request(ch, device, data)
+    elif topic.startswith("v1/gateway/attributes/request") and device:
+        shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
+        shared_keys = shared_keys.split(",")
+        sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
+        if not sub_device:
+            return
+
+        attributes = AttributeKv.objects.filter(
+            attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=sub_device.id
+        )
+        message = {
+            "targetDeviceUUID": str(device.id),
+            "topic": topic.replace("request", "response"),
+            "data": {},
+        }
+        for attribute in attributes:
+            _, value = get_non_null_field(attribute)
+            message["data"][attribute.attribute_key] = value
+        message["data"]["device"] = str(sub_device.id)
+        message["data"]["id"] = data.get("id")
+        send_to_rabbitmq(ch, message)
+
+    elif topic.startswith("v1/devices/me/attributes/request") and device:
+        shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
+        shared_keys = shared_keys.split(",") if shared_keys else []
+        attributes = AttributeKv.objects.filter(attribute_type=AttributeKv.SHARED_SCOPE, entity_id=device.id)
+        attributes = attributes.filter(attribute_key__in=shared_keys) if shared_keys else attributes
+
+        message = {
+            "targetDeviceUUID": str(device.id),
+            "topic": topic.replace("request", "response"),
+            "data": {},
+        }
+        for attribute in attributes:
+            _, value = get_non_null_field(attribute)
+            message["data"][attribute.attribute_key] = value
+        send_to_rabbitmq(ch, message)
+
     elif topic.endswith("/attributes"):
         _handle_attribute_saving(device, data)
     elif topic.endswith("/telemetry"):
