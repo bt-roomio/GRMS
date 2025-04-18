@@ -81,7 +81,14 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         send_to_rabbitmq(ch, message)
 
     elif topic.endswith("/attributes"):
-        _handle_attribute_saving(device, data)
+        # Gateway-level attributes: data maps sub-device names to attribute dicts
+        if topic.startswith("v1/gateway/") and isinstance(data, dict):
+            for sub_name, attrs in data.items():
+                sub_device = _get_or_create_device(sub_name, device)
+                _handle_attribute_saving(sub_device, attrs)
+        else:
+            # Direct device attributes
+            _handle_attribute_saving(device, data)
     elif topic.endswith("/telemetry"):
         # Gateway-level telemetry: data contains sub-device entries
         if topic.startswith("v1/gateway/") and isinstance(data, dict):
