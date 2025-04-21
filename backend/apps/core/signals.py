@@ -31,6 +31,7 @@ def remove_default_permissions(sender, **kwargs):
         "devicecredentials",
     ]
 
+    # TODO: optimise
     content_types = ContentType.objects.filter(model__in=models)
     Permission.objects.filter(content_type__in=content_types).delete()
     content_types.delete()

@@ -1,6 +1,6 @@
 # Deployment
 
-# Build project for gitlab.registry.com
+## Build project for gitlab.registry.com
 
 `docker buildx build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/yroomio/grms:latest --push .`
 

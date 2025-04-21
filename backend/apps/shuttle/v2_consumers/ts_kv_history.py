@@ -16,6 +16,13 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
         self.subscribers = {}
         await super().accept(*args, **kwargs)
 
+    def get_data_paginated(self, query_params, **kwargs):
+        queryset = self.get_queryset(query_params=query_params)
+        for key in queryset:
+            serializer = self.get_serializer(instance=queryset[key], many=True, action_kwargs=kwargs)
+            queryset[key] = serializer.data
+        return queryset
+
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = TsKvHistoryFilterParams.check(data=kwargs.get("query_params", {}))
@@ -25,6 +32,7 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
             interval=params.get("interval"),
             agg=params.get("agg"),
             limit=params.get("limit"),
+            sort_by=params.get("sort_by"),
         )
         return query
 
