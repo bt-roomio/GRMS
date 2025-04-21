@@ -7,10 +7,12 @@ from core.utils.pagination import pagination
 from users.models import User
 from users.serializers.user import UserDetailSerializer, UserParams, UserSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
+from core.utils.permission import check_perms
 
 
 class UserListView(APIView):
     @swagger_auto_schema(tags=["Users, User"], responses=UserSwagger, query_serializer=UserParams)
+    @check_perms(["users.view_user"])
     def get(self, request):
         params = UserParams.check(request.GET)
         queryset = User.objects.list(
@@ -24,6 +26,7 @@ class UserListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(tags=["Users, User"], responses=UserSwagger, request_body=UserSerializer)
+    @check_perms(["users.add_user"])
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -33,6 +36,7 @@ class UserListView(APIView):
 
 class UserDetailView(APIView):
     @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger)
+    @check_perms(["users.view_user"])
     def get(self, request, pk):
         queryset = User.objects.prefetch_related("roles", "roles__permissions")
         instance = get_object_or_404(queryset, id=pk, tenant=request.user.tenant_id)
@@ -40,6 +44,7 @@ class UserDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger, request_body=UserSerializer)
+    @check_perms(["users.change_user"])
     def put(self, request, pk):
         instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
         serializer = UserSerializer(instance, data=request.data)
@@ -48,6 +53,7 @@ class UserDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Users, User"], responses={})
+    @check_perms(["users.delete_user"])
     def delete(self, request, pk):
         instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
         instance.delete()

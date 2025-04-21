@@ -1,6 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.permission import check_perms
 from shuttle.models import AttributeKv
 from shuttle.serializers.remove_attribute import RemoveAttributeFilterParams, RemoveAttributeFilterPath
 from shuttle.swagger.remove_attribute import remove_attribute_swagger
@@ -8,6 +9,7 @@ from shuttle.swagger.remove_attribute import remove_attribute_swagger
 
 class RemoveAttribute(APIView):
     @remove_attribute_swagger()
+    @check_perms(["shuttle.delete_removeattribute"])
     def delete(self, request, *args, **kwargs):
         path = RemoveAttributeFilterPath.check(kwargs)
         params = RemoveAttributeFilterParams.check(request.GET)

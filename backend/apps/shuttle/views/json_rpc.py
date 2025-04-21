@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.helpers import b_encode, compress_data, read_binary
+from core.utils.permission import check_perms
 from main.models import Device
 from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
@@ -21,6 +22,7 @@ class JsonRPCView(APIView):
     permission_classes = (WhiteListOrIsAuthenticated,)
 
     @json_rpc_swagger()
+    @check_perms(["shuttle.add_jsonrpc"])
     def post(self, request, **kwargs):
         kwargs = self.handle_params(**kwargs)
         device = Device.objects.filter(**kwargs).first()

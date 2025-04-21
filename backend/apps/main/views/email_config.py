@@ -7,10 +7,12 @@ from rest_framework.views import APIView
 from main.models import EmailConfiguration
 from main.serializers.email_config import EmailConfigSerializer
 from main.swagger.email_configuration import EmailConfigSwagger, EmailConfigUpdateSwagger
+from core.utils.permission import check_perms
 
 
 class EmailConfigDetailView(APIView):
     @swagger_auto_schema(responses=EmailConfigSwagger, tags=["Main, Email Configuration"])
+    @check_perms(["main.view_emailconfiguration"])
     def get(self, request):
         instance = EmailConfiguration.objects.filter(tenant=request.user.tenant).first()
         serializer = EmailConfigSerializer(instance)
@@ -19,6 +21,7 @@ class EmailConfigDetailView(APIView):
     @swagger_auto_schema(
         request_body=EmailConfigSerializer, responses=EmailConfigUpdateSwagger, tags=["Main, Email Configuration"]
     )
+    @check_perms(["main.change_emailconfiguration"])
     def put(self, request):
         if not request.user.tenant:
             raise Http404("The tenant does not exist in the user!")

@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import Device
 from shuttle.models import TsKvLatest
 from shuttle.serializers.ts_kv_latest import TsKvLatestIntegrationFilterParams, TsKvLatestIntegrationSerializer
@@ -15,6 +16,7 @@ class LatestTsKvListView(APIView):
     permission_classes = (WhiteListOrIsAuthenticated,)
 
     @swagger_auto_schema(tags=["Shuttle, TsKv"])
+    @check_perms(["shuttle.view_tskvlatest"])
     def get(self, request, **kwargs):
         kwargs = self.make_kwargs(**kwargs)
         device = get_list_or_404(Device, **kwargs)[0]

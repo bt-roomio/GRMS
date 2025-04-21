@@ -3,6 +3,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.permission import check_perms
 from main.models import Guest
 from main.serializers.guest import GuestMoveRoomFilterParams, GuestMoveRoomSerializer
 
@@ -16,6 +17,7 @@ class GuestMoveRoomListView(APIView):
         },
         query_serializer=GuestMoveRoomFilterParams(),
     )
+    @check_perms(["shuttle.change_guestmoveroom"])
     def put(self, request):
         params = GuestMoveRoomFilterParams.check(request.GET)
         instance = Guest.objects.filter(room_id=params.get("from_room"), is_active=True)

@@ -9,10 +9,12 @@ from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
+from core.utils.permission import check_perms
 
 
 class CardListView(APIView):
     @card_swagger()
+    @check_perms(["access_manager.view_card"])
     def get(self, request):
         params = CardFilterParams.check(request.GET)
         queryset = Card.objects.list(  # pyright: ignore
@@ -26,6 +28,7 @@ class CardListView(APIView):
         return Response(data)
 
     @card_swagger()
+    @check_perms(["access_manager.add_card"])
     def post(self, request):
         data = with_tenant(request)
         card_number = random.randint(1, 99999999)
@@ -38,12 +41,14 @@ class CardListView(APIView):
 
 class CardDetailView(APIView):
     @card_swagger()
+    @check_perms(["access_manager.view_card"])
     def get(self, request, pk):
         instance = get_object_or_404(Card, pk=pk, tenant_id=request.user.tenant_id)
         serializer = CardSerializer(instance)
         return Response(serializer.data)
 
     @card_swagger()
+    @check_perms(["access_manager.change_card"])
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(Card, id=pk, tenant_id=request.user.tenant_id)
@@ -53,6 +58,7 @@ class CardDetailView(APIView):
         return Response(serializer.data)
 
     @card_swagger()
+    @check_perms(["access_manager.delete_card"])
     def delete(self, request, pk):
         instance = get_object_or_404(Card, id=pk, tenant_id=request.user.tenant_id)
         instance.delete()

@@ -2,6 +2,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView, Response
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
+from core.utils.permission import check_perms
 from main.models import Device
 from main.utils.save_attributes import save_attributes
 from shuttle.consumers.aggregations.latest_telemetry import get_ts_kv_dict
@@ -20,6 +21,7 @@ class AttributeListView(APIView):
     parser_classes = (JSONParser,)
 
     @tag_swagger()
+    @check_perms(["shuttle.view_attributelist"])
     def get(self, request, *args, **kwargs):
         path = TagFilterPath.check(kwargs)
         params = TagFilterParams.check(request.GET)
@@ -53,6 +55,7 @@ class AttributeListView(APIView):
         return Response(result)
 
     @tag_swagger()
+    @check_perms(["shuttle.add_attributelist"])
     def post(self, request, *args, **kwargs):
         path = AttributeKvPath(data=kwargs)
         path.is_valid(raise_exception=True)
@@ -97,6 +100,7 @@ class AttributesChangeRPCView(APIView):
     parser_classes = (JSONParser,)
 
     @swagger_attributes_change()
+    @check_perms(["shuttle.add_attributerpc"])
     def post(self, request, *args, **kwargs):
         path = AttributesChangeFilterPath.check(kwargs)
         model_name = path.get("entity_type") if path.get("entity_type") != "AllRoomType" else "Room"

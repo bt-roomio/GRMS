@@ -7,10 +7,12 @@ from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
+from core.utils.permission import check_perms
 
 
 class StaffListView(APIView):
     @staff_swagger()
+    @check_perms(["access_manager.view_staff"])
     def get(self, request):
         params = StaffFilterParams.check(request.GET)
         queryset = Staff.objects.list(  # pyright: ignore
@@ -26,6 +28,7 @@ class StaffListView(APIView):
         return Response(data)
 
     @staff_swagger()
+    @check_perms(["access_manager.add_staff"])
     def post(self, request):
         data = with_tenant(request)
         serializer = StaffSerializer(data=data)
@@ -36,12 +39,14 @@ class StaffListView(APIView):
 
 class StaffDetailView(APIView):
     @staff_swagger()
+    @check_perms(["access_manager.view_staff"])
     def get(self, request, pk):
         instance = get_object_or_404(Staff, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = StaffSerializer(instance)
         return Response(serializer.data)
 
     @staff_swagger()
+    @check_perms(["access_manager.change_staff"])
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(Staff, id=pk, tenant_id=request.user.tenant_id, is_active=True)
@@ -51,6 +56,7 @@ class StaffDetailView(APIView):
         return Response(serializer.data)
 
     @staff_swagger()
+    @check_perms(["access_manager.delete_staff"])
     def delete(self, request, pk):
         instance = get_object_or_404(Staff, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         instance.is_active = False

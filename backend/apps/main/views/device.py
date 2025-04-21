@@ -7,10 +7,12 @@ from core.utils.pagination import pagination
 from main.models import Device
 from main.serializers.device import DeviceFilterParams, DeviceSerializer
 from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
+from core.utils.permission import check_perms
 
 
 class DeviceListView(APIView):
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceSwagger, query_serializer=DeviceFilterParams())
+    @check_perms(["main.view_device"])
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
         queryset = Device.objects.list(  # pyright: ignore
@@ -25,6 +27,7 @@ class DeviceListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceSwagger, request_body=DeviceSerializer)
+    @check_perms(["main.add_device"])
     def post(self, request):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
@@ -37,12 +40,14 @@ class DeviceListView(APIView):
 
 class DeviceDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceDetailSwagger)
+    @check_perms(["main.view_device"])
     def get(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = DeviceSerializer(device)
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceDetailSwagger, request_body=DeviceSerializer)
+    @check_perms(["main.change_device"])
     def put(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = DeviceSerializer(device, data=request.data)
@@ -51,6 +56,7 @@ class DeviceDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Device"], responses={})
+    @check_perms(["main.delete_device"])
     def delete(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         device.is_active = False

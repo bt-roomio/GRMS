@@ -8,10 +8,11 @@ from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
-
+from core.utils.permission import check_perms
 
 class GroupListView(APIView):
     @group_swagger("list")
+    @check_perms(["access_manager.view_group"])
     def get(self, request):
         params = GroupFilterParams.check(request.GET)
         queryset = Group.objects.list(  # pyright: ignore
@@ -25,6 +26,7 @@ class GroupListView(APIView):
         return Response(data)
 
     @group_swagger()
+    @check_perms(["access_manager.add_group"])
     def post(self, request):
         data = with_tenant(request)
         serializer = GroupSerializer(data=data)
@@ -35,6 +37,7 @@ class GroupListView(APIView):
 
 class GroupDetailView(APIView):
     @group_swagger()
+    @check_perms(["access_manager.view_group"])
     def get(self, request, pk):
         instance = get_object_or_404(
             Group.objects.filter(
@@ -47,6 +50,7 @@ class GroupDetailView(APIView):
         return Response(serializer.data)
 
     @group_swagger()
+    @check_perms(["access_manager.change_group"])
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
@@ -56,6 +60,7 @@ class GroupDetailView(APIView):
         return Response(serializer.data)
 
     @group_swagger()
+    @check_perms(["access_manager.delete_group"])
     def delete(self, request, pk):
         instance = get_object_or_404(Group, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         instance.is_active = False

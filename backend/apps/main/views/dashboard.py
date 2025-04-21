@@ -4,7 +4,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
-
+from core.utils.permission import check_perms
 from core.utils.pagination import pagination
 from main.models import Dashboard, Tenant
 from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer, DashboardTypeSerializer
@@ -13,6 +13,7 @@ from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 
 class DashboardListView(APIView):
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardSwagger, query_serializer=DashboardFilterParams())
+    @check_perms(["main.view_dashboard"])
     def get(self, request):
         params = DashboardFilterParams.check(request.GET)
         queryset = Dashboard.objects.list(  # pyright: ignore
@@ -26,6 +27,7 @@ class DashboardListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardSwagger, request_body=DashboardSerializer)
+    @check_perms(["main.add_dashboard"])
     def post(self, request):
         serializer = DashboardSerializer(data=request.data, context={"tenant_id": request.user.tenant_id})
         serializer.is_valid(raise_exception=True)
@@ -35,12 +37,14 @@ class DashboardListView(APIView):
 
 class DashboardDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardDetailSwagger)
+    @check_perms(["main.view_dashboard"])
     def get(self, request, pk):
         instance = get_object_or_404(Dashboard, pk=pk, tenant=request.user.tenant)
         serializer = DashboardSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardDetailSwagger, request_body=DashboardSerializer)
+    @check_perms(["main.change_dashboard"])
     def put(self, request, pk):
         instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
         serializer = DashboardSerializer(instance, data=request.data)
@@ -49,6 +53,7 @@ class DashboardDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses={})
+    @check_perms(["main.delete_dashboard"])
     def delete(self, request, pk):
         instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
         instance.delete()
@@ -61,7 +66,7 @@ class DashboardTypeView(APIView):
         operation_description="Getting Dashboard by category **[main_dashboard, public_space_dashboard]**",
         query_serializer=DashboardTypeSerializer(),
         responses=DashboardDetailSwagger,
-    )
+    )  # TODO write custom check for this
     def get(self, request):
         """
         d == dashboard

@@ -10,6 +10,7 @@ from services.swagger.integration import (
     integration_swagger_retrive,
     integration_swagger_update,
 )
+from core.utils.permission import check_perms
 
 
 class IntegrationListView(APIView):
@@ -23,16 +24,18 @@ class IntegrationListView(APIView):
             tenant=self.request.user.tenant,
         )
 
-    @integration_swagger_list()
-    def get(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
 
-        # Apply filters
-        for backend in self.filter_backends:
-            queryset = backend().filter_queryset(request, queryset, self)
+@integration_swagger_list()
+@check_perms(["services.view_integration"])
+def get(self, request, *args, **kwargs):
+    queryset = self.get_queryset()
 
-        serializer = IntegrationSerializer(queryset, many=True)
-        return Response(serializer.data)
+    # Apply filters
+    for backend in self.filter_backends:
+        queryset = backend().filter_queryset(request, queryset, self)
+
+    serializer = IntegrationSerializer(queryset, many=True)
+    return Response(serializer.data)
 
 
 class IntegrationDetailView(APIView):
@@ -43,6 +46,7 @@ class IntegrationDetailView(APIView):
             return None
 
     @integration_swagger_retrive()
+    @check_perms(["services.view_integration"])
     def get(self, request, pk, *args, **kwargs):
         instance = self.get_object(pk)
         if not instance:
@@ -51,6 +55,7 @@ class IntegrationDetailView(APIView):
         return Response(serializer.data)
 
     @integration_swagger_update()
+    @check_perms(["services.change_integration"])
     def put(self, request, pk, *args, **kwargs):
         instance = self.get_object(pk)
         if not instance:

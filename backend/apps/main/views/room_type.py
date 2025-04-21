@@ -7,10 +7,12 @@ from core.utils.pagination import pagination
 from main.models import RoomType
 from main.serializers.room_type import RoomTypeFilterParams, RoomTypeSerializer
 from main.swagger.room_type import RoomTypeDetailSwagger, RoomTypeSwagger
+from core.utils.permission import check_perms
 
 
 class RoomTypeListView(APIView):
     @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeSwagger, query_serializer=RoomTypeFilterParams())
+    @check_perms(["main.view_roomtype"])
     def get(self, request):
         params = RoomTypeFilterParams.check(request.GET)
         queryset = RoomType.objects.list(
@@ -23,6 +25,7 @@ class RoomTypeListView(APIView):
         return Response(data)
 
     @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeSwagger, request_body=RoomTypeSerializer)
+    @check_perms(["main.add_roomtype"])
     def post(self, request):
         data = request.data.copy()
         data["tenant"] = request.user.tenant_id
@@ -34,12 +37,14 @@ class RoomTypeListView(APIView):
 
 class RoomTypeDetailView(APIView):
     @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeDetailSwagger)
+    @check_perms(["main.view_roomtype"])
     def get(self, request, pk):
         room_type = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         serializer = RoomTypeSerializer(room_type)
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, RoomType"], responses=RoomTypeDetailSwagger, request_body=RoomTypeSerializer)
+    @check_perms(["main.change_roomtype"])
     def put(self, request, pk):
         data = request.data.copy()
         data["tenant"] = request.user.tenant_id
@@ -50,6 +55,7 @@ class RoomTypeDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, RoomType"], responses={})
+    @check_perms(["main.delete_roomtype"])
     def delete(self, request, pk):
         instance = get_object_or_404(RoomType, pk=pk, tenant=request.user.tenant)
         instance.delete()

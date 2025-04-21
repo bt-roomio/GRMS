@@ -9,12 +9,13 @@ from core.utils.pagination import pagination
 from main.models import DeviceProfile
 from main.serializers.device_profile import DeviceProfileFilterParams, DeviceProfileSerializer
 from main.swagger.device_profile import DeviceProfileDetailSwagger, DeviceProfileSwagger
-
+from core.utils.permission import check_perms
 
 class DeviceProfileListView(APIView):
     @swagger_auto_schema(
         tags=["Main, Device Profile"], responses=DeviceProfileSwagger, query_serializer=DeviceProfileFilterParams()
     )
+    @check_perms(["main.view_deviceprofile"])
     def get(self, request):
         params = DeviceProfileFilterParams.check(request.GET)
         queryset = DeviceProfile.objects.list(
@@ -30,6 +31,7 @@ class DeviceProfileListView(APIView):
     @swagger_auto_schema(
         tags=["Main, Device Profile"], responses=DeviceProfileSwagger, request_body=DeviceProfileSerializer
     )
+    @check_perms(["main.add_deviceprofile"])
     def post(self, request):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
@@ -42,6 +44,7 @@ class DeviceProfileListView(APIView):
 
 class DeviceProfileDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Device Profile"], responses=DeviceProfileDetailSwagger)
+    @check_perms(["main.view_deviceprofile"])
     def get(self, request, pk):
         instance = get_object_or_404(DeviceProfile, pk=pk, tenant_id=request.user.tenant_id, active=True)
         serializer = DeviceProfileSerializer(instance)
@@ -50,6 +53,7 @@ class DeviceProfileDetailView(APIView):
     @swagger_auto_schema(
         tags=["Main, Device Profile"], responses=DeviceProfileDetailSwagger, request_body=DeviceProfileSerializer
     )
+    @check_perms(["main.change_deviceprofile"])
     def put(self, request, pk):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
@@ -61,6 +65,7 @@ class DeviceProfileDetailView(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Device Profile"], responses={})
+    @check_perms(["main.delete_deviceprofile"])
     def delete(self, request, pk):
         instance = get_object_or_404(
             DeviceProfile.objects.annotate(devices_count=Count("devices")).filter(id=pk, active=True)
