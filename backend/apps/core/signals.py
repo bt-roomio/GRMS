@@ -47,6 +47,7 @@ def gen_perms():
         {"app_label": "main", "model": "integrationsettings"},
         {"app_label": "main", "model": "roomfromconf"},
         {"app_label": "main", "model": "roomstatus"},
+        {"app_label": "main", "model": "dashboardtype"},
         {"app_label": "tenat", "model": "tenant"},
         {"app_label": "shuttle", "model": "attributelist"},
         {"app_label": "shuttle", "model": "attributerpc"},

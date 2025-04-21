@@ -66,7 +66,8 @@ class DashboardTypeView(APIView):
         operation_description="Getting Dashboard by category **[main_dashboard, public_space_dashboard]**",
         query_serializer=DashboardTypeSerializer(),
         responses=DashboardDetailSwagger,
-    )  # TODO write custom check for this
+    )
+    @check_perms(["main.view_dashboardtype"])
     def get(self, request):
         """
         d == dashboard

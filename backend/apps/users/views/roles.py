@@ -44,7 +44,6 @@ class RoleDetailView(APIView):
             instance = get_object_or_404(Role, pk=pk)
         else:
             instance = get_object_or_404(Role, pk=pk, tenant=request.user.tenant)
-            # TODO fix dulicating perms
         serializer = RoleSimpleSerializer(instance)
         return Response(serializer.data)
 

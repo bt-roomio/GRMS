@@ -52,7 +52,7 @@ class GuestDetailView(APIView):
 
 
 class GuestCheckoutView(APIView):
-    @swagger_guest_checkout()  # TODO: how to add permission
+    @swagger_guest_checkout()
     def post(self, request):
         params = GuestCheckoutParams.check(request.GET)
         guests = Room.objects.guest_checkout(params.get("room").id)
