@@ -124,38 +124,6 @@ def _handle_connect_disconnect(device, topic, data):
     _update_activity_device(sub, connected)
 
 
-def _handle_attribute_request(ch, device, data):
-    """Respond to shared-attributes request from gateway."""
-    keys = data.get("sharedKeys") or data.get("keys") or []
-    if isinstance(keys, str):
-        keys = keys.split(",")
-    sub_name = data.get("device")
-    sub = Device.objects.filter(
-        name__iexact=sub_name,
-        tenant_id=device.tenant_id,
-        is_active=True,
-    ).first()
-    if not sub:
-        # create sub-device if missing
-        sub = _get_or_create_device(sub_name, device)
-    attrs = AttributeKv.objects.filter(
-        entity=sub,
-        attribute_type=AttributeKv.SHARED_SCOPE,
-        attribute_key__in=keys,
-    ).values("attribute_key", "bool_v", "str_v", "long_v", "dbl_v", "json_v")
-    resp = {
-        rec["attribute_key"]: next(
-            v for v in (rec["bool_v"], rec["str_v"], rec["long_v"], rec["dbl_v"], rec["json_v"]) if v is not None
-        )
-        for rec in attrs
-    }
-    resp.update(device=str(sub.id), id=data.get("id"))
-    send_to_rabbitmq(
-        ch,
-        {"targetDeviceUUID": str(device.id), "topic": "v1/gateway/attributes/response", "data": resp},
-    )
-
-
 @transaction.atomic
 def _handle_attribute_saving(device, data):
     """Save incoming attribute key-values in CLIENT_SCOPE."""
@@ -173,13 +141,15 @@ def _handle_attribute_saving(device, data):
                 "last_update_ts": ts_now,
             }
             defaults[field] = value
-            AttributeKv.objects.update_or_create(
+            print(defaults)
+            r = AttributeKv.objects.update_or_create(
                 entity=device,
                 entity__tenant_id=device.tenant_id,
                 attribute_type=AttributeKv.CLIENT_SCOPE,
                 attribute_key=key,
                 defaults=defaults,
             )
+            print(r)
     _update_activity_gateway(device)
 
 
@@ -244,21 +214,42 @@ def _update_activity_gateway(device):
 def _update_activity_device(device, connected=True):
     ts_now = get_mil_sec()
     # Active state
-    AttributeKv.objects.update_or_create(
-        entity=device,
-        entity__tenant_id=device.tenant_id,
-        attribute_type=AttributeKv.SERVER_SCOPE,
-        attribute_key="active",
-        defaults={"bool_v": connected, "entity_type": "DEVICE", "last_update_ts": ts_now},
-    )
+    attrs = AttributeKv.objects.filter(
+        entity=device, attribute_type=AttributeKv.SERVER_SCOPE, attribute_key="active"
+    ).first()
+    if attrs:
+        attrs.bool_v = connected
+        attrs.last_update_ts = ts_now
+        attrs.entity_type = "DEVICE"
+        attrs.save()
+    elif not attrs:
+        AttributeKv.objects.create(
+            entity=device,
+            attribute_key="active",
+            entity_type="DEVICE",
+            attribute_type=AttributeKv.SERVER_SCOPE,
+            bool_v=connected,
+            last_update_ts=ts_now,
+        )
+
     # Last activity
-    AttributeKv.objects.update_or_create(
-        entity=device,
-        entity__tenant_id=device.tenant_id,
-        attribute_type=AttributeKv.SERVER_SCOPE,
-        attribute_key="lastActivityTime",
-        defaults={"long_v": ts_now, "entity_type": "DEVICE", "last_update_ts": ts_now},
-    )
+    attrs = AttributeKv.objects.filter(
+        entity=device, attribute_type=AttributeKv.SERVER_SCOPE, attribute_key="lastActivityTime"
+    ).first()
+    if attrs:
+        attrs.long_v = ts_now
+        attrs.last_update_ts = ts_now
+        attrs.entity_type = "DEVICE"
+        attrs.save()
+    elif not attrs:
+        AttributeKv.objects.create(
+            entity=device,
+            attribute_key="lastActivityTime",
+            entity_type="DEVICE",
+            attribute_type=AttributeKv.SERVER_SCOPE,
+            long_v=ts_now,
+            last_update_ts=ts_now,
+        )
 
 
 def _get_or_create_device(name, from_device):

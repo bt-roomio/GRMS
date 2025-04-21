@@ -1,8 +1,8 @@
 import logging
 
+import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
-import pika
 from pika.adapters.blocking_connection import BlockingChannel
 
 from core.management.handlers_mq import handlers_mq
