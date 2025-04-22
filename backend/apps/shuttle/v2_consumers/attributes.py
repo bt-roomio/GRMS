@@ -40,7 +40,7 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             elif device == message.get("entity") and action == "subscribe" and scope == message.get("scope"):
                 _, value = get_non_null_column(message)
                 message = {
-                    "key_name": message.get("attribute_key"),
+                    "key_name": message.get("key_name"),
                     "last_update_ts": message.get("last_update_ts"),
                     "value": value,
                 }
