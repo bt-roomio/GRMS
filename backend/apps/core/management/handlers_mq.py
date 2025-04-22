@@ -2,6 +2,7 @@ import json
 import logging
 
 from django.db import transaction
+from django.db.models.signals import post_save
 from pika.adapters.blocking_connection import BlockingChannel
 
 from core.management.handle_fias import handle_fias
@@ -202,6 +203,24 @@ def _handle_telemetry(device, data):
         TsKvLatest.objects.bulk_create(to_create)
     if to_update:
         TsKvLatest.objects.bulk_update(to_update, ["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"])
+
+    def emit_latest_signals():
+        for inst in to_create:
+            post_save.send(
+                sender=TsKvLatest,
+                instance=inst,
+                created=True,
+                update_fields=None,
+            )
+        for inst in to_update:
+            post_save.send(
+                sender=TsKvLatest,
+                instance=inst,
+                created=False,
+                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+            )
+
+    transaction.on_commit(emit_latest_signals)
 
     _update_activity_gateway(device)
 
