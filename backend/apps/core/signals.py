@@ -37,7 +37,7 @@ def remove_default_permissions(sender, **kwargs):
     Permission.objects.filter(content_type__in=content_types).delete()
     content_types.delete()
     gen_perms()
-    # give_perms()
+    give_perms()
 
 
 def gen_perms():
