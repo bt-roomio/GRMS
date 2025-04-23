@@ -72,7 +72,7 @@ def gen_perms():
 
 
 def give_perms():
-    tenant_admins = Role.objects.filter(name="TENANT_ADMIN")
+    tenant_admins = Role.objects.filter(name__in=["TENANT_ADMIN", "SYS_ADMIN"])
     permissions = Permission.objects.all()
     for tenant_admin in tenant_admins:
         tenant_admin.permissions.clear()
