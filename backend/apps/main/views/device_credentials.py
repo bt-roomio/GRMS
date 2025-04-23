@@ -13,7 +13,6 @@ class DeviceCredentialsDetailView(APIView):
     permission_classes = [AllowAny]
 
     @swagger_auto_schema(tags=["Main, Device Credentials"])
-    @check_perms(["main.view_devicecredentials"])
     def get(self, request, token):
         instance = get_object_or_404(DeviceCredentials, credentials_id=token)
         serializer = DeviceCredentialsDetailSerializer(instance)
