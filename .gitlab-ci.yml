@@ -6,7 +6,6 @@ stages:
   - build
   - production
 
-
 variables:
   IMAGE_NAME: registry.gitlab.com/yroomio/grms
   IMAGE_TAG: latest  
