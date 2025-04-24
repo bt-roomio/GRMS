@@ -2,7 +2,6 @@ from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
 
 from shuttle.models import TsKv
-from django.utils.dateparse import parse_datetime
 from shuttle.serializers.ts_kv import TagLogsFilterParams, TsKvSerializer
 from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
@@ -35,7 +34,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
         query = query.tag_logs(  # pyright: ignore
             entity=params.get("device"),
             keys=params.get("keys"),
-            start_ts=str(params.get("start_ts")),
+            start_ts=params.get("start_ts"),
             sort_by=params.get("sort_by", []),
         )
         self.count = query.count()

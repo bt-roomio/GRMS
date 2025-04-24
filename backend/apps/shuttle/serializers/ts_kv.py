@@ -10,7 +10,7 @@ from main.models import Device, Room, Tenant
 
 
 class GatewayLogsSerializer(serializers.Serializer):
-    ts = serializers.IntegerField()
+    ts = serializers.DateTimeField()
     key_name = serializers.CharField()
     value = DynamicField()
 
@@ -24,14 +24,14 @@ class GatewayLogsFilterParams(ValidatorSerializer):
     device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
     key = serializers.CharField()
     start_ts = serializers.DateTimeField()
-    end_ts = serializers.DateTimeField()
+    end_ts = serializers.DateTimeField(required=False)
     page = serializers.IntegerField(default=1, min_value=1)
     size = serializers.IntegerField(default=15, max_value=500)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class TsKvSerializer(serializers.Serializer):
-    ts = serializers.IntegerField()
+    ts = serializers.DateTimeField()
     key_name = serializers.CharField()
     value = DynamicField()
 
@@ -83,8 +83,8 @@ class TsKvFilterParams(ValidatorSerializer):
     }
 
     keys = serializers.ListField(child=serializers.CharField())
-    start_ts = TimestampField()
-    end_ts = TimestampField()
+    start_ts = serializers.DateTimeField()
+    end_ts = serializers.DateTimeField()
     interval = serializers.IntegerField(default=60)  # Default is 60sec
     agg = serializers.ChoiceField(choices=AGG, default=AGG["Min"], error_messages=default_error_messages)
     limit = serializers.IntegerField(default=100)
