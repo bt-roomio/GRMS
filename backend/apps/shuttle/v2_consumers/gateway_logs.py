@@ -1,6 +1,6 @@
 from djangochannelsrestframework.mixins import ListModelMixin, action
 
-from core.utils.get_time import get_mil_sec
+from core.utils.get_time import get_time
 from shuttle.models import TsKv
 from shuttle.serializers.ts_kv import GatewayLogsFilterParams, GatewayLogsSerializer
 from shuttle.utils.get_non_null_field import get_non_null_column
@@ -31,7 +31,7 @@ class GatewayLogsConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             .gateway_logs(
                 key=params.get("key"),
                 start_ts=params.get("start_ts"),
-                end_ts=params.get("end_ts", get_mil_sec()),
+                end_ts=params.get("end_ts", get_time()),
                 sort_by=params.get("sort_by", []),
             )
         )
