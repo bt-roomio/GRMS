@@ -10,6 +10,7 @@ variables:
   IMAGE_NAME: registry.gitlab.com/yroomio/grms
   IMAGE_TAG: latest  
 
+
 build:
   stage: build
   when: manual
