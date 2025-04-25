@@ -36,7 +36,6 @@ class UserListView(APIView):
 
 class UserDetailView(APIView):
     @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger)
-    @check_perms(["users.view_user"])
     def get(self, request, pk):
         queryset = User.objects.prefetch_related("roles", "roles__permissions")
         instance = get_object_or_404(queryset, id=pk, tenant=request.user.tenant_id)
