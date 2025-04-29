@@ -18,3 +18,18 @@ class AttributeKvQuerySet(BaseQuerySet):
         ]
 
         return cleaned_data
+
+    def update_or_create_or_delete(self, devices, room):
+        from shuttle.models import AttributeKv
+
+        for device in devices:
+            self.update_or_create(
+                entity_id=device.id,
+                attribute_type=AttributeKv.SHARED_SCOPE,
+                attribute_key="roomNumber",
+                defaults={"long_v": room.number},
+            )
+
+        self.filter(entity__room=room, attribute_type=AttributeKv.SHARED_SCOPE, attribute_key="roomNumber").exclude(
+            entity_id__in=devices
+        ).update(long_v=None)

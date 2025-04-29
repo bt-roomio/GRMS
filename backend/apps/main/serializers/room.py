@@ -6,6 +6,7 @@ from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
 from main.serializers.room_type import RoomTypeSerializer
+from shuttle.models import AttributeKv
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -30,10 +31,15 @@ class RoomSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
+
         for device in validated_data.get("devices", {}):
             if device.room_id and device.room_id != instance.id:
                 raise serializers.ValidationError({"devices": "Device already assigned to another room!"})
-        return super().update(instance, validated_data)
+
+        AttributeKv.objects.update_or_create_or_delete(validated_data.get("devices"), instance)
+
+        data = super().update(instance, validated_data)
+        return data
 
     def create(self, validated_data):
         for device in validated_data.get("devices", {}):
