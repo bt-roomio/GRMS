@@ -128,6 +128,16 @@ class StaffCard(BaseModel, CreatedByModel):
         db_table = "access_manager_staff_cards"
 
 
+class GuestCard(BaseModel, CreatedByModel):
+    guest = models.ForeignKey("main.Guest", models.CASCADE)
+    card = models.ForeignKey("access_manager.Card", models.CASCADE)
+    is_active = models.BooleanField(default=True)
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+        db_table = "access_manager_guest_cards"
+        constraints = [UniqueConstraint("guest", "card", condition=Q(is_active=True), name="unique_active_guest_card")]
+
+
 class GroupRoom(BaseModel, CreatedByModel):
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
     room = models.ForeignKey("main.Room", models.CASCADE, "group_room")

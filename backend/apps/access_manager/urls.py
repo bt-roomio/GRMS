@@ -1,7 +1,9 @@
 from access_manager.views.card import CardDetailView, CardListView
 from access_manager.views.group import GroupDetailView, GroupListView
 from access_manager.views.staff import StaffDetailView, StaffListView
+from access_manager.views.guest_card import GuestCardView
 from django.urls import path
+
 
 urlpatterns = [
     # Group
@@ -13,4 +15,6 @@ urlpatterns = [
     # Public space
     path("card/", CardListView.as_view(), name="card-list"),
     path("card/<uuid:pk>/", CardDetailView.as_view(), name="card-detail"),
+    # Guest
+    path("guest-card/", GuestCardView.as_view(), name="guest-card"),
 ]
