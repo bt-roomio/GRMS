@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
+from channels.layers import get_channel_layer
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device, Room
 from main.utils.default_state import StateEnum, attribute_room_state
 from main.utils.remove_or_add_state import remove_or_add
 from shuttle.models import AttributeKv
+from asgiref.sync import async_to_sync
 
 
 @receiver(post_save, sender=Device)
@@ -45,6 +46,15 @@ def check_for_duplicate_state(instance, **kwargs):
     # Disabling duplicate state
     Room.objects.filter(id=instance.id).update(state=list(set(instance.state)))
     update_fields = kwargs.get("update_fields", []) or []
+
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        message = {
+            "id": str(instance.id),
+            "room_num": instance.number,
+            "tenant": str(instance.tenant),
+        }
+        async_to_sync(channel_layer.group_send)("room_status", {"type": "get_latest_activity", **message})
 
     if settings.TESTING or settings.DEBUG or "state" not in update_fields:
         return
