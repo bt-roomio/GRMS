@@ -1,12 +1,12 @@
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
 from shuttle.consumers.aggregations.controller_status import controller_status
-from shuttle.models import TsKvDictionary, TsKvLatest, AttributeKv
-from shuttle.serializers.attributes import AttributeSerializer
+from shuttle.models import TsKvDictionary, TsKvLatest
+from djangochannelsrestframework.mixins import ListModelMixin
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
+class RoomStatusConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
@@ -14,29 +14,50 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         self.user_obj = await sync_to_async(self.get_user_object)()
         await super().accept(*args, **kwargs)
 
+    @action
+    async def list(self, **kwargs):
+        user_obj = self.user_obj
+        tenant_id = self.user.tenant_id
+        dnd_count = await self.get_room_count_by_key("DND Relay", tenant_id)
+        mur_count = await self.get_room_count_by_key("MUR Relay", tenant_id)
+        occupancy_count = await self.get_room_count_by_key("Occupancy State", tenant_id)
+        raw_stats = await controller_status({}, user_obj)
+        data = await self.flatten_controller_status(raw_stats)
+        data.update(
+            {
+                "dnd": {"status": True, "count": dnd_count},
+                "mur": {"status": True, "count": mur_count},
+                "occupied": {"status": True, "count": occupancy_count},
+            }
+        )
+        return data, 200
+
     async def get_latest_activity(self, message, **kwargs):
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
-        for request_id, params in self.subscribers.items():
-            dnd_count = await self.get_room_count_by_key("DND Relay", tenant_id)
-            mur_count = await self.get_room_count_by_key("MUR Relay", tenant_id)
-            occupancy_count = await self.get_room_count_by_key("Occupancy State", tenant_id)
+
+        key = message.get("key")
+        keys = ["DND Relay", "MUR Relay", "Occupancy State"]
+        response_data = {}
+
+        if key in keys:
+            count = await self.get_room_count_by_key(key, tenant_id)
+            key_name = key.split(" ")[0].lower()
+            response_data[key_name] = {"count": count}
+
+        elif not key:
             raw_stats = await controller_status({}, user_obj)
             flat_data = await self.flatten_controller_status(raw_stats)
+            response_data = flat_data
 
-            flat_data.update(
-                {
-                    "dnd": {"status": True, "count": dnd_count},
-                    "mur": {"status": True, "count": mur_count},
-                    "occupied": {"status": True, "count": occupancy_count},
-                }
-            )
-
-            await self.reply(data=flat_data, action="subscribe", request_id=request_id)
+        if response_data:
+            for request_id in self.subscribers:
+                await self.reply(data=response_data, action="subscribe", request_id=request_id)
 
     async def flatten_controller_status(self, raw_status):
         flat = {}
         data = raw_status.get("data", {})
+        print("raw_status", raw_status)
 
         for entry in data.get("status_controllers", []):
             name = entry.get("status")
@@ -45,10 +66,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
                     "last_24_hour": entry.get("last_24_hour", 0),
                     "diff_previous_day": entry.get("diff_previous_day", 0),
                 }
-
-        # # Flatten count_active_rooms
-        # for idx, entry in enumerate(data.get("count_active_rooms", [])):
-        #     flat[f"count_active_room_{idx}"] = entry  # optionally rename to something better
+        flat["count_active_rooms"] = data.get("count_active_rooms", None)
 
         raw_status.pop("subscriptionId", None)
         return flat
