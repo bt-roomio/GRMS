@@ -6,3 +6,21 @@ class EmergencyStatusFilterParams(ValidatorSerializer):
     delisting_devices = serializers.ListField(child=serializers.CharField(), required=False)
     keys = serializers.ListField(child=serializers.CharField())
     room_types = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+class TelemetryDataItemSerializer(serializers.Serializer):
+    key_name = serializers.CharField()
+    ts = serializers.IntegerField()
+    value = serializers.JSONField(allow_null=True)
+
+
+class RoomSerializer(serializers.Serializer):
+    number = serializers.CharField(allow_null=True)
+    id = serializers.CharField(allow_null=True)
+
+
+class DeviceTelemetrySerializer(serializers.Serializer):
+    device_id = serializers.CharField()
+    room = RoomSerializer()
+    telemetry_data = TelemetryDataItemSerializer(many=True, source='data')
+

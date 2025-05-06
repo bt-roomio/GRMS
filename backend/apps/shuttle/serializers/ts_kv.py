@@ -5,7 +5,6 @@ from rest_framework import serializers
 from core.serializers.dynamic import DynamicField
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS
 from core.utils.serializers import ValidatorSerializer
-from core.utils.unix_timestamp import TimestampField
 from main.models import Device, Room, Tenant
 
 

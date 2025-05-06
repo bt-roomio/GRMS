@@ -35,9 +35,7 @@ class RoomSerializer(serializers.ModelSerializer):
         for device in validated_data.get("devices", {}):
             if device.room_id and device.room_id != instance.id:
                 raise serializers.ValidationError({"devices": "Device already assigned to another room!"})
-
         AttributeKv.objects.update_or_create_or_delete(validated_data.get("devices"), instance)
-
         data = super().update(instance, validated_data)
         return data
 

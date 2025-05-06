@@ -14,7 +14,7 @@ class RoomStatusConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         self.user_obj = await sync_to_async(self.get_user_object)()
         await super().accept(*args, **kwargs)
 
-    @action
+    @action(atomic=False)
     async def list(self, **kwargs):
         user_obj = self.user_obj
         tenant_id = self.user.tenant_id
