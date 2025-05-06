@@ -35,3 +35,9 @@ class DeviceQuerySet(BaseQuerySet):
             return gateway.id
 
         return pk
+
+    def emergency_status(self, tenant_id, room_types, delisting_devices):
+        query = self.select_related("room__type").filter(tenant=tenant_id)
+        query = query.filter(room__type__title__in=room_types) if room_types else query
+        query = query.exclude(id__in=delisting_devices) if delisting_devices else query
+        return query

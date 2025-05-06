@@ -1,14 +1,16 @@
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
+from djangochannelsrestframework.mixins import ListModelMixin
+
 from main.models import Device
 from shuttle.models import TsKvDictionary, TsKvLatest
-from shuttle.serializers.emergency_status import EmergencyStatusFilterParams
+from shuttle.serializers.emergency_status import EmergencyStatusFilterParams, DeviceTelemetrySerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
-from djangochannelsrestframework.mixins import ListModelMixin
 
 
 class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
     queryset = Device.objects.all()
+    serializer_class = DeviceTelemetrySerializer
 
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
@@ -17,30 +19,13 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
-        user = self.user
         params = EmergencyStatusFilterParams.check(data=kwargs.get("query_params", {}))
-
-        if params.get("room_types"):
-            query = query.filter(room__type__title__in=params["room_types"])
-
-        if params.get("delisting_devices"):
-            query = query.exclude(id__in=params["delisting_devices"])
-
-        query = query.filter(tenant=user.tenant_id).select_related("room")
+        query = query.emergency_status(  # pyright:ignore
+            tenant_id=self.user.tenant_id,
+            room_types=params.get("room_types"),
+            delisting_devices=params.get("delisting_devices"),
+        )
         return query
-
-    @action()
-    async def subscribe(self, request_id, action, **kwargs):
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("emergency_status", self.channel_name)
-            self.subscribers[request_id] = {
-                "action": action,
-                "query_params": kwargs.get("query_params", {}),
-            }
-
-    @action()
-    async def unsubscribe(self, request_id, **kwargs):
-        self.subscribers.pop(request_id, None)
 
     @action()
     async def list(self, **kwargs):
@@ -55,8 +40,8 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
         for device in devices:
             latest_data = await self.get_latest_data(device, key_ids)
-            if not latest_data:
-                continue
+            # if not latest_data:
+            #     continue
 
             data_list = [
                 {
@@ -70,8 +55,10 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             all_data.append(
                 {
                     "device_id": device.id,
-                    "room": device.room.number if device and device.room else None,
-                    "room_id": str(device.room.id) if device and device.room else None,
+                    "room": {
+                        "number": device.room.number if device and device.room else None,
+                        "id": str(device.room.id) if device and device.room else None,
+                    },
                     "data": data_list,
                 }
             )
@@ -131,3 +118,15 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             value = obj.get("bool_v") or obj.get("str_v") or obj.get("long_v") or obj.get("dbl_v") or obj.get("json_v")
             data.append({"key": obj.get("key__key"), "ts": obj.get("ts"), "value": value})
         return data
+
+    @action()
+    async def subscribe(self, request_id, action, **kwargs):
+        await self.add_group("emergency_status")
+        self.subscribers[request_id] = {
+            "action": action,
+            "query_params": kwargs.get("query_params", {}),
+        }
+
+    @action()
+    async def unsubscribe(self, request_id, **kwargs):
+        self.subscribers.pop(request_id, None)
