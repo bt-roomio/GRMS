@@ -45,7 +45,7 @@ class GuestCardView(APIView):
             for card_number in cards:
                 card_data = {
                     "cardNumber": card_number,
-                    "access_group": "0",
+                    "access_group": "1",
                     "start_time": "00:00",
                     "end_time": "23:59",
                     "weekdays": ["1", "2", "3", "4", "5", "6", "7"],
