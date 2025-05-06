@@ -1,6 +1,7 @@
 import logging
 
 import pika
+from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from pika.adapters.blocking_connection import BlockingChannel
@@ -13,7 +14,7 @@ RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
 logger = logging.getLogger("main")
-
+THREAD_COUNT = 50
 
 class Command(BaseCommand):
     help = "Closes the specified poll for voting"
@@ -24,9 +25,13 @@ class Command(BaseCommand):
             connection_parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
 
             with pika.BlockingConnection(connection_parameters) as conn:
-                with conn.channel() as ch:
+                with conn.channel() as ch, ThreadPoolExecutor(max_workers=THREAD_COUNT) as executor:
                     ch.queue_declare(queue="toGRMS")
-                    ch.basic_consume(queue="toGRMS", on_message_callback=self.process_message)
+                    def callback(ch, method, properties, body):
+                        # Отправляем задачу в пул потоков
+                        executor.submit(self.process_message, ch, method, properties, body)
+                    ch.basic_qos(prefetch_count=THREAD_COUNT)
+                    ch.basic_consume(queue="toGRMS", on_message_callback=callback)
                     print("Waiting for message")
                     ch.start_consuming()
         except Exception as err:
