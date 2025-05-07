@@ -2,11 +2,10 @@ from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
 from shuttle.consumers.aggregations.controller_status import controller_status
 from shuttle.models import TsKvDictionary, TsKvLatest
-from djangochannelsrestframework.mixins import ListModelMixin
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class RoomStatusConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
+class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
 
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
@@ -14,62 +13,50 @@ class RoomStatusConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         self.user_obj = await sync_to_async(self.get_user_object)()
         await super().accept(*args, **kwargs)
 
-    @action(atomic=False)
-    async def list(self, **kwargs):
-        user_obj = self.user_obj
-        tenant_id = self.user.tenant_id
-        dnd_count = await self.get_room_count_by_key("DND Relay", tenant_id)
-        mur_count = await self.get_room_count_by_key("MUR Relay", tenant_id)
-        occupancy_count = await self.get_room_count_by_key("Occupancy State", tenant_id)
-        raw_stats = await controller_status({}, user_obj)
-        data = await self.flatten_controller_status(raw_stats)
-        data.update(
-            {
-                "dnd": {"status": True, "count": dnd_count},
-                "mur": {"status": True, "count": mur_count},
-                "occupied": {"status": True, "count": occupancy_count},
-            }
-        )
-        return data, 200
+    @action()
+    async def list_subscribe(self, request_id, action, **kwargs):
+        await self.add_group("room_status")
+        self.subscribers[request_id] = {"action": action}
+        await self.get_latest_activity(request_id=request_id)
 
-    async def get_latest_activity(self, message, **kwargs):
+    @action()
+    async def list_unsubscribe(self, request_id, **kwargs):
+        self.subscribers.pop(request_id, None)
+
+    async def get_latest_activity(self, message=None, request_id=None, **kwargs):
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
-
-        key = message.get("key")
-        keys = ["DND Relay", "MUR Relay", "Occupancy State"]
-        response_data = {}
-
-        if key in keys:
-            count = await self.get_room_count_by_key(key, tenant_id)
-            key_name = key.split(" ")[0].lower()
-            response_data[key_name] = {"count": count}
-
-        elif not key:
+        request_ids = [request_id] if request_id is not None else self.subscribers.keys()
+        print("request_ids", request_ids)
+        for request_id in request_ids:
+            dnd_count = await self.get_room_count_by_key("DND Relay", tenant_id)
+            mur_count = await self.get_room_count_by_key("MUR Relay", tenant_id)
+            occupancy_count = await self.get_room_count_by_key("Occupancy State", tenant_id)
             raw_stats = await controller_status({}, user_obj)
             flat_data = await self.flatten_controller_status(raw_stats)
-            response_data = flat_data
-
-        if response_data:
-            for request_id in self.subscribers:
-                await self.reply(data=response_data, action="subscribe", request_id=request_id)
-
-    async def flatten_controller_status(self, raw_status):
-        flat = {}
-        data = raw_status.get("data", {})
-        print("raw_status", raw_status)
-
-        for entry in data.get("status_controllers", []):
-            name = entry.get("status")
-            if name:
-                flat[name] = {
-                    "last_24_hour": entry.get("last_24_hour", 0),
-                    "diff_previous_day": entry.get("diff_previous_day", 0),
+            flat_data.update(
+                {
+                    "dnd": dnd_count,
+                    "mur": mur_count,
+                    "occupied": occupancy_count,
                 }
-        flat["count_active_rooms"] = data.get("count_active_rooms", None)
+            )
+            await self.reply(data=flat_data, action="list_subscribe", request_id=request_id)
 
-        raw_status.pop("subscriptionId", None)
-        return flat
+    async def flatten_controller_status(self, data: dict) -> dict:
+        result = {}
+        status_controllers = data.get("data", {}).get("status_controllers", [])
+        for item in status_controllers:
+            status = item.get("status").lower()
+            count = item.get("last_24_hour", 0)
+            if status:
+                result[status] = count
+        count_active_rooms = data.get("data", {}).get("count_active_rooms", [])
+        for item in count_active_rooms:
+            if item.get("status") is False:
+                result["offline"] = item.get("count", 0)
+                break
+        return result
 
     @sync_to_async
     def get_room_count_by_key(self, key_name: str, tenant_id):
@@ -77,13 +64,3 @@ class RoomStatusConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         if key_id is None:
             return 0
         return TsKvLatest.objects.filter(key=key_id, long_v=1, entity__tenant_id=tenant_id).count()
-
-    @action()
-    async def subscribe(self, request_id, action, **kwargs):
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("room_status", self.channel_name)
-            self.subscribers[request_id] = {"action": action}
-
-    @action()
-    async def unsubscribe(self, request_id, **kwargs):
-        self.subscribers.pop(request_id, None)
