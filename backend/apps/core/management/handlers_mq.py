@@ -108,7 +108,7 @@ def _handle_rpc(data):
     """Mark RPCMessage as received."""
     RPCMessage.objects.filter(id=data.get("id"), received=False).update(
         received=True,
-        additional_info=str_to_dict(data.get("data")),
+        additional_info=data.get("data"),
     )
 
 

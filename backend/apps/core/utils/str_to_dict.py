@@ -1,4 +1,7 @@
 import json
+import logging
+
+logger = logging.getLogger("django")
 
 
 def str_to_dict(input):
@@ -12,4 +15,5 @@ def str_to_dict(input):
 
         return json.loads(input)
     except Exception as e:
-        print(f"Second attempt failed: {e}")
+        logger.warning(f"Second attempt failed: {e}")
+        return input

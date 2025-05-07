@@ -9,6 +9,7 @@ from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from access_manager.models import GuestCard, Card
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
+from core.utils.str_to_dict import str_to_dict
 from main.models import Guest, Device
 from shuttle.models import RPCMessage, Relation
 from shuttle.utils.permissions import WhiteListOrIsAuthenticated
@@ -86,12 +87,15 @@ def prepare_mqtt_request(device, tenant_id, guest, rpc_params, cards):
     while time.time() - start_time < timeout_seconds:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
 
-        if has_message and has_message.additional_info.get("success") == True:
-            for card_number in cards:
-                card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": tenant_id})
-                GuestCard.objects.create(guest=guest, card=card)
-
+        if has_message and str_to_dict(has_message.additional_info).get("success") == True:
+            add_cards(cards, guest, tenant_id)
             return {"success": True, "error_rooms": False, "error_public_spaces": []}
         time.sleep(0.3)
 
     return {"success": False, "error_rooms": False, "error_public_spaces": [], "msg": "Timeout error"}
+
+
+def add_cards(cards, guest, tenant_id):
+    for card_number in cards:
+        card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": tenant_id})
+        GuestCard.objects.create(guest=guest, card=card)
