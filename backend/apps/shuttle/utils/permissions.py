@@ -1,11 +1,11 @@
 from django.conf import settings
 from hoteza.utils.permissions import WhiteListPermission
 
-from main.models import AdminSettings
-
 
 class WhiteListOrIsAuthenticated(WhiteListPermission):
     def has_permission(self, request, view):
+        from main.models import AdminSettings
+
         if bool(request.user and request.user.is_authenticated):
             return True
 

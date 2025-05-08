@@ -143,15 +143,21 @@ def _handle_attribute_saving(device, data):
                 "last_update_ts": ts_now,
             }
             defaults[field] = value
-            print(defaults)
-            r = AttributeKv.objects.update_or_create(
+            obj, created = AttributeKv.objects.update_or_create(
                 entity=device,
                 entity__tenant_id=device.tenant_id,
                 attribute_type=AttributeKv.CLIENT_SCOPE,
                 attribute_key=key,
                 defaults=defaults,
             )
-            print(r)
+
+            post_save.send(
+                sender=AttributeKv,
+                instance=obj,
+                created=created,
+                update_fields=None if created else list(defaults.keys()),
+            )
+
     _update_activity_gateway(device)
 
 

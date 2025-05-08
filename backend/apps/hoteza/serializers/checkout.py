@@ -1,8 +1,10 @@
+from access_manager.models import GuestCard
+from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
 from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
-from main.models import Guest, Room, Tenant
+from main.models import Guest, Room, Tenant, Device
 from main.serializers.guest import GuestSerializer
 
 
@@ -53,8 +55,15 @@ class CheckOutSerializer(serializers.Serializer):
             additional_info__pms_reg_num=validated_data.get("pms_reg_num"),
             is_active=True,
         )
-        for guest in guests:
-            data = {"is_active": False, "tenant": validated_data.get("tenant"), "room": validated_data.get("room")}
-            serializer = GuestSerializer()
-            serializer.update(guest, data)
-        return guests
+        room = validated_data.get("room")
+        cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
+        device = Device.objects.filter(room__id=room.id, is_active=True).select_related("tenant").first()
+        rpc_params = prepare_cards(cards, 0)
+        deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
+        if deactivate_result.get("success"):
+            for guest in guests:
+                data = {"is_active": False, "tenant": validated_data.get("tenant"), "room": validated_data.get("room")}
+                serializer = GuestSerializer()
+                serializer.update(guest, data)
+            return guests
+        return deactivate_result

@@ -47,7 +47,11 @@ class GuestDetailView(APIView):
         instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GuestSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save(tenant_id=request.user.tenant_id)
+        result = serializer.save(tenant_id=request.user.tenant_id)
+
+        if isinstance(result, dict) and not result.get("success", True):
+            return Response({"result": 0, "message": result.get("message", "Failed to deactivate card!")})
+
         return Response(serializer.data)
 
 

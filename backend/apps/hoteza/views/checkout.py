@@ -20,5 +20,9 @@ class CheckOutListView(APIView):
             logger.error("Validation error: %s", e)
             logger.error("Request data: %s", request.data)
             raise
-        serializer.save()
+        result = serializer.save()
+
+        if isinstance(result, dict) and not result.get("success", True):
+            return Response({"result": 1, "message": result.get("message", "Failed to deactivate card!")})
+
         return Response({"result": 0, "message": "Successfully checkout!"})
