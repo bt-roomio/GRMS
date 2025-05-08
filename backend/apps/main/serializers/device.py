@@ -9,6 +9,13 @@ from main.utils.has_roomio_node import has_roomio_node
 
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["device_profile"] = str(instance.device_profile_id)
+        data["tenant"] = str(instance.tenant_id)
+        data["room"] = str(instance.room_id)
+        return data
+
     class Meta:
         model = Device
         fields = (
