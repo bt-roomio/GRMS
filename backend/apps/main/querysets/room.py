@@ -1,5 +1,7 @@
 from django.db.models import Count, F, Func, Q
 
+from access_manager.models import GuestCard
+from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import TsKvDictionary, TsKvLatest
 
@@ -40,12 +42,19 @@ class RoomQuerySet(BaseQuerySet):
         return result
 
     def guest_checkout(self, room_id):
-        from main.models import Guest, Room
+        from main.models import Guest, Room, Device
 
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
-        guests = Guest.objects.filter(room_id=room_id, is_active=True).update(is_active=False)
-        query.update(state=Func(F("state"), Room.CheckedIn, function="array_remove"))
-        return guests
+        guests = Guest.objects.filter(room_id=room_id, is_active=True)
+        cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
+        device = Device.objects.filter(room__id=room_id, is_active=True).select_related("tenant").first()
+        rpc_params = prepare_cards(cards, 0)
+        deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
+        if deactivate_result.get("success"):
+            guests.update(is_active=False)
+            query.update(state=Func(F("state"), Room.CheckedIn, function="array_remove"))
+            return guests
+        return deactivate_result
 
 
 def get_dnd_rooms(tenant):

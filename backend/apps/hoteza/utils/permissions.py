@@ -2,12 +2,12 @@ from django.conf import settings
 
 from rest_framework import exceptions, permissions
 
-from main.models import AdminSettings
-
 
 class WhiteListPermission(permissions.BasePermission):
 
     def has_permission(self, request, view) -> bool:  # pyright: ignore
+        from main.models import AdminSettings
+
         admin_settings = AdminSettings.objects.first()
         admin_settings = admin_settings and admin_settings.json_value.get("hoteza_whitelist") or []
 
