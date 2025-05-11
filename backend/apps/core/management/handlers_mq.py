@@ -18,6 +18,9 @@ from shuttle.utils.get_non_null_field import get_non_null_field
 
 logger = logging.getLogger("django")
 _tskv_dict_cache = {}
+_device_dict_cache = {}
+_sub_device_dict_cache = {}
+_sub_device_dict_getcreate_cache = {}
 
 
 def get_tskv_dict(key):
@@ -27,16 +30,17 @@ def get_tskv_dict(key):
         _tskv_dict_cache[key] = obj
     return _tskv_dict_cache[key]
 
-
 def handlers_mq(ch: BlockingChannel, body: bytes):
     msg = json.loads(body)
     logger.info(msg)
     device_id = msg.get("sourceDeviceUUID")
-    device = Device.objects.filter(id=device_id).first()
+    device = _device_dict_cache.get(device_id)
     if not device:
-        logger.warning("Device not found: %s", device_id)
-        return
-
+        device = Device.objects.filter(id=device_id).first()
+        if not device:
+            logger.warning("Device not found: %s", device_id)
+            return
+        _device_dict_cache[device_id] = device
     topic = msg.get("topic", "")
     data = msg.get("data")
 
@@ -47,9 +51,13 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
     elif topic.startswith("v1/gateway/attributes/request") and device:
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
-        sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
+        device_name = data.get("device")
+        sub_device = _sub_device_dict_cache.get(str(device.tenant_id) + device_name)
         if not sub_device:
-            return
+            sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
+            if not sub_device:
+                return
+            _sub_device_dict_cache[str(device.tenant_id) + device_name] = sub_device
 
         attributes = AttributeKv.objects.filter(
             attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=sub_device.id
@@ -86,7 +94,10 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         # Gateway-level attributes: data maps sub-device names to attribute dicts
         if topic.startswith("v1/gateway/") and isinstance(data, dict):
             for sub_name, attrs in data.items():
-                sub_device = _get_or_create_device(sub_name, device)
+                sub_device = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + sub_name)
+                if not sub_device:
+                    sub_device = _get_or_create_device(sub_name, device)
+                    _sub_device_dict_getcreate_cache[str(device.tenant_id) + sub_name] = sub_device
                 _handle_attribute_saving(sub_device, attrs)
         else:
             # Direct device attributes
@@ -95,7 +106,10 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         # Gateway-level telemetry: data contains sub-device entries
         if topic.startswith("v1/gateway/") and isinstance(data, dict):
             for sub_name, telemetry_list in data.items():
-                sub_device = _get_or_create_device(sub_name, device)
+                sub_device = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + sub_name)
+                if not sub_device:
+                    sub_device = _get_or_create_device(sub_name, device)
+                    _sub_device_dict_getcreate_cache[str(device.tenant_id) + sub_name] = sub_device
                 _handle_telemetry(sub_device, telemetry_list)
         else:
             # Direct device telemetry
@@ -114,14 +128,19 @@ def _handle_rpc(data):
 
 def _handle_connect_disconnect(device, topic, data):
     """Handle gateway connect/disconnect events."""
+
     name = data.get("device")
-    sub = Device.objects.filter(
-        name__iexact=name,
-        tenant_id=device.tenant_id,
-        is_active=True,
-    ).first()
+    sub = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + name)
     if not sub:
         sub = _get_or_create_device(name, device)
+        _sub_device_dict_getcreate_cache[str(device.tenant_id) + name] = sub
+    # sub = Device.objects.filter(
+    #     name__iexact=name,
+    #     tenant_id=device.tenant_id,
+    #     is_active=True,
+    # ).first()
+    # if not sub:
+    #     sub = _get_or_create_device(name, device)
     connected = topic.endswith("connect")
     _update_activity_device(sub, connected)
 
