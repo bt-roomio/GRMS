@@ -14,7 +14,7 @@ RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
 logger = logging.getLogger("main")
-THREAD_COUNT = 50
+THREAD_COUNT = 1
 
 class Command(BaseCommand):
     help = "Closes the specified poll for voting"

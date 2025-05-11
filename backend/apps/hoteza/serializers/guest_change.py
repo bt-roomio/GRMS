@@ -53,15 +53,14 @@ class GuestChangeSerializer(serializers.Serializer):
         # Validate room
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()
         if not room:
-            raise JsonValidationError({"result": 9, "message": f"Room `{attrs["room_number"]}` not found!"})
+            raise JsonValidationError({"result": 9, "message": f"Room {attrs['room_number']} not found!"})
         attrs["room"] = room
-
         # Validate old room
         old_room = (
             Room.objects.filter(tenant=tenant, number=attrs["old_room"]).first() if attrs.get("old_room") else None
         )
         if attrs["old_room"] and not old_room:
-            raise JsonValidationError({"result": 9, "message": f"Room `{attrs["old_room"]}` not found!"})
+            raise JsonValidationError({"result": 9, "message": f"Room {attrs['old_room']} not found!"})
         attrs["old_room"] = old_room
 
         attrs["tenant"] = tenant
