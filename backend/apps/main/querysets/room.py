@@ -50,7 +50,7 @@ class RoomQuerySet(BaseQuerySet):
         device = Device.objects.filter(room__id=room_id, is_active=True).select_related("tenant").first()
         rpc_params = prepare_cards(cards, 0)
         deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
-        if deactivate_result.get("success"):
+        if deactivate_result.get("cards_empty", False) or deactivate_result.get("success"):
             guests.update(is_active=False)
             query.update(state=Func(F("state"), Room.CheckedIn, function="array_remove"))
             return guests

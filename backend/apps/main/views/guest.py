@@ -60,4 +60,7 @@ class GuestCheckoutView(APIView):
     def post(self, request):
         params = GuestCheckoutParams.check(request.GET)
         guests = Room.objects.guest_checkout(params.get("room").id)
+
+        if isinstance(guests, dict) and not guests.get("success", True):
+            return Response({"result": 0, "message": guests.get("message", "Failed to deactivate card!")})
         return Response({"message": f"{guests} guests have left."})
