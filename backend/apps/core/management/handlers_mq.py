@@ -10,7 +10,6 @@ from core.rabbitmq.config import send_to_rabbitmq
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
-from core.utils.str_to_dict import str_to_dict
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field

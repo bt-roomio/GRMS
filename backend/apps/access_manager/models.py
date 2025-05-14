@@ -2,6 +2,7 @@ from uuid import UUID
 
 from access_manager.querysets.card import CardQuerySet
 from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
+from access_manager.querysets.guest_card import GuestCardQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -133,6 +134,8 @@ class GuestCard(BaseModel, CreatedByModel):
     guest = models.ForeignKey("main.Guest", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
+
+    objects = GuestCardQuerySet.as_manager()
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_guest_cards"
