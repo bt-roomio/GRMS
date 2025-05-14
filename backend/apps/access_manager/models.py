@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from access_manager.querysets.card import CardQuerySet
 from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
 from access_manager.querysets.staff import StaffQuerySet
@@ -7,21 +9,15 @@ from django.db.models import Q, UniqueConstraint
 
 from core.models import BaseModel, CreatedByModel, UpdateByModel
 
-DENIED = 0
-GUEST = 1
 HOUSEKEEPING = 2
 ENGINEERING = 3
 MASTER_CARD = 4
-FAILED = 5
 
 
 TYPE_CHOICES = (
-    (DENIED, "DENIED"),
-    (GUEST, "GUEST"),
     (HOUSEKEEPING, "HOUSEKEEPING"),
     (ENGINEERING, "ENGINEERING"),
     (MASTER_CARD, "MASTER CARD"),
-    (FAILED, "FAILED"),
 )
 
 
@@ -55,7 +51,7 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
     expiry_date = models.DateTimeField()
     is_active = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
-    group_type = models.CharField(choices=TYPE_CHOICES, default=DENIED)
+    group_type = models.CharField(choices=TYPE_CHOICES, default=HOUSEKEEPING)
 
     objects = GroupQuerySet.as_manager()
 
@@ -101,6 +97,7 @@ class Staff(BaseModel, CreatedByModel):
     last_name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     group = models.ForeignKey("access_manager.Group", models.SET_NULL, null=True, blank=True)
+    group_id: UUID
     additional_info = models.JSONField(null=True, blank=True)
 
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
@@ -109,6 +106,9 @@ class Staff(BaseModel, CreatedByModel):
 
     def __str__(self):
         return str(self.id)
+
+    def get_name(self):
+        return str(self.first_name + " " + self.last_name)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_staff"
@@ -126,6 +126,7 @@ class StaffCard(BaseModel, CreatedByModel):
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_staff_cards"
+        constraints = [UniqueConstraint("staff", "card", condition=Q(is_active=True), name="unique_active_staff_card")]
 
 
 class GuestCard(BaseModel, CreatedByModel):

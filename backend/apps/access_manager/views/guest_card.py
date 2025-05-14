@@ -1,18 +1,17 @@
 import logging
 import time
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
-
-from access_manager.models import GuestCard, Card
+from access_manager.models import Card, GuestCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
-from core.utils.str_to_dict import str_to_dict
-from shuttle.models import RPCMessage, Relation
-from shuttle.utils.permissions import WhiteListOrIsAuthenticated
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
+from core.utils.str_to_dict import str_to_dict
+from shuttle.models import Relation, RPCMessage
 
 logger = logging.getLogger("main")
 
@@ -22,18 +21,20 @@ class GuestCardView(APIView):
 
     @guest_card_swagger()
     def post(self, request):
-        from main.models import Guest, Device
+        from main.models import Device, Guest
 
         serializer = GuestCardRequestSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, 400)
         try:
             validated_data = serializer.validated_data
-            tenant_id = request.user.tenant_id
+
+            if not validated_data or not isinstance(validated_data, dict):
+                return Response({"detail": "Incorrect data!"}, 400)
+
             guest_id = validated_data["guest_id"]
             cards = validated_data["cards"]
-            public_spaces = validated_data["public_spaces"]
 
             guest = Guest.objects.get(pk=guest_id)
             device = Device.objects.filter(room__guests=guest_id, is_active=True).first()
