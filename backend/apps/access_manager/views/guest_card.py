@@ -4,6 +4,7 @@ import time
 from access_manager.models import Card, GuestCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
+from django.db.models.signals import post_save
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -17,7 +18,6 @@ logger = logging.getLogger("main")
 
 
 class GuestCardView(APIView):
-    # permission_classes = (WhiteListOrIsAuthenticated,)
 
     @guest_card_swagger()
     def post(self, request):
@@ -71,7 +71,13 @@ def prepare_cards(cards, access):
 def deactivate_guest_card(guests):
     try:
         for guest in guests:
-            GuestCard.objects.filter(guest=guest, is_active=True).update(is_active=False)
+            instance = GuestCard.objects.filter(guest=guest, is_active=True).update(is_active=False)
+            post_save.send(
+                sender=GuestCard,
+                instance=instance,
+                created=False,  # This is an update, not creation
+                update_fields=["is_active"],
+            )
         return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
     except Exception:
         return {"success": False, "message": "Could not disconnect card, please try again !"}
@@ -125,7 +131,6 @@ def activate_guest_card(cards, guest):
 
         if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
             continue
-
         GuestCard.objects.create(guest=guest, card=card, is_active=True)
 
     return {

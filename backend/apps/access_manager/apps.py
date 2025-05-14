@@ -4,3 +4,6 @@ from django.apps import AppConfig
 class CardConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "access_manager"
+
+    def ready(self):
+        import access_manager.signals  # noqa

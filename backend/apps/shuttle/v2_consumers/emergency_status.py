@@ -40,8 +40,6 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
         for device in devices:
             latest_data = await self.get_latest_data(device, key_ids)
-            # if not latest_data:
-            #     continue
 
             data_list = [
                 {
@@ -55,6 +53,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             all_data.append(
                 {
                     "device_id": device.id,
+                    "device_name": device.name,
                     "room": {
                         "number": device.room.number if device and device.room else None,
                         "id": str(device.room.id) if device and device.room else None,

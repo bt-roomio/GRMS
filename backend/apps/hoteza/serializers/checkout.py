@@ -53,8 +53,9 @@ class CheckOutSerializer(serializers.Serializer):
             additional_info__pms_reg_num=validated_data.get("pms_reg_num"),
             is_active=True,
         )
+        result = None
         for guest in guests:
             data = {"is_active": False, "tenant": validated_data.get("tenant"), "room": validated_data.get("room")}
             serializer = GuestSerializer()
-            serializer.update(guest, data)
-        return guests
+            result = serializer.update(guest, data)
+        return result or guests
