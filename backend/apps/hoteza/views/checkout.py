@@ -22,7 +22,7 @@ class CheckOutListView(APIView):
             raise
         result = serializer.save()
 
-        if isinstance(result, dict) and not result.get("success", True):
+        if isinstance(result, dict):
             return Response({"result": 1, "message": result.get("message", "Failed to deactivate card!")})
 
         return Response({"result": 0, "message": "Successfully checkout!"})
