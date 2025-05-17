@@ -1,10 +1,7 @@
 import json
 import logging
-
-from django.db import transaction
 from django.db.models.signals import post_save
 from pika.adapters.blocking_connection import BlockingChannel
-
 from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
 from core.utils.date import unix_to_datetime
@@ -15,12 +12,21 @@ from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
+import time
+from functools import wraps
+from django.db import DatabaseError, transaction, OperationalError
 
 logger = logging.getLogger("django")
 _tskv_dict_cache = {}
-_device_dict_cache = {}
-_sub_device_dict_cache = {}
-_sub_device_dict_getcreate_cache = {}
+MAX_DEADLOCK_RETRIES = 3
+RETRY_DELAY_SECONDS = 0.2
+
+
+# _device_dict_cache = {}
+# _sub_device_dict_cache = {}
+# _sub_device_dict_getcreate_cache = {}
+#TODO надо модифицировать Api удаления устройства, надо чистить кешированные устройства, либо раз в минуту(раз в час)
+# чистить кеш или проверять все ли еще устройства is_active
 
 
 def get_tskv_dict(key):
@@ -34,13 +40,7 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
     msg = json.loads(body)
     logger.info(msg)
     device_id = msg.get("sourceDeviceUUID")
-    device = _device_dict_cache.get(device_id)
-    if not device:
-        device = Device.objects.filter(id=device_id).first()
-        if not device:
-            logger.warning("Device not found: %s", device_id)
-            return
-        _device_dict_cache[device_id] = device
+    device = Device.objects.filter(id=device_id).first()
     topic = msg.get("topic", "")
     data = msg.get("data")
 
@@ -51,13 +51,9 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
     elif topic.startswith("v1/gateway/attributes/request") and device:
         shared_keys = data.get("sharedKeys", []) or data.get("keys", [])
         shared_keys = shared_keys.split(",")
-        device_name = data.get("device")
-        sub_device = _sub_device_dict_cache.get(str(device.tenant_id) + device_name)
+        sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
         if not sub_device:
-            sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=data.get("device")).first()
-            if not sub_device:
-                return
-            _sub_device_dict_cache[str(device.tenant_id) + device_name] = sub_device
+            sub_device = _get_or_create_device(data.get("device"), device)
 
         attributes = AttributeKv.objects.filter(
             attribute_key__in=shared_keys, attribute_type=AttributeKv.SHARED_SCOPE, entity_id=sub_device.id
@@ -94,10 +90,9 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         # Gateway-level attributes: data maps sub-device names to attribute dicts
         if topic.startswith("v1/gateway/") and isinstance(data, dict):
             for sub_name, attrs in data.items():
-                sub_device = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + sub_name)
+                sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=sub_name).first()
                 if not sub_device:
                     sub_device = _get_or_create_device(sub_name, device)
-                    _sub_device_dict_getcreate_cache[str(device.tenant_id) + sub_name] = sub_device
                 _handle_attribute_saving(sub_device, attrs)
         else:
             # Direct device attributes
@@ -106,14 +101,13 @@ def handlers_mq(ch: BlockingChannel, body: bytes):
         # Gateway-level telemetry: data contains sub-device entries
         if topic.startswith("v1/gateway/") and isinstance(data, dict):
             for sub_name, telemetry_list in data.items():
-                sub_device = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + sub_name)
+                sub_device = Device.objects.filter(tenant_id=device.tenant_id, name=sub_name).first()
                 if not sub_device:
                     sub_device = _get_or_create_device(sub_name, device)
-                    _sub_device_dict_getcreate_cache[str(device.tenant_id) + sub_name] = sub_device
-                _handle_telemetry(sub_device, telemetry_list)
+                _handle_telemetry(sub_device.id, telemetry_list)
         else:
             # Direct device telemetry
-            _handle_telemetry(device, data)
+            _handle_telemetry(device.id, data)
     else:
         logger.debug("Unhandled topic: %s", topic)
 
@@ -125,22 +119,33 @@ def _handle_rpc(data):
         additional_info=data.get("data"),
     )
 
+def retry_on_deadlock(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        for attempt in range(1, MAX_DEADLOCK_RETRIES + 1):
+            try:
+                return func(*args, **kwargs)
+            except OperationalError as e:
+                if "deadlock detected" in str(e):
+                    if attempt < MAX_DEADLOCK_RETRIES:
+                        time.sleep(RETRY_DELAY_SECONDS)
+                        continue
+            except Exception as e:
+                logger.error("Error in retry_on_deadlock: %s", str(e))
+                raise
+    return wrapper
 
 def _handle_connect_disconnect(device, topic, data):
     """Handle gateway connect/disconnect events."""
 
     name = data.get("device")
-    sub = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + name)
+    sub = Device.objects.filter(
+        name__iexact=name,
+        tenant_id=device.tenant_id,
+        is_active=True,
+    ).first()
     if not sub:
         sub = _get_or_create_device(name, device)
-        _sub_device_dict_getcreate_cache[str(device.tenant_id) + name] = sub
-    # sub = Device.objects.filter(
-    #     name__iexact=name,
-    #     tenant_id=device.tenant_id,
-    #     is_active=True,
-    # ).first()
-    # if not sub:
-    #     sub = _get_or_create_device(name, device)
     connected = topic.endswith("connect")
     _update_activity_device(sub, connected)
 
@@ -181,7 +186,7 @@ def _handle_attribute_saving(device, data):
 
 
 @transaction.atomic
-def _handle_telemetry(device, data):
+def _handle_telemetry1(device, data):
     """Bulk-save telemetry and maintain latest values."""
     # Collect (timestamp, values) pairs
     entries = []
@@ -201,59 +206,123 @@ def _handle_telemetry(device, data):
             dict_obj = get_tskv_dict(key)
             historical.append(TsKv(entity=device, key=dict_obj, ts=ts_dt, **{field: value}))
             latest.append(TsKvLatest(entity=device, key=dict_obj, ts=ts_now, **{field: value}))
-            if key == "messageFromFIAS":
+            latest.append(TsKvLatest(entity=device, key=dict_obj, ts=ts_now, **{field: value}))
+
+        if key == "messageFromFIAS":
                 handle_fias(value, device)
 
+
     # Bulk insert historical telemetry
+    TsKv.objects.bulk_create(historical, update_conflicts=True)
+
+    # Upsert latest telemetry
+    TsKvLatest.objects.bulk_create(
+        latest,
+        update_conflicts=True,
+        update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+        unique_fields=["entity", "key"],
+    )
+
+    # def emit_latest_signals():
+    #     for inst in to_create:
+    #         post_save.send(
+    #             sender=TsKvLatest,
+    #             instance=inst,
+    #             created=True,
+    #             update_fields=None,
+    #         )
+    #     for inst in to_update:
+    #         post_save.send(
+    #             sender=TsKvLatest,
+    #             instance=inst,
+    #             created=False,
+    #             update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+    #         )
+    #
+    # transaction.on_commit(emit_latest_signals)
+
+    _update_activity_gateway(device)
+
+@transaction.atomic
+def _handle_telemetry(device_id, data):
+    """Bulk-save telemetry and maintain latest values."""
+    entries = []
+    if isinstance(data, dict) and "ts" in data and "values" in data:
+        entries.append((data["ts"], data["values"]))
+    elif isinstance(data, list):
+        entries.extend((d["ts"], d["values"]) for d in data if "ts" in d and "values" in d)
+    if not entries:
+        return
+
+    ts_now = get_mil_sec()
+    historical = []
+    latest = {}
+
+    for ts_ms, values in entries:
+        ts_dt = unix_to_datetime(ts_ms)
+        for key, (field, value) in find_compatible_field(values).items():
+            dict_obj = get_tskv_dict(key)
+            key_id = dict_obj.key_id
+
+            common_kwargs = {
+                "entity_id": device_id,
+                "key": dict_obj,
+                "bool_v": None,
+                "str_v": None,
+                "long_v": None,
+                "dbl_v": None,
+                "json_v": None,
+                field: value,
+            }
+
+            historical.append(TsKv(ts=ts_dt, **common_kwargs))
+            latest[key_id] = TsKvLatest(ts=ts_now, **common_kwargs)
+            # latest[key_id] = TsKvLatest(**common_kwargs)
+
+
+        if key == "messageFromFIAS":
+                handle_fias(value, device_id) #TODO передалть device на device_id
+
+    # Исторические данные
     TsKv.objects.bulk_create(historical, ignore_conflicts=True)
 
-    # De-duplicate by key and split updates vs creates
-    unique_latest = {obj.key_id: obj for obj in latest}
-    existing = TsKvLatest.objects.filter(
-        entity=device,
-        key_id__in=unique_latest.keys(),
-    )
-    existing_map = {e.key_id: e for e in existing}  # pyright: ignore
+    # Пытаемся создать все latest
+    TsKvLatest.objects.bulk_create(latest.values(), ignore_conflicts=True)
 
-    to_create, to_update = [], []
-    for key_id, obj in unique_latest.items():
-        if key_id in existing_map:
-            existing_obj = existing_map[key_id]
-            for attr in ("ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"):
-                setattr(existing_obj, attr, getattr(obj, attr))
-            to_update.append(existing_obj)
-        else:
-            to_create.append(obj)
+    # Обновляем существующие (конфликтующие) записи
+    existing = TsKvLatest.objects.filter(entity_id=device_id, key_id__in=latest.keys())
+    for existing_obj in existing:
+        key_id = existing_obj.key_id
+        new_obj = latest[key_id]
+        for attr in ("ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"):
+            setattr(existing_obj, attr, getattr(new_obj, attr))
 
-    if to_create:
-        TsKvLatest.objects.bulk_create(to_create)
-    if to_update:
-        TsKvLatest.objects.bulk_update(to_update, ["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"])
+    TsKvLatest.objects.bulk_update(existing, ["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"])
 
     def emit_latest_signals():
-        for inst in to_create:
-            post_save.send(
-                sender=TsKvLatest,
-                instance=inst,
-                created=True,
-                update_fields=None,
-            )
-        for inst in to_update:
+        for inst in existing:
             post_save.send(
                 sender=TsKvLatest,
                 instance=inst,
                 created=False,
                 update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
             )
+        for inst in latest.values():
+            if inst.key_id not in {e.key_id for e in existing}:
+                post_save.send(
+                    sender=TsKvLatest,
+                    instance=inst,
+                    created=True,
+                    update_fields=None,
+                )
 
     transaction.on_commit(emit_latest_signals)
 
-    _update_activity_gateway(device)
+    _update_activity_gateway(device_id)
 
-
-def _update_activity_gateway(device):
-    if Device.objects.filter(id=device.id, tenant_id=device.tenant_id).exists():
-        _update_activity_device(device)
+def _update_activity_gateway(device_id):
+    if Device.objects.filter(id=device_id).exists():
+        _update_activity_device(device_id)
 
 
 def _update_activity_device(device, connected=True):
