@@ -17,8 +17,8 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 class TsKv(BaseModelTs):
     ts = models.DateTimeField(default=timezone.now)
-    entity = models.ForeignKey("main.Device", models.DO_NOTHING)
-    entity_id = UUID
+    #entity = models.ForeignKey("main.Device", models.DO_NOTHING)
+    entity_id = models.UUIDField()  # Явно задаём UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.CharField(max_length=10000, blank=True, null=True)
@@ -35,7 +35,7 @@ class TsKv(BaseModelTs):
 
     class Meta(BaseModelTs.Meta):
         db_table = "shuttle_ts_kv"
-        unique_together = ("entity", "key", "ts")
+        unique_together = ("entity_id", "key", "ts")
 
 
 class TsKvDictionary(models.Model):
@@ -49,11 +49,11 @@ class TsKvDictionary(models.Model):
         unique_together = ("key", "key_id")
 
 
-class TsKvLatest(BaseModelTs):
-    entity_id: UUID
-    entity = models.ForeignKey("main.Device", models.DO_NOTHING)
-    key_id: int
+class TsKvLatest(models.Model):
+    entity_id = models.UUIDField()  # Явно задаём UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
+    #ts = models.DateTimeField(default=timezone.now)
+
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.CharField(max_length=10000, blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
@@ -62,9 +62,9 @@ class TsKvLatest(BaseModelTs):
 
     objects = TsKvLatestQuerySet.as_manager()
 
-    class Meta(BaseModelTs.Meta):
+    class Meta:
         db_table = "shuttle_ts_kv_latest"
-        unique_together = ("entity", "key")
+        unique_together = ("entity_id", "key")
 
 
 class AttributeKv(BaseModel):

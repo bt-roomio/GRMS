@@ -1,78 +1,70 @@
-import asyncio
 import logging
-
-import aio_pika
-from aio_pika import ExchangeType
-from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
+import pika
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from core.management.handlers_mq import handlers_mq
-
-logger = logging.getLogger("main")
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN
 RABBIT_PASSWORD = settings.RABBIT_PASSWORD
 RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
-EXCHANGE_NAME = "toGRMS"
-
-TOPIC_BINDINGS = {
-    "rpc": "v1.gateway.rpc",
-    "connect": "v1.gateway.connect",
-    "disconnect": "v1.gateway.disconnect",
-    "attributes": "#.attributes",
-    "telemetry": "#.telemetry",
+# Очереди и количество потоков для каждой
+QUEUE_CONFIG = {
+    "toGRMS": 1,
+    "v1/devices/me/attributes/request": 1,
+    "v1/gateway/rpc": 1,
+    "v1/gateway/attributes/request": 1,
+    "/attributes": 1,
+    "/telemetry": 1,
 }
+
+logger = logging.getLogger("main")
 
 
 class Command(BaseCommand):
-    help = "Handle messages from rabbit_mq"
+    help = "Consumes messages from multiple RabbitMQ queues using thread pools"
 
     def handle(self, *args, **options):
-        try:
-            asyncio.run(main())
-        except KeyboardInterrupt:
-            logger.info("MQ consumer stopped")
+        threads = []
+        for queue_name, worker_count in QUEUE_CONFIG.items():
+            t = threading.Thread(target=self.consume_queue, args=(queue_name, worker_count), daemon=True)
+            t.start()
+            threads.append(t)
 
+        for t in threads:
+            t.join()
 
-async def handle_message(message: AbstractIncomingMessage):
-    async with message.process(ignore_processed=True):
-        try:
-            await asyncio.to_thread(handlers_mq, body=message.body)
-        except Exception as e:
-            logger.exception("Error processing message: %s", e)
+    def consume_queue(self, queue_name: str, worker_count: int):
+        while True:
+            try:
+                credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
+                connection_parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
 
+                connection = pika.BlockingConnection(connection_parameters)
+                channel = connection.channel()
+                channel.queue_declare(queue=queue_name)
+                channel.basic_qos(prefetch_count=worker_count)
 
-async def start_consumer(channel: AbstractChannel, topic_key: str, binding_key: str):
-    queue_name = f"{EXCHANGE_NAME}.{topic_key}"
-    queue = await channel.declare_queue(queue_name, durable=True)
-    await queue.bind(exchange=await channel.get_exchange(EXCHANGE_NAME), routing_key=binding_key)
-    await queue.consume(handle_message)
-    logger.info("Consumer started: queue=%s bind=%s", queue_name, binding_key)
+                executor = ThreadPoolExecutor(max_workers=worker_count)
 
+                def callback(ch, method, properties, body):
+                    executor.submit(self.process_message, queue_name, ch, method, properties, body)
 
-async def main():
-    # подключаемся к RabbitMQ (robust для автоматического переподключения)
-    connection = await aio_pika.connect_robust(
-        host=RABBIT_HOST,
-        port=RABBIT_PORT,
-        login=RABBIT_LOGIN,
-        password=RABBIT_PASSWORD,
-    )
+                channel.basic_consume(queue=queue_name, on_message_callback=callback)
+                logger.info(f"Started consuming from '{queue_name}' with {worker_count} threads")
+                channel.start_consuming()
 
-    async with connection:
-        # канал для всех очередей
-        channel = await connection.channel()
-        # прямой обмен типа topic
-        await channel.declare_exchange(EXCHANGE_NAME, ExchangeType.TOPIC, durable=True)
+            except Exception as err:
+                logger.exception(f"[{queue_name}] Error in consumer thread: {err}")
 
-        # запускаем консьюмеры по каждой теме
-        tasks = []
-        for topic_key, binding_key in TOPIC_BINDINGS.items():
-            tasks.append(asyncio.create_task(start_consumer(channel, topic_key, binding_key)))
-
-        # держим приложение живым
-        await asyncio.gather(*tasks)
-        await asyncio.Future()  # блокируем навечно
+    def process_message(self, queue_name, ch, method, properties, body):
+        while True:
+            try:
+                handlers_mq(ch, body)
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+            except Exception as err:
+                logger.warning(f"[{queue_name}] Error processing message: {body}. Error: {err}")
