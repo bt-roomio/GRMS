@@ -1,9 +1,9 @@
 from channelsmultiplexer import AsyncJsonWebsocketDemultiplexer
 
 from shuttle.v2_consumers.attributes import AttributeConsumer
-from shuttle.v2_consumers.guest_cards import GuestCardConsumer
 from shuttle.v2_consumers.emergency_status import EmergencyStatus
 from shuttle.v2_consumers.gateway_logs import GatewayLogsConsumer
+from shuttle.v2_consumers.guest_cards import GuestCardConsumer
 from shuttle.v2_consumers.guests import GuestConsumer
 from shuttle.v2_consumers.room_status import RoomStatusConsumer
 from shuttle.v2_consumers.rooms import RoomConsumer

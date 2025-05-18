@@ -21,6 +21,7 @@ from rest_framework.fields import pytz
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
+from shuttle.utils.fill_empty_intervals import fill_missing_intervals
 
 origin_dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
 
@@ -133,7 +134,7 @@ class TsKvQuerySet(BaseQuerySet):
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
                 )
 
-            result[key] = (
+            data = (
                 query.values("interval_ts")
                 .annotate(
                     value=Round(agg_function("avail_field")),
@@ -144,6 +145,8 @@ class TsKvQuerySet(BaseQuerySet):
                 .values("value", "ts", "key_name", "count")
                 .order_by(*sort_by)[:limit]
             )
+            data = fill_missing_intervals(data, interval)[:limit]
+            result[key] = data
         return result
 
     def get_history(self, keys, start_ts, end_ts, interval=10, agg="Avg", limit=100):
