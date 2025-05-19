@@ -9,6 +9,7 @@ from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
+from core.utils.handle_card_event import handle_card_event
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
@@ -28,6 +29,7 @@ def get_tskv_dict(key):
         obj, _ = TsKvDictionary.objects.get_or_create(key=key)
         _tskv_dict_cache[key] = obj
     return _tskv_dict_cache[key]
+
 
 def handlers_mq(ch: BlockingChannel, body: bytes):
     msg = json.loads(body)
@@ -197,6 +199,8 @@ def _handle_telemetry(device, data):
     for ts_ms, vals in entries:
         ts_dt = unix_to_datetime(ts_ms)
         for key, (field, value) in find_compatible_field(vals).items():
+            if key == "rfid_card_event":
+                value = handle_card_event(value)
             dict_obj = get_tskv_dict(key)
             historical.append(TsKv(entity=device, key=dict_obj, ts=ts_dt, **{field: value}))
             latest.append(TsKvLatest(entity=device, key=dict_obj, ts=ts_now, **{field: value}))

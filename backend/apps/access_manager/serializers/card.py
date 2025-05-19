@@ -1,10 +1,12 @@
-from access_manager.models import Card, Staff, StaffCard
+from access_manager.models import Card, Staff, StaffCard, GuestCard
 from access_manager.serializers.staff import SimpleStaffSerializer
 
 from rest_framework import serializers
 from rest_framework.fields import ValidationError
 
+from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
 from core.utils.serializers import ValidatorSerializer
+from main.models import Device, Guest
 
 
 class CardSerializer(serializers.ModelSerializer):
@@ -50,3 +52,19 @@ class CardFilterParams(ValidatorSerializer):
     search_field = serializers.ChoiceField(choices=("number",), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+
+
+class DisconnectCardSerializer(serializers.Serializer):
+    card_id = serializers.CharField()
+
+    def create(self, validated_data):
+        card = GuestCard.objects.get(card_id=validated_data["card_id"], is_active=True)
+
+        if card:
+            guest = Guest.objects.filter(id=card.guest.id).first()
+            device = Device.objects.filter(room=guest.room, is_active=True).select_related("tenant").first()
+            card_number = [card.card.number]
+            rpc_params = prepare_cards(card_number, 0)
+            deactivate_result = prepare_mqtt_request(device, rpc_params, card_number, guests=[guest], guest=None)
+            return deactivate_result
+        return {"success": False, "message": "Active card not found !"}

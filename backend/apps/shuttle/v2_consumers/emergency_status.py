@@ -81,7 +81,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             except Device.DoesNotExist:
                 continue
 
-            value = (
+            value = (  #TODO use get_non_null_column() method here
                 message.get("bool_v")
                 or message.get("str_v")
                 or message.get("long_v")

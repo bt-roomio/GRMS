@@ -104,13 +104,13 @@ class TsKvQuerySet(BaseQuerySet):
     def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by):
         sort_by = ["interval_ts"] if sort_by is None else sort_by
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
-        interval = make_interval(*interval.split(" ")) if len(interval.split(" ")) > 1 else interval
+        interval = make_interval(*interval.split(" ")) if interval and len(interval.split(" ")) > 1 else interval
         limit = limit or 100
         agg_function = Avg if agg in ["Change", None] else agg_function
         result = {}
 
         for key in keys:
-            query = self.filter(ts__gte=start_ts, key__key=key)
+            query = self.filter(key__key=key, **({"ts__gte": start_ts} if start_ts else {}))
 
             if interval in ["month", "year"]:
                 query = query.annotate(
@@ -122,13 +122,22 @@ class TsKvQuerySet(BaseQuerySet):
                     ),
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
                 )
+            elif interval is None:
+                query = query.annotate(
+                    interval_ts=F("ts"),
+                    avail_field=Coalesce(
+                        F("str_v"),
+                        Cast("json_v", output_field=TextField()),
+                        Cast("bool_v", output_field=TextField()),
+                        output_field=CharField(),
+                    ),
+                )
             else:
                 query = query.annotate(
                     interval_ts=Func(
                         Value(interval),  # bin width
                         F("ts"),  # timestamp field
-                        Value(origin_dt),
-                        function="date_bin",
+                        function="date_trunc",
                         output_field=DateTimeField(),
                     ),
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
@@ -137,7 +146,7 @@ class TsKvQuerySet(BaseQuerySet):
             data = (
                 query.values("interval_ts")
                 .annotate(
-                    value=Round(agg_function("avail_field")),
+                    value=Round(agg_function("avail_field")) if agg_function is not None else F("avail_field"),
                     ts=F("interval_ts"),
                     key_name=F("key__key"),
                     count=Count("interval_ts"),
