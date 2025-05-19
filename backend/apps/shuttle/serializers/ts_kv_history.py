@@ -20,10 +20,11 @@ class TsKvHistoryFilterParams(ValidatorSerializer):
         "invalid_choice": _('"{input}" is not a valid choice. Select from the list [Min, Max, Avg, Sum, Count, None]')
     }
 
-    device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+    device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), required=False)
+    room = serializers.CharField(required=False)
     keys = serializers.ListField(child=serializers.CharField())
-    start_ts = serializers.DateTimeField()
-    interval = serializers.CharField()
+    start_ts = serializers.DateTimeField(allow_null=True, required=False)
+    interval = serializers.CharField(allow_null=True, required=False)
     sort_by = serializers.ListField(
         child=serializers.ChoiceField(choices=["-interval_ts", "interval_ts"], default="interval_ts")
     )

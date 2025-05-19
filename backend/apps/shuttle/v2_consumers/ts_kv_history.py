@@ -2,6 +2,7 @@ from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
 from core.utils.date import convert_datetime
+from main.models import Device
 from shuttle.models import TsKv
 from shuttle.serializers.ts_kv_history import TsKvHistoryFilterParams, TsKvHistorySerializer
 from shuttle.utils.get_non_null_field import get_non_null_column
@@ -26,9 +27,14 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = TsKvHistoryFilterParams.check(data=kwargs.get("query_params", {}))
+        params["device"] = (
+            Device.objects.filter(room__id=params.get("room"), is_active=True).first()
+            if params.get("room")
+            else params.get("device")
+        )
         query = query.by_device(entity=params.get("device")).get_history_v2(  # pyright: ignore
             keys=params.get("keys"),
-            start_ts=convert_datetime(params.get("start_ts")),
+            start_ts=convert_datetime(params.get("start_ts")) if params.get("start_ts") else None,
             interval=params.get("interval"),
             agg=params.get("agg"),
             limit=params.get("limit"),

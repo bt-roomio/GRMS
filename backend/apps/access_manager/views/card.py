@@ -1,8 +1,8 @@
 import random
 
 from access_manager.models import Card
-from access_manager.serializers.card import CardFilterParams, CardSerializer
-from access_manager.swagger.card import card_swagger
+from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
+from access_manager.swagger.card import card_swagger, swagger_card_disconnect
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -63,3 +63,17 @@ class CardDetailView(APIView):
         instance = get_object_or_404(Card, id=pk, tenant_id=request.user.tenant_id)
         instance.delete()
         return Response({}, 204)
+
+
+class DisconnectCardView(APIView):
+
+    @swagger_card_disconnect()
+    def post(self, request):
+        serializer = DisconnectCardSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+
+        if isinstance(result, dict) and not result.get("success", True):
+            return Response({"result": 0, "message": result.get("message", "Failed to deactivate card!")})
+
+        return Response({"success": True, "message": f"Card is deactivated !"}, status=200)

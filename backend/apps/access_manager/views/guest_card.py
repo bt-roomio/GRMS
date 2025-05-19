@@ -4,7 +4,6 @@ import time
 from access_manager.models import Card, GuestCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
-from django.db.models.signals import post_save
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -68,16 +67,12 @@ def prepare_cards(cards, access):
     return rpc_params
 
 
-def deactivate_guest_card(guests):
+def deactivate_guest_card(cards):
     try:
-        for guest in guests:
-            instance = GuestCard.objects.filter(guest=guest, is_active=True).update(is_active=False)
-            post_save.send(
-                sender=GuestCard,
-                instance=instance,
-                created=False,  # This is an update, not creation
-                update_fields=["is_active"],
-            )
+        for card in cards:
+            instance = GuestCard.objects.get(card__number=card, is_active=True)
+            instance.is_active = False
+            instance.save(update_fields=["is_active"])
         return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
     except Exception:
         return {"success": False, "message": "Could not disconnect card, please try again !"}
@@ -114,7 +109,7 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     while time.time() - start_time < timeout_seconds:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
         if has_message and str_to_dict(has_message.additional_info).get("success") == True and guests is not None:
-            result = deactivate_guest_card(guests)
+            result = deactivate_guest_card(cards)
             return result
         if has_message and str_to_dict(has_message.additional_info).get("success") == True and guest is not None:
             result = activate_guest_card(cards, guest)

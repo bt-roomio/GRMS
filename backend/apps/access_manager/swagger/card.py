@@ -1,4 +1,4 @@
-from access_manager.serializers.card import CardFilterParams, CardSerializer
+from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
 from drf_yasg.utils import swagger_auto_schema
 
 
@@ -20,4 +20,22 @@ def card_swagger():
             - An expiry date after which the card is no longer valid.
 
             """,
+    )
+
+
+def swagger_card_disconnect():
+    return swagger_auto_schema(
+        request_body=DisconnectCardSerializer(),
+        responses={200: DisconnectCardSerializer()},
+        tags=["Access manager, Card"],
+        operation_description="""
+        
+        **This endpoint deactivates an active guest card in the system with the provided card_id.**
+        
+        The card disconnection process:
+            - Finds the active guest card with the specified card_id
+            - Sends a deactivation request to the associated device
+            - Marks the card as inactive in the system
+            
+        """,
     )
