@@ -100,7 +100,7 @@ def prepare_mqtt_request(device, rpc_params, cards, staff, deactiveate=False):
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
 
-    timeout_seconds = 3
+    timeout_seconds = 5
     start_time = time.time()
 
     while time.time() - start_time < timeout_seconds:
