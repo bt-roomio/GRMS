@@ -18,9 +18,9 @@ from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 
 # Настройка логирования для видимости в Celery-воркере
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 # Celery-конфигурация: основной таск process_mq_message получает до 20 сообщений в секунду
@@ -34,10 +34,10 @@ logger.setLevel(logging.INFO)
     rate_limit="20/s",
 )
 def process_mq_message(self, body_str: str):
-    logger.info("process_mq_message started")
+    logger.debug("process_mq_message started")
     try:
         msg = json.loads(body_str)
-        logger.info("Received message: %s", msg)
+        logger.debug("Received message: %s", msg)
         # Обработка устройства
         device_id = msg.get("sourceDeviceUUID")
         device = Device.objects.filter(id=device_id).first()
@@ -50,10 +50,10 @@ def process_mq_message(self, body_str: str):
 
         # Маршрутизация по теме
         if topic.startswith("v1/gateway/attributes/request") or topic.startswith("v1/devices/me/attributes/request"):
-            logger.info("Scheduling attribute response task for device %s topic %s", device_id, topic)
+            logger.debug("Scheduling attribute response task for device %s topic %s", device_id, topic)
             handle_attribute_request.delay(device.id, topic, data)  # pyright:ignore
         else:
-            logger.info("Routing message for topic %s", topic)
+            logger.debug("Routing message for topic %s", topic)
             _route_and_handle(device, topic, data)
     except Reject:
         logger.warning("Rejecting message without retry")
@@ -62,7 +62,7 @@ def process_mq_message(self, body_str: str):
         logger.exception("Error in process_mq_message, retrying... %s", exc)
         raise
     finally:
-        logger.info("process_mq_message completed")
+        logger.debug("process_mq_message completed")
 
 
 def _route_and_handle(device, topic, data):
@@ -97,7 +97,7 @@ def _get_or_create_device(name, from_device):
     sub = Device.objects.filter(name__iexact=name, tenant_id=from_device.tenant_id, is_active=True).first()
     if sub:
         return sub
-    logger.info("Creating sub-device %s for tenant %s", name, from_device.tenant_id)
+    logger.debug("Creating sub-device %s for tenant %s", name, from_device.tenant_id)
     obj = Device(
         name=name,
         tenant_id=from_device.tenant_id,
@@ -124,7 +124,7 @@ def _get_or_create_device(name, from_device):
 
 
 def _handle_rpc(data):
-    logger.info("Handling RPC: %s", data)
+    logger.debug("Handling RPC: %s", data)
     RPCMessage.objects.filter(id=data.get("id"), received=False).update(
         received=True,
         additional_info=data.get("data"),
@@ -132,7 +132,7 @@ def _handle_rpc(data):
 
 
 def _handle_connect_disconnect(device, topic, data):
-    logger.info("Handling %s for device %s", topic, device.id)
+    logger.debug("Handling %s for device %s", topic, device.id)
     name = data.get("device")
     sub = _sub_device_dict_cache.get(f"{device.tenant_id}:{name}")
     if not sub:
@@ -143,7 +143,7 @@ def _handle_connect_disconnect(device, topic, data):
 
 
 def _sync_attributes(device, topic, payload):
-    logger.info("Sync attributes: device=%s topic=%s", device.id, topic)
+    logger.debug("Sync attributes: device=%s topic=%s", device.id, topic)
     if topic.startswith("v1/gateway/") and isinstance(payload, dict) and not topic.endswith("request"):
         for sub_name, attrs in payload.items():
             sub_dev = _sub_device_dict_getcreate_cache.get(f"{device.tenant_id}:{sub_name}")
@@ -183,7 +183,7 @@ def _update_attribute_store(device, data):
 
 
 def _sync_telemetry(device, topic, payload):
-    logger.info(
+    logger.debug(
         "Sync telemetry: device=%s topic=%s entries=%s",
         device.id,
         topic,
@@ -252,7 +252,7 @@ _response_channel = None
 async def _get_response_channel():
     global _response_connection, _response_channel
     if _response_connection is None or _response_connection.is_closed:
-        logger.info("Opening new aio-pika connection for responses")
+        logger.debug("Opening new aio-pika connection for responses")
         _response_connection = await aio_pika.connect_robust(
             host=settings.RABBIT_HOST,
             port=settings.RABBIT_PORT,
@@ -283,7 +283,7 @@ async def send_to_rabbitmq_async(message: dict, routing_key: str):
     rate_limit="10/s",
 )
 def handle_attribute_request(self, device_id: str, topic: str, data: dict):
-    logger.info("handle_attribute_request: device=%s topic=%s", device_id, topic)
+    logger.debug("handle_attribute_request: device=%s topic=%s", device_id, topic)
     try:
         device = Device.objects.get(id=device_id)
         shared_keys = data.get("sharedKeys") or data.get("keys") or []
@@ -297,7 +297,7 @@ def handle_attribute_request(self, device_id: str, topic: str, data: dict):
             "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
         }
         asyncio.run(send_to_rabbitmq_async(response, routing_key=response["topic"]))
-        logger.info("Attribute response sent for device %s", device_id)
+        logger.debug("Attribute response sent for device %s", device_id)
     except Exception as exc:
         logger.exception("Failed to send attribute response: %s", exc)
         raise

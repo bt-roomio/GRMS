@@ -46,11 +46,10 @@ async def handle_message(message: AbstractIncomingMessage):
 
 
 async def start_consumer(channel: AbstractChannel, topic_key: str, binding_key: str):
-    queue_name = f"{EXCHANGE_NAME}.{topic_key}"
-    queue = await channel.declare_queue(queue_name, durable=True)
+    queue = await channel.declare_queue(EXCHANGE_NAME, durable=True)
     await queue.bind(exchange=await channel.get_exchange(EXCHANGE_NAME), routing_key=binding_key)
     await queue.consume(handle_message)
-    logger.info("Consumer started: queue=%s bind=%s", queue_name, binding_key)
+    logger.info("Consumer started: queue=%s bind=%s", EXCHANGE_NAME, binding_key)
 
 
 async def main():
