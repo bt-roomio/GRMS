@@ -1,66 +1,80 @@
 import logging
-import pika
 import threading
-import time
+
+import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from core.management.handlers_mq import handlers_mq
+
+logger = logging.getLogger("main")
+THREAD_COUNT = 8  # adjust to number of CPU cores or desired parallelism
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN
 RABBIT_PASSWORD = settings.RABBIT_PASSWORD
 RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
+QUEUE_NAME = "toGRMS"
 
-# Очереди и количество потоков для каждой
-QUEUE_CONFIG = {
-    "toGRMS": 1,
-    "v1/devices/me/attributes/request": 1,
-    "v1/gateway/rpc": 1,
-    "v1/gateway/attributes/request": 1,
-    "/attributes": 2,
-    "/telemetry": 2,
-}
+
+def _process_and_ack(ch, method, properties, body):
+    try:
+        handlers_mq(ch, body)
+    except Exception as e:
+        logger.exception("Error processing message: %s", e)
+        # Nack with requeue=False to avoid infinite loop
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+    else:
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+
+def _worker_thread(connection_parameters):
+    """Worker thread: opens its own connection and starts consuming."""
+    connection = pika.BlockingConnection(connection_parameters)
+    channel = connection.channel()
+    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    # Fair dispatch
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(queue=QUEUE_NAME, on_message_callback=_process_and_ack)
+    logger.info("Thread %s started consuming", threading.current_thread().name)
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        channel.stop_consuming()
+    finally:
+        connection.close()
 
 logger = logging.getLogger("main")
 
 class Command(BaseCommand):
-    help = "Consumes messages from multiple RabbitMQ queues using dedicated threads"
+    help = "Multi-threaded RabbitMQ consumer"
 
     def handle(self, *args, **options):
-        for queue_name, worker_count in QUEUE_CONFIG.items():
-            for i in range(worker_count):
-                thread = threading.Thread(
-                    target=self.worker_thread, args=(queue_name, i), daemon=True
-                )
-                thread.start()
+        credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
+        params = pika.ConnectionParameters(
+            host=RABBIT_HOST if RABBIT_HOST != "localhost" else "127.0.0.1",
+            port=RABBIT_PORT,
+            credentials=credentials,
+            heartbeat=600,
+            blocked_connection_timeout=300,  # pyright:ignore
+            connection_attempts=5,
+            retry_delay=2,  # pyright:ignore
+        )
 
-        # Ожидаем завершения всех потоков (по сути — бесконечно)
-        while True:
-            time.sleep(10)
+        threads = []
+        for i in range(THREAD_COUNT):
+            t = threading.Thread(
+                target=_worker_thread,
+                args=(params,),
+                name=f"mq-worker-{i}",
+                daemon=True,
+            )
+            threads.append(t)
+            t.start()
 
-    def worker_thread(self, queue_name: str, thread_id: int):
-        while True:
-            try:
-                credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
-                parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
-                connection = pika.BlockingConnection(parameters)
-                channel = connection.channel()
-                channel.queue_declare(queue=queue_name, durable=True)
-                channel.basic_qos(prefetch_count=1)
-
-                logger.info(f"[{queue_name}][Worker-{thread_id}] Started consuming")
-
-                def callback(ch, method, properties, body):
-                    try:
-                        handlers_mq(ch, body)
-                        ch.basic_ack(delivery_tag=method.delivery_tag)
-                    except Exception as e:
-                        logger.warning(f"[{queue_name}][Worker-{thread_id}] Error: {e}")
-                        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-
-                channel.basic_consume(queue=queue_name, on_message_callback=callback)
-                channel.start_consuming()
-
-            except Exception as err:
-                logger.exception(f"[{queue_name}][Worker-{thread_id}] Connection error: {err}")
-                time.sleep(5)
+        logger.info("Started %d worker threads", THREAD_COUNT)
+        try:
+            # Keep main thread alive
+            for t in threads:
+                t.join()
+        except KeyboardInterrupt:
+            logger.info("Stopping all worker threads")
