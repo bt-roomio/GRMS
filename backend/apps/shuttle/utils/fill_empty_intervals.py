@@ -45,6 +45,9 @@ def fill_missing_intervals(data, interval_str, start=None, end=None):
     if not data:
         return []
 
+    if not interval_str:
+        return data
+
     data = sorted(data, key=lambda x: x["ts"])
     use_rd, delta_kwargs = parse_interval(interval_str)
 

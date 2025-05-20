@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from access_manager.models import GuestCard
+from access_manager.models import GuestCard, StaffCard, Group
 
 
 @receiver(post_save, sender=GuestCard)
@@ -11,3 +11,24 @@ def tskv_signal_handler(sender, instance, **kwargs):
     channel_layer = get_channel_layer()
     if channel_layer is not None:
         async_to_sync(channel_layer.group_send)("guest_cards", {"type": "get_list_activity"})
+
+
+@receiver(post_save, sender=GuestCard)
+def guest_card_signal_handler(sender, instance, **kwargs):
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)("cards", {"type": "get_list_activity"})
+
+
+@receiver(post_save, sender=StaffCard)
+def staff_card_signal_handler(sender, instance, **kwargs):
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)("cards", {"type": "get_list_activity"})
+
+
+@receiver(post_save, sender=Group)
+def group_signal_handler(sender, instance, **kwargs):
+    channel_layer = get_channel_layer()
+    if channel_layer is not None:
+        async_to_sync(channel_layer.group_send)("cards", {"type": "get_list_activity"})
