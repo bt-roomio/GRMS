@@ -18,8 +18,8 @@ QUEUE_CONFIG = {
     "v1/devices/me/attributes/request": 1,
     "v1/gateway/rpc": 1,
     "v1/gateway/attributes/request": 1,
-    "/attributes": 1,
-    "/telemetry": 1,
+    "/attributes": 2,
+    "/telemetry": 2,
 }
 
 logger = logging.getLogger("main")
