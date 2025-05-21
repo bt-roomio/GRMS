@@ -1,10 +1,9 @@
 import logging
 import pika
 import threading
-from concurrent.futures import ThreadPoolExecutor
+import time
 from django.conf import settings
 from django.core.management.base import BaseCommand
-
 from core.management.handlers_mq import handlers_mq
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN
@@ -24,47 +23,44 @@ QUEUE_CONFIG = {
 
 logger = logging.getLogger("main")
 
-
 class Command(BaseCommand):
-    help = "Consumes messages from multiple RabbitMQ queues using thread pools"
+    help = "Consumes messages from multiple RabbitMQ queues using dedicated threads"
 
     def handle(self, *args, **options):
-        threads = []
         for queue_name, worker_count in QUEUE_CONFIG.items():
-            t = threading.Thread(target=self.consume_queue, args=(queue_name, worker_count), daemon=True)
-            t.start()
-            threads.append(t)
+            for i in range(worker_count):
+                thread = threading.Thread(
+                    target=self.worker_thread, args=(queue_name, i), daemon=True
+                )
+                thread.start()
 
-        for t in threads:
-            t.join()
+        # Ожидаем завершения всех потоков (по сути — бесконечно)
+        while True:
+            time.sleep(10)
 
-    def consume_queue(self, queue_name: str, worker_count: int):
+    def worker_thread(self, queue_name: str, thread_id: int):
         while True:
             try:
                 credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
-                connection_parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
-
-                connection = pika.BlockingConnection(connection_parameters)
+                parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
+                connection = pika.BlockingConnection(parameters)
                 channel = connection.channel()
-                channel.queue_declare(queue=queue_name)
-                channel.basic_qos(prefetch_count=worker_count)
+                channel.queue_declare(queue=queue_name, durable=True)
+                channel.basic_qos(prefetch_count=1)
 
-                executor = ThreadPoolExecutor(max_workers=worker_count)
+                logger.info(f"[{queue_name}][Worker-{thread_id}] Started consuming")
 
                 def callback(ch, method, properties, body):
-                    executor.submit(self.process_message, queue_name, ch, method, properties, body)
+                    try:
+                        handlers_mq(ch, body)
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+                    except Exception as e:
+                        logger.warning(f"[{queue_name}][Worker-{thread_id}] Error: {e}")
+                        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
                 channel.basic_consume(queue=queue_name, on_message_callback=callback)
-                logger.info(f"Started consuming from '{queue_name}' with {worker_count} threads")
                 channel.start_consuming()
 
             except Exception as err:
-                logger.exception(f"[{queue_name}] Error in consumer thread: {err}")
-
-    def process_message(self, queue_name, ch, method, properties, body):
-        try:
-            handlers_mq(ch, body)
-            if ch.is_open:
-                ch.basic_ack(delivery_tag=method.delivery_tag)
-        except Exception as err:
-            logger.warning(f"[{queue_name}] Error processing message: {body}. Error: {err}")
+                logger.exception(f"[{queue_name}][Worker-{thread_id}] Connection error: {err}")
+                time.sleep(5)
