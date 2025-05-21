@@ -46,7 +46,9 @@ class GuestCardView(APIView):
 
             rpc_params = prepare_cards(cards, 1)
             result = prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=guest)
-            return Response(result)
+            if not result.get("success", True):
+                return Response(result, status=400)
+            return Response(result, status=200)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -68,14 +70,20 @@ def prepare_cards(cards, access):
 
 
 def deactivate_guest_card(cards):
-    try:
-        for card in cards:
-            instance = GuestCard.objects.get(card__number=card, is_active=True)
+    error_cards = []
+    for card in cards:
+        try:
+            instance = GuestCard.objects.get(card__enumber=card, is_active=True)
             instance.is_active = False
             instance.save(update_fields=["is_active"])
-        return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
-    except Exception:
-        return {"success": False, "message": "Could not disconnect card, please try again !"}
+        except Exception:
+            error_cards.append(card)
+    message = "Some cards are not deactivated."
+    return {
+        "success": error_cards == [],
+        "error_cards": error_cards,
+        "message": message if error_cards else "Cards are deactivated.",
+    }
 
 
 def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
@@ -98,7 +106,7 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     logger.debug(message)
 
     if not rpc_params:
-        return {"success": False, "cards_empty": True, "message": "Cards doesn't exist. "}
+        return {"success": False, "cards_empty": True, "message": "Cards are not provided ! "}
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
@@ -117,18 +125,23 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
 
         time.sleep(1)
 
-    return {"success": False, "message": "Could not perform action with card, please try again !"}
+    return {"success": False, "message": "Timed out error !"}
 
 
 def activate_guest_card(cards, guest):
+    error_cards = []
     for card_number in cards:
-        card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": guest.tenant_id})
+        try:
+            card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": guest.tenant_id})
 
-        if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
-            continue
-        GuestCard.objects.create(guest=guest, card=card, is_active=True)
-
+            if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
+                continue
+            GuestCard.objects.create(guest=guest, card=card, is_active=True)
+        except Exception as e:
+            error_cards.append(card_number)
+    message = "Some cards are not activated."
     return {
-        "success": True,
-        "message": "Successfully activated guest card.",
+        "success": error_cards == [],
+        "error_cards": error_cards,
+        "message": message if error_cards else "Successfully activated guest card.",
     }
