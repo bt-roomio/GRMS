@@ -244,7 +244,7 @@ class RoomType(BaseModel):
         unique_together = (("title", "tenant"),)
 
 
-class  Device(BaseModel):
+class Device(BaseModel):
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
