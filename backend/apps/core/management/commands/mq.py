@@ -62,9 +62,9 @@ class Command(BaseCommand):
                 logger.exception(f"[{queue_name}] Error in consumer thread: {err}")
 
     def process_message(self, queue_name, ch, method, properties, body):
-        while True:
-            try:
-                handlers_mq(ch, body)
+        try:
+            handlers_mq(ch, body)
+            if ch.is_open:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
-            except Exception as err:
-                logger.warning(f"[{queue_name}] Error processing message: {body}. Error: {err}")
+        except Exception as err:
+            logger.warning(f"[{queue_name}] Error processing message: {body}. Error: {err}")
