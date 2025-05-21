@@ -1,10 +1,9 @@
 import logging
-
 import pika
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from pika.adapters.blocking_connection import BlockingChannel
 
 from core.management.handlers_mq import handlers_mq
 
@@ -13,43 +12,59 @@ RABBIT_PASSWORD = settings.RABBIT_PASSWORD
 RABBIT_HOST = settings.RABBIT_HOST
 RABBIT_PORT = settings.RABBIT_PORT
 
+# Очереди и количество потоков для каждой
+QUEUE_CONFIG = {
+    "toGRMS": 1,
+    "v1/devices/me/attributes/request": 1,
+    "v1/gateway/rpc": 1,
+    "v1/gateway/attributes/request": 1,
+    "/attributes": 1,
+    "/telemetry": 1,
+}
+
 logger = logging.getLogger("main")
-THREAD_COUNT = 1
+
 
 class Command(BaseCommand):
-    help = "Closes the specified poll for voting"
+    help = "Consumes messages from multiple RabbitMQ queues using thread pools"
 
     def handle(self, *args, **options):
-        try:
-            credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
-            connection_parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
+        threads = []
+        for queue_name, worker_count in QUEUE_CONFIG.items():
+            t = threading.Thread(target=self.consume_queue, args=(queue_name, worker_count), daemon=True)
+            t.start()
+            threads.append(t)
 
-            with pika.BlockingConnection(connection_parameters) as conn:
-                with conn.channel() as ch, ThreadPoolExecutor(max_workers=THREAD_COUNT) as executor:
-                    ch.queue_declare(queue="toGRMS")
-                    def callback(ch, method, properties, body):
-                        # Отправляем задачу в пул потоков
-                        executor.submit(self.process_message, ch, method, properties, body)
-                    ch.basic_qos(prefetch_count=THREAD_COUNT)
-                    ch.basic_consume(queue="toGRMS", on_message_callback=callback)
-                    print("Waiting for message")
-                    ch.start_consuming()
-        except Exception as err:
-            logger.warn(str(err))
+        for t in threads:
+            t.join()
 
-    def process_message(
-        self,
-        ch: BlockingChannel,
-        method: pika.spec.Basic.Deliver,
-        properties: pika.spec.BasicProperties,
-        body: bytes,
-    ):
+    def consume_queue(self, queue_name: str, worker_count: int):
+        while True:
+            try:
+                credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
+                connection_parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
+
+                connection = pika.BlockingConnection(connection_parameters)
+                channel = connection.channel()
+                channel.queue_declare(queue=queue_name)
+                channel.basic_qos(prefetch_count=worker_count)
+
+                executor = ThreadPoolExecutor(max_workers=worker_count)
+
+                def callback(ch, method, properties, body):
+                    executor.submit(self.process_message, queue_name, ch, method, properties, body)
+
+                channel.basic_consume(queue=queue_name, on_message_callback=callback)
+                logger.info(f"Started consuming from '{queue_name}' with {worker_count} threads")
+                channel.start_consuming()
+
+            except Exception as err:
+                logger.exception(f"[{queue_name}] Error in consumer thread: {err}")
+
+    def process_message(self, queue_name, ch, method, properties, body):
         try:
             handlers_mq(ch, body)
+            if ch.is_open:
+                ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception as err:
-            logger.warning("Error from handlers_mq", err)
-            return
-
-        # Make sure this should end of process
-        if method and method.delivery_tag:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+            logger.warning(f"[{queue_name}] Error processing message: {body}. Error: {err}")
