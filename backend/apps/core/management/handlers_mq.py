@@ -199,8 +199,6 @@ def _handle_telemetry(device, data):
     for ts_ms, vals in entries:
         ts_dt = unix_to_datetime(ts_ms)
         for key, (field, value) in find_compatible_field(vals).items():
-            if key == "rfid_card_event":
-                value = handle_card_event(value)
             dict_obj = get_tskv_dict(key)
             historical.append(TsKv(entity=device, key=dict_obj, ts=ts_dt, **{field: value}))
             latest.append(TsKvLatest(entity=device, key=dict_obj, ts=ts_now, **{field: value}))

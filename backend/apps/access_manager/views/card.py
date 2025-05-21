@@ -66,14 +66,12 @@ class CardDetailView(APIView):
 
 
 class DisconnectCardView(APIView):
-
     @swagger_card_disconnect()
     def post(self, request):
         serializer = DisconnectCardSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
-
         if isinstance(result, dict) and not result.get("success", True):
-            return Response({"result": 0, "message": result.get("message", "Failed to deactivate card!")})
+            return Response(result, status=400)
 
         return Response({"success": True, "message": f"Card is deactivated !"}, status=200)

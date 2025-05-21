@@ -50,7 +50,7 @@ class GuestDetailView(APIView):
         result = serializer.save(tenant_id=request.user.tenant_id)
 
         if isinstance(result, dict) and not result.get("success", True):
-            return Response({"result": 0, "message": result.get("message", "Failed to deactivate card!")})
+            return Response({"result": 0, "message": result.get("message", "Failed to deactivate card!")}, status=400)
 
         return Response(serializer.data)
 
@@ -59,8 +59,8 @@ class GuestCheckoutView(APIView):
     @swagger_guest_checkout()
     def post(self, request):
         params = GuestCheckoutParams.check(request.GET)
-        guests = Room.objects.guest_checkout(params.get("room").id)
+        result = Room.objects.guest_checkout(params.get("room").id)
 
-        if isinstance(guests, dict) and not guests.get("success", True):
-            return Response({"result": 0, "message": guests.get("message", "Failed to deactivate card!")})
-        return Response({"message": f"{guests} guests have left."})
+        if isinstance(result, dict) and not result.get("success", True):
+            return Response(result, status=400)
+        return Response({"message": f"{result} guests have left."}, status=200)

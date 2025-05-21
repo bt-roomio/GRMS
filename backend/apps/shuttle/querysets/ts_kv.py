@@ -21,6 +21,7 @@ from rest_framework.fields import pytz
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
+from core.utils.handle_card_event import handle_card_event
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
 
 origin_dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
@@ -155,6 +156,8 @@ class TsKvQuerySet(BaseQuerySet):
                 .order_by(*sort_by)[:limit]
             )
             data = fill_missing_intervals(data, interval)[:limit]
+            if key == "rfid_card_event":
+                data = handle_card_event(data)
             result[key] = data
         return result
 
