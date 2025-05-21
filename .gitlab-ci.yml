@@ -23,7 +23,7 @@ production:
   when: manual
   image: alpine:latest
   only:
-    - Umarov
+    - dev
   script:
     - apk add --no-cache openssh-client
     - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
