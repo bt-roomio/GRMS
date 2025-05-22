@@ -25,13 +25,14 @@ class GroupSerializer(serializers.ModelSerializer):
 
 class CardSerializer(serializers.Serializer):
     card_id = serializers.SerializerMethodField()
+    created_at = serializers.CharField()
     need_to_sync = serializers.SerializerMethodField()
     number = serializers.CharField()
     card_user = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
-        fields = ["card_id", "card_number", "need_to_sync"]
+        fields = ["created_at", "card_id", "card_number", "need_to_sync"]
 
     def get_card_user(self, obj):
         try:
