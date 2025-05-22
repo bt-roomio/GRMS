@@ -1,7 +1,8 @@
-from access_manager.models import StaffCard, GuestCard
-from core.utils.str_to_dict import str_to_dict
-from django.db.models import F, ExpressionWrapper, DurationField
+from access_manager.models import GuestCard, StaffCard
+from django.db.models import DurationField, ExpressionWrapper, F
 from django.db.models.functions import Abs
+
+from core.utils.str_to_dict import str_to_dict
 
 
 def handle_card_event(data):
@@ -93,5 +94,5 @@ def handle_card_event(data):
 
             message.update({"value": value})
         return data
-    except Exception as e:
+    except Exception:
         return data

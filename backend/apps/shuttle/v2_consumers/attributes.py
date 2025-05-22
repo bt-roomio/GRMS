@@ -59,9 +59,8 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
         await self.send_list(action, query_params, request_id, **kwargs)
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("attribute_kv_updates", self.channel_name)
-            self.request_ids[request_id] = {"query_params": query_params, "action": action}
+        await self.add_group("attribute_kv_updates")
+        self.request_ids[request_id] = {"query_params": query_params, "action": action}
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):

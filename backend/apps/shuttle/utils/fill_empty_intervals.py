@@ -10,7 +10,6 @@ def parse_interval(interval_str):
     Months and years must be singular (no quantities); others can have quantities.
     Returns: (use_relativedelta: bool, kwargs: dict)
     """
-    # allow optional quantity for seconds-minutes-hours-days-weeks
     pattern = (
         r"^(?:(?P<qty>\d+)\s+)?" r"(?P<unit>second|seconds|minute|minutes|hour|hours|day|days|week|weeks|month|year)$"
     )
@@ -21,60 +20,54 @@ def parse_interval(interval_str):
     unit = match.group("unit")
 
     unit_s = unit.rstrip("s")
-
-    # months and year must be singular and no qty
+    # months and year singular only
     if unit_s in ("month", "year"):
         if qty is not None:
             raise ValueError(f"Interval '{interval_str}' invalid: use 'month' or 'year' without a quantity")
         return True, {unit_s + "s": 1}
 
-    # for other units, default qty to 1 if missing
     qty = int(qty) if qty else 1
-    delta_arg = {unit_s + "s": qty}
-    # weeks still use timedelta
-    use_rd = False
-    return use_rd, delta_arg
+    return False, {unit_s + "s": qty}
 
 
-def fill_missing_intervals(data, interval_str, start=None, end=None):
+def fill_missing_intervals(data, interval_str):
     """
-    data: list of dicts with 'ts', 'value', 'count', etc.
-    interval_str: string like '2 hours', '15 minutes', '1 day', 'month', or 'year'.
-    start, end: optional datetime bounds
+    Fill missing time intervals between each pair of records in the original order.
+
+    data: list of dicts with 'ts' datetime, 'value', 'count', etc.
+    interval_str: e.g. '2 hours', '15 minutes', '1 day', 'month', or 'year'.
+    Returns a new list of dicts, preserving original order with fillers.
     """
-    if not data:
-        return []
+    if not data or not interval_str:
+        return list(data)
 
-    if not interval_str:
-        return data
-
-    data = sorted(data, key=lambda x: x["ts"])
     use_rd, delta_kwargs = parse_interval(interval_str)
-
-    curr = start or data[0]["ts"]
-    last = end or data[-1]["ts"]
-
     filled = []
-    idx = 0
     prev = None
 
-    while curr <= last:
-        if idx < len(data) and data[idx]["ts"] == curr:
-            prev = data[idx]
-            filled.append(prev)
-            idx += 1
+    for record in data:
+        if prev is None:
+            # first record
+            filled.append(record)
         else:
-            filled.append(
-                {
-                    "ts": curr,
-                    "value": prev["value"] if prev else 0.0,
-                    "count": 0,
-                    "key_name": prev["key_name"] if prev else None,
-                }
+            # step from prev.ts until reaching current record.ts
+            next_ts = prev["ts"] + (
+                relativedelta(**delta_kwargs) if use_rd else timedelta(**delta_kwargs)  # pyright: ignore
             )
-        if use_rd:
-            curr = curr + relativedelta(**delta_kwargs)  # pyright:ignore
-        else:
-            curr = curr + timedelta(**delta_kwargs)
+            while next_ts < record["ts"]:
+                filled.append(
+                    {
+                        "ts": next_ts,
+                        "value": prev["value"],
+                        "count": 0,
+                        "key_name": prev["key_name"],
+                    }
+                )
+                next_ts = next_ts + (
+                    relativedelta(**delta_kwargs) if use_rd else timedelta(**delta_kwargs)  # pyright: ignore
+                )
+            # then append actual record
+            filled.append(record)
+        prev = record
 
     return filled
