@@ -13,6 +13,7 @@ class CheckInListView(APIView):
     permission_classes = (WhiteListPermission,)
 
     def post(self, request):
+        logger.debug("Request data: %s", request.data)
         serializer = CheckInSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)

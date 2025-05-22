@@ -242,7 +242,7 @@ def _sync_telemetry(device, topic, payload):
     # Upsert latest
     unique_latest = {obj.key_id: obj for obj in latest}
     existing = TsKvLatest.objects.filter(entity=device, key_id__in=unique_latest.keys())
-    existing_map = {e.key_id: e for e in existing}
+    existing_map = {e.key_id: e for e in existing}  # pyright: ignore
     to_create, to_update = [], []
     for key_id, obj in unique_latest.items():
         if key_id in existing_map:
@@ -331,7 +331,7 @@ def _update_activity_device(device, connected=True):
         entity=device, attribute_type=AttributeKv.SERVER_SCOPE, attribute_key="active"
     ).first()
 
-    if connected and attrs and attrs.last_update_ts > ts_now - 20000:  # 20 sec threshold
+    if connected and attrs and attrs.last_update_ts > ts_now - 1000:  # 1 sec threshold
         return
 
     if attrs:
