@@ -18,8 +18,8 @@ class CheckOutListView(APIView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
-            logger.error("Validation error: %s", e)
-            logger.error("Request data: %s", request.data)
+            logger.warning("Validation error: %s", e)
+            logger.warning("Request data: %s", request.data)
             raise
         result = serializer.save()
 
