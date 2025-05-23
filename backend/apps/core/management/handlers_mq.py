@@ -13,6 +13,7 @@ from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
+from concurrent.futures import ThreadPoolExecutor
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -170,16 +171,8 @@ def _update_attribute_store(device, data):
     to_update = []
     for key, field, value in updates:
         # Prepare default values
-        base = {
-            "bool_v": None,
-            "str_v": None,
-            "long_v": None,
-            "dbl_v": None,
-            "json_v": None,
-            "entity_type": "DEVICE",
-            "last_update_ts": ts_now,
-        }
-        base[field] = value
+        base = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None, "entity_type": "DEVICE",
+                "last_update_ts": ts_now, field: value}
         if key in existing_map:
             inst = existing_map[key]
             for attr_name, attr_val in base.items():
@@ -207,6 +200,8 @@ def _update_attribute_store(device, data):
     _update_activity_device(device)
 
 
+executor = ThreadPoolExecutor(max_workers=4)  # для handle_fias
+
 def _sync_telemetry(device, topic, payload):
     logger.debug(
         "Sync telemetry: device=%s topic=%s entries=%s",
@@ -214,12 +209,14 @@ def _sync_telemetry(device, topic, payload):
         topic,
         len(payload) if hasattr(payload, "__len__") else 1,
     )
+
     if topic.startswith("v1/gateway/") and isinstance(payload, dict):
         for sub_name, telemetry_list in payload.items():
-            sub_device = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + sub_name)
+            key = str(device.tenant_id) + sub_name
+            sub_device = _sub_device_dict_getcreate_cache.get(key)
             if not sub_device:
                 sub_device = _get_or_create_device(sub_name, device)
-                _sub_device_dict_getcreate_cache[str(device.tenant_id) + sub_name] = sub_device
+                _sub_device_dict_getcreate_cache[key] = sub_device
             device = sub_device
             payload = telemetry_list
 
@@ -230,6 +227,7 @@ def _sync_telemetry(device, topic, payload):
         entries.extend((d["ts"], d["values"]) for d in payload if "ts" in d and "values" in d)
     if not entries:
         return
+
     ts_now = get_mil_sec()
     historical = []
     latest = []
@@ -239,43 +237,31 @@ def _sync_telemetry(device, topic, payload):
             dict_obj = get_tskv_dict(key)
             historical.append(TsKv(entity_id=device.id, key=dict_obj, ts=ts_dt, **{field: value}))
             latest.append(TsKvLatest(entity_id=device.id, key=dict_obj, ts=ts_now, **{field: value}))
+
             if key == "messageFromFIAS":
-                handle_fias(value, device)
-    # Bulk save
+                # Асинхронный вызов
+                executor.submit(handle_fias, value, device)
+
+    # Сохраняем исторические данные
     TsKv.objects.bulk_create(historical, ignore_conflicts=True)
-    # Upsert latest
-    unique_latest = {obj.key_id: obj for obj in latest}
-    existing = TsKvLatest.objects.filter(entity=device, key_id__in=unique_latest.keys())
-    existing_map = {e.key_id: e for e in existing}  # pyright: ignore
-    to_create, to_update = [], []
-    for key_id, obj in unique_latest.items():
-        if key_id in existing_map:
-            existing_obj = existing_map[key_id]
-            for attr in ("ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"):
-                setattr(existing_obj, attr, getattr(obj, attr))
-            to_update.append(existing_obj)
-        else:
-            to_create.append(obj)
-    if to_create:
-        TsKvLatest.objects.bulk_create(to_create)
-    if to_update:
-        TsKvLatest.objects.bulk_update(to_update, ["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"])
 
-    # Emit signals on commit
-    def emit_signals():
-        from django.db.models.signals import post_save
-
-        for inst in to_create:
-            post_save.send(sender=TsKvLatest, instance=inst, created=True)
-        for inst in to_update:
-            post_save.send(
-                sender=TsKvLatest,
-                instance=inst,
-                created=False,
+    # Обновляем последние (upsert)
+    if latest:
+        try:
+            unique_latest = {}
+            for obj in latest:
+                key = (obj.entity_id, obj.key_id)
+                unique_latest[key] = obj
+            TsKvLatest.objects.bulk_create(
+                list(unique_latest.values()),
+                update_conflicts=True,
                 update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+                unique_fields=["entity_id", "key_id"],
             )
+        except Exception as e:
+            logger.exception("Failed to upsert TsKvLatest: %s", e)
 
-    transaction.on_commit(emit_signals)
+    # Обновление активности устройства
     _update_activity_device(device)
 
 
