@@ -1,9 +1,11 @@
 import logging
-import pika
 import threading
 import time
+
+import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
+
 from core.management.handlers_mq import handlers_mq
 
 RABBIT_LOGIN = settings.RABBIT_LOGIN
@@ -23,15 +25,14 @@ QUEUE_CONFIG = {
 
 logger = logging.getLogger("main")
 
+
 class Command(BaseCommand):
     help = "Consumes messages from multiple RabbitMQ queues using dedicated threads"
 
     def handle(self, *args, **options):
         for queue_name, worker_count in QUEUE_CONFIG.items():
             for i in range(worker_count):
-                thread = threading.Thread(
-                    target=self.worker_thread, args=(queue_name, i), daemon=True
-                )
+                thread = threading.Thread(target=self.worker_thread, args=(queue_name, i), daemon=True)
                 thread.start()
 
         # Ожидаем завершения всех потоков (по сути — бесконечно)

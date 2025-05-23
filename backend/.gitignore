@@ -21,3 +21,4 @@ files
 logs
 *.log
 playground.py
+*.json

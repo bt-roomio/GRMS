@@ -1,5 +1,3 @@
-import datetime
-
 from django.db.models import (
     Avg,
     CharField,
@@ -11,20 +9,19 @@ from django.db.models import (
     Func,
     IntegerField,
     Q,
+    Sum,
     TextField,
     Value,
     Window,
 )
 from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
-from rest_framework.fields import pytz
-
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
 from core.utils.handle_card_event import handle_card_event
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
 
-origin_dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
+origin_dt = Value("2000-01-01 00:00:00+00", output_field=DateTimeField())
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -108,6 +105,12 @@ class TsKvQuerySet(BaseQuerySet):
         interval = make_interval(*interval.split(" ")) if interval and len(interval.split(" ")) > 1 else interval
         limit = limit or 100
         agg_function = Avg if agg in ["Change", None] else agg_function
+        sum_expr = Sum("avail_field", output_field=FloatField())
+        count_expr = Count("interval_ts")
+
+        # (SUM(...) / COUNT(...)) as numeric, then ROUND(..., 2)
+        avg_expr = ExpressionWrapper(sum_expr / count_expr, output_field=FloatField())
+
         result = {}
 
         for key in keys:
@@ -138,7 +141,8 @@ class TsKvQuerySet(BaseQuerySet):
                     interval_ts=Func(
                         Value(interval),  # bin width
                         F("ts"),  # timestamp field
-                        function="date_trunc",
+                        origin_dt,
+                        function="date_bin",
                         output_field=DateTimeField(),
                     ),
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
@@ -147,10 +151,10 @@ class TsKvQuerySet(BaseQuerySet):
             data = (
                 query.values("interval_ts")
                 .annotate(
-                    value=Round(agg_function("avail_field")) if agg_function is not None else F("avail_field"),
+                    value=Round(avg_expr, precision=2),
                     ts=F("interval_ts"),
                     key_name=F("key__key"),
-                    count=Count("interval_ts"),
+                    count=count_expr,
                 )
                 .values("value", "ts", "key_name", "count")
                 .order_by(*sort_by)[:limit]
