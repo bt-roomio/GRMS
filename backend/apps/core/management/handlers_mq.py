@@ -1,9 +1,7 @@
 import json
 import logging
 
-import aio_pika
 from celery.exceptions import Reject
-from django.conf import settings
 from django.db import transaction
 
 from core.management.handle_fias import handle_fias
@@ -16,11 +14,8 @@ from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictiona
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 
-logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
-
-logger_pika = logging.getLogger("pika")
-logger_pika.setLevel(logging.WARNING)
 
 
 def handlers_mq(ch, body):
@@ -219,6 +214,15 @@ def _sync_telemetry(device, topic, payload):
         topic,
         len(payload) if hasattr(payload, "__len__") else 1,
     )
+    if topic.startswith("v1/gateway/") and isinstance(payload, dict):
+        for sub_name, telemetry_list in payload.items():
+            sub_device = _sub_device_dict_getcreate_cache.get(str(device.tenant_id) + sub_name)
+            if not sub_device:
+                sub_device = _get_or_create_device(sub_name, device)
+                _sub_device_dict_getcreate_cache[str(device.tenant_id) + sub_name] = sub_device
+            device = sub_device
+            payload = telemetry_list
+
     entries = []
     if isinstance(payload, dict) and "ts" in payload and "values" in payload:
         entries.append((payload["ts"], payload["values"]))
@@ -275,34 +279,6 @@ def _sync_telemetry(device, topic, payload):
     _update_activity_device(device)
 
 
-_response_connection = None
-_response_channel = None
-
-
-async def _get_response_channel():
-    global _response_connection, _response_channel
-    if _response_connection is None or _response_connection.is_closed:
-        logger.debug("Opening new aio-pika connection for responses")
-        _response_connection = await aio_pika.connect_robust(
-            host=settings.RABBIT_HOST,
-            port=settings.RABBIT_PORT,
-            login=settings.RABBIT_LOGIN,
-            password=settings.RABBIT_PASSWORD,
-        )
-        _response_channel = await _response_connection.channel()
-    return _response_channel
-
-
-async def send_to_rabbitmq_async(message: dict, routing_key: str):
-    logger.debug("Sending async response to routing_key=%s message=%s", routing_key, message)
-    channel = await _get_response_channel()
-    exchange = await channel.get_exchange("toGRMS")  # pyright:ignore
-    await exchange.publish(
-        aio_pika.Message(body=json.dumps(message).encode()),
-        routing_key=routing_key,
-    )
-
-
 def handle_attribute_request(ch, device_id: str, topic: str, data: dict):
     logger.debug("handle_attribute_request: device=%s topic=%s", device_id, topic)
     try:
@@ -316,7 +292,7 @@ def handle_attribute_request(ch, device_id: str, topic: str, data: dict):
             "topic": topic.replace("request", "response"),
             "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
         }
-        send_to_rabbitmq(ch, response, routing_key=response["topic"])
+        send_to_rabbitmq(ch, response, routing_key="fromGRMS")
         logger.debug("Attribute response sent for device %s", device_id)
     except Exception as exc:
         logger.exception("Failed to send attribute response: %s", exc)
