@@ -1,5 +1,6 @@
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
+
 from shuttle.consumers.aggregations.controller_status import controller_status
 from shuttle.models import TsKvDictionary, TsKvLatest
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
@@ -27,7 +28,6 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
         request_ids = [request_id] if request_id is not None else self.subscribers.keys()
-        print("request_ids", request_ids)
         for request_id in request_ids:
             dnd_count = await self.get_room_count_by_key("DND Relay", tenant_id)
             mur_count = await self.get_room_count_by_key("MUR Relay", tenant_id)

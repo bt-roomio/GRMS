@@ -278,12 +278,17 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "propagate": True,
+            "propagate": False,
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
             "level": "WARNING",
             "propagate": False,
+        },
+        "core": {
+            "handlers": ["console"],
+            "propagate": False,
+            "level": "WARNING",
         },
     },
 }

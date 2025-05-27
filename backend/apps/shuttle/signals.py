@@ -38,7 +38,9 @@ def tskv_latest_signal_handler(sender, instance, **kwargs):
             "dbl_v": instance.dbl_v,
             "json_v": instance.json_v,
         }
-        async_to_sync(channel_layer.group_send)("tskv_latest_updates", {"type": "get_latest_activity", **message})
+        async_to_sync(channel_layer.group_send)(
+            f"tskv_latest_updates_{instance.entity_id}", {"type": "get_latest_activity", "update": message}
+        )
         async_to_sync(channel_layer.group_send)("room_status", {"type": "get_latest_activity", **message})
         async_to_sync(channel_layer.group_send)("emergency_status", {"type": "get_latest_activity", **message})
 

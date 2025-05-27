@@ -16,7 +16,7 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 
 class TsKv(BaseModelTs):
-    ts = models.DateTimeField(default=timezone.now)
+    ts: models.DateTimeField = models.DateTimeField(default=timezone.now)
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     entity_id = UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")

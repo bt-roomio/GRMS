@@ -1,8 +1,9 @@
 import json
 import logging
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 from celery.exceptions import Reject
-from django.db import transaction
 
 from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
@@ -11,12 +12,15 @@ from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
+from shuttle.services.ts_kv_latest import publish_updates_batch
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
-from concurrent.futures import ThreadPoolExecutor
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
+
+logger_pika = logging.getLogger("pika")
+logger_pika.setLevel(logging.WARNING)
 
 
 def handlers_mq(ch, body):
@@ -171,8 +175,16 @@ def _update_attribute_store(device, data):
     to_update = []
     for key, field, value in updates:
         # Prepare default values
-        base = {"bool_v": None, "str_v": None, "long_v": None, "dbl_v": None, "json_v": None, "entity_type": "DEVICE",
-                "last_update_ts": ts_now, field: value}
+        base = {
+            "bool_v": None,
+            "str_v": None,
+            "long_v": None,
+            "dbl_v": None,
+            "json_v": None,
+            "entity_type": "DEVICE",
+            "last_update_ts": ts_now,
+            field: value,
+        }
         if key in existing_map:
             inst = existing_map[key]
             for attr_name, attr_val in base.items():
@@ -202,6 +214,7 @@ def _update_attribute_store(device, data):
 
 executor = ThreadPoolExecutor(max_workers=4)  # для handle_fias
 
+
 def _sync_telemetry(device, topic, payload):
     logger.debug(
         "Sync telemetry: device=%s topic=%s entries=%s",
@@ -210,9 +223,10 @@ def _sync_telemetry(device, topic, payload):
         len(payload) if hasattr(payload, "__len__") else 1,
     )
 
+    # Обработка gateway-пакета: разбиваем на sub-device
     if topic.startswith("v1/gateway/") and isinstance(payload, dict):
         for sub_name, telemetry_list in payload.items():
-            key = str(device.tenant_id) + sub_name
+            key = f"{device.tenant_id}{sub_name}"
             sub_device = _sub_device_dict_getcreate_cache.get(key)
             if not sub_device:
                 sub_device = _get_or_create_device(sub_name, device)
@@ -220,40 +234,56 @@ def _sync_telemetry(device, topic, payload):
             device = sub_device
             payload = telemetry_list
 
+    # Собираем raw-entries [(ts_ms, values), …]
     entries = []
     if isinstance(payload, dict) and "ts" in payload and "values" in payload:
         entries.append((payload["ts"], payload["values"]))
     elif isinstance(payload, list):
-        entries.extend((d["ts"], d["values"]) for d in payload if "ts" in d and "values" in d)
+        entries.extend((d["ts"], d["values"]) for d in payload if isinstance(d, dict) and "ts" in d and "values" in d)
     if not entries:
         return
 
     ts_now = get_mil_sec()
-    historical = []
-    latest = []
+    historical_objs = []
+    latest_objs = []
+    updates_by_device: dict[int, list[dict]] = defaultdict(list)
+
+    # Формируем объекты и пакетные updates
     for ts_ms, vals in entries:
         ts_dt = unix_to_datetime(ts_ms)
         for key, (field, value) in find_compatible_field(vals).items():
             dict_obj = get_tskv_dict(key)
-            historical.append(TsKv(entity_id=device.id, key=dict_obj, ts=ts_dt, **{field: value}))
-            latest.append(TsKvLatest(entity_id=device.id, key=dict_obj, ts=ts_now, **{field: value}))
+            # исторические записи
+            historical_objs.append(TsKv(entity_id=device.id, key=dict_obj, ts=ts_dt, **{field: value}))
+            # объекты для upsert
+            latest_objs.append(TsKvLatest(entity_id=device.id, key=dict_obj, ts=ts_now, **{field: value}))
+            # пакетное сообщение
+            updates_by_device[device.id].append(
+                {
+                    "entity": str(device.id),
+                    "key": key,
+                    "ts": ts_now,
+                    "bool_v": value if field == "bool_v" else None,
+                    "str_v": value if field == "str_v" else None,
+                    "long_v": value if field == "long_v" else None,
+                    "dbl_v": value if field == "dbl_v" else None,
+                    "json_v": value if field == "json_v" else None,
+                }
+            )
 
             if key == "messageFromFIAS":
-                # Асинхронный вызов
+                # Асинхронный обработчик
                 executor.submit(handle_fias, value, device)
 
     # Сохраняем исторические данные
-    TsKv.objects.bulk_create(historical, ignore_conflicts=True)
+    TsKv.objects.bulk_create(historical_objs, ignore_conflicts=True)
 
-    # Обновляем последние (upsert)
-    if latest:
+    # Upsert последних значений
+    if latest_objs:
         try:
-            unique_latest = {}
-            for obj in latest:
-                key = (obj.entity_id, obj.key_id)
-                unique_latest[key] = obj
+            unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
             TsKvLatest.objects.bulk_create(
-                list(unique_latest.values()),
+                list(unique.values()),
                 update_conflicts=True,
                 update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
                 unique_fields=["entity_id", "key_id"],
@@ -261,7 +291,11 @@ def _sync_telemetry(device, topic, payload):
         except Exception as e:
             logger.exception("Failed to upsert TsKvLatest: %s", e)
 
-    # Обновление активности устройства
+    # Пакетная отправка всем подписанным WebSocket-клиентам
+    if updates_by_device:
+        publish_updates_batch(updates_by_device)
+
+    # Обновляем активность устройства
     _update_activity_device(device)
 
 
