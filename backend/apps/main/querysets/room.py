@@ -1,7 +1,7 @@
-from django.db.models import Count, F, Func, Q
-
 from access_manager.models import GuestCard
 from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+from django.db.models import Count, F, Func, Q
+
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import TsKvDictionary, TsKvLatest
 
@@ -12,7 +12,8 @@ class RoomQuerySet(BaseQuerySet):
         query = query.prefetch_related("devices", "type")
         query = query.annotate(count_online_devices=Count("devices", filter=Q(devices__status=True)))
         query = query.annotate(count_devices=Count("devices"))
-        query = query.filter(state__contains=[state]) if state and state not in [3, 4] else query
+        query = query.filter(state__contains=[state]) if state and state not in [2, 3, 4] else query
+        query = query.filter(id__in=get_occupied_rooms(tenant)) if state == 2 else query
         query = query.filter(id__in=get_dnd_rooms(tenant)) if state == 3 else query
         query = query.filter(id__in=get_mur_rooms(tenant)) if state == 4 else query
 
@@ -42,7 +43,7 @@ class RoomQuerySet(BaseQuerySet):
         return result
 
     def guest_checkout(self, room_id):
-        from main.models import Guest, Room, Device
+        from main.models import Device, Guest, Room
 
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
@@ -75,3 +76,11 @@ def get_mur_rooms(tenant):
             entity__tenant=tenant,
             key=key_dict.key_id,
         ).values_list("entity__room_id", flat=True)
+
+
+def get_occupied_rooms(tenant):
+    return TsKvLatest.objects.filter(
+        long_v=1,
+        entity__tenant=tenant,
+        key__key="Occupancy State",
+    ).values_list("entity__room_id", flat=True)
