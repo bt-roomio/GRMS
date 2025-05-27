@@ -7,7 +7,6 @@ from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
 class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
-
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
         self.user = self.scope["user"]
@@ -25,6 +24,9 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         self.subscribers.pop(request_id, None)
 
     async def get_latest_activity(self, message=None, request_id=None, **kwargs):
+        for update in message.get("updates"):
+            await self.get_latest_activity(update, **kwargs)
+
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
         request_ids = [request_id] if request_id is not None else self.subscribers.keys()

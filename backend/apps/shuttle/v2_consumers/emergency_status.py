@@ -1,10 +1,10 @@
 from asgiref.sync import sync_to_async
-from djangochannelsrestframework.observer.generics import action
 from djangochannelsrestframework.mixins import ListModelMixin
+from djangochannelsrestframework.observer.generics import action
 
 from main.models import Device
 from shuttle.models import TsKvDictionary, TsKvLatest
-from shuttle.serializers.emergency_status import EmergencyStatusFilterParams, DeviceTelemetrySerializer
+from shuttle.serializers.emergency_status import DeviceTelemetrySerializer, EmergencyStatusFilterParams
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -65,6 +65,9 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return all_data, 200
 
     async def get_latest_activity(self, message, **kwargs):
+        for update in message.get("updates", []):
+            await self.get_latest_activity(update, **kwargs)
+
         entity_id = message.get("entity")
         key = message.get("key")
 
@@ -73,7 +76,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             keys = params.get("keys", [])
             delisting_devices = params.get("delisting_devices", [])
 
-            if key not in keys or entity_id in delisting_devices:
+            if key not in keys or entity_id not in delisting_devices:
                 continue
 
             try:
@@ -81,7 +84,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             except Device.DoesNotExist:
                 continue
 
-            value = (  #TODO use get_non_null_column() method here
+            value = (  # TODO use get_non_null_column() method here
                 message.get("bool_v")
                 or message.get("str_v")
                 or message.get("long_v")
