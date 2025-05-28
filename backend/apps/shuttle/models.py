@@ -51,7 +51,7 @@ class TsKvDictionary(models.Model):
 
 class TsKvLatest(BaseModelTs):
     entity_id: UUID
-    entity = models.ForeignKey("main.Device", models.DO_NOTHING)
+    entity = models.ForeignKey("main.Device", models.CASCADE)
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.CharField(max_length=10000, blank=True, null=True)
@@ -96,6 +96,12 @@ class AttributeKv(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "shuttle_attribute_kv"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
+                name="unique_attrkv_type_scope_entity_key",
+            ),
+        ]
 
 
 class Relation(BaseModel, UpdateByModel):
