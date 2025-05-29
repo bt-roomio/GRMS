@@ -77,7 +77,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             keys = params.get("keys", [])
             delisting_devices = params.get("delisting_devices", [])
 
-            if key not in keys or entity_id not in delisting_devices:
+            if key not in keys or entity_id in delisting_devices:
                 continue
 
             try:
