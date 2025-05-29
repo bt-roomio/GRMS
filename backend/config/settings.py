@@ -194,11 +194,14 @@ FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:3000")
 FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", 6379)
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(os.getenv("CHANNEL_LAYERS_HOST", "localhost"), 6379)],
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
         },
     },
 }
@@ -253,7 +256,7 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "INFO",
+            "level": "DEBUG",
             "filters": ["require_debug_true"],
             "class": "logging.StreamHandler",
             "formatter": "simple",
@@ -287,8 +290,8 @@ LOGGING = {
         },
         "core": {
             "handlers": ["console"],
-            "propagate": False,
-            "level": "WARNING",
+            "propagate": True,
+            "level": "DEBUG",
         },
     },
 }

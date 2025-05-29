@@ -15,6 +15,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
         self.user = self.scope["user"]
+        self.data = {}
         await super().accept(*args, **kwargs)
 
     def get_queryset(self, **kwargs):
@@ -40,7 +41,6 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
         for device in devices:
             latest_data = await self.get_latest_data(device, key_ids)
-
             data_list = [
                 {
                     "key_name": telemetry["key"],
@@ -49,7 +49,6 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 }
                 for telemetry in latest_data
             ]
-
             all_data.append(
                 {
                     "device_id": device.id,
@@ -105,7 +104,9 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 ],
             }
 
-            await self.reply(data=result, action="update", request_id=request_id)
+            if self.data != result:
+                await self.reply(data=result, action="update", request_id=request_id)
+                self.data = result
 
     @sync_to_async
     def get_key_ids(self, keys):

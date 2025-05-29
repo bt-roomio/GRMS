@@ -1,6 +1,8 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
+from shuttle.utils.has_changed_and_update import has_changed_and_update
+
 GROUP_SUFFIXES = (
     "tskv_latest_updates",
     "room_status",
@@ -10,7 +12,7 @@ GROUP_SUFFIXES = (
 
 def publish_updates_batch(updates_by_device: dict[int, list[dict]]):
     """
-    Отправляем пачками: для каждого device_id шлём в каждую группу один пакет.
+    Отправляем пачками: для каждого device_id шлём в каждую группу только изменившиеся данные.
     updates_by_device: { device_id: [ {entity, key, ts, bool_v...}, ... ] }
     """
     channel_layer = get_channel_layer()
@@ -18,9 +20,13 @@ def publish_updates_batch(updates_by_device: dict[int, list[dict]]):
         raise ValueError("No channel layer")
 
     for device_id, messages in updates_by_device.items():
-        payload = {"type": "get_latest_activity", "updates": messages}
+        changed_messages = has_changed_and_update(device_id, messages)
+        if not changed_messages:
+            continue
+
+        payload = {"type": "get_latest_activity", "updates": changed_messages}
         for suffix in GROUP_SUFFIXES:
-            if "tskv_latest_updates" == suffix:
+            if suffix == "tskv_latest_updates":
                 group_name = f"{suffix}_{device_id}"
             else:
                 group_name = suffix

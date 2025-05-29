@@ -70,7 +70,6 @@ def _route_and_handle(device, topic, data):
 
 # Кеши
 _tskv_dict_cache = {}
-_device_dict_cache = {}
 _sub_device_dict_cache = {}
 _sub_device_dict_getcreate_cache = {}
 

@@ -9,25 +9,12 @@ from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
+        self.data = {}
         self.user = self.scope["user"]
         self.user_obj = await sync_to_async(self.get_user_object)()
         await super().accept(*args, **kwargs)
 
-    @action()
-    async def list_subscribe(self, request_id, action, **kwargs):
-        await self.add_group("room_status")
-        self.subscribers[request_id] = {"action": action}
-        await self.get_latest_activity(request_id=request_id)
-
-    @action()
-    async def list_unsubscribe(self, request_id, **kwargs):
-        self.subscribers.pop(request_id, None)
-
-    async def get_latest_activity(self, message=None, request_id=None, **kwargs):
-        if message and message.get("updates"):
-            for update in message.get("updates"):
-                await self.get_latest_activity(update, **kwargs)
-
+    async def response(self, request_id):
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
         request_ids = [request_id] if request_id is not None else self.subscribers.keys()
@@ -44,7 +31,26 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
                     "occupied": occupancy_count,
                 }
             )
-            await self.reply(data=flat_data, action="list_subscribe", request_id=request_id)
+            if self.data != flat_data:
+                await self.reply(data=flat_data, action="list_subscribe", request_id=request_id)
+                self.data = flat_data
+
+    @action()
+    async def list_subscribe(self, request_id, action, **kwargs):
+        await self.add_group("room_status")
+        self.subscribers[request_id] = {"action": action}
+        await self.response(request_id)
+
+    @action()
+    async def list_unsubscribe(self, request_id, **kwargs):
+        self.subscribers.pop(request_id, None)
+
+    async def get_latest_activity(self, message=None, request_id=None, **kwargs):
+        if message and message.get("updates"):
+            for update in message.get("updates"):
+                await self.get_latest_activity(update, **kwargs)
+
+        await self.response(request_id)
 
     async def flatten_controller_status(self, data: dict) -> dict:
         result = {}
