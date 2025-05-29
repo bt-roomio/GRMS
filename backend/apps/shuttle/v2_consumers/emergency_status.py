@@ -65,8 +65,9 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return all_data, 200
 
     async def get_latest_activity(self, message, **kwargs):
-        for update in message.get("updates", []):
-            await self.get_latest_activity(update, **kwargs)
+        if message.get("updates"):
+            for update in message.get("updates", []):
+                await self.get_latest_activity(update, **kwargs)
 
         entity_id = message.get("entity")
         key = message.get("key")
