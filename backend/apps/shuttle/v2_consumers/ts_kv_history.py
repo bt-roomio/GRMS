@@ -39,6 +39,7 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
             agg=params.get("agg"),
             limit=params.get("limit"),
             sort_by=params.get("sort_by"),
+            auto_fill=params.get("auto_fill"),
         )
         return query
 

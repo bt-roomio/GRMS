@@ -31,15 +31,15 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
                     "occupied": occupancy_count,
                 }
             )
-            if self.data != flat_data:
-                await self.reply(data=flat_data, action="list_subscribe", request_id=request_id)
-                self.data = flat_data
+
+            return flat_data
 
     @action()
     async def list_subscribe(self, request_id, action, **kwargs):
         await self.add_group("room_status")
         self.subscribers[request_id] = {"action": action}
-        await self.response(request_id)
+        self.data = await self.response(request_id)
+        await self.reply(data=self.data, action="list_subscribe", request_id=request_id)
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
@@ -50,7 +50,10 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
             for update in message.get("updates"):
                 await self.get_latest_activity(update, **kwargs)
 
-        await self.response(request_id)
+        flat_data = await self.response(request_id)
+        if self.data != flat_data:
+            await self.reply(data=flat_data, action="list_subscribe", request_id=request_id)
+            self.data = flat_data
 
     async def flatten_controller_status(self, data: dict) -> dict:
         result = {}

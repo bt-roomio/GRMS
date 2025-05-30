@@ -21,8 +21,6 @@ from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
 from core.utils.handle_card_event import handle_card_event
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
 
-origin_dt = Value("2000-01-01 00:00:00+00", output_field=DateTimeField())
-
 
 class TsKvQuerySet(BaseQuerySet):
     def by_tenant(self, tenant):
@@ -99,7 +97,8 @@ class TsKvQuerySet(BaseQuerySet):
         qs = qs.filter(filter_conditions).values("ts", "key_name", "value").order_by(*sort_by)
         return qs
 
-    def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by):
+    def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by, auto_fill):
+        origin_dt = Value(start_ts, output_field=DateTimeField())
         sort_by = ["interval_ts"] if sort_by is None else sort_by
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         interval = make_interval(*interval.split(" ")) if interval and len(interval.split(" ")) > 1 else interval
@@ -108,14 +107,12 @@ class TsKvQuerySet(BaseQuerySet):
         sum_expr = Sum("avail_field", output_field=FloatField())
         count_expr = Count("interval_ts")
 
-        # (SUM(...) / COUNT(...)) as numeric, then ROUND(..., 2)
         avg_expr = ExpressionWrapper(sum_expr / count_expr, output_field=FloatField())
 
         result = {}
 
         for key in keys:
             query = self.filter(key__key=key, **({"ts__gte": start_ts} if start_ts else {}))
-
             if interval in ["month", "year"]:
                 query = query.annotate(
                     interval_ts=Func(
@@ -159,7 +156,8 @@ class TsKvQuerySet(BaseQuerySet):
                 .values("value", "ts", "key_name", "count")
                 .order_by(*sort_by)[:limit]
             )
-            data = fill_missing_intervals(data, interval)[:limit]
+            if auto_fill:
+                data = fill_missing_intervals(data, interval, start_ts, limit)
             if key == "rfid_card_event":
                 data = handle_card_event(data)
             result[key] = data
