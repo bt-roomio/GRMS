@@ -1,3 +1,4 @@
+import datetime
 import re
 from datetime import timedelta
 
@@ -5,69 +6,50 @@ from dateutil.relativedelta import relativedelta
 
 
 def parse_interval(interval_str):
-    """
-    Parse a string like '2 hours', '15 minutes', '1 day', 'month', or 'year'.
-    Months and years must be singular (no quantities); others can have quantities.
-    Returns: (use_relativedelta: bool, kwargs: dict)
-    """
     pattern = (
         r"^(?:(?P<qty>\d+)\s+)?" r"(?P<unit>second|seconds|minute|minutes|hour|hours|day|days|week|weeks|month|year)$"
     )
     match = re.match(pattern, interval_str)
     if not match:
         raise ValueError(f"Invalid interval: {interval_str}")
-    qty = match.group("qty")
-    unit = match.group("unit")
+    qty = int(match.group("qty") or 1)
+    unit = match.group("unit").rstrip("s")
 
-    unit_s = unit.rstrip("s")
-    # months and year singular only
-    if unit_s in ("month", "year"):
-        if qty is not None:
-            raise ValueError(f"Interval '{interval_str}' invalid: use 'month' or 'year' without a quantity")
-        return True, {unit_s + "s": 1}
+    if unit in ("month", "year") and match.group("qty"):
+        raise ValueError("Use 'month' or 'year' without quantity")
 
-    qty = int(qty) if qty else 1
-    return False, {unit_s + "s": qty}
+    return (True if unit in ("month", "year") else False), {unit + "s": qty}
 
 
-def fill_missing_intervals(data, interval_str):
-    """
-    Fill missing time intervals between each pair of records in the original order.
+def fill_missing_intervals(data, interval_str, start_ts, limit):
+    if not interval_str or not start_ts or not limit:
+        return []
 
-    data: list of dicts with 'ts' datetime, 'value', 'count', etc.
-    interval_str: e.g. '2 hours', '15 minutes', '1 day', 'month', or 'year'.
-    Returns a new list of dicts, preserving original order with fillers.
-    """
-    if not data or not interval_str:
-        return list(data)
+    if start_ts and isinstance(start_ts, str):
+        start_ts = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
 
     use_rd, delta_kwargs = parse_interval(interval_str)
-    filled = []
-    prev = None
+    result = []
 
-    for record in data:
-        if prev is None:
-            # first record
-            filled.append(record)
+    # Index incoming data by timestamp
+    data_by_ts = {record["ts"]: record for record in data}
+    current_ts = start_ts
+    last_known = None
+
+    for _ in range(limit):
+        record = data_by_ts.get(current_ts)
+        if record:
+            result.append(record)
+            last_known = record
         else:
-            # step from prev.ts until reaching current record.ts
-            next_ts = prev["ts"] + (
-                relativedelta(**delta_kwargs) if use_rd else timedelta(**delta_kwargs)  # pyright: ignore
+            result.append(
+                {
+                    "ts": current_ts,
+                    "value": last_known["value"] if last_known else 0,
+                    "count": 0,
+                    "key_name": last_known["key_name"] if last_known else None,
+                }
             )
-            while next_ts < record["ts"]:
-                filled.append(
-                    {
-                        "ts": next_ts,
-                        "value": prev["value"],
-                        "count": 0,
-                        "key_name": prev["key_name"],
-                    }
-                )
-                next_ts = next_ts + (
-                    relativedelta(**delta_kwargs) if use_rd else timedelta(**delta_kwargs)  # pyright: ignore
-                )
-            # then append actual record
-            filled.append(record)
-        prev = record
+        current_ts += relativedelta(**delta_kwargs) if use_rd else timedelta(**delta_kwargs)  # pyright: ignore
 
-    return filled
+    return result

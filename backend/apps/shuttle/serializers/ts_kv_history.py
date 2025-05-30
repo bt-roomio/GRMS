@@ -30,3 +30,4 @@ class TsKvHistoryFilterParams(ValidatorSerializer):
     )
     agg = serializers.ChoiceField(choices=AGG, default="Avg")
     limit = serializers.IntegerField(default=100, max_value=1000)
+    auto_fill = serializers.BooleanField(default=True)
