@@ -27,7 +27,7 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         query = self.pagination(query, params.get("page", 1), params.get("size", 25))
         return query
 
-    async def get_latest_activity(self, message, **kwargs):
+    async def ts_kv_latest_activity(self, message, **kwargs):
         updates = message.get("updates")
         if updates:
             devices = set([u.get("entity") for u in updates])

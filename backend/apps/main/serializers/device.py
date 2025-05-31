@@ -25,7 +25,6 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
             "status",
             "type",
             "tenant",
-            "customer",
             "room",
             "device_profile",
             "label",
