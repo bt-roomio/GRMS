@@ -1,4 +1,4 @@
-from access_manager.models import Group, GroupPublicSpace, GroupRoom
+from access_manager.models import Group, GroupPublicSpace, GroupRoom, TypeChoices
 from access_manager.serializers.group_room import SimpleGroupPublicSpaceSerializer, SimpleGroupRoomSerializer
 from django.db.models import Q
 
@@ -7,6 +7,32 @@ from rest_framework import serializers
 from core.utils.serializers import ValidatorSerializer
 from main.models import PublicSpace, Room
 from users.serializers.user import SimpleUserSerializer
+
+
+class TypeChoiceField(serializers.Field):
+    """
+    A read/write field that:
+      - on input: accepts the enum *name* ("ENGINEERING") and converts it to its integer (3)
+      - on output: takes the integer stored in the model and returns the enum name ("ENGINEERING").
+    """
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            raise serializers.ValidationError(
+                f"Invalid type for group_type. Expected string choice, got {type(data).__name__}."
+            )
+
+        try:
+            return TypeChoices[data].value
+        except KeyError:
+            valid_names = ", ".join([choice.name for choice in TypeChoices])
+            raise serializers.ValidationError(f'"{data}" is not a valid choice. ' f"Valid options are: {valid_names}.")
+
+    def to_representation(self, value):
+        try:
+            return TypeChoices(value).name
+        except ValueError:
+            return value
 
 
 class SimpleGroupSerializer(serializers.ModelSerializer):
@@ -24,6 +50,7 @@ class GroupSerializer(serializers.ModelSerializer):
         many=True, queryset=PublicSpace.objects.all(), write_only=True
     )
     public_spaces = SimpleGroupPublicSpaceSerializer(source="group_public_space", read_only=True, many=True)
+    group_type = TypeChoiceField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -66,6 +93,7 @@ class GroupSerializer(serializers.ModelSerializer):
             "created_at",
             "created_by",
             "name",
+            "group_type",
             "tenant",
             "rooms_ids",
             "rooms",

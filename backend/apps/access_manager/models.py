@@ -10,16 +10,11 @@ from django.db.models import Q, UniqueConstraint
 
 from core.models import BaseModel, CreatedByModel, UpdateByModel
 
-HOUSEKEEPING = 2
-ENGINEERING = 3
-MASTER_CARD = 4
 
-
-TYPE_CHOICES = (
-    (HOUSEKEEPING, "HOUSEKEEPING"),
-    (ENGINEERING, "ENGINEERING"),
-    (MASTER_CARD, "MASTER CARD"),
-)
+class TypeChoices(models.IntegerChoices):
+    HOUSEKEEPING = 2, "HOUSEKEEPING"
+    ENGINEERING = 3, "ENGINEERING"
+    MASTER_CARD = 4, "MASTER_CARD"
 
 
 ALL_DAYS = "all_days"
@@ -52,7 +47,10 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
     expiry_date = models.DateTimeField()
     is_active = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
-    group_type = models.CharField(choices=TYPE_CHOICES, default=HOUSEKEEPING)
+    group_type = models.IntegerField(
+        choices=TypeChoices.choices,
+        help_text="Must be one of: HOUSEKEEPING, ENGINEERING, MASTER_CARD",
+    )
 
     objects = GroupQuerySet.as_manager()
 
