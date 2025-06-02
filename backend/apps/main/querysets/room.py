@@ -1,9 +1,21 @@
 from access_manager.models import GuestCard
 from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
-from django.db.models import Count, F, Func, Q
+from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import TsKvDictionary, TsKvLatest
+
+
+class JSONBObjectAgg(Aggregate):
+    """
+    Wraps the Postgres jsonb_object_agg(key_field, value_field) aggregate.
+    Produces a JSONB object of the form { key_field: value_field, … }.
+    """
+
+    function = "jsonb_object_agg"
+    name = "JSONB_OBJECT_AGG"
+    output_field = JSONField()  # pyright: ignore
 
 
 class RoomQuerySet(BaseQuerySet):
@@ -22,6 +34,31 @@ class RoomQuerySet(BaseQuerySet):
 
         query = query.filter(status=status) if status else query
         return query.order_by(*(sort_by or ["number"]) + ["id"])
+
+    def rooms_ts_kvs(self, tenant, keys=[]):
+        query = self.filter(active=True, tenant=tenant)
+
+        tskv_grouped = (
+            TsKvLatest.objects.filter(entity__room=OuterRef("pk"), key__key__in=keys)
+            .values("entity__room")
+            .annotate(
+                mapped=JSONBObjectAgg(
+                    "key__key",
+                    Coalesce(
+                        Func(F("str_v"), function="to_jsonb", output_field=JSONField()),
+                        Func(F("long_v"), function="to_jsonb", output_field=JSONField()),
+                        Func(F("bool_v"), function="to_jsonb", output_field=JSONField()),
+                        F("json_v"),
+                        Func(F("dbl_v"), function="to_jsonb", output_field=JSONField()),
+                        output_field=JSONField(),
+                    ),
+                )
+            )
+            .values("mapped")
+        )
+        query = query.annotate(ts_kv_values=Subquery(tskv_grouped))
+
+        return query
 
     def statuses(self, tenant):
         from main.models import Room
