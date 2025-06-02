@@ -51,7 +51,7 @@ class TsKvDictionary(models.Model):
 
 class TsKvLatest(BaseModelTs):
     entity_id: UUID
-    entity = models.ForeignKey("main.Device", models.CASCADE)
+    entity = models.ForeignKey("main.Device", models.DO_NOTHING, "ts_kvs_latest")
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.CharField(max_length=10000, blank=True, null=True)

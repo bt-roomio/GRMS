@@ -38,7 +38,7 @@ class GatewayLogsConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         self.count = query[1]
         return self.pagination(query[0], params.get("page", 1), params.get("size", 25))
 
-    async def get_latest_activity(self, message, **kwargs):
+    async def get_latest_ts_kv_activity(self, message, **kwargs):
         entity = message.get("entity")
         for request_id, params in self.request_ids.items():
             device = params.get("query_params").get("device")

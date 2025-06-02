@@ -1,8 +1,9 @@
+from typing import Any, Dict, Iterable, Union
 from uuid import UUID
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
+from django.db.models import CASCADE, SET_NULL, Manager, Q, UniqueConstraint
 from django.db.models.functions import Lower
 
 from rest_framework.exceptions import ValidationError
@@ -22,6 +23,7 @@ from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
+from shuttle.models import TsKvDictionary, TsKvLatest
 
 
 class Tenant(BaseModel):
@@ -122,6 +124,8 @@ class Room(BaseModel, UpdateByModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
 
+    devices: Manager["Device"]
+
     objects = RoomQuerySet.as_manager()
 
     def __str__(self):
@@ -182,6 +186,29 @@ class Room(BaseModel, UpdateByModel):
                 updated_by=self.updated_by,
                 room_id=str(self.pk),
             )
+
+    def ts_kvs_latest_values(self, keys: Union[Iterable[TsKvDictionary], Iterable[str]]) -> Dict[str, Any]:
+        """
+        Возвращает словарь {key_name: value} для всех ключей из списка keys.
+        keys может быть списком объектов TsKvDictionary или списка строк-имен ключей.
+        """
+        # если передали строки, отфильтруем по названиям
+        filter_kwargs = {}
+        if keys and isinstance(next(iter(keys)), str):
+            filter_kwargs["key__key__in"] = keys  # ключ.key – это строковое имя
+        else:
+            filter_kwargs["key__in"] = keys  # ключ – полноценный объект
+
+        qs = (
+            TsKvLatest.objects.filter(entity__room=self, **filter_kwargs)
+            .select_related("key")
+            .values_list("key__key", "long_v", "dbl_v")
+        )
+        result: Dict[str, Any] = {}
+        for key_name, long_v, dbl_v in qs:
+            # приоритет – long_v, если его нет, то dbl_v
+            result[key_name] = long_v if long_v is not None else dbl_v
+        return result
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room"

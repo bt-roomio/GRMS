@@ -43,7 +43,7 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
         )
         return query
 
-    async def get_latest_activity(self, message, **kwargs):
+    async def get_latest_ts_kv_activity(self, message, **kwargs):
         entity = message.pop("entity")
         key = message.pop("key")
         _, value = get_non_null_column(message)

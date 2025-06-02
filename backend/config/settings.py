@@ -279,7 +279,7 @@ LOGGING = {
         },
     },
     "loggers": {
-        "django": {
+        "django.db.backends": {
             "handlers": ["console"],
             "propagate": False,
         },

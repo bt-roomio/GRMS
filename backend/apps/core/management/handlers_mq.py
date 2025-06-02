@@ -17,7 +17,7 @@ from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.DEBUG)
 
 logger_pika = logging.getLogger("pika")
 logger_pika.setLevel(logging.WARNING)

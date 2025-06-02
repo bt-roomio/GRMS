@@ -37,6 +37,7 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     async def send_list_paginated(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
         await self.reply(data=data, action=action, request_id=request_id)
+        return data
 
     def get_data(self, **kwargs):
         queryset = self.get_queryset(query_params=kwargs.get("query_params"))

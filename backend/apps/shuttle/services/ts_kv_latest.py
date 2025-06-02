@@ -28,6 +28,7 @@ def publish_updates_batch(updates_by_device: dict[int, list[dict]]):
         for suffix in GROUP_SUFFIXES:
             if suffix == "tskv_latest_updates":
                 group_name = f"{suffix}_{device_id}"
+                payload["type"] = "ts_kv_latest_activity"
             else:
                 group_name = suffix
             async_to_sync(channel_layer.group_send)(group_name, payload)
