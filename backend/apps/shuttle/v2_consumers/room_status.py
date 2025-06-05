@@ -33,6 +33,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
             )
 
             return flat_data
+        return None
 
     @action()
     async def list_subscribe(self, request_id, action, **kwargs):
@@ -75,4 +76,5 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         key_id = TsKvDictionary.objects.filter(key=key_name).values_list("key_id", flat=True).first()
         if key_id is None:
             return 0
-        return TsKvLatest.objects.filter(key=key_id, long_v=1, entity__tenant_id=tenant_id).count()
+        return TsKvLatest.objects.filter(key=key_id, long_v=1, entity__room__isnull=False,
+                                         entity__tenant_id=tenant_id).count()
