@@ -1,98 +1,75 @@
-from access_manager.models import GuestCard, StaffCard
-from django.db.models import DurationField, ExpressionWrapper, F
-from django.db.models.functions import Abs
+from datetime import datetime
+from django.utils import timezone
+from access_manager.models import CardLog, AccessGroupChoices, Card
+import logging
 
-from core.utils.str_to_dict import str_to_dict
+logger = logging.getLogger(__name__)
 
 
-def handle_card_event(data):
-    """
-    Processes a list of card event messages by identifying the associated user
-    (Staff or Guest) based on the card UID and event timestamp. It adds user
-    details (type, ID, and name) to each message's value field. Falls back to
-    "Unknown" if no match is found.
-    """
+def handle_card_event(device, value, ts_dt):
     try:
-        for message in data:
-            value = message.get("value")
-            value = str_to_dict(value)
+        access_group_str = value.get('access_group', '').upper()
+        card_uid = value.get('card_uid', '')
+        event_ts_unix = value.get('event_ts')
 
-            event_timestamp_init = value.get("event_ts")
-            card_uid = value.get("card_uid")
+        if not all([access_group_str, card_uid, event_ts_unix]):
+            logger.warning(f"Missing required fields in RFID event: {value}")
+            return None
 
-            if not card_uid:
-                continue
+        try:
+            tenant = device.tenant
+        except AttributeError:
+            logger.error(f"Device object missing tenant attribute: {device}")
+            return None
 
-            event_timestamp = event_timestamp_init * 1000
+        access_group_value = getattr(AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED)
+        event_datetime = datetime.fromtimestamp(event_ts_unix, tz=timezone.get_current_timezone())
+        staff = None
+        guest = None
 
-            staff_card = (
-                StaffCard.objects.filter(card__number=card_uid, is_active=True, created_at__lte=event_timestamp_init)
-                .select_related("staff", "card")
-                .annotate(
-                    time_diff=ExpressionWrapper(
-                        Abs(F("created_at") - event_timestamp_init), output_field=DurationField()
-                    )
-                )
-                .order_by("time_diff")
-                .values("id", "staff__id", "staff__first_name", "staff__last_name", "time_diff")
-                .first()
-            )
+        try:
+            card = Card.objects.filter(number=card_uid, tenant=tenant).first()
 
-            guest_card = (
-                GuestCard.objects.filter(card__number=card_uid, is_active=True, created_at__lte=event_timestamp)
-                .select_related("guest", "card")
-                .annotate(
-                    time_diff=ExpressionWrapper(Abs(F("created_at") - event_timestamp), output_field=DurationField())
-                )
-                .order_by("time_diff")
-                .values("id", "guest__id", "guest__name", "guest__lastname", "time_diff")
-                .first()
-            )
+            if card:
+                from access_manager.models import StaffCard
+                staff_card = StaffCard.objects.filter(
+                    card=card,
+                    is_active=True
+                ).select_related('staff').first()
 
-            user_type = "Unknown"
-            if staff_card and guest_card:
-                if staff_card["time_diff"] <= guest_card["time_diff"]:
-                    card_user = staff_card
-                    user_type = "Staff"
+                if staff_card:
+                    staff = staff_card.staff
                 else:
-                    card_user = guest_card
-                    user_type = "Guest"
-            elif staff_card:
-                card_user = staff_card
-                user_type = "Staff"
-            elif guest_card:
-                card_user = guest_card
-                user_type = "Guest"
-            else:
-                card_user = None
+                    from access_manager.models import GuestCard
+                    guest_card = GuestCard.objects.filter(
+                        card=card,
+                        is_active=True
+                    ).select_related('guest').first()
 
-            if card_user:
-                if user_type == "Staff":
-                    value.update(
-                        {
-                            "user_type": user_type,
-                            "user_id": card_user.get("staff__id"),
-                            "user_name": f"{card_user.get('staff__first_name')} {card_user.get('staff__last_name')}",
-                        }
-                    )
-                elif user_type == "Guest":
-                    value.update(
-                        {
-                            "user_type": user_type,
-                            "user_id": card_user.get("guest__id"),
-                            "user_name": f"{card_user.get('guest__name')} {card_user.get('guest__lastname')}",
-                        }
-                    )
-            else:
-                value.update(
-                    {
-                        "user_type": "Unknown",
-                        "user_id": None,
-                        "user_name": "Unknown User",
-                    }
-                )
+                    if guest_card:
+                        guest = guest_card.guest
 
-            message.update({"value": value})
-        return data
-    except Exception:
-        return data
+        except Exception as e:
+            logger.warning(f"Error finding staff/guest for card {card_uid}: {e}")
+
+        card_log = CardLog(
+            tenant=tenant,
+            number=card_uid,
+            event_ts=event_datetime,
+            access_group=access_group_value,
+            device=device,
+            staff=staff,
+            guest=guest,
+            created_at=ts_dt,
+            additional_info={
+                'raw_event': value,
+                'device_identifier': str(device),
+                'processed_at': timezone.now().isoformat()
+            }
+        )
+        return card_log
+
+    except Exception as e:
+        logger.error(f"Error processing RFID card event: {e}")
+        logger.error(f"Device: {device}, Value: {value}, Timestamp: {ts_dt}")
+        return None

@@ -18,7 +18,6 @@ from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
-from core.utils.handle_card_event import handle_card_event
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
 
 
@@ -158,8 +157,6 @@ class TsKvQuerySet(BaseQuerySet):
             )
             if auto_fill:
                 data = fill_missing_intervals(data, interval, start_ts, limit)
-            if key == "rfid_card_event":
-                data = handle_card_event(data)
             result[key] = data
         return result
 

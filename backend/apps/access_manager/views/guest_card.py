@@ -73,7 +73,7 @@ def deactivate_guest_card(cards):
     error_cards = []
     for card in cards:
         try:
-            instance = GuestCard.objects.get(card__enumber=card, is_active=True)
+            instance = GuestCard.objects.get(card__number=card, is_active=True)
             instance.is_active = False
             instance.save(update_fields=["is_active"])
         except Exception:
