@@ -7,7 +7,9 @@ from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q, UniqueConstraint
+from django.utils import timezone
 
+from access_manager.querysets.card_log import CardLogQuerySet
 from core.models import BaseModel, CreatedByModel, UpdateByModel
 
 
@@ -15,6 +17,15 @@ class TypeChoices(models.IntegerChoices):
     HOUSEKEEPING = 2, "HOUSEKEEPING"
     ENGINEERING = 3, "ENGINEERING"
     MASTER_CARD = 4, "MASTER_CARD"
+
+
+class AccessGroupChoices(models.IntegerChoices):
+    DENIED = 0, "DENIED"
+    GUEST = 1, "GUEST"
+    HOUSEKEEPING = 2, "HOUSEKEEPING"
+    ENGINEERING = 3, "ENGINEERING"
+    MASTER_CARD = 4, "MASTER_CARD"
+    FAILED = 5, "FAILED"
 
 
 ALL_DAYS = "all_days"
@@ -79,6 +90,33 @@ class Card(BaseModel, CreatedByModel, UpdateByModel):
     class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_cards"
         unique_together = ("number", "tenant")
+
+
+class CardLog(BaseModel, CreatedByModel, UpdateByModel):
+    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now)
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    number = models.CharField(max_length=200)
+    event_ts = models.DateTimeField()
+    access_group = models.IntegerField(
+        choices=AccessGroupChoices.choices,
+        help_text="Must be one of: HOUSEKEEPING, ENGINEERING, MASTER_CARD",
+    )
+
+    device = models.ForeignKey("main.Device", models.DO_NOTHING)
+    staff = models.ForeignKey("access_manager.Staff", models.DO_NOTHING, null=True, blank=True,
+                              related_name="card_logs")
+    guest = models.ForeignKey("main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs")
+
+    additional_info = models.JSONField(null=True, blank=True)
+
+    objects = CardLogQuerySet.as_manager()
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+        db_table = "access_manager_card_logs"
+        ordering = ["-event_ts"]
+
+    def __str__(self):
+        return f"{self.number} - {self.device} - {self.event_ts} - {self.access_group}"
 
 
 class NeedSyncDevice(BaseModel, CreatedByModel):
