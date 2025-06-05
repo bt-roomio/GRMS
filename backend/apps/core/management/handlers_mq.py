@@ -9,9 +9,13 @@ from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
+from core.utils.handle_card_event import handle_card_event
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
+from access_manager.models import CardLog
+
+from shuttle.services.card_log_updates import publish_card_log_updates_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
@@ -245,12 +249,18 @@ def _sync_telemetry(device, topic, payload):
     ts_now = get_mil_sec()
     historical_objs = []
     latest_objs = []
+    card_logs = []
     updates_by_device: dict[int, list[dict]] = defaultdict(list)
 
     # Формируем объекты и пакетные updates
     for ts_ms, vals in entries:
         ts_dt = unix_to_datetime(ts_ms)
         for key, (field, value) in find_compatible_field(vals).items():
+            if key == "rfid_card_event":
+                card_log = handle_card_event(device, value, ts_dt)
+                if card_log:
+                    card_logs.append(card_log)
+                continue
             dict_obj = get_tskv_dict(key)
             # исторические записи
             historical_objs.append(TsKv(entity_id=device.id, key=dict_obj, ts=ts_dt, **{field: value}))
@@ -276,6 +286,13 @@ def _sync_telemetry(device, topic, payload):
 
     # Сохраняем исторические данные
     TsKv.objects.bulk_create(historical_objs, ignore_conflicts=True)
+
+    if card_logs:
+        try:
+            CardLog.objects.bulk_create(card_logs, ignore_conflicts=True)
+            publish_card_log_updates_batch(card_logs)
+        except Exception as e:
+            logger.exception("Failed to create CardLog entries: %s", e)
 
     # Upsert последних значений
     if latest_objs:
