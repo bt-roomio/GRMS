@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
-from django.db.models import OuterRef, Subquery
+from django.db.models import F, Func, JSONField, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.get_time import get_mil_sec
