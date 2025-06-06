@@ -22,8 +22,10 @@ class RoomQuerySet(BaseQuerySet):
     def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None):
         query = self.filter(active=True, tenant=tenant)
         query = query.prefetch_related("devices__ts_kvs_latest__key", "type")
-        query = query.annotate(count_online_devices=Count("devices", filter=Q(devices__status=True)))
-        query = query.annotate(count_devices=Count("devices"))
+        query = query.annotate(
+            count_online_devices=Count("devices", filter=Q(Q(devices__status=True) & Q(devices__is_active=True)))
+        )
+        query = query.annotate(count_devices=Count("devices", filter=Q(devices__is_active=True)))
         query = query.filter(state__contains=[state]) if state and state not in [2, 3, 4] else query
         query = query.filter(id__in=get_occupied_rooms(tenant)) if state == 2 else query
         query = query.filter(id__in=get_dnd_rooms(tenant)) if state == 3 else query

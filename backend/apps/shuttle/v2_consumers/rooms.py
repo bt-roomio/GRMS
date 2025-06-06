@@ -64,13 +64,13 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         if STATIC_KEYS.get(payload.get("key")):
             for request_id, _ in self.query_params.items():
                 incoming_entity_id = payload.get("entity")
-                for room in self.responses.get("results", []):
+                for room in self.responses.get(request_id, {}).get("results", []):
                     has_device = room.get("devices", [])
                     if has_device and has_device[0].get("id") == incoming_entity_id:
                         _, value = get_non_null_column(payload)
                         room["telemetry"][payload.get("key")] = value
 
-                await self.reply(data=self.responses, action="list_subscribe", request_id=request_id)
+                await self.reply(data=self.responses[request_id], action="list_subscribe", request_id=request_id)
 
     @model_observer(Room, serializer_class=RoomSerializer)
     async def get_latest_room_activity(self, message, action, **kwargs):
