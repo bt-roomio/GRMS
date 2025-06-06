@@ -1,31 +1,38 @@
 from django.core.management.base import BaseCommand
-from django.db.models import OuterRef, Subquery
+from django.db.models import F, Func, JSONField, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 
-from main.models import Room
-from shuttle.models import TsKvLatest
+from main.models import Room, Tenant
+from main.querysets.room import JSONBObjectAgg
+from shuttle.models import AttributeKv
 
 
 class Command(BaseCommand):
     help = "Playground"
 
     def handle(self, *args, **options):
-        temp_subq = (
-            TsKvLatest.objects.filter(entity__room=OuterRef("pk"), key__key="Room Temperature")
-            .order_by()
-            .values("long_v")[:1]
-        )
-        mur_subq = (
-            TsKvLatest.objects.filter(entity__room=OuterRef("pk"), key__key="MUR Relay").order_by().values("long_v")[:1]
-        )
+        tenant = Tenant.objects.get(id="124ed4ee-c3f2-4936-a625-8103dd25c364")
+        query = Room.objects.filter(active=True, tenant=tenant)
 
-        rooms = (
-            Room.objects.prefetch_related("devices__ts_kvs_latest__key")
-            .filter(tenant_id="ac73203f-e25f-4baa-a5c7-a4c9585f5bbc", devices__isnull=False)
-            .annotate(temperature=Subquery(temp_subq), mur=Subquery(mur_subq))
+        tskv_grouped = (
+            AttributeKv.objects.filter(
+                entity__room=OuterRef("pk"), attribute_type__in=[AttributeKv.SERVER_SCOPE], attribute_key__in=["active"]
+            )
+            .values("entity__room")
+            .annotate(
+                mapped=JSONBObjectAgg(
+                    "attribute_key",
+                    Coalesce(
+                        Func(F("str_v"), function="to_jsonb", output_field=JSONField()),
+                        Func(F("long_v"), function="to_jsonb", output_field=JSONField()),
+                        Func(F("bool_v"), function="to_jsonb", output_field=JSONField()),
+                        F("json_v"),
+                        Func(F("dbl_v"), function="to_jsonb", output_field=JSONField()),
+                        output_field=JSONField(),
+                    ),
+                )
+            )
+            .values("mapped")
         )
-        for room in rooms:
-            print(room.id, room.temperature, room.mur)
-        #     r = rooms.ts_kvs_latest_values(
-        #         ["MUR Relay", "DND Relay", "AC_ON_OFF", "Room Temperature", "Occupancy State"]
-        #     )
-        #     print(r)
+        query = query.annotate(attribute_values=Subquery(tskv_grouped))
+        print(query)

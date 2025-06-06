@@ -18,6 +18,10 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         self.data = {}
         await super().accept(*args, **kwargs)
 
+    async def disconnect(self, code):
+        await self.remove_group("emergency_status")
+        await super().disconnect(code)
+
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = EmergencyStatusFilterParams.check(data=kwargs.get("query_params", {}))
@@ -29,9 +33,9 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return query
 
     @action()
-    async def list(self, **kwargs):
+    async def list(self, **kwargs):  # pyright: ignore
         params = kwargs.get("query_params")
-        keys = params.get("keys", [])
+        keys = params.get("keys", [])  # pyright: ignore
         key_ids = await self.get_key_ids(keys)
         if not key_ids:
             return None
@@ -133,4 +137,5 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
+        await self.remove_group("emergency_status")
         self.subscribers.pop(request_id, None)

@@ -14,6 +14,10 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         self.user_obj = await sync_to_async(self.get_user_object)()
         await super().accept(*args, **kwargs)
 
+    async def disconnect(self, code):
+        await self.remove_group("room_status")
+        await super().disconnect(code)
+
     async def response(self, request_id):
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
@@ -43,6 +47,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
+        await self.remove_group("room_status")
         self.subscribers.pop(request_id, None)
 
     async def get_latest_activity(self, message=None, request_id=None, **kwargs):

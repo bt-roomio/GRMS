@@ -27,10 +27,14 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     serializer_class = RoomSerializer
 
     async def accept(self, *args, **kwargs):
-        self.request_ids = {}
+        self.query_params = {}
         self.scope["user"] = await sync_to_async(self.get_user)()
-        self.list_subscribe_response = {}
+        self.responses = {}
         await super().accept(*args, **kwargs)
+
+    async def websocket_disconnect(self, message):
+        await self.handle_groups(self.responses, remove=True)
+        await super().websocket_disconnect(message)
 
     @action()
     def list(self, **kwargs):  # pyright: ignore
@@ -58,19 +62,19 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             return
         payload = message.get("update")
         if STATIC_KEYS.get(payload.get("key")):
-            for request_id, _ in self.request_ids.items():
+            for request_id, _ in self.query_params.items():
                 incoming_entity_id = payload.get("entity")
-                for room in self.list_subscribe_response.get("results", []):
+                for room in self.responses.get("results", []):
                     has_device = room.get("devices", [])
                     if has_device and has_device[0].get("id") == incoming_entity_id:
                         _, value = get_non_null_column(payload)
                         room["telemetry"][payload.get("key")] = value
 
-                await self.reply(data=self.list_subscribe_response, action="list_subscribe", request_id=request_id)
+                await self.reply(data=self.responses, action="list_subscribe", request_id=request_id)
 
     @model_observer(Room, serializer_class=RoomSerializer)
     async def get_latest_room_activity(self, message, action, **kwargs):
-        for request_id, _ in self.request_ids.items():
+        for request_id, _ in self.query_params.items():
             tenant_id = self.scope["user"].get("tenant_id")
             if str(tenant_id) == message.get("tenant"):
                 await self.reply(data=message, action=action, request_id=request_id)
@@ -78,7 +82,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     @action()
     async def subscribe(self, request_id, query_params, **kwargs):
         await self.get_latest_room_activity.subscribe(request_id=request_id, **kwargs)
-        self.request_ids[request_id] = query_params
+        self.query_params[request_id] = query_params
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
@@ -86,7 +90,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @model_observer(Room, serializer_class=RoomSerializer)
     async def get_list_activity(self, message, action, **kwargs):
-        for request_id, params in self.request_ids.items():
+        for request_id, params in self.query_params.items():
             tenant_id = self.scope["user"].get("tenant_id")
             if str(tenant_id) == message.get("tenant"):
                 data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
@@ -96,13 +100,29 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
         data = await self.send_list_paginated(action, query_params, request_id, **kwargs)
-        self.list_subscribe_response = data
+
+        await self.handle_groups(self.responses.get(request_id), remove=False)
+        await self.handle_groups(data)
+
         await self.get_list_activity.subscribe(request_id=request_id, **kwargs)
-        devices_in_rooms = [j["id"] for i in data.get("results", []) for j in i["devices"]]
-        for device_id in devices_in_rooms:
-            await self.add_group(f"tskv_latest_updates_{device_id}")
-        self.request_ids[request_id] = query_params
+        self.responses[request_id] = data
+        self.query_params[request_id] = query_params
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
         await self.get_list_activity.unsubscribe(request_id=request_id, **kwargs)
+        await self.handle_groups(self.responses.get(request_id), remove=True)
+
+    async def handle_groups(self, data, remove=False):
+        data = data or {}
+        if data and "results" not in data:
+            for _, resp_data in self.responses.items():
+                await self.handle_groups(resp_data, remove)
+            return
+
+        devices_in_rooms = [j["id"] for i in data.get("results", []) for j in i["devices"]]
+        for device_id in devices_in_rooms:
+            if remove:
+                await self.remove_group(f"tskv_latest_updates_{device_id}")
+            else:
+                await self.add_group(f"tskv_latest_updates_{device_id}")

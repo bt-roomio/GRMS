@@ -31,4 +31,5 @@ def publish_updates_batch(updates_by_device: dict[int, list[dict]]):
                 payload["type"] = "ts_kv_latest_activity"
             else:
                 group_name = suffix
+                payload["type"] = "get_latest_activity"
             async_to_sync(channel_layer.group_send)(group_name, payload)
