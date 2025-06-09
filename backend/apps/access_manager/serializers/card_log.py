@@ -55,5 +55,5 @@ class CardLogFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1, min_value=1)
     filters = serializers.DictField(
         required=False,
-        child=serializers.DateTimeField()
+        child=serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", input_formats=["%Y-%m-%d %H:%M:%S"])
     )

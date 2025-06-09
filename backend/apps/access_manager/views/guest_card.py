@@ -1,7 +1,7 @@
 import logging
 import time
 
-from access_manager.models import Card, GuestCard
+from access_manager.models import Card, GuestCard, NeedSyncDevice
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
@@ -86,6 +86,51 @@ def deactivate_guest_card(cards):
     }
 
 
+def need_sync(cards, device, message):
+    if not device:
+        return
+
+    original_params = message.get("data", {}).get("data", {}).get("params", [])
+
+    for card_num in cards:
+        try:
+            card = Card.objects.get(number=card_num)
+            single_card_param = next((param for param in original_params if param.get("cardNumber") == card_num), None)
+            if not single_card_param:
+                continue
+
+            single_card_message = {
+                **message,
+                "data": {
+                    **message["data"],
+                    "data": {
+                        **message["data"]["data"],
+                        "params": [single_card_param],
+                    },
+                },
+            }
+
+            sync_obj, created = NeedSyncDevice.objects.get_or_create(
+                card=card,
+                device=device,
+                defaults={
+                    "need_sync": True,
+                    "additional_info": {"unsuccessful_requests": [single_card_message]},
+                },
+            )
+
+            if not created:
+                info = sync_obj.additional_info or {"unsuccessful_requests": []}
+                info.setdefault("unsuccessful_requests", []).append(single_card_message)
+
+                sync_obj.need_sync = True
+                sync_obj.additional_info = info
+                sync_obj.save()
+
+        except Exception as e:
+            logger.warning(f"Failed to update NeedSyncDevice for card {card_num}: {e}")
+
+
 def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     from main.models import Device
 
@@ -116,16 +161,22 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
 
     while time.time() - start_time < timeout_seconds:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
-        if has_message and str_to_dict(has_message.additional_info).get("success") == True and guests is not None:
-            result = deactivate_guest_card(cards)
-            return result
-        if has_message and str_to_dict(has_message.additional_info).get("success") == True and guest is not None:
+        is_success = has_message.additional_info.get(
+            "success") if has_message else False  # str_to_dict(has_message.additional_info).get("success")
+        if has_message and guests is not None:
+            if is_success:
+                result = deactivate_guest_card(cards)
+                return result
+            else:
+                need_sync(cards, device, message)
+        if has_message and is_success and guest is not None:
             result = activate_guest_card(cards, guest)
             return result
 
         time.sleep(1)
-
-    return {"success": False, "message": "Timed out error !"}
+    else:
+        need_sync(cards, device, message)
+        return {"success": False, "message": "Timed out error !"}
 
 
 def activate_guest_card(cards, guest):

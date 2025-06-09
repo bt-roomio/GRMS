@@ -175,7 +175,9 @@ class GuestCard(BaseModel, CreatedByModel):
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_guest_cards"
-        constraints = [UniqueConstraint("guest", "card", condition=Q(is_active=True), name="unique_active_guest_card")]
+        constraints = [
+            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_card_active"),
+        ]
 
 
 class GroupRoom(BaseModel, CreatedByModel):
