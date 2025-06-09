@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from shuttle.models import AttributeKv, TsKv, TsKvLatest
+from shuttle.utils.has_changed_and_update import has_changed_and_update
 
 
 @receiver(post_save, sender=TsKv)
@@ -38,6 +39,10 @@ def tskv_latest_signal_handler(sender, instance, **kwargs):
             "dbl_v": instance.dbl_v,
             "json_v": instance.json_v,
         }
+        changed_messages = has_changed_and_update(instance.entity_id, [message])
+        if not changed_messages:
+            return
+
         async_to_sync(channel_layer.group_send)(
             f"tskv_latest_updates_{instance.entity_id}", {"type": "ts_kv_latest_activity", "update": message}
         )

@@ -21,6 +21,14 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)
 
+    @property
+    def user_id(self):
+        return self.scope["user"].get("id")
+
+    @property
+    def tenant_id(self):
+        return self.scope["user"].get("tenant_id")
+
     def get_user_object(self):
         return User.objects.filter(pk=self.scope["user"].id).first()
 

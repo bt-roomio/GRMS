@@ -89,3 +89,26 @@ class RoomFilterParams(ValidatorSerializer):
         if "search_value" not in attrs and "search_field" in attrs:
             raise serializers.ValidationError({"search_value": "search_value is required!"})
         return attrs
+
+
+class RoomDetailWsSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
+        data["tenant"] = str(instance.tenant_id)
+        data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
+        if hasattr(instance, "count_online_devices"):
+            data["status"] = (
+                "ON"
+                if instance.count_online_devices == instance.count_devices and instance.count_devices > 0
+                else "OFF"
+            )
+        if self.context.get("detail"):
+            data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
+        else:
+            data["type"] = instance.type and instance.type.title
+        return data
+
+    class Meta:
+        model = Room
+        fields = ("id", "number", "floor", "block", "type")
