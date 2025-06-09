@@ -87,38 +87,48 @@ def deactivate_guest_card(cards):
 
 
 def need_sync(cards, device, message):
-    if device:
-        original_params = message.get("data", {}).get("data", {}).get("params", [])
+    if not device:
+        return
 
-        for card_num in cards:
-            try:
-                card = Card.objects.get(number=card_num)
-                single_card_param = next((param for param in original_params if param.get("cardNumber") == card_num),
-                                         None)
-                if not single_card_param:
-                    continue
+    original_params = message.get("data", {}).get("data", {}).get("params", [])
 
-                single_card_message = {
-                    **message,
+    for card_num in cards:
+        try:
+            card = Card.objects.get(number=card_num)
+            single_card_param = next((param for param in original_params if param.get("cardNumber") == card_num), None)
+            if not single_card_param:
+                continue
+
+            single_card_message = {
+                **message,
+                "data": {
+                    **message["data"],
                     "data": {
-                        **message["data"],
-                        "data": {
-                            **message["data"]["data"],
-                            "params": [single_card_param],
-                        },
+                        **message["data"]["data"],
+                        "params": [single_card_param],
                     },
-                }
+                },
+            }
 
-                sync_obj, _ = NeedSyncDevice.objects.update_or_create(
-                    card=card,
-                    device=device,
-                    defaults={
-                        "need_sync": True,
-                        "additional_info": single_card_message,
-                    },
-                )
-            except Exception as e:
-                logger.warning(f"Failed to update NeedSyncDevice for card {card_num}: {e}")
+            sync_obj, created = NeedSyncDevice.objects.get_or_create(
+                card=card,
+                device=device,
+                defaults={
+                    "need_sync": True,
+                    "additional_info": {"unsuccessful_requests": [single_card_message]},
+                },
+            )
+
+            if not created:
+                info = sync_obj.additional_info or {"unsuccessful_requests": []}
+                info.setdefault("unsuccessful_requests", []).append(single_card_message)
+
+                sync_obj.need_sync = True
+                sync_obj.additional_info = info
+                sync_obj.save()
+
+        except Exception as e:
+            logger.warning(f"Failed to update NeedSyncDevice for card {card_num}: {e}")
 
 
 def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):

@@ -64,4 +64,4 @@ class GuestCheckoutView(APIView):
 
         if isinstance(result, dict) and not result.get("success", True):
             return Response(f"{guests} guests have left.", status=400)
-        return Response({"message": f"{result} guests have left."}, status=200)
+        return Response({"message": f"{guests} guests have left."}, status=200)

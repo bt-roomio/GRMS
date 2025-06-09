@@ -92,7 +92,7 @@ class RoomQuerySet(BaseQuerySet):
         deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
         guests.update(is_active=False)
         query.update(state=Func(F("state"), Room.CheckedIn, function="array_remove"))
-        return guests, deactivate_result
+        return guests.count(), deactivate_result
 
 
 def get_dnd_rooms(tenant):
