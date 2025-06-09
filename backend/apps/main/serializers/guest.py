@@ -69,14 +69,13 @@ class GuestSerializer(serializers.ModelSerializer):
             device = Device.objects.filter(room__id=room.id, is_active=True).select_related("tenant").first()
             rpc_params = prepare_cards(cards, 0)
             deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
-            if deactivate_result.get("cards_empty", False) or deactivate_result.get("success"):
-                if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
-                    room.state = safely_remove(room.state, Room.CheckedIn)
-                    room.state.append(Room.Available)
-                    room.save(update_fields=["state"])
-                    return super().update(instance, validated_data)
-            return deactivate_result
-        return None
+            if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
+                room.state = safely_remove(room.state, Room.CheckedIn)
+                room.state.append(Room.Available)
+                room.save(update_fields=["state"])
+                self.context["deactivate_result"] = deactivate_result
+
+        return super().update(instance, validated_data)
 
     class Meta:
         model = Guest
