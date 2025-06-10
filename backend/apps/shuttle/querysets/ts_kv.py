@@ -156,7 +156,7 @@ class TsKvQuerySet(BaseQuerySet):
                 .order_by(*sort_by)[:limit]
             )
             if auto_fill:
-                data = fill_missing_intervals(data, interval, start_ts, limit)
+                data = fill_missing_intervals(data, interval, start_ts, limit, key_name=key)
             result[key] = data
         return result
 
