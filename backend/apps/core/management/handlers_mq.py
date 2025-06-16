@@ -3,6 +3,7 @@ import logging
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
+from access_manager.models import CardLog
 from celery.exceptions import Reject
 
 from core.management.handle_fias import handle_fias
@@ -13,8 +14,6 @@ from core.utils.handle_card_event import handle_card_event
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
-from access_manager.models import CardLog
-
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
 from shuttle.utils.find_compatible_field import find_compatible_field
