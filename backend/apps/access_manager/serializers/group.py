@@ -1,12 +1,14 @@
 from access_manager.models import Group, GroupPublicSpace, GroupRoom, TypeChoices
 from access_manager.serializers.group_room import SimpleGroupPublicSpaceSerializer, SimpleGroupRoomSerializer
-from django.db.models import Q
 
 from rest_framework import serializers
 
+from access_manager.tasks import card_room, card_public_space
 from core.utils.serializers import ValidatorSerializer
 from main.models import PublicSpace, Room
 from users.serializers.user import SimpleUserSerializer
+
+
 
 
 class TypeChoiceField(serializers.Field):
@@ -65,24 +67,48 @@ class GroupSerializer(serializers.ModelSerializer):
 
         for room in rooms:
             GroupRoom.objects.create(group=instance, room=room)
+            card_room(instance.id, room.id, action="connect")
 
         for public_space in public_spaces:
             GroupPublicSpace.objects.create(group=instance, public_space=public_space)
+            card_public_space(instance.id, public_space.id, action="connect")
 
         return instance
 
     def update(self, instance, validated_data):
         rooms = validated_data.pop("rooms_ids", None) if validated_data.get("rooms_ids") else []
         public_spaces = validated_data.pop("public_spaces_ids", None) if validated_data.get("public_spaces_ids") else []
+
+        current_rooms = set(instance.group_room.values_list('room_id', flat=True))
+        new_rooms = set(room.id for room in rooms)
+
+        current_public_spaces = set(instance.group_public_space.values_list('public_space_id', flat=True))
+        new_public_spaces = set(public_space.id for public_space in public_spaces)
+
+        rooms_to_remove = current_rooms - new_rooms
+        public_spaces_to_remove = current_public_spaces - new_public_spaces
+
         instance = super().update(instance, validated_data)
 
-        instance.group_room.filter(~Q(room__in=rooms)).delete()
-        for room in rooms:
-            GroupRoom.objects.get_or_create(group=instance, room=room)
+        for room_id in rooms_to_remove:
+            card_room(instance.id, room_id, action="disconnect")
 
-        instance.group_public_space.filter(~Q(public_space__in=public_spaces)).delete()
+        instance.group_room.filter(room_id__in=rooms_to_remove).delete()
+
+        for room in rooms:
+            _, created = GroupRoom.objects.get_or_create(group=instance, room=room)
+            if created:
+                card_room(instance.id, room.id, action='connect')
+
+        for public_space_id in public_spaces_to_remove:
+            card_public_space(instance.id, public_space_id, action="disconnect")
+
+        instance.group_public_space.filter(public_space_id__in=public_spaces_to_remove).delete()
+
         for public_space in public_spaces:
-            GroupPublicSpace.objects.get_or_create(group=instance, public_space=public_space)
+            _, created = GroupPublicSpace.objects.get_or_create(group=instance, public_space=public_space)
+            if created:
+                card_public_space(instance.id, public_space.id, action="connect")
 
         return instance
 

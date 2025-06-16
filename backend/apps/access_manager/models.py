@@ -3,6 +3,7 @@ from uuid import UUID
 from access_manager.querysets.card import CardQuerySet
 from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
 from access_manager.querysets.guest_card import GuestCardQuerySet
+from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -124,6 +125,8 @@ class NeedSyncDevice(BaseModel, CreatedByModel):
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     need_sync = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
+
+    objects = NeedSyncDeviceQuerySet.as_manager()
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_need_sync_devices"
