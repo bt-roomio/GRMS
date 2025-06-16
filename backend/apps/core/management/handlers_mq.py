@@ -15,6 +15,7 @@ from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
+from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
@@ -207,6 +208,25 @@ def _update_attribute_store(device, data):
     if to_update:
         fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
         AttributeKv.objects.bulk_update(to_update, fields)
+
+    # Prepare updates for WebSocket clients
+    updates_by_device = defaultdict(list)
+    for attr in to_create + to_update:
+        updates_by_device[device.id].append({
+            "entity": str(device.id),
+            "key_name": attr.attribute_key,
+            "last_update_ts": ts_now,
+            "scope": AttributeKv.CLIENT_SCOPE,
+            "bool_v": attr.bool_v,
+            "str_v": attr.str_v,
+            "long_v": attr.long_v,
+            "dbl_v": attr.dbl_v,
+            "json_v": attr.json_v,
+        })
+
+    # Send updates to WebSocket clients
+    if updates_by_device:
+        publish_updates_attribute_batch(updates_by_device)
 
     logger.debug(
         "Bulk attributes processed for device %s: created=%d updated=%d", device.id, len(to_create), len(to_update)
