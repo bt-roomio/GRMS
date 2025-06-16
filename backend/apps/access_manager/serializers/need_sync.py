@@ -9,7 +9,8 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
     card_number = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     user_type = serializers.SerializerMethodField()
-    location = serializers.SerializerMethodField()
+    public_space = serializers.SerializerMethodField()
+    room = serializers.SerializerMethodField()
     failed_requests_list = serializers.SerializerMethodField()
 
     class Meta:
@@ -20,7 +21,8 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
             'card_number',
             'user_name',
             'user_type',
-            'location',
+            'public_space',
+            'room',
             'failed_requests_list'
         ]
 
@@ -60,17 +62,21 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
 
         return None
 
-    def get_location(self, obj):
+    def get_public_space(self, obj):
+        if not obj.device:
+            return None
+
+        public_spaces = obj.device.publicspace_set.all()
+        if public_spaces.exists():
+            return f"Public Space: {public_spaces.first().name}"
+        return None
+
+    def get_room(self, obj):
         if not obj.device:
             return None
 
         if obj.device.room:
             return f"Room {obj.device.room.number}"
-
-        public_spaces = obj.device.publicspace_set.all()
-        if public_spaces.exists():
-            return f"Public Space: {public_spaces.first().name}"
-
         return None
 
 
