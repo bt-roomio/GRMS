@@ -16,7 +16,7 @@ def need_sync(cards: List[str], device, message: dict):
 
     for card_num in cards:
         try:
-            card = Card.objects.get(number=card_num, tenant=device.tenant)
+            card = Card.objects.get(number=card_num)
             single_card_param = next((param for param in original_params if param.get("cardNumber") == card_num), None)
             if not single_card_param:
                 continue

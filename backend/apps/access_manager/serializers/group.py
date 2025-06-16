@@ -96,8 +96,9 @@ class GroupSerializer(serializers.ModelSerializer):
         instance.group_room.filter(room_id__in=rooms_to_remove).delete()
 
         for room in rooms:
-            GroupRoom.objects.get_or_create(group=instance, room=room)
-            card_room(instance.id, room.id, action='connect')
+            _, created = GroupRoom.objects.get_or_create(group=instance, room=room)
+            if created:
+                card_room(instance.id, room.id, action='connect')
 
         for public_space_id in public_spaces_to_remove:
             card_public_space(instance.id, public_space_id, action="disconnect")
@@ -105,8 +106,9 @@ class GroupSerializer(serializers.ModelSerializer):
         instance.group_public_space.filter(public_space_id__in=public_spaces_to_remove).delete()
 
         for public_space in public_spaces:
-            GroupPublicSpace.objects.get_or_create(group=instance, public_space=public_space)
-            card_public_space(instance.id, public_space.id, action="connect")
+            _, created = GroupPublicSpace.objects.get_or_create(group=instance, public_space=public_space)
+            if created:
+                card_public_space(instance.id, public_space.id, action="connect")
 
         return instance
 

@@ -45,7 +45,7 @@ class StaffCardView(APIView):
             if not devices:
                 return Response({"detail": "Not found device."}, 404)
 
-            rpc_params = prepare_cards(cards, group, True)
+            rpc_params = prepare_cards(cards, group, False)
             results = []
             for device in devices:
                 result = prepare_mqtt_request(device, rpc_params, cards, staff)
@@ -68,13 +68,14 @@ def prepare_cards(cards: List[str], group: Group, connect: bool = True) -> List[
         card_data = {
             "cardNumber": card_number,
             "access_group": str(group.group_type) if connect else "0",
-            "start_time": group.start_time.strftime("%H:%M") if group.start_time else "00:00",
-            "end_time": group.end_time.strftime("%H:%M") if group.end_time else "23:59",
+            "start_time": str(group.start_time) if group.start_time else "00:00",
+            "end_time": str(group.end_time) if group.end_time else "23:59",
             "weekdays": (
                 ["1", "2", "3", "4", "5", "6", "7"] if ALL_DAYS in group.week_days else get_indexes_of_day(group)
             ),
             "slot_num": "1",
         }
+        print(card_data)
         rpc_params.append(card_data)
     return rpc_params
 

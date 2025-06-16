@@ -1,15 +1,13 @@
 import logging
 import time
 
-from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
+from access_manager.models import Card, GuestCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from celery import shared_task
 
 from access_manager.utilits.need_sync import need_sync
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
@@ -94,7 +92,6 @@ def deactivate_guest_card(cards):
     }
 
 
-# @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
 def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     from main.models import Device
 
