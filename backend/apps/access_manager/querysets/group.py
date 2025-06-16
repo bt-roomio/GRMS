@@ -21,6 +21,25 @@ class GroupQuerySet(BaseQuerySet):
     def is_active(self):
         return self.filter(is_active=True)
 
+    def get_staff_cards(self, group_id):
+        from access_manager.models import StaffCard
+        group = self.filter(id=group_id, is_active=True).first()
+
+        if not group:
+            return None, None
+
+        staff_cards = StaffCard.objects.filter(
+            staff__group=group,
+            staff__is_active=True,
+            is_active=True
+        ).select_related('card', 'staff')
+
+        if not staff_cards.exists():
+            return None, group
+
+        cards = [staff_card.card.number for staff_card in staff_cards]
+        return cards, group
+
 
 class GroupRoomQuerySet(BaseQuerySet):
     pass

@@ -9,7 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         msg = {
             "sourceDeviceUUID": "c6fe44a3-b349-491d-bd7b-31c32dcaf3db",
-            "data": {"40:76:2E:18:DB:32": [{"ts": 1748328532448, "values": {"Occupancy State": 0}}]},
+            "data": {"40:76:2E:18:DB:32": [{"ts": 1748328532448, "values": {"MUR Relay": 0}}]},
             "topic": "v1/gateway/telemetry",
         }
         ch = connect_to_rabbitmq()
