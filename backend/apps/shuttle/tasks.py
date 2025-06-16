@@ -1,9 +1,13 @@
 import logging
+from datetime import timedelta
 
 from celery import shared_task
 from django.db import connection
+from django.utils import timezone
 
-logger = logging.getLogger("main")
+from shuttle.models import TsKv, TsKvDictionary
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -33,3 +37,11 @@ def aggregate_table_ts_kv():
         )
         logger.info(cursor.rowcount, "records deleted")
     logger.info("The aggregating table task successfully.")
+
+
+@shared_task
+def delete_old_logs():
+    keys = TsKvDictionary.objects.filter(key__endswith="_LOGS")
+    logger.info(f"Keys: {", ".join(keys.values_list('key', flat=True))}")
+    logs = TsKv.objects.filter(key__in=keys, ts__lte=(timezone.now() - timedelta(days=7)))
+    logger.info(f" {logs.delete()[0]} log(s) deleted!")

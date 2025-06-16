@@ -15,6 +15,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -224,13 +225,19 @@ CACHES = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
 
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BEAT_SCHEDULE = {
     "auto-checkout": {
         "task": "main.tasks.auto_check_out",
         "schedule": 30.0,
-    }
+    },
+    "clean_logs": {
+        "task": "shuttle.tasks.delete_old_logs",
+        "schedule": crontab(hour="0", minute="0"),
+    },
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
