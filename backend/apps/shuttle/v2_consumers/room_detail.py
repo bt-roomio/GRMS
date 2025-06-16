@@ -1,9 +1,10 @@
 from asgiref.sync import sync_to_async
+from django.db.models import Prefetch
 from djangochannelsrestframework.mixins import action
 
 from rest_framework.fields import ValidationError
 
-from main.models import Room
+from main.models import Guest, Room
 from main.serializers.room import RoomDetailWsSerializer
 from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
@@ -60,7 +61,17 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         if kwargs.get("pk") is None:
             raise ValidationError("pk is required in payload!")
 
-        query = self.get_queryset().filter(pk=kwargs.get("pk"))
+        query = self.get_queryset().filter(pk=kwargs.get("pk"), tenant=self.tenant_id)
+        if not query:
+            raise ValidationError("Room not found!")
+
+        query = query.prefetch_related(
+            Prefetch(
+                "guests",
+                queryset=Guest.objects.order_by("-created_at")[:1],
+                to_attr="last_guests",  # you can name this whatever you like
+            )
+        )
         instance = query.rooms_ts_kvs(tenant=self.tenant_id, keys=self.keys).first()  # pyright: ignore
         serializer = self.get_serializer(instance=instance, action_kwargs=kwargs)
         return serializer.data

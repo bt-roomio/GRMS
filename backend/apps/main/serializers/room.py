@@ -5,6 +5,7 @@ from rest_framework import serializers
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
+from main.serializers.guest import SimpleGuestSerializer
 from main.serializers.room_type import RoomTypeSerializer
 from shuttle.models import AttributeKv
 
@@ -107,8 +108,9 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
             data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
         else:
             data["type"] = instance.type and instance.type.title
+        data["guest"] = SimpleGuestSerializer(instance.last_guests[0]).data if instance.last_guests else None
         return data
 
     class Meta:
         model = Room
-        fields = ("id", "number", "floor", "block", "type")
+        fields = ("id", "number", "floor", "block", "type", "state")
