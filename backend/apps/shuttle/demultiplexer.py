@@ -7,6 +7,7 @@ from shuttle.v2_consumers.emergency_status import EmergencyStatus
 from shuttle.v2_consumers.gateway_logs import GatewayLogsConsumer
 from shuttle.v2_consumers.guest_cards import GuestCardConsumer
 from shuttle.v2_consumers.guests import GuestConsumer
+from shuttle.v2_consumers.need_sync import NeedSyncConsumer
 from shuttle.v2_consumers.room_detail import RoomDetailConsumer
 from shuttle.v2_consumers.room_status import RoomStatusConsumer
 from shuttle.v2_consumers.rooms import RoomConsumer
@@ -30,4 +31,5 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "ts_kv_history": TsKvHistoryConsumer.as_asgi(),
         "room_status": RoomStatusConsumer.as_asgi(),
         "emergency_status": EmergencyStatus.as_asgi(),
+        "need_sync": NeedSyncConsumer.as_asgi(),
     }

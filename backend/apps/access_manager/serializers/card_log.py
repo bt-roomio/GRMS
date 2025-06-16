@@ -49,7 +49,7 @@ class CardLogSerializer(serializers.ModelSerializer):
 class CardLogFilterParams(ValidatorSerializer):
     room = serializers.CharField()
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=["-event_ts", "event_ts"], default="-ts", required=False)
+        child=serializers.ChoiceField(choices=["-event_ts", "event_ts"], default="-event_ts", required=False)
     )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)
