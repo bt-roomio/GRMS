@@ -1,10 +1,17 @@
-from rest_framework import serializers
-
 from access_manager.models import GuestCard
 from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+
+from rest_framework import serializers
+
 from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
-from main.models import Guest, Room, Device
+from main.models import Device, Guest, Room
+
+
+class SimpleGuestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Guest
+        fields = ("id", "name", "lastname")
 
 
 class GuestMoveRoomFilterParams(ValidatorSerializer):
@@ -66,7 +73,11 @@ class GuestSerializer(serializers.ModelSerializer):
             room = Room.objects.filter(id=instance.room_id).first()
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-            device = Device.objects.filter(room__id=room.id, is_active=True).select_related("tenant").first()
+            device = (
+                Device.objects.filter(room__id=room.id, is_active=True)  # pyright: ignore
+                .select_related("tenant")
+                .first()
+            )
             rpc_params = prepare_cards(cards, 0)
             deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
