@@ -40,3 +40,7 @@ class GuestCardFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all())
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    filters = serializers.DictField(
+        required=False,
+        child=serializers.BooleanField()
+    )
