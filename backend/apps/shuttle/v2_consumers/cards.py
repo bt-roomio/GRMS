@@ -30,6 +30,7 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
             sort_by=params.get("sort_by", []),
             search_field="number",
             search_value=params.get("search_value", None),
+            filters=params.get("filters", {})
         )
         return query
 
