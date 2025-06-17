@@ -72,3 +72,7 @@ class CardFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=20)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     search_value = serializers.CharField(required=False, allow_null=True)
+    filters = serializers.DictField(
+        required=False,
+        child=serializers.BooleanField()
+    )
