@@ -18,9 +18,6 @@ class GuestCardSerializer(serializers.ModelSerializer):
         model = GuestCard
         fields = ["card_id", "card_number", "guest_name", "guest_check_in", "guest_id", "need_to_sync", "created_at"]
 
-    # def get_card_id(self, obj):
-    #     return str(obj.card.id)
-
     def get_guest_name(self, obj):
         guest = obj.guest
         if guest.lastname:
@@ -35,13 +32,15 @@ class GuestCardFilterParams(ValidatorSerializer):
     SORT_FIELDS = (
         "created_at",
         "-created_at",
-        "name",
-        "-name",
-        "lastname",
-        "-lastname",
+        "need_sync",
+        "-need_sync",
     )
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all())
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    filters = serializers.DictField(
+        required=False,
+        child=serializers.BooleanField()
+    )
