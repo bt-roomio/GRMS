@@ -32,6 +32,8 @@ class GuestCardFilterParams(ValidatorSerializer):
     SORT_FIELDS = (
         "created_at",
         "-created_at",
+        "need_sync",
+        "-need_sync",
     )
 
     page = serializers.IntegerField(default=1)
