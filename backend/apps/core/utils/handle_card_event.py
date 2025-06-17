@@ -1,7 +1,8 @@
-from datetime import datetime
 from django.utils import timezone
 from access_manager.models import CardLog, AccessGroupChoices, Card
 import logging
+
+from core.utils.date import unix_to_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,8 @@ def handle_card_event(device, value, ts_dt):
             return None
 
         access_group_value = getattr(AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED)
-        event_datetime = datetime.fromtimestamp(event_ts_unix, tz=timezone.get_current_timezone())
+        event_datetime = unix_to_datetime(event_ts_unix)
+
         staff = None
         guest = None
 
