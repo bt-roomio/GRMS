@@ -25,19 +25,19 @@ class GuestCardSerializer(serializers.ModelSerializer):
         return guest.name
 
     def get_need_to_sync(self, obj):
-        return obj.card.needsyncdevice_set.filter(need_sync=True).exists()
+        return obj.card.needsyncdevice_set.filter(
+            need_sync=True,
+            device__room=obj.guest.room
+        ).exists()
 
 
 class GuestCardFilterParams(ValidatorSerializer):
     SORT_FIELDS = (
         "created_at",
         "-created_at",
-        "need_sync",
-        "-need_sync",
     )
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all())
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
-

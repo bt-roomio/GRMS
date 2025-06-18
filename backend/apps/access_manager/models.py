@@ -56,7 +56,7 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
     week_days = ArrayField(models.CharField(max_length=10, choices=WEEK_DAYS))
     start_time = models.TimeField()
     end_time = models.TimeField()
-    expiry_date = models.DateTimeField()
+    expiry_date = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
     group_type = models.IntegerField(

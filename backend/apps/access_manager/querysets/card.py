@@ -8,18 +8,17 @@ class CardQuerySet(BaseQuerySet):
         from access_manager.models import NeedSyncDevice
 
         query = self.select_related("created_by").filter(tenant_id=tenant_id)
-        need_sync = filters.get("need_sync")
-
-        query = query.annotate(
-            need_sync=Exists(
-                NeedSyncDevice.objects.filter(
-                    card=OuterRef('pk'),
-                    need_sync=True
+        if 'need_sync' in filters:
+            need_sync = filters.get("need_sync")
+            query = query.annotate(
+                need_sync=Exists(
+                    NeedSyncDevice.objects.filter(
+                        card=OuterRef('pk'),
+                        need_sync=True
+                    )
                 )
             )
-        )
-
-        query = query.filter(need_sync=need_sync) if need_sync is not None else query
+            query = query.filter(need_sync=need_sync)
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
