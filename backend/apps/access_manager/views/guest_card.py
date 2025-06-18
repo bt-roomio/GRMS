@@ -1,7 +1,7 @@
 import logging
 import time
 
-from access_manager.models import Card, GuestCard
+from access_manager.models import Card, GuestCard, NeedSyncDevice
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
