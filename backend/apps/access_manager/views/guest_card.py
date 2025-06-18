@@ -1,7 +1,7 @@
 import logging
 import time
 
-from access_manager.models import Card, GuestCard
+from access_manager.models import Card, GuestCard, NeedSyncDevice
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
@@ -124,7 +124,7 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
             else:
                 need_sync(cards, device, message)
         if has_message and is_success and guest is not None:
-            result = activate_guest_card(cards, guest)
+            result = activate_guest_card(cards, device, guest)
             return result
 
         time.sleep(1)
@@ -133,7 +133,7 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
         return {"success": False, "message": "Timed out error !"}
 
 
-def activate_guest_card(cards, guest):
+def activate_guest_card(cards, device, guest):
     error_cards = []
     for card_number in cards:
         try:
@@ -142,6 +142,7 @@ def activate_guest_card(cards, guest):
             if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
                 continue
             GuestCard.objects.create(guest=guest, card=card, is_active=True)
+            NeedSyncDevice.objects.filter(card=card, device=device).update(need_sync=False)
         except Exception as e:
             error_cards.append(card_number)
     message = "Some cards are not activated."
