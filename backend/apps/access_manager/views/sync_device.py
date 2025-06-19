@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from access_manager.serializers.need_sync import SyncDeviceSerializer
+from access_manager.swagger.sync_device import sync_device_swagger
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
 from shuttle.models import RPCMessage
@@ -17,6 +18,8 @@ logger = get_task_logger(__name__)
 
 
 class SyncDeviceView(APIView):
+    
+    @sync_device_swagger()
     def post(self, request):
         serializer = SyncDeviceSerializer(data=request.data)
         if not serializer.is_valid():
