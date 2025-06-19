@@ -79,6 +79,7 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
 class Card(BaseModel, CreatedByModel, UpdateByModel):
     number = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    is_active = models.BooleanField(default=True)
 
     KNX = models.IntegerField(null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)

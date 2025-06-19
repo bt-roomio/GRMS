@@ -86,3 +86,12 @@ class NeedSyncDeviceFilterParams(ValidatorSerializer):
     )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)
+
+
+class SyncDeviceSerializer(serializers.Serializer):
+    ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        allow_empty=False,
+        help_text="List of NeedSyncDevice UUIDs to sync. If not provided, all devices needing sync will be processed."
+    )
