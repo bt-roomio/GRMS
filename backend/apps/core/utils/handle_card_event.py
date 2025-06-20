@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def handle_card_event(device, value, ts_dt):
     try:
-        access_group_str = value.get('access_group', '').upper()
+        access_group_str = value.get('access_group', '').upper().replace(' ', '_')
         card_uid = value.get('card_uid', '')
         event_ts_unix = value.get('event_ts')
 
