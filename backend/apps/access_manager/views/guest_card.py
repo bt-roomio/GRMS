@@ -106,7 +106,7 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     }
 
     if not rpc_params:
-        return {"success": False, "cards_empty": True, "message": "Cards are not provided ! "}
+        return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)

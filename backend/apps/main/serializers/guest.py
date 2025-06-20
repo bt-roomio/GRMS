@@ -86,6 +86,7 @@ class GuestSerializer(serializers.ModelSerializer):
                 room.save(update_fields=["state"])
                 self.context["deactivate_result"] = deactivate_result
 
+            self._deactivate_result = deactivate_result
         return super().update(instance, validated_data)
 
     class Meta:

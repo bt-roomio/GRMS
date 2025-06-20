@@ -48,10 +48,10 @@ class GuestDetailView(APIView):
         serializer = GuestSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
-        deactivate = serializer.context.get("deactivate_result")
+        deactivate_result = getattr(serializer, '_deactivate_result', None)
 
-        if not deactivate.get("success", True):
-            return Response({"message": "Guest successfully checked out ."}, status=400)
+        if deactivate_result and not deactivate_result.get("success", True):
+            return Response({"message": "Guest successfully checked out."}, status=400)
 
         return Response(serializer.data)
 
@@ -64,4 +64,4 @@ class GuestCheckoutView(APIView):
 
         if isinstance(result, dict) and not result.get("success", True):
             return Response(f"{guests} guests have left.", status=400)
-        return Response({"message": f"{guests} guests have left."}, status=200)
+        return Response(f"{guests} guests have left.", status=200)
