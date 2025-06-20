@@ -2,7 +2,7 @@ import logging
 import time
 from typing import cast, List
 
-from access_manager.models import ALL_DAYS, WEEK_DAYS, Card, Group, GroupPublicSpace, GroupRoom, StaffCard
+from access_manager.models import ALL_DAYS, WEEK_DAYS, Card, Group, GroupPublicSpace, GroupRoom, StaffCard, GuestCard
 from access_manager.serializers.staff_card import StaffCardRequestData, StaffCardRequestSerializer
 from access_manager.swagger.staff_card import staff_card_swagger
 
@@ -29,6 +29,10 @@ class StaffCardView(APIView):
             cards = validated_data["cards"]
             group = staff.group
 
+            guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=request.user.tenant_id)
+            if guest_cards:
+                return Response({"detail": "Card is connected to guest."}, 403)
+
             group_rooms_devices = GroupRoom.objects.filter(group=group, room__devices__is_active=True).values_list(
                 "room__devices", flat=True
             )
@@ -41,7 +45,7 @@ class StaffCardView(APIView):
             if not devices:
                 return Response({"detail": "Not found device."}, 404)
 
-            rpc_params = prepare_cards(cards, group, False)
+            rpc_params = prepare_cards(cards, group, True)
             results = []
             for device in devices:
                 result = prepare_mqtt_request(device, rpc_params, cards, staff)
@@ -132,7 +136,8 @@ def deactivate_staff_card(staff):
 
 def activate_staff_card(cards, staff, device):
     for card_number in cards:
-        card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": staff.tenant_id})
+        card, _ = Card.objects.get_or_create(number=card_number, tenant_id=staff.tenant_id,
+                                             defaults={"is_active": True})
 
         if StaffCard.objects.filter(staff=staff, card=card, is_active=True).exists():
             continue

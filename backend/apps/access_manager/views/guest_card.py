@@ -1,13 +1,15 @@
 import logging
 import time
 
-from access_manager.models import Card, GuestCard, NeedSyncDevice
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from celery import shared_task
 
 from access_manager.utilits.need_sync import need_sync
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
@@ -35,6 +37,11 @@ class GuestCardView(APIView):
 
             guest_id = validated_data["guest_id"]
             cards = validated_data["cards"]
+
+            staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
+                                                   staff__tenant_id=request.user.tenant_id)
+            if staff_cards:
+                return Response({"detail": "Card is connected to staff."}, 403)
 
             guest = Guest.objects.get(pk=guest_id)
             device = Device.objects.filter(room__guests=guest_id, is_active=True).first()
@@ -87,6 +94,7 @@ def deactivate_guest_card(cards):
     }
 
 
+# @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
 def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     from main.models import Device
 
@@ -114,10 +122,13 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     timeout_seconds = 5
     start_time = time.time()
 
+    print("message", message)
+
     while time.time() - start_time < timeout_seconds:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and guests is not None:
+            print("mmmmmmmmm", has_message)
             if is_success:
                 result = deactivate_guest_card(cards)
                 return result
@@ -137,7 +148,8 @@ def activate_guest_card(cards, device, guest):
     error_cards = []
     for card_number in cards:
         try:
-            card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": guest.tenant_id})
+            card, _ = Card.objects.get_or_create(number=card_number, tenant_id=guest.tenant_id,
+                                                 defaults={"is_active": True})
 
             if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
                 continue
