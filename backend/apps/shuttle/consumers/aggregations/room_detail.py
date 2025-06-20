@@ -3,7 +3,7 @@ import json
 from channels.db import database_sync_to_async
 from django.db.models import Count, Q
 
-from core.tests.uuid_encode import UUIDEncoder
+from core.utils.uuid_encode import UUIDEncoder
 from main.models import Room
 from main.serializers.room import RoomSerializer
 from shuttle.utils.response import response
