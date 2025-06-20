@@ -25,10 +25,7 @@ class GuestCardSerializer(serializers.ModelSerializer):
         return guest.name
 
     def get_need_to_sync(self, obj):
-        return obj.card.needsyncdevice_set.filter(
-            need_sync=True,
-            device__room=obj.guest.room
-        ).exists()
+        return obj.card.needsyncdevice_set.filter(need_sync=True).exists()
 
 
 class GuestCardFilterParams(ValidatorSerializer):
