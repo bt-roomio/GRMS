@@ -45,7 +45,7 @@ class StaffCardView(APIView):
             if not devices:
                 return Response({"detail": "Not found device."}, 404)
 
-            rpc_params = prepare_cards(cards, group, False)
+            rpc_params = prepare_cards(cards, group, True)
             results = []
             for device in devices:
                 result = prepare_mqtt_request(device, rpc_params, cards, staff)
