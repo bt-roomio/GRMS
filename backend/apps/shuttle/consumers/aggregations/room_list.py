@@ -2,8 +2,8 @@ import json
 
 from channels.db import database_sync_to_async
 
-from core.tests.uuid_encode import UUIDEncoder
 from core.utils.pagination import pagination
+from core.utils.uuid_encode import UUIDEncoder
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
 from shuttle.models import AttributeKv
