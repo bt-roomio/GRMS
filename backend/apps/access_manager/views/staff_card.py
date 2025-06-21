@@ -126,9 +126,12 @@ def prepare_mqtt_request(device, rpc_params, cards, staff, deactiveate=False):
     }
 
 
-def deactivate_staff_card(staff):
+def deactivate_staff_card(staff, staff_card=None):
     try:
-        StaffCard.objects.filter(staff=staff, is_active=True).update(is_active=False)
+        if staff:
+            StaffCard.objects.filter(staff=staff, is_active=True).update(is_active=False)
+        if staff_card:
+            StaffCard.objects.filter(id=staff_card, is_active=True).update(is_active=False)
         return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
     except Exception:
         return {"success": False, "message": "Could not disconnect card, please try again !"}

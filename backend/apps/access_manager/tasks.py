@@ -17,27 +17,29 @@ from shuttle.models import Relation, RPCMessage
 logger = get_task_logger(__name__)
 
 
-def card_room(group_id, room_id, action):
+def card_room(group_id, room_id, action, card_num=None):
     try:
-        result = manage_cards_for_room_task.delay(str(group_id), str(room_id), action)
+        result = manage_cards_for_room_task.delay(str(group_id), str(room_id), action, card_num=card_num)
         print(f"Connect/Disconect task result: {result}")
     except Exception as e:
         print(f"Error connecting cards to room: {str(e)}")
 
 
-def card_public_space(group_id, public_space_id, action):
+def card_public_space(group_id, public_space_id, action, card_num=None):
     try:
-        result = manage_cards_for_public_space_task.delay(str(group_id), str(public_space_id), action)
+        result = manage_cards_for_public_space_task.delay(str(group_id), str(public_space_id), action,
+                                                          card_num=card_num)
         print(f"Connect/Disconect public space task result: {result}")
     except Exception as e:
         print(f"Error connecting cards to public space: {str(e)}")
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def manage_cards_for_room_task(group_id: str, room_id: str, action: str):
+def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_num=None):
     """Connect or disconnect cards to/from room devices."""
     try:
         cards, group = Group.objects.get_staff_cards(group_id)
+        cards = [card_num] if card_num else cards
         if not cards or not group:
             return {"success": False, "message": f"No cards found for group {group_id}"}
 
@@ -65,10 +67,11 @@ def manage_cards_for_room_task(group_id: str, room_id: str, action: str):
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def manage_cards_for_public_space_task(group_id: str, public_space_id: str, action: str):
+def manage_cards_for_public_space_task(group_id: str, public_space_id: str, action: str, card_num=None):
     """Connect or disconnect cards to/from public space device."""
     try:
         cards, group = Group.objects.get_staff_cards(group_id)
+        cards = [card_num] if card_num else cards
         if not cards or not group:
             return {"success": False, "message": f"No cards found for group {group_id}"}
 
