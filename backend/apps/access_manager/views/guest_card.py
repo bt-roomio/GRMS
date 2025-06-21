@@ -94,9 +94,10 @@ def deactivate_guest_card(cards):
     }
 
 
-# @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
+@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None, device_id=None):
     from main.models import Device
+    device = Device.objects.get(id=device_id) if device_id else device
 
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     device_id = relation and relation.from_id.id
@@ -122,13 +123,11 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
     timeout_seconds = 5
     start_time = time.time()
 
-    print("message", message)
 
     while time.time() - start_time < timeout_seconds:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and guests is not None:
-            print("mmmmmmmmm", has_message)
             if is_success:
                 result = deactivate_guest_card(cards)
                 return result

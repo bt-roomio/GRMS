@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from access_manager.models import Card, StaffCard, GuestCard, Group
 
-# from access_manager.serializers.group import GroupSerializer
 from access_manager.serializers.staff import StaffSerializer
 from core.utils.serializers import ValidatorSerializer
 from main.serializers.guest import GuestSerializer
@@ -28,11 +27,12 @@ class CardSerializer(serializers.Serializer):
     created_at = serializers.CharField()
     need_to_sync = serializers.SerializerMethodField()
     number = serializers.CharField()
+    is_active = serializers.BooleanField()
     card_user = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
-        fields = ["created_at", "card_id", "card_number", "need_to_sync"]
+        fields = ["created_at", "card_id", "card_number", "need_to_sync", "is_active"]
 
     def get_card_user(self, obj):
         try:
