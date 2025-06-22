@@ -74,4 +74,4 @@ class DisconnectCardView(APIView):
         if isinstance(result, dict) and not result.get("success", True):
             return Response(result, status=400)
 
-        return Response({"success": True, "message": f"Card is deactivated !"}, status=200)
+        return Response({"success": True, "message": "Card is deactivated !"}, status=200)
