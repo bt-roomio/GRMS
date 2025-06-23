@@ -75,7 +75,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
     async def ts_kv_latest_activity(self, message, **kwargs):
         for update in message.get("updates", []) or []:
             await self.ts_kv_latest_activity({"update": update}, **kwargs)
-            return
+            continue
 
         for request_id, params in self.request_ids.items():
             payload = message.get("update")
