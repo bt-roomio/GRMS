@@ -10,7 +10,7 @@ GROUP_SUFFIXES = (
 )
 
 
-def publish_updates_batch(updates_by_device: dict[int, list[dict]]):
+def publish_updates_batch(updates_by_device: dict[str, list[dict]]):
     """
     Отправляем пачками: для каждого device_id шлём в каждую группу только изменившиеся данные.
     updates_by_device: { device_id: [ {entity, key, ts, bool_v...}, ... ] }

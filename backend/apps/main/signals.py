@@ -12,9 +12,6 @@ from shuttle.models import AttributeKv
 
 @receiver(post_save, sender=AttributeKv)
 def update_state_of_room_and_status_device(sender, instance, **kwargs):
-    if instance.attribute_key == "active" and instance.attribute_type == AttributeKv.SERVER_SCOPE:
-        instance.entity.status = bool(instance.bool_v)
-        instance.entity.save()
     if instance.attribute_type == AttributeKv.CLIENT_SCOPE and instance.attribute_key == "scanned_devices":
         AttributeKv.objects.update_or_create(
             attribute_key=instance.attribute_key,

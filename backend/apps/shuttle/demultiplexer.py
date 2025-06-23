@@ -33,3 +33,19 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "emergency_status": EmergencyStatus.as_asgi(),
         "need_sync": NeedSyncConsumer.as_asgi(),
     }
+
+    async def receive_json(self, content, **kwargs):
+        try:
+            await super().receive_json(content, **kwargs)
+        except ValueError as e:
+            err = {
+                "stream": content.get("stream"),
+                "payload": {
+                    "errors": [{"stream": f"Invalid stream: {str(e)}"}],
+                    "data": None,
+                    "action": content.get("payload").get("action"),
+                    "response_status": 400,
+                    "request_id": content.get("payload").get("request_id"),
+                },
+            }
+            await self.send_json(err)
