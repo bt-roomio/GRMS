@@ -63,5 +63,5 @@ class GuestCheckoutView(APIView):
         guests, result = Room.objects.guest_checkout(params.get("room").id)
 
         if isinstance(result, dict) and not result.get("success", True):
-            return Response(f"{guests} guests have left.", status=400)
-        return Response(f"{guests} guests have left.", status=200)
+            return Response({"message": f"{guests} guests have left."}, status=400)
+        return Response({"message": f"{guests} guests have left."}, status=200)
