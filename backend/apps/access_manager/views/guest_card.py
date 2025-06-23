@@ -41,7 +41,7 @@ class GuestCardView(APIView):
             staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
                                                    staff__tenant_id=request.user.tenant_id)
             if staff_cards:
-                return Response({"detail": "Card is connected to staff."}, 403)
+                return Response({"message": "Card is connected to staff."}, 403)
 
             guest = Guest.objects.get(pk=guest_id)
             device = Device.objects.filter(room__guests=guest_id, is_active=True).first()

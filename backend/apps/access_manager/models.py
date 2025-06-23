@@ -167,7 +167,9 @@ class StaffCard(BaseModel, CreatedByModel):
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_staff_cards"
-        constraints = [UniqueConstraint("staff", "card", condition=Q(is_active=True), name="unique_active_staff_card")]
+        constraints = [
+            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_active_staff_card"),
+        ]
 
 
 class GuestCard(BaseModel, CreatedByModel):

@@ -31,7 +31,7 @@ class StaffCardView(APIView):
 
             guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=request.user.tenant_id)
             if guest_cards:
-                return Response({"detail": "Card is connected to guest."}, 403)
+                return Response({"message": "Card is connected to guest."}, 403)
 
             group_rooms_devices = GroupRoom.objects.filter(group=group, room__devices__is_active=True).values_list(
                 "room__devices", flat=True
@@ -128,10 +128,10 @@ def prepare_mqtt_request(device, rpc_params, cards, staff, deactiveate=False):
 
 def deactivate_staff_card(staff, staff_card=None):
     try:
-        if staff:
-            StaffCard.objects.filter(staff=staff, is_active=True).update(is_active=False)
         if staff_card:
             StaffCard.objects.filter(id=staff_card, is_active=True).update(is_active=False)
+        else:
+            StaffCard.objects.filter(staff=staff, is_active=True).update(is_active=False)
         return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
     except Exception:
         return {"success": False, "message": "Could not disconnect card, please try again !"}
