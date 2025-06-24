@@ -1,4 +1,7 @@
 import time
+from typing import List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 
 from access_manager.models import NeedSyncDevice
 
@@ -18,7 +21,6 @@ logger = get_task_logger(__name__)
 
 
 class SyncDeviceView(APIView):
-    
     @sync_device_swagger()
     def post(self, request):
         serializer = SyncDeviceSerializer(data=request.data)
@@ -30,13 +32,18 @@ class SyncDeviceView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         ids = serializer.validated_data.get('ids', [])
+        device_ids = serializer.validated_data.get('device_ids', [])
         tenant_id = request.user.tenant_id
 
-        need_sync_exists = NeedSyncDevice.objects.filter(
-            need_sync=True, device__tenant_id=tenant_id,
-            id__in=ids).exists() if ids else NeedSyncDevice.objects.filter(
-            need_sync=True, device__tenant_id=tenant_id
-        ).exists()
+        # Check if any devices need syncing based on provided filters
+        queryset = NeedSyncDevice.objects.filter(need_sync=True, device__tenant_id=tenant_id)
+        
+        if ids:
+            queryset = queryset.filter(id__in=ids)
+        elif device_ids:
+            queryset = queryset.filter(device_id__in=device_ids)
+        
+        need_sync_exists = queryset.exists()
 
         if not need_sync_exists:
             return Response({
@@ -44,7 +51,7 @@ class SyncDeviceView(APIView):
                 "message": "No devices need syncing",
             }, status=status.HTTP_200_OK)
 
-        sync_devices_task.delay(tenant_id, ids)
+        sync_devices_task.delay(tenant_id, ids, device_ids)
 
         return Response({
             "success": True,
@@ -53,88 +60,170 @@ class SyncDeviceView(APIView):
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def sync_devices_task(tenant_id, ids=None):
+def sync_devices_task(tenant_id, ids=None, device_ids=None):
     try:
-        unsuccessful_messages = []
-        synced_count = 0
         queryset = NeedSyncDevice.objects.select_related('device', 'card').filter(
             need_sync=True,
+            device__status=True,
+            device__is_active=True,
             device__tenant_id=tenant_id
         )
         if ids:
             queryset = queryset.filter(id__in=ids)
+        elif device_ids:
+            queryset = queryset.filter(device_id__in=device_ids)
+
         need_sync_objects = queryset.all()
 
+        device_groups = defaultdict(list)
         for sync_obj in need_sync_objects:
-            print(sync_obj.id)
-            try:
-                additional_info = sync_obj.additional_info or {}
-                failed_requests = additional_info.get("failed_requests", [])
+            device_groups[sync_obj.device].append(sync_obj)
 
-                if not failed_requests:
-                    sync_obj.need_sync = False
-                    sync_obj.save()
-                    synced_count += 1
-                    logger.info("Device %s has no failed requests, marked as synced", sync_obj.device.name)
-                    continue
+        if not device_groups:
+            return {
+                "success": True,
+                "message": "No active devices need syncing",
+                "synced_count": 0,
+                "unsuccessful_messages": []
+            }
 
-                for num in reversed(range(len(failed_requests))):
-                    request_message = failed_requests[num]
-                    logger.info("Processing failed request %d for device %s", num, sync_obj.device.name)
+        results = process_devices_parallel(device_groups)
 
-                    result = send_rpc_request(request_message)
+        total_synced = sum(result.get("synced_count", 0) for result in results)
+        total_unsuccessful = []
+        for result in results:
+            total_unsuccessful.extend(result.get("unsuccessful_messages", []))
 
-                    if result.get("success"):
-                        failed_requests.pop(num)
-                        logger.info("Successfully processed request for device %s", sync_obj.device.name)
-                    else:
-                        logger.warning("Failed to process request for device %s: %s", sync_obj.device.name,
-                                       result.get("message"))
-                        unsuccessful_messages.append({
-                            "device": sync_obj.device.name,
-                            "card": sync_obj.card.number if sync_obj.card else "Unknown",
-                            "message": request_message,
-                            "error": result.get("message", "Unknown error")
-                        })
-
-                if not failed_requests:
-                    sync_obj.need_sync = False
-                    synced_count += 1
-                    logger.info("All requests processed successfully for device %s", sync_obj.device.name)
-                else:
-                    logger.warning("Some requests still failed for device %s", sync_obj.device.name)
-
-                sync_obj.additional_info = additional_info
-                sync_obj.save()
-
-            except Exception as e:
-                logger.error("Error processing sync object %s: %s", sync_obj.id, str(e))
-                unsuccessful_messages.append({
-                    "device": sync_obj.device.name if sync_obj.device else "Unknown",
-                    "card": sync_obj.card.number if sync_obj.card else "Unknown",
-                    "message": "Processing error",
-                    "error": str(e)
-                })
-
-        result = {
-            "success": len(unsuccessful_messages) == 0,
-            "message": f"Successfully synced {synced_count} devices" if not unsuccessful_messages else f"Synced {synced_count} devices with {len(unsuccessful_messages)} errors",
-            "unsuccessful_messages": unsuccessful_messages,
-            "synced_count": synced_count,
+        final_result = {
+            "success": len(total_unsuccessful) == 0,
+            "message": f"Successfully synced {total_synced} devices" if not total_unsuccessful else f"Synced {total_synced} devices with {len(total_unsuccessful)} errors",
+            "unsuccessful_messages": total_unsuccessful,
+            "synced_count": total_synced,
         }
 
-        logger.info("Sync task completed: %s", result["message"])
-        return result
+        logger.info("Sync task completed: %s", final_result["message"])
+        return final_result
 
     except Exception as e:
         logger.error("Error in sync_devices_task: %s", str(e))
         raise e
 
 
-def send_rpc_request(message):
+def process_devices_parallel(device_groups: Dict) -> List[Dict[str, Any]]:
+    results = []
+
+    with ThreadPoolExecutor(max_workers=min(len(device_groups), 10)) as executor:
+        future_to_device = {
+            executor.submit(process_device_sequential, device, sync_objects): device
+            for device, sync_objects in device_groups.items()
+        }
+
+        for future in as_completed(future_to_device):
+            device = future_to_device[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                logger.error("Error processing device %s: %s", device.name, str(e))
+                results.append({
+                    "device_name": device.name,
+                    "synced_count": 0,
+                    "unsuccessful_messages": [{
+                        "device": device.name,
+                        "card": "Unknown",
+                        "message": "Processing error",
+                        "error": str(e)
+                    }]
+                })
+
+    return results
+
+
+def process_device_sequential(device, sync_objects: List) -> Dict[str, Any]:
+    """Process sync objects for a single device sequentially in batches of 10."""
+    synced_count = 0
+
+    batch_size = 10
+    batches = [sync_objects[i:i + batch_size] for i in range(0, len(sync_objects), batch_size)]
+
+    logger.info("Processing %d batches for device %s", len(batches), device.name)
+
+    for batch_num, batch in enumerate(batches, 1):
+        logger.info("Processing batch %d/%d with %d requests for device %s",
+                    batch_num, len(batches), len(batch), device.name)
+
+        batch_params = []
+        batch_sync_objects = []
+
+        for sync_obj in batch:
+            additional_info = sync_obj.additional_info or {}
+            failed_request = additional_info.get("failed_request")
+
+            if not failed_request:
+                sync_obj.need_sync = False
+                sync_obj.save()
+                synced_count += 1
+                logger.info("Device %s sync object %s has no failed requests, marked as synced",
+                            device.name, sync_obj.id)
+                continue
+
+            request_params = failed_request.get("data", {}).get("data", {}).get("params", [])
+            batch_params.extend(request_params)
+            batch_sync_objects.append(sync_obj)
+
+        if not batch_params:
+            logger.info("No parameters to send for batch %d of device %s", batch_num, device.name)
+            continue
+
+        result = send_batch_rpc_request(device, batch_params, batch_sync_objects)
+
+        if result.get("success"):
+            for sync_obj in batch_sync_objects:
+                sync_obj.need_sync = False
+                sync_obj.save()
+                synced_count += 1
+            logger.info("Successfully processed batch %d for device %s", batch_num, device.name)
+        else:
+            logger.warning("Failed to process batch %d for device %s: %s",
+                       batch_num, device.name, result.get("message"))
+
+    return {
+        "device_name": device.name,
+        "synced_count": synced_count,
+    }
+
+
+def send_batch_rpc_request(device, batch_params: List[dict], sync_objects: List) -> dict:
+    """Send a batch RPC request with multiple parameters."""
     try:
-        request_id = message.get("data", {}).get("data", {}).get("id")
-        logger.info("Sending RPC request with ID: %s", request_id)
+        # Create RPC message for batch request
+        rpc_message = RPCMessage.objects.create(additional_info={})
+        request_id = rpc_message.id
+
+        # Get device info (similar to tasks.py logic)
+        from shuttle.models import Relation
+        from main.models import Device
+
+        relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
+        device_id = relation.from_id.id if relation else None
+        gateway_or_none = Device.objects.gateway_or_none(device.id)
+
+        message = {
+            "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device_id),
+            "topic": "v1/gateway/rpc",
+            "data": {
+                "device": str(device.name),
+                "data": {
+                    "id": request_id,
+                    "method": "writeRFID",
+                    "params": batch_params,
+                    "timeout": 10000
+                },
+            },
+        }
+
+        logger.info("Sending batch RPC request with ID: %s for device %s with %d parameters",
+                    request_id, device.name, len(batch_params))
 
         channel = connect_to_rabbitmq()
         send_to_rabbitmq(channel, message)
@@ -146,22 +235,24 @@ def send_rpc_request(message):
             has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
             if has_message:
                 success = bool(str_to_dict(has_message.additional_info).get("success"))
-                logger.info("RPC request %s completed with success: %s", request_id, success)
+                logger.info("Batch RPC request %s for device %s completed with success: %s",
+                            request_id, device.name, success)
                 return {
                     "success": success,
-                    "message": "RPC request completed" if success else "RPC request failed"
+                    "message": f"Batch RPC request completed for device {device.name}" if success else f"Batch RPC request failed for device {device.name}"
                 }
             time.sleep(0.5)
 
-        logger.warning("RPC request %s timed out after %d seconds", request_id, timeout_seconds)
+        logger.warning("Batch RPC request %s for device %s timed out after %d seconds",
+                       request_id, device.name, timeout_seconds)
         return {
             "success": False,
-            "message": "Timeout waiting for RPC response"
+            "message": f"Timeout waiting for RPC response from device {device.name}"
         }
 
     except Exception as e:
-        logger.error("Error sending RPC request: %s", str(e))
+        logger.error("Error sending batch RPC request for device %s: %s", device.name, str(e))
         return {
             "success": False,
-            "message": f"Error sending RPC request: {str(e)}"
+            "message": f"Error sending batch RPC request to device {device.name}: {str(e)}"
         }

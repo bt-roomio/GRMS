@@ -95,3 +95,9 @@ class SyncDeviceSerializer(serializers.Serializer):
         allow_empty=False,
         help_text="List of NeedSyncDevice UUIDs to sync. If not provided, all devices needing sync will be processed."
     )
+    device_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        allow_empty=False,
+        help_text="List of Device UUIDs to sync. If not provided, all devices needing sync will be processed."
+    )
