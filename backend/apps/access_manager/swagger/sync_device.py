@@ -13,6 +13,15 @@ SyncDeviceRequestSwagger = openapi.Schema(
             ),
             description="List of NeedSyncDevice UUIDs to sync. If not provided, all devices needing sync will be processed.",
         ),
+        "device_ids": openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_UUID,
+                description="Device UUID"
+            ),
+            description="List of Device UUIDs to sync. If provided, all NeedSyncDevice objects for these devices will be processed.",
+        ),
     },
 )
 
@@ -56,13 +65,18 @@ def sync_device_swagger():
         
         This endpoint processes devices that need synchronization by:
         - Checking for NeedSyncDevice records with failed requests
-        - Retrying failed RPC requests for card operations
+        - Retrying failed RPC requests for card operations in batches of 10
+        - Processing devices in parallel but batches sequentially per device
         - Updating sync status based on operation results
         
         The sync operation runs as a background Celery task with automatic retries.
         
         **Parameters:**
-        - `ids` (optional): List of specific NeedSyncDevice UUIDs to sync. If omitted, all devices needing sync will be processed.
+        - `ids` (optional): List of specific NeedSyncDevice UUIDs to sync
+        - `device_ids` (optional): List of specific Device UUIDs to sync all their NeedSyncDevice records
+        
+        **Note:** If both `ids` and `device_ids` are provided, only `ids` will be used.
+        If neither is provided, all devices needing sync will be processed.
         
         **Response codes:**
         - `200`: No devices need syncing
