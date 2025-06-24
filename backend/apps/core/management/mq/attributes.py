@@ -14,7 +14,7 @@ from shuttle.utils.find_compatible_field import find_compatible_field
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 EXPIRY_TIME = 3600
 
