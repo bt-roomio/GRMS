@@ -255,6 +255,10 @@ LOGGING = {
             "format": "{levelname} {message}",
             "style": "{",
         },
+        "verbose_with_location": {
+            "format": "[{levelname}] {asctime} {pathname}:{lineno} | {message}",
+            "style": "{",
+        },
     },
     "filters": {
         "require_debug_true": {
@@ -265,7 +269,7 @@ LOGGING = {
         "console": {
             "level": "DEBUG",
             "filters": ["require_debug_true"],
-            "class": "logging.StreamHandler",
+            "class": "rich.logging.RichHandler",
             "formatter": "simple",
         },
         "file": {
@@ -289,6 +293,7 @@ LOGGING = {
         "django.db.backends": {
             "handlers": ["console"],
             "propagate": False,
+            # "level": "DEBUG",
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
