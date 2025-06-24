@@ -37,27 +37,25 @@ def need_sync(cards: List[str], device, message: dict):
                 device=device,
                 defaults={
                     "need_sync": True,
-                    "additional_info": {"failed_requests": [single_card_message]},
+                    "additional_info": {"failed_request": single_card_message},
                 },
             )
             if created:
                 publish_updates("need_sync", "get_list_activity", {})
 
             if not created:
-                info = sync_obj.additional_info or {"failed_requests": []}
-                failed_requests = info.setdefault("failed_requests", [])
+                info = sync_obj.additional_info or {}
+                current_failed_request = info.get("failed_request")
 
-                if failed_requests and is_same_request(failed_requests[-1], single_card_message):
+                if current_failed_request and is_same_request(current_failed_request, single_card_message):
                     continue
 
-                failed_requests.append(single_card_message)
+                info["failed_request"] = single_card_message
 
                 sync_obj.need_sync = True
                 sync_obj.additional_info = info
                 sync_obj.save()
                 publish_updates("need_sync", "get_list_activity", {})
-
-
 
         except Card.DoesNotExist:
             logger.error("Card '%s' not found, skipping sync", card_num)

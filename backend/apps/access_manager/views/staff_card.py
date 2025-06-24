@@ -9,6 +9,7 @@ from access_manager.swagger.staff_card import staff_card_swagger
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.utilits.need_sync import need_sync
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
 from main.models import Device
@@ -29,7 +30,8 @@ class StaffCardView(APIView):
             cards = validated_data["cards"]
             group = staff.group
 
-            guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=request.user.tenant_id)
+            guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards,
+                                                   guest__tenant_id=request.user.tenant_id)
             if guest_cards:
                 return Response({"message": "Card is connected to guest."}, 403)
 
@@ -113,11 +115,14 @@ def prepare_mqtt_request(device, rpc_params, cards, staff, deactiveate=False):
             if has_message and bool(str_to_dict(has_message.additional_info).get("success")):
                 result = deactivate_staff_card(staff)
                 return result
+            elif not bool(str_to_dict(has_message.additional_info).get("success")):
+                need_sync(cards, device, message)
         elif has_message and bool(str_to_dict(has_message.additional_info).get("success")):
             result = activate_staff_card(cards, staff, device)
             return result
 
         time.sleep(1)
+    need_sync(cards, device, message)
 
     return {
         "success": False,

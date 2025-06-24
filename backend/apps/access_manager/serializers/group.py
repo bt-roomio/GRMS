@@ -43,6 +43,13 @@ class SimpleGroupSerializer(serializers.ModelSerializer):
         fields = ("id", "name")
 
 
+class TimeHourMinuteField(serializers.TimeField):
+    def to_representation(self, value):
+        if value is None:
+            return value
+        return value.strftime('%H:%M')
+
+
 class GroupSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, read_only=True)
     created_by = SimpleUserSerializer(read_only=True)
@@ -53,6 +60,8 @@ class GroupSerializer(serializers.ModelSerializer):
     )
     public_spaces = SimpleGroupPublicSpaceSerializer(source="group_public_space", read_only=True, many=True)
     group_type = TypeChoiceField()
+    start_time = TimeHourMinuteField()
+    end_time = TimeHourMinuteField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
