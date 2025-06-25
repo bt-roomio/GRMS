@@ -18,8 +18,20 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = CardLogFilterParams.check(data=kwargs.get("query_params", {}))
-        device = Device.objects.filter(room__id=params.get("room"), is_active=True).first()
-        query = query.by_device(device=device).list(filters=params.get("filters", {}), sort_by=params.get("sort_by"))
+
+        user = self.scope["user"]
+        tenant=user.get("tenant_id")
+        print("tenant", tenant)
+
+        query = query.list(
+            filters=params.get("filters", {}),
+            sort_by=params.get("sort_by", ["-event_ts"]),
+            room_id=params.get("room"),
+            user_id=params.get("user"),
+            card_num=params.get("card_num"),
+            tenant=tenant
+        )
+
         return query
 
     async def get_list_activity(self, message, **kwargs):
