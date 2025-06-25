@@ -3,7 +3,7 @@ import logging
 from shuttle.models import RPCMessage
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 def handle_rpc(data):

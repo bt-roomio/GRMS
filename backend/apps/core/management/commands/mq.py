@@ -14,8 +14,8 @@ QUEUE_CONFIG = {
     "v1/devices/me/attributes/request": 1,
     "v1/gateway/rpc": 1,
     "v1/gateway/attributes/request": 1,
-    "/attributes": 2,
-    "/telemetry": 2,
+    "/attributes": 4,
+    "/telemetry": 4,
 }
 
 DLX_EXCHANGE = "dlx_exchange"
@@ -67,8 +67,8 @@ class Command(BaseCommand):
                 self.declare_queue_with_dlx(channel, queue_name)
 
             connection.close()
-        except Exception as e:
-            logger.error(f"Failed to setup DLX and queues: {e}")
+        except Exception:
+            logger.exception("Failed to setup DLX and queues")
             return
 
         for queue_name, worker_count in QUEUE_CONFIG.items():

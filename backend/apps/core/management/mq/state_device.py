@@ -5,7 +5,7 @@ from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 def handle_connect_disconnect(device, topic, data):
