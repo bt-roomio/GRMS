@@ -272,12 +272,14 @@ class RoomType(BaseModel):
 
 
 class Device(BaseModel):
+    id: UUID
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     tenant_id: UUID
     customer = models.ForeignKey("main.Customer", CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    device_profile_id: UUID
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", SET_NULL, "devices", null=True, blank=True)

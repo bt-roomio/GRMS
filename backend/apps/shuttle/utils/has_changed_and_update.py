@@ -6,7 +6,7 @@ from django.conf import settings
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
 
-def has_changed_and_update(device_id: int, updates: list[dict], is_attribute_kv: bool = False) -> list[dict]:
+def has_changed_and_update(device_id: str, updates: list[dict], is_attribute_kv: bool = False) -> list[dict]:
     """
     Проверяет, изменились ли данные для устройства.
     Возвращает только те обновления, которые действительно изменились.
