@@ -11,9 +11,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         ch = connect_to_rabbitmq()
 
-        with open("output.json", "r") as f:
+        with open("output_500.json", "r") as f:
             msg = json.load(f)
-            # msg = [m for m in msg if m.get("topic").endswith("/attributes")]
+            attrs = [m for m in msg if m.get("topic").endswith("/attributes")]
+            print(len(attrs))
+            for m in attrs:
+                send_to_rabbitmq(ch, m, "/attributes")
+
+            msg = [m for m in msg if m.get("topic").endswith("/telemetry")]
             print(len(msg))
-            for m in msg[:2000]:
-                send_to_rabbitmq(ch, m, "toGRMS")
+            for m in msg:
+                send_to_rabbitmq(ch, m, "/telemetry")

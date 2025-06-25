@@ -5,7 +5,7 @@ from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 def handle_attribute_request(ch, device_id: str, topic: str, data: dict):
