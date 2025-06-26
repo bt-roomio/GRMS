@@ -17,6 +17,10 @@ class UUIDEncoder(json.JSONEncoder):
 class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     pagination_class = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subscribers = {}
+
     @classmethod
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)
@@ -37,10 +41,9 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
 
     def get_data_paginated(self, query_params, **kwargs):
         queryset = self.get_queryset(query_params=query_params)
-        count = queryset.count()
         queryset = self.pagination(queryset, query_params.get("page", 1), query_params.get("size", 15))
         serializer = self.get_serializer(instance=queryset, many=True, action_kwargs=kwargs)
-        return {"results": serializer.data, "count": count}
+        return {"results": serializer.data, "count": queryset.count()}
 
     async def send_list_paginated(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)

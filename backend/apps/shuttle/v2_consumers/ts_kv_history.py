@@ -13,10 +13,6 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
     queryset = TsKv.objects.all()
     serializer_class = TsKvHistorySerializer
 
-    async def accept(self, *args, **kwargs):
-        self.subscribers = {}
-        await super().accept(*args, **kwargs)
-
     def get_data_paginated(self, query_params, **kwargs):
         queryset = self.get_queryset(query_params=query_params)
         for key in queryset:
@@ -58,10 +54,10 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
                 self.last_value = value
 
     @action()
-    async def list_subscribe(self, **kwargs):
+    async def list_subscribe(self, request_id, **kwargs):
         await self.send_list_paginated(**kwargs)
         await self.add_group("tskv_updates")
-        self.subscribers[kwargs.get("request_id")] = kwargs
+        self.subscribers[request_id] = kwargs
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):

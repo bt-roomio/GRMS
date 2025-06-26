@@ -29,20 +29,18 @@ class TsKvQuerySet(BaseQuerySet):
         return self.filter(entity=entity)
 
     def gateway_logs(self, key, start_ts, end_ts, sort_by=[]):
+        query = self.filter(ts__gte=start_ts, key__key=key)
+        query = query.filter(ts__lte=end_ts) if end_ts else query
         query = (
-            self.select_related("key")
-            .filter(ts__gte=start_ts, ts__lte=end_ts, key__key=key)
-            .annotate(key_name=F("key__key"))
-            .values("ts", "key_name", "str_v", "bool_v", "json_v", "long_v", "dbl_v")
+            query.annotate(
+                key_name=F("key__key"),
+                value=Coalesce("str_v", Cast("json_v", output_field=CharField()), output_field=CharField()),
+            )
+            .values("ts", "key_name", "value")
             .order_by(*sort_by)
         )
 
-        cleaned_query = [{k: v for k, v in record.items() if v is not None} for record in query]
-        cleaned_query = [
-            {(k if k in ["ts", "key_name"] else "value"): v for k, v in record.items()} for record in cleaned_query
-        ]
-
-        return cleaned_query, query.count()
+        return query
 
     def tag_logs(self, entity, keys, start_ts, sort_by=None):
         if sort_by is None:

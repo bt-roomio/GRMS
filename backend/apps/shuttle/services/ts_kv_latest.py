@@ -5,6 +5,7 @@ from shuttle.utils.has_changed_and_update import has_changed_and_update
 
 GROUP_SUFFIXES = (
     "tskv_latest_updates",
+    "tskv_updates",
     "room_status",
     "emergency_status",
 )
@@ -29,6 +30,9 @@ def publish_updates_batch(updates_by_device: dict[str, list[dict]]):
             if suffix == "tskv_latest_updates":
                 group_name = f"{suffix}_{device_id}"
                 payload["type"] = "ts_kv_latest_activity"
+            elif suffix == "tskv_updates":
+                group_name = f"{suffix}_{device_id}"
+                payload["type"] = "ts_kv_activity"
             else:
                 group_name = suffix
                 payload["type"] = "get_latest_activity"
