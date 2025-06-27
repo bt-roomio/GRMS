@@ -41,9 +41,10 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
 
     def get_data_paginated(self, query_params, **kwargs):
         queryset = self.get_queryset(query_params=query_params)
+        count = queryset.count()
         queryset = self.pagination(queryset, query_params.get("page", 1), query_params.get("size", 15))
         serializer = self.get_serializer(instance=queryset, many=True, action_kwargs=kwargs)
-        return {"results": serializer.data, "count": queryset.count()}
+        return {"results": serializer.data, "count": count}
 
     async def send_list_paginated(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)

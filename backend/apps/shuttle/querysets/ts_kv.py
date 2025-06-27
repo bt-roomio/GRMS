@@ -28,8 +28,9 @@ class TsKvQuerySet(BaseQuerySet):
     def by_device(self, entity):
         return self.filter(entity=entity)
 
-    def gateway_logs(self, key, start_ts, end_ts, sort_by=[]):
-        query = self.filter(ts__gte=start_ts, key__key=key)
+    def gateway_logs(self, entity, key, start_ts, end_ts, sort_by=[]):
+        query = self.by_device(entity)
+        query = query.filter(ts__gte=start_ts, key__key=key)
         query = query.filter(ts__lte=end_ts) if end_ts else query
         query = (
             query.annotate(
@@ -150,11 +151,15 @@ class TsKvQuerySet(BaseQuerySet):
                     key_name=F("key__key"),
                     count=count_expr,
                 )
-                .values("value", "ts", "key_name", "count")
-                .order_by(*sort_by)[:limit]
+                .values("value", "ts", "key_name", "count")[:limit]
             )
+
             if auto_fill:
                 data = fill_missing_intervals(data, interval, start_ts, limit, key_name=key)
+
+            if "-interval_ts" in sort_by:
+                data = sorted(data, key=lambda d: d["ts"], reverse=True)
+
             result[key] = data
         return result
 

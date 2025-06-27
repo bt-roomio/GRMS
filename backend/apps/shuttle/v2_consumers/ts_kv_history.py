@@ -1,11 +1,9 @@
-from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
 from core.utils.date import convert_datetime
 from main.models import Device
 from shuttle.models import TsKv
 from shuttle.serializers.ts_kv_history import TsKvHistoryFilterParams, TsKvHistorySerializer
-from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -39,25 +37,27 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
         )
         return query
 
-    async def get_latest_ts_kv_activity(self, message, **kwargs):
-        entity = message.pop("entity")
-        key = message.pop("key")
-        _, value = get_non_null_column(message)
-        del message["ts"]
-        del message["type"]
+    async def ts_kv_activity(self, message):
+        updates = message.get("updates", []) or []
+        for update in updates:
+            await self.handle_ts_kv_activity(update)
+        if not updates:
+            await self.handle_ts_kv_activity(message.get("update"))
+
+    async def handle_ts_kv_activity(self, payload):
+        entity = payload.pop("entity")
+        key = payload.pop("key")
 
         for request_id, params in self.subscribers.items():
-            query_params = params.get("query_params")
-            if query_params.get("device") == entity and key in query_params.get("keys", []):
-                data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
-                await self.reply(data=data, action="subscribe", request_id=request_id)
-                self.last_value = value
+            qp = params.get("query_params")
+            if qp.get("device") == entity and key in qp.get("keys", []):
+                await self.send_list_paginated(params.get("action"), qp, request_id)
 
     @action()
-    async def list_subscribe(self, request_id, **kwargs):
-        await self.send_list_paginated(**kwargs)
-        await self.add_group("tskv_updates")
-        self.subscribers[request_id] = kwargs
+    async def list_subscribe(self, request_id, query_params, action):
+        res = await self.send_list_paginated(action, query_params, request_id)
+        await self.add_group(f"tskv_updates_{query_params.get('device')}")
+        self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
