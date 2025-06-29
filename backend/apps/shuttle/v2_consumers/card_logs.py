@@ -3,7 +3,6 @@ from djangochannelsrestframework.mixins import action
 
 from access_manager.models import CardLog
 from access_manager.serializers.card_log import CardLogSerializer, CardLogFilterParams
-from main.models import Device
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -21,7 +20,6 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
 
         user = self.scope["user"]
         tenant=user.get("tenant_id")
-        print("tenant", tenant)
 
         query = query.list(
             filters=params.get("filters", {}),

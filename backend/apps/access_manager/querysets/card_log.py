@@ -18,8 +18,6 @@ class CardLogQuerySet(BaseQuerySet):
         from_date = filters.get("from_date")
         to_date = filters.get("to_date")
 
-        print(from_date, to_date)
-
         if from_date:
             query = query.filter(event_ts__gte=from_date)
         if to_date:
