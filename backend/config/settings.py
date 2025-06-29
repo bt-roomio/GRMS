@@ -120,6 +120,7 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
+        "CONN_MAX_AGE": 60,
     }
 }
 
@@ -207,9 +208,8 @@ CHANNEL_LAYERS = {
     },
 }
 
-RABBIT_TYPE = os.getenv("RABBIT_TYPE", "rabbitMQ")
-RABBIT_HOST = os.getenv("RABBIT_MQ_HOST", "localhost")
-RABBIT_PORT = os.getenv("RABBIT_MQ_PORT", 5672)
+RABBIT_HOST = os.getenv("RABBIT_HOST", "rabbitmq")
+RABBIT_PORT = os.getenv("RABBIT_PORT", 5672)
 RABBIT_LOGIN = os.getenv("RABBIT_LOGIN", "guest")
 RABBIT_PASSWORD = os.getenv("RABBIT_PASSWORD", "guest")
 
