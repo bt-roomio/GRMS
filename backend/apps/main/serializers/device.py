@@ -1,3 +1,4 @@
+import logging
 from rest_framework import serializers
 
 from core.utils.random_letter import get_random_letter
@@ -6,6 +7,8 @@ from main.models import Device, DeviceCredentials, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
 from main.serializers.device_profile import SimpleDeviceProfileSerializer
 from main.utils.has_roomio_node import has_roomio_node
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
@@ -50,7 +53,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
-            validated_data.get("tenant_id")
+                validated_data.get("tenant_id")
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
@@ -64,11 +67,58 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
-            validated_data.get("tenant_id"), instance.id
+                validated_data.get("tenant_id"), instance.id
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
-        return super().update(instance, validated_data)
+        old_room_id = instance.room_id if instance.pk else None
+
+        updated_instance = super().update(instance, validated_data)
+
+        new_room_id = updated_instance.room_id
+
+        if (old_room_id != new_room_id and
+                new_room_id and
+                updated_instance.is_active and
+                updated_instance.status):
+            print("yesss")
+            self._register_cards_for_room(new_room_id)
+
+        return updated_instance
+
+    def _register_cards_for_room(self, room_id):
+        from access_manager.models import GroupRoom
+        from access_manager.tasks import card_room
+
+        try:
+            group_rooms = GroupRoom.objects.filter(
+                room_id=room_id,
+                group__is_active=True
+            ).select_related('group')
+
+            print("group_rooms", group_rooms)
+
+            for group_room in group_rooms:
+                try:
+                    card_room(
+                        group_id=group_room.group_id,
+                        room_id=room_id,
+                        action="connect"
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Error registering cards for group %s to room %s: %s",
+                        group_room.group_id,
+                        room_id,
+                        str(e)
+                    )
+
+        except Exception as e:
+            logger.error(
+                "Error in _register_cards_for_room for room %s: %s",
+                room_id,
+                str(e)
+            )
 
     class Meta:
         model = Device
