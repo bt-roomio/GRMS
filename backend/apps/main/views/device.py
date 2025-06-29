@@ -2,9 +2,9 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from access_manager.models import NeedSyncDevice
 from core.utils.pagination import pagination
-from main.models import Device
+from main.models import Device, PublicSpace
 from main.serializers.device import DeviceFilterParams, DeviceSerializer
 from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 from core.utils.permission import check_perms
@@ -59,6 +59,17 @@ class DeviceDetailView(APIView):
     @check_perms(["main.delete_device"])
     def delete(self, request, pk):
         device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
+        remove_need_sync(device)
         device.is_active = False
         device.save()
         return Response({}, 204)
+
+
+def remove_need_sync(device: Device):
+    NeedSyncDevice.objects.filter(device=device, need_sync=True).update(need_sync=False)
+    PublicSpace.objects.filter(device=device).update(device=None)
+
+    if device.room:
+        device.room = None
+        device.save()
+
