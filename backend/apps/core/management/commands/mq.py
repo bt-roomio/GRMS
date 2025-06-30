@@ -14,12 +14,12 @@ QUEUE_CONFIG = {
     "v1/devices/me/attributes/request": 1,
     "v1/gateway/rpc": 1,
     "v1/gateway/attributes/request": 1,
-    "/attributes": 4,
-    "/telemetry": 4,
+    "/attributes": 8,
+    "/telemetry": 8,
 }
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 
 class Command(BaseCommand):

@@ -7,7 +7,7 @@ from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 
 class AttributeRequestType(TypedDict):
