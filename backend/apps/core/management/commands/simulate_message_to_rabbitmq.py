@@ -9,7 +9,14 @@ class Command(BaseCommand):
     help = "simulate_message_to_rabbitmq"
 
     def handle(self, **_):
+        msg = {
+            "sourceDeviceUUID": "c6fe44a3-b349-491d-bd7b-31c32dcaf3db",
+            "data": {"device": "d8:9c:e4:6a:bb:b3"},
+            "topic": "v1/gateway/disconnect",
+        }
         ch = connect_to_rabbitmq()
+        send_to_rabbitmq(ch, msg, "toGRMS")
+        return
 
         with open("output_500.json", "r") as f:
             msg = json.load(f)

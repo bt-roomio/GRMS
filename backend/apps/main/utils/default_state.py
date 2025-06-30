@@ -9,7 +9,7 @@ def default_state():
 
 
 class StateEnum(str, Enum):
-    RESERVED_STATUS = "Reserved"
+    CHECK_IN_OUT = "CHECK IN/OUT"
     OCCUPANCY_STATUS = "OCCUPANCY STATUS"
 
 
