@@ -27,7 +27,6 @@ def handle_attribute_request(ch, topic: str, device: DeviceType, data: Attribute
             sub_device = get_sub_device(device, name=data.get("device"))
             sub_device_id = sub_device.get("id")
 
-        print(f"{sub_device_id or device_id}")
         shared_keys = data.get("sharedKeys") or data.get("keys") or []
         keys = shared_keys.split(",") if isinstance(shared_keys, str) else shared_keys
         attrs = AttributeKv.objects.filter(attribute_type=AttributeKv.SHARED_SCOPE, entity=sub_device_id or device_id)

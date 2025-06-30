@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 from django.core.management.base import BaseCommand
 
@@ -11,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         while True:
-            print("Checking Attributes SERVER_SCOPE", get_mil_sec())
+            print("Checking Attributes SERVER_SCOPE", datetime.now())
             active_attribute_server_scope()
             time.sleep(10)
 
@@ -29,6 +30,8 @@ def check_activity_time(attribute_kv):
         if attr.long_v < get_mil_sec() - 60000:
             attr_active.bool_v = False
             attr_active.save()
+            attr_active.entity.status = False
+            attr_active.entity.save()
             print(f"Device id: {attr.entity_id}")
 
             if attr.entity.additional_info and attr.entity.additional_info.get("gateway"):
@@ -41,3 +44,5 @@ def check_activity_time(attribute_kv):
                     print(f"Relation: {relation_attr.entity_id}")
                     relation_attr.bool_v = False
                     relation_attr.save()
+                    relation_attr.entity.status = False
+                    relation_attr.entity.save()
