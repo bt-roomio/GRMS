@@ -252,7 +252,7 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "WARNING",
+            "level": "DEBUG",
             "filters": ["require_debug_true"],
             "class": "rich.logging.RichHandler",
             "formatter": "simple",
@@ -287,7 +287,7 @@ LOGGING = {
         },
         "core": {
             "handlers": ["console"],
-            "propagate": True,
+            "propagate": False,
             "level": "WARNING",
         },
     },

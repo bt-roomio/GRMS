@@ -45,8 +45,8 @@ def update_activity_device(device_id, connected=True):
             active_attr.save()
 
         # Updating device status
-        if not active_attr.entity.status:
-            active_attr.entity.status = True
+        if active_attr.entity.status != connected:
+            active_attr.entity.status = connected
             active_attr.entity.save()
     else:
         AttributeKv.objects.create(
