@@ -31,7 +31,7 @@ def has_changed_and_update(device_id: str, updates: list[dict], is_attribute_kv:
         old_value = cached.get(update_key)
         new_value = update.get("bool_v") or update.get("str_v") or update.get("dbl_v") or update.get("long_v")
 
-        if old_value != new_value:
+        if update.get("key", "").endswith("_LOGS") or old_value != new_value:
             changed.append(update)
             cached[update_key] = new_value
 

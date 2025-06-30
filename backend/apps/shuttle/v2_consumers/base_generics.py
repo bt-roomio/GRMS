@@ -17,6 +17,10 @@ class UUIDEncoder(json.JSONEncoder):
 class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     pagination_class = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subscribers = {}
+
     @classmethod
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)

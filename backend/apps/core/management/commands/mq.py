@@ -14,45 +14,16 @@ QUEUE_CONFIG = {
     "v1/devices/me/attributes/request": 1,
     "v1/gateway/rpc": 1,
     "v1/gateway/attributes/request": 1,
-    "/attributes": 4,
-    "/telemetry": 4,
+    "/attributes": 8,
+    "/telemetry": 8,
 }
 
-DLX_EXCHANGE = "dlx_exchange"
-DLX_QUEUE = "dlx_queue"
-MESSAGE_TTL = 30000  # 30 seconds in milliseconds
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 class Command(BaseCommand):
     help = "Consumes messages from multiple RabbitMQ queues using dedicated threads with DLX support"
-
-    def setup_dlx(self, channel: BlockingChannel):
-        """Setup Dead Letter Exchange and Queue"""
-        try:
-            channel.exchange_declare(exchange=DLX_EXCHANGE, exchange_type="fanout", durable=True)
-            channel.queue_declare(queue=DLX_QUEUE, durable=True)
-            channel.queue_bind(exchange=DLX_EXCHANGE, queue=DLX_QUEUE)
-
-            logger.info(f"DLX setup completed: exchange={DLX_EXCHANGE}, queue={DLX_QUEUE}")
-        except Exception as e:
-            logger.error(f"Failed to setup DLX: {e}")
-            raise
-
-    def declare_queue_with_dlx(self, channel: BlockingChannel, queue_name: str):
-        """Declare queue with DLX configuration"""
-        try:
-            args = {
-                "x-dead-letter-exchange": DLX_EXCHANGE,
-                "x-message-ttl": MESSAGE_TTL,  # Messages expire after TTL
-            }
-
-            channel.queue_declare(queue=queue_name, durable=True, arguments=args)  # pyright: ignore
-        except Exception as e:
-            logger.error(f"Failed to declare queue '{queue_name}' with DLX: {e}")
-            raise
 
     def handle(self, *args, **options):
         try:
@@ -61,21 +32,19 @@ class Command(BaseCommand):
             connection = pika.BlockingConnection(parameters)
             channel = connection.channel()
 
-            self.setup_dlx(channel)
-
             for queue_name in QUEUE_CONFIG.keys():
-                self.declare_queue_with_dlx(channel, queue_name)
+                channel.queue_declare(queue=queue_name, durable=True)
 
             connection.close()
         except Exception:
-            logger.exception("Failed to setup DLX and queues")
+            logger.exception("Failed to setup queues!")
             return
 
         for queue_name, worker_count in QUEUE_CONFIG.items():
             for i in range(worker_count):
                 thread = threading.Thread(target=self.worker_thread, args=(queue_name, i), daemon=True)
                 thread.start()
-                logger.info(f"Started worker thread for queue '{queue_name}' (Worker-{i})")
+                logger.debug(f"Started worker thread for queue '{queue_name}' (Worker-{i})")
 
         logger.info("All worker threads started. Waiting indefinitely...")
         try:
@@ -108,9 +77,6 @@ class Command(BaseCommand):
                             logger.debug(f"[{queue_name}][Worker-{thread_id}] Message processed successfully")
                     except Exception as e:
                         logger.warning(f"[{queue_name}][Worker-{thread_id}] Error processing message: {e}")
-                        if method.delivery_tag:
-                            ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
-                            logger.info(f"[{queue_name}][Worker-{thread_id}] Message rejected and sent to DLX")
 
                 channel.basic_consume(queue=queue_name, on_message_callback=callback)
                 channel.start_consuming()
