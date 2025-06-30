@@ -19,6 +19,7 @@ def handle_connect_disconnect(device, topic, data):
 
 
 def update_activity_device(device_id, connected=True):
+    logger.debug(f"Params update_activity_device: {device_id, connected}")
     ts_now = get_mil_sec()
 
     # Active state and Last activity
@@ -27,6 +28,7 @@ def update_activity_device(device_id, connected=True):
     )
 
     attr_map = {attr.attribute_key: attr for attr in attrs}
+    logger.debug(f"attr_map: {attr_map}")
 
     active_attr = attr_map.get("active")
     # Early exit when no update is required

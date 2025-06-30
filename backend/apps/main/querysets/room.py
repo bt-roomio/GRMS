@@ -4,6 +4,7 @@ from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, 
 from django.db.models.functions import Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
+from core.utils.helpers import safely_remove
 from shuttle.models import TsKvDictionary, TsKvLatest
 
 
@@ -91,7 +92,11 @@ class RoomQuerySet(BaseQuerySet):
         rpc_params = prepare_cards(cards, 0)
         deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
         guests.update(is_active=False)
-        query.update(state=Func(F("state"), Room.CheckedIn, function="array_remove"))
+        # loop for send signal
+        for room in query:
+            room.state = safely_remove(room.state, Room.CheckedIn)
+            room.state.append(Room.Available)
+            room.save(update_fields=["state"])
         return guests.count(), deactivate_result
 
 
