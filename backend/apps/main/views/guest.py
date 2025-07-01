@@ -6,10 +6,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import Guest, Room
 from main.serializers.guest import GuestCheckoutParams, GuestFilterParams, GuestSerializer
 from main.swagger.guest import GuestDetailSwagger, GuestSwagger, swagger_guest_checkout
-from core.utils.permission import check_perms
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class GuestDetailView(APIView):
         serializer = GuestSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
-        deactivate_result = getattr(serializer, '_deactivate_result', None)
+        deactivate_result = getattr(serializer, "_deactivate_result", None)
 
         if deactivate_result and not deactivate_result.get("success", True):
             return Response({"message": "Guest successfully checked out."}, status=400)
