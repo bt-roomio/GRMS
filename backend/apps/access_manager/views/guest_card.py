@@ -76,6 +76,7 @@ def prepare_cards(cards, access, device):
             try:
                 slot = CardDeviceSlot.objects.get(card_number=card_number, device=device).slot
             except CardDeviceSlot.DoesNotExist:
+                logger.warning(f"Card {card_number} not found in device {device.id}")
                 continue
         else:
             while current_slot in used_slots:
