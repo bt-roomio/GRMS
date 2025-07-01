@@ -31,6 +31,7 @@ class Command(BaseCommand):
             parameters = pika.ConnectionParameters(settings.RABBIT_HOST, settings.RABBIT_PORT, "/", credentials)
             connection = pika.BlockingConnection(parameters)
             channel = connection.channel()
+            channel.queue_declare(queue="fromGRMS", durable=True)
 
             for queue_name in QUEUE_CONFIG.keys():
                 channel.queue_declare(queue=queue_name, durable=True)
@@ -62,7 +63,6 @@ class Command(BaseCommand):
                 channel = connection.channel()
 
                 channel.queue_declare(queue=queue_name, durable=True, passive=True)
-                channel.basic_qos(prefetch_count=1)
 
                 def callback(
                     ch: BlockingChannel,

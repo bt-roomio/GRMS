@@ -8,7 +8,7 @@ logger = logging.getLogger("django")
 
 
 def handle_fias(data, device):
-    tenant_id = device.tenant_id
+    tenant_id = device.get("tenant_id")
     data = {
         "command": data.get("command"),
         "tenantId": str(tenant_id),
