@@ -1,7 +1,7 @@
 import logging
 import time
 
-from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard, CardDeviceSlot
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
@@ -52,7 +52,7 @@ class GuestCardView(APIView):
             if not device:
                 return Response({"detail": "Not found device."}, 404)
 
-            rpc_params = prepare_cards(cards, 1)
+            rpc_params = prepare_cards(cards, 1, device)
             result = prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=guest)
             if not result.get("success", True):
                 return Response(result, status=400)
@@ -62,28 +62,52 @@ class GuestCardView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-def prepare_cards(cards, access):
+def prepare_cards(cards, access, device):
+    is_deactivating = str(access) == "0"
+
+    if not is_deactivating:
+        used_slots = set(CardDeviceSlot.objects.filter(device=device).values_list('slot', flat=True))
+        current_slot = 1
+
     rpc_params = []
+
     for card_number in cards:
-        card_data = {
+        if is_deactivating:
+            try:
+                slot = CardDeviceSlot.objects.get(card_number=card_number, device=device).slot
+            except CardDeviceSlot.DoesNotExist:
+                continue
+        else:
+            while current_slot in used_slots:
+                current_slot += 1
+
+            try:
+                CardDeviceSlot.objects.create(card_number=card_number, device=device, slot=current_slot)
+            except Exception:
+                ...
+
+            slot = current_slot
+            used_slots.add(current_slot)
+            current_slot += 1
+
+        rpc_params.append({
             "cardNumber": card_number,
             "access_group": str(access),
             "start_time": "00:00",
             "end_time": "23:59",
             "weekdays": ["1", "2", "3", "4", "5", "6", "7"],
-            "slot_num": "1",
-        }
-        rpc_params.append(card_data)
+            "slot_num": str(slot),
+        })
+
     return rpc_params
-
-
-def deactivate_guest_card(cards):
+def deactivate_guest_card(cards, device):
     error_cards = []
     for card in cards:
         try:
             instance = GuestCard.objects.get(card__number=card, is_active=True)
             instance.is_active = False
             instance.save(update_fields=["is_active"])
+            CardDeviceSlot.objects.filter(card_number=card, device=device).delete()
         except Exception:
             error_cards.append(card)
     message = "Some cards are not deactivated."
@@ -129,7 +153,7 @@ def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None, dev
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and guests is not None:
             if is_success:
-                result = deactivate_guest_card(cards)
+                result = deactivate_guest_card(cards, device)
                 return result
             else:
                 need_sync(cards, device, message)

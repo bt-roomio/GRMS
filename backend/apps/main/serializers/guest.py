@@ -78,7 +78,7 @@ class GuestSerializer(serializers.ModelSerializer):
                 .select_related("tenant")
                 .first()
             )
-            rpc_params = prepare_cards(cards, 0)
+            rpc_params = prepare_cards(cards, 0, device)
             deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)

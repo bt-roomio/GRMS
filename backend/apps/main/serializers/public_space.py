@@ -9,6 +9,12 @@ from main.serializers.device import SimpleDeviceSerializer
 logger = logging.getLogger(__name__)
 
 
+class SimplePublicSpaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicSpace
+        fields = ("id", "name", "floor", "block")
+
+
 class PublicSpaceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -81,6 +87,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             "name",
             "floor",
             "block",
+            "accessible_for_guest",
             "device",
             "tenant",
             "dashboard",
@@ -95,4 +102,5 @@ class PublicSpaceFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     search_field = serializers.ChoiceField(choices=(["name"]), required=False)
     search_value = serializers.CharField(required=False)
+    accessible_for_guest = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)

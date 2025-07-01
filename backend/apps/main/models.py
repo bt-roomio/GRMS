@@ -493,6 +493,7 @@ class PublicSpace(BaseModel, CreatedByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
+    accessible_for_guest = models.BooleanField(default=False)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     device = models.ForeignKey("main.Device", models.CASCADE, null=True, blank=True)
     dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)

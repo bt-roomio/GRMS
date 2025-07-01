@@ -19,7 +19,9 @@ class PublicSpaceListView(APIView):
             sort_by=params.get("sort_by", []),  # pyright: ignore
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
+            accessible_for_guest=params.get("accessible_for_guest", None),
         )
+        print('tenant', request.user.tenant.id)
         serializer = PublicSpaceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
         return Response(data)

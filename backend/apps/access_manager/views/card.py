@@ -115,14 +115,14 @@ def disconnect_card(card):
             if guest.room:
                 room_devices = Device.objects.filter(room=guest.room, is_active=True)
                 for device in room_devices:
-                    rpc_params = prepare_cards([card_num], 0)
+                    rpc_params = prepare_cards([card_num], 0, device)
                     prepare_mqtt_request.delay(None, rpc_params, [card_num], guests=True, guest=None,
                                                         device_id=str(device.id))
             guest_public_spaces = GuestPublicSpace.objects.filter(guest=guest).select_related('public_space')
             for guest_public_space in guest_public_spaces:
                 public_space = guest_public_space.public_space
                 if public_space.device and public_space.device.is_active:
-                    rpc_params = prepare_cards([card_num], 0)
+                    rpc_params = prepare_cards([card_num], 0, public_space.device)
                     prepare_mqtt_request.delay(None, rpc_params, [card_num],
                                                         guests=True, guest=None, device_id=str(public_space.device.id))
 
