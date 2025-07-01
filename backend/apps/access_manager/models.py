@@ -1,16 +1,17 @@
 from uuid import UUID
 
 from access_manager.querysets.card import CardQuerySet
+from access_manager.querysets.card_log import CardLogQuerySet
 from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
 from access_manager.querysets.guest_card import GuestCardQuerySet
 from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
-from access_manager.querysets.card_log import CardLogQuerySet
 from core.models import BaseModel, CreatedByModel, UpdateByModel
 
 
@@ -105,8 +106,9 @@ class CardLog(BaseModel, CreatedByModel, UpdateByModel):
     )
 
     device = models.ForeignKey("main.Device", models.DO_NOTHING)
-    staff = models.ForeignKey("access_manager.Staff", models.DO_NOTHING, null=True, blank=True,
-                              related_name="card_logs")
+    staff = models.ForeignKey(
+        "access_manager.Staff", models.DO_NOTHING, null=True, blank=True, related_name="card_logs"
+    )
     guest = models.ForeignKey("main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs")
 
     additional_info = models.JSONField(null=True, blank=True)
@@ -222,3 +224,14 @@ class GuestPublicSpace(BaseModel):
 
     def __str__(self):
         return f"{self.guest} -> {self.public_space}"
+
+
+class CardDeviceSlot(BaseModel, UpdateByModel, CreatedByModel):
+    card_number = models.CharField(max_length=100)
+    device = models.ForeignKey("main.Device", models.CASCADE)
+    slot = models.PositiveBigIntegerField(validators=[MaxValueValidator(65535)])
+    additional_info = models.JSONField(null=True, blank=True)
+
+    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
+        unique_together = ("device", "slot")
+        db_table = "access_manager_card_device_slots"
