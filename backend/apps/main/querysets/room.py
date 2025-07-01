@@ -89,7 +89,7 @@ class RoomQuerySet(BaseQuerySet):
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
         cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
         device = Device.objects.filter(room__id=room_id, is_active=True).select_related("tenant").first()
-        rpc_params = prepare_cards(cards, 0)
+        rpc_params = prepare_cards(cards, 0, device)
         deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
         guests.update(is_active=False)
         # loop for send signal

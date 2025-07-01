@@ -64,7 +64,7 @@ class DisconnectCardSerializer(serializers.Serializer):
             guest = Guest.objects.filter(id=card.guest.id).first()
             device = Device.objects.filter(room=guest.room, is_active=True).select_related("tenant").first()
             card_number = [card.card.number]
-            rpc_params = prepare_cards(card_number, 0)
+            rpc_params = prepare_cards(card_number, 0, device)
             deactivate_result = prepare_mqtt_request(device, rpc_params, card_number, guests=[guest], guest=None)
             return deactivate_result
         except GuestCard.DoesNotExist:
