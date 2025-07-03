@@ -235,8 +235,5 @@ class CardDeviceSlot(BaseModel, UpdateByModel, CreatedByModel):
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
-        unique_together = [
-            ("device", "card_number"),
-            ("device", "slot")
-        ]
+        unique_together = [("device", "card_number"), ("device", "slot")]
         db_table = "access_manager_card_device_slots"

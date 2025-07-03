@@ -37,26 +37,23 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         device_ids = validated_data.pop("device_ids", None)
-        # old_device_id = instance.device_id if instance.pk else None
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        # updated_instance = super().update(instance, validated_data)
 
         if device_ids is not None:
-            DevicePublicSpaces.objects.filter(public_space=instance).delete()
+            device_public_space = DevicePublicSpaces.objects.filter(public_space=instance)
+            public_space_devices = device_public_space.values_list("device_id", flat=True)
+            to_remove = public_space_devices.exclude(device_id__in=device_ids)
+            DevicePublicSpaces.objects.filter(device_id__in=to_remove).delete()
+
+            public_space_devices = [str(device) for device in public_space_devices]
+            new_devices = [device_id for device_id in device_ids if str(device_id.id) not in public_space_devices]
             DevicePublicSpaces.objects.bulk_create(
-                [DevicePublicSpaces(device=device, public_space=instance) for device in device_ids]
+                [DevicePublicSpaces(device=device, public_space=instance) for device in new_devices]
             )
-        # new_device_id = updated_instance.device_id
-        # if (
-        #     old_device_id != new_device_id
-        #     and new_device_id
-        #     and updated_instance.device.is_active
-        #     and updated_instance.device.status
-        # ):
-        #     self._register_cards_for_public_space(updated_instance.id)
+            self._register_cards_for_public_space(instance.id, new_devices)
 
         return instance
 
@@ -68,11 +65,11 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             DevicePublicSpaces.objects.bulk_create(
                 [DevicePublicSpaces(device=device, public_space=instance) for device in device_ids]
             )
-            self._register_cards_for_public_space(instance.id)
+            self._register_cards_for_public_space(instance.id, device_ids)
 
         return instance
 
-    def _register_cards_for_public_space(self, public_space_id):
+    def _register_cards_for_public_space(self, public_space_id, new_devices):
         from access_manager.models import GroupPublicSpace
         from access_manager.tasks import card_public_space
 
@@ -84,7 +81,10 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             for group_public_space in group_public_spaces:
                 try:
                     card_public_space(
-                        group_id=group_public_space.group_id, public_space_id=public_space_id, action="connect"
+                        group_id=group_public_space.group_id,
+                        public_space_id=public_space_id,
+                        devices=new_devices,
+                        action="connect",
                     )
                 except Exception as e:
                     logger.error(

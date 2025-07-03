@@ -25,10 +25,12 @@ def card_room(group_id, room_id, action, card_num=None):
         print(f"Error connecting cards to room: {str(e)}")
 
 
-def card_public_space(group_id, public_space_id, action, card_num=None):
+def card_public_space(group_id, public_space_id, action, devices, card_num=None):
     try:
-        result = manage_cards_for_public_space_task.delay(
-            str(group_id), str(public_space_id), action, card_num=card_num
+
+        # result = manage_cards_for_public_space_task.delay(  # TODO: change before commit
+        result = manage_cards_for_public_space_task(
+            str(group_id), str(public_space_id), action, devices, card_num=card_num
         )
         print(f"Connect/Disconect public space task result: {result}")
     except Exception as e:
@@ -39,7 +41,7 @@ def card_public_space(group_id, public_space_id, action, card_num=None):
 def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_num=None):
     """Connect or disconnect cards to/from room devices."""
     try:
-        cards, group = Group.objects.get_staff_cards(group_id)
+        cards, group = Group.objects.get_staff_cards(group_id)  # pyright: ignore
         cards = [card_num] if card_num else cards
         if not cards or not group:
             return {"success": False, "message": f"No cards found for group {group_id}"}
@@ -63,11 +65,11 @@ def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_nu
         raise e
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def manage_cards_for_public_space_task(group_id: str, public_space_id: str, action: str, card_num=None):
+# @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
+def manage_cards_for_public_space_task(group_id: str, public_space_id: str, action: str, devices, card_num=None):
     """Connect or disconnect cards to/from public space device."""
     try:
-        cards, group = Group.objects.get_staff_cards(group_id)
+        cards, group = Group.objects.get_staff_cards(group_id)  # pyright: ignore
         cards = [card_num] if card_num else cards
         if not cards or not group:
             return {"success": False, "message": f"No cards found for group {group_id}"}
@@ -78,15 +80,19 @@ def manage_cards_for_public_space_task(group_id: str, public_space_id: str, acti
             logger.error("Public space '%s' not found in tenant '%s'", public_space_id, group.tenant)
             return {"success": False, "message": f"Public space {public_space_id} not found in tenant {group.tenant}"}
 
-        if not public_space.device or not public_space.device.is_active:
-            logger.info("No device assigned to public space '%s'", public_space_id)
-            return {
-                "success": False,
-                "message": f"No device assigned to public space {public_space_id} or it is not active",
-            }
+        active_devices = list(devices.filter(is_active=True, status=True))
+        inactive_devices = devices.exclude(is_active=True, status=True)
+        print(active_devices, inactive_devices)
 
-        devices = [public_space.device]
-        results = process_devices_parallel(devices, cards, group, action)
+        # for device in inactive_devices:
+        # # TODO: Should be create NeedSync for inactive_devices
+        # logger.info("No device assigned to public space '%s'", public_space_id)
+        # return {
+        #     "success": False,
+        #     "message": f"No device assigned to public space {public_space_id} or it is not active",
+        # }
+
+        results = process_devices_parallel(active_devices, cards, group, action)
 
         logger.info(
             "Completed manage_cards_for_public_space_task for group '%s' and public space '%s' with action '%s'",
