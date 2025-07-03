@@ -189,6 +189,7 @@ class GuestCard(BaseModel, CreatedByModel):
 
 
 class GroupRoom(BaseModel, CreatedByModel):
+    group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
     room = models.ForeignKey("main.Room", models.CASCADE, "group_room")
     additional_info = models.JSONField(null=True, blank=True)
@@ -203,6 +204,7 @@ class GroupRoom(BaseModel, CreatedByModel):
 
 
 class GroupPublicSpace(BaseModel, CreatedByModel):
+    group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
     public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)

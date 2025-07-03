@@ -27,14 +27,15 @@ def card_room(group_id, room_id, action, card_num=None):
 
 def card_public_space(group_id, public_space_id, action, card_num=None):
     try:
-        result = manage_cards_for_public_space_task.delay(str(group_id), str(public_space_id), action,
-                                                          card_num=card_num)
+        result = manage_cards_for_public_space_task.delay(
+            str(group_id), str(public_space_id), action, card_num=card_num
+        )
         print(f"Connect/Disconect public space task result: {result}")
     except Exception as e:
         print(f"Error connecting cards to public space: {str(e)}")
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_num=None):
     """Connect or disconnect cards to/from room devices."""
     try:
@@ -62,7 +63,7 @@ def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_nu
         raise e
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def manage_cards_for_public_space_task(group_id: str, public_space_id: str, action: str, card_num=None):
     """Connect or disconnect cards to/from public space device."""
     try:

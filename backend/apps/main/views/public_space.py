@@ -4,7 +4,7 @@ from rest_framework.views import APIView, Response
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms
-from main.models import PublicSpace
+from main.models import DevicePublicSpaces, PublicSpace
 from main.serializers.public_space import PublicSpaceFilterParams, PublicSpaceSerializer
 from main.swagger.public_space import public_space_swagger
 
@@ -21,7 +21,6 @@ class PublicSpaceListView(APIView):
             search_value=params.get("search_value"),  # pyright: ignore
             accessible_for_guest=params.get("accessible_for_guest", None),
         )
-        print('tenant', request.user.tenant.id)
         serializer = PublicSpaceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
         return Response(data)
@@ -58,5 +57,6 @@ class PublicSpaceDetailView(APIView):
     @check_perms(["access_manager.delete_publicspace"])
     def delete(self, request, pk):
         instance = get_object_or_404(PublicSpace, id=pk, tenant_id=request.user.tenant_id)
+        DevicePublicSpaces.objects.filter(public_space=instance).delete()
         instance.delete()
         return Response({}, 204)
