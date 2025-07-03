@@ -1,5 +1,3 @@
-import datetime
-
 from django.db.models import (
     Avg,
     CharField,
@@ -11,19 +9,16 @@ from django.db.models import (
     Func,
     IntegerField,
     Q,
+    Sum,
     TextField,
     Value,
     Window,
 )
 from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
 
-from rest_framework.fields import pytz
-
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
-
-origin_dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -33,21 +28,20 @@ class TsKvQuerySet(BaseQuerySet):
     def by_device(self, entity):
         return self.filter(entity=entity)
 
-    def gateway_logs(self, key, start_ts, end_ts, sort_by=[]):
+    def gateway_logs(self, entity, key, start_ts, end_ts, sort_by=[]):
+        query = self.by_device(entity)
+        query = query.filter(ts__gte=start_ts, key__key=key)
+        query = query.filter(ts__lte=end_ts) if end_ts else query
         query = (
-            self.select_related("key")
-            .filter(ts__gte=start_ts, ts__lte=end_ts, key__key=key)
-            .annotate(key_name=F("key__key"))
-            .values("ts", "key_name", "str_v", "bool_v", "json_v", "long_v", "dbl_v")
+            query.annotate(
+                key_name=F("key__key"),
+                value=Coalesce("str_v", Cast("json_v", output_field=CharField()), output_field=CharField()),
+            )
+            .values("ts", "key_name", "value")
             .order_by(*sort_by)
         )
 
-        cleaned_query = [{k: v for k, v in record.items() if v is not None} for record in query]
-        cleaned_query = [
-            {(k if k in ["ts", "key_name"] else "value"): v for k, v in record.items()} for record in cleaned_query
-        ]
-
-        return cleaned_query, query.count()
+        return query
 
     def tag_logs(self, entity, keys, start_ts, sort_by=None):
         if sort_by is None:
@@ -101,17 +95,22 @@ class TsKvQuerySet(BaseQuerySet):
         qs = qs.filter(filter_conditions).values("ts", "key_name", "value").order_by(*sort_by)
         return qs
 
-    def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by):
+    def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by, auto_fill):
+        origin_dt = Value(start_ts, output_field=DateTimeField())
         sort_by = ["interval_ts"] if sort_by is None else sort_by
         agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         interval = make_interval(*interval.split(" ")) if interval and len(interval.split(" ")) > 1 else interval
         limit = limit or 100
         agg_function = Avg if agg in ["Change", None] else agg_function
+        sum_expr = Sum("avail_field", output_field=FloatField())
+        count_expr = Count("interval_ts")
+
+        avg_expr = ExpressionWrapper(sum_expr / count_expr, output_field=FloatField())
+
         result = {}
 
         for key in keys:
             query = self.filter(key__key=key, **({"ts__gte": start_ts} if start_ts else {}))
-
             if interval in ["month", "year"]:
                 query = query.annotate(
                     interval_ts=Func(
@@ -137,7 +136,8 @@ class TsKvQuerySet(BaseQuerySet):
                     interval_ts=Func(
                         Value(interval),  # bin width
                         F("ts"),  # timestamp field
-                        function="date_trunc",
+                        origin_dt,
+                        function="date_bin",
                         output_field=DateTimeField(),
                     ),
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
@@ -146,15 +146,20 @@ class TsKvQuerySet(BaseQuerySet):
             data = (
                 query.values("interval_ts")
                 .annotate(
-                    value=Round(agg_function("avail_field")) if agg_function is not None else F("avail_field"),
+                    value=Round(avg_expr, precision=2),
                     ts=F("interval_ts"),
                     key_name=F("key__key"),
-                    count=Count("interval_ts"),
+                    count=count_expr,
                 )
-                .values("value", "ts", "key_name", "count")
-                .order_by(*sort_by)[:limit]
+                .values("value", "ts", "key_name", "count")[:limit]
             )
-            data = fill_missing_intervals(data, interval)[:limit]
+
+            if auto_fill:
+                data = fill_missing_intervals(data, interval, start_ts, limit, key_name=key)
+
+            if "-interval_ts" in sort_by:
+                data = sorted(data, key=lambda d: d["ts"], reverse=True)
+
             result[key] = data
         return result
 

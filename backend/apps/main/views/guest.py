@@ -6,10 +6,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import Guest, Room
 from main.serializers.guest import GuestCheckoutParams, GuestFilterParams, GuestSerializer
 from main.swagger.guest import GuestDetailSwagger, GuestSwagger, swagger_guest_checkout
-from core.utils.permission import check_perms
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +47,11 @@ class GuestDetailView(APIView):
         instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = GuestSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        result = serializer.save(tenant_id=request.user.tenant_id)
+        serializer.save(tenant_id=request.user.tenant_id)
+        deactivate_result = getattr(serializer, "_deactivate_result", None)
 
-        if isinstance(result, dict) and not result.get("success", True):
-            return Response({"result": 0, "message": result.get("message", "Failed to deactivate card!")})
+        if deactivate_result and not deactivate_result.get("success", True):
+            return Response({"message": "Guest successfully checked out."}, status=400)
 
         return Response(serializer.data)
 
@@ -59,8 +60,8 @@ class GuestCheckoutView(APIView):
     @swagger_guest_checkout()
     def post(self, request):
         params = GuestCheckoutParams.check(request.GET)
-        guests = Room.objects.guest_checkout(params.get("room").id)
+        guests, result = Room.objects.guest_checkout(params.get("room").id)
 
-        if isinstance(guests, dict) and not guests.get("success", True):
-            return Response({"result": 0, "message": guests.get("message", "Failed to deactivate card!")})
-        return Response({"message": f"{guests} guests have left."})
+        if isinstance(result, dict) and not result.get("success", True):
+            return Response({"message": f"{guests} guests have left."}, status=400)
+        return Response({"message": f"{guests} guests have left."}, status=200)

@@ -13,16 +13,17 @@ class CheckOutListView(APIView):
     permission_classes = (WhiteListPermission,)
 
     def post(self, request):
+        logger.debug("Request data: %s", request.data)
         serializer = CheckOutSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
-            logger.error("Validation error: %s", e)
-            logger.error("Request data: %s", request.data)
+            logger.warning("Validation error: %s", e)
+            logger.warning("Request data: %s", request.data)
             raise
         result = serializer.save()
 
-        if isinstance(result, dict):
-            return Response({"result": 1, "message": result.get("message", "Failed to deactivate card!")})
+        if isinstance(result, dict) and result.get("success") == False:
+            return Response(result, status=400)
 
-        return Response({"result": 0, "message": "Successfully checkout!"})
+        return Response({"result": 0, "message": "Successfully checkout!"}, status=200)

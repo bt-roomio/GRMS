@@ -1,10 +1,10 @@
 from asgiref.sync import sync_to_async
-from djangochannelsrestframework.observer.generics import action
 from djangochannelsrestframework.mixins import ListModelMixin
+from djangochannelsrestframework.observer.generics import action
 
 from main.models import Device
 from shuttle.models import TsKvDictionary, TsKvLatest
-from shuttle.serializers.emergency_status import EmergencyStatusFilterParams, DeviceTelemetrySerializer
+from shuttle.serializers.emergency_status import DeviceTelemetrySerializer, EmergencyStatusFilterParams
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -15,7 +15,12 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
         self.user = self.scope["user"]
+        self.data = {}
         await super().accept(*args, **kwargs)
+
+    async def disconnect(self, code):
+        await self.remove_group("emergency_status")
+        await super().disconnect(code)
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
@@ -28,9 +33,9 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return query
 
     @action()
-    async def list(self, **kwargs):
+    async def list(self, **kwargs):  # pyright: ignore
         params = kwargs.get("query_params")
-        keys = params.get("keys", [])
+        keys = params.get("keys", [])  # pyright: ignore
         key_ids = await self.get_key_ids(keys)
         if not key_ids:
             return None
@@ -40,7 +45,6 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
         for device in devices:
             latest_data = await self.get_latest_data(device, key_ids)
-
             data_list = [
                 {
                     "key_name": telemetry["key"],
@@ -49,7 +53,6 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 }
                 for telemetry in latest_data
             ]
-
             all_data.append(
                 {
                     "device_id": device.id,
@@ -65,6 +68,10 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return all_data, 200
 
     async def get_latest_activity(self, message, **kwargs):
+        if message.get("updates"):
+            for update in message.get("updates", []):
+                await self.get_latest_activity(update, **kwargs)
+
         entity_id = message.get("entity")
         key = message.get("key")
 
@@ -81,7 +88,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
             except Device.DoesNotExist:
                 continue
 
-            value = (  #TODO use get_non_null_column() method here
+            value = (  # TODO use get_non_null_column() method here
                 message.get("bool_v")
                 or message.get("str_v")
                 or message.get("long_v")
@@ -101,7 +108,9 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 ],
             }
 
-            await self.reply(data=result, action="update", request_id=request_id)
+            if self.data != result:
+                await self.reply(data=result, action="update", request_id=request_id)
+                self.data = result
 
     @sync_to_async
     def get_key_ids(self, keys):
@@ -128,4 +137,5 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
+        await self.remove_group("emergency_status")
         self.subscribers.pop(request_id, None)

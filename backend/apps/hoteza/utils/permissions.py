@@ -1,6 +1,10 @@
+import logging
+
 from django.conf import settings
 
 from rest_framework import exceptions, permissions
+
+logger = logging.getLogger(__name__)
 
 
 class WhiteListPermission(permissions.BasePermission):
@@ -23,4 +27,5 @@ class WhiteListPermission(permissions.BasePermission):
         for valid_ip in [*settings.HOTEZA_WHITELIST, *admin_settings]:
             if remote_addr == valid_ip or remote_addr.startswith(valid_ip):
                 return True
+        logger.warning("IP %s is not allowed", remote_addr)
         raise exceptions.PermissionDenied(detail="Your IP address is not allowed.")

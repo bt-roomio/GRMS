@@ -1,9 +1,15 @@
 import logging
+from datetime import timedelta
 
 from celery import shared_task
 from django.db import connection
+from django.utils import timezone
 
-logger = logging.getLogger("main")
+from core.management.mq.state_device import update_activity_device
+from shuttle.models import TsKv, TsKvDictionary
+from shuttle.services.ts_kv_latest import publish_updates_batch
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -33,3 +39,21 @@ def aggregate_table_ts_kv():
         )
         logger.info(cursor.rowcount, "records deleted")
     logger.info("The aggregating table task successfully.")
+
+
+@shared_task
+def delete_old_logs():
+    keys = TsKvDictionary.objects.filter(key__endswith="_LOGS")
+    logger.info(f"Keys: {", ".join(keys.values_list('key', flat=True))}")
+    logs = TsKv.objects.filter(key__in=keys, ts__lte=(timezone.now() - timedelta(days=7)))
+    logger.info(f" {logs.delete()[0]} log(s) deleted!")
+
+
+@shared_task
+def update_activity_device_task(device_id, connected=True):
+    update_activity_device(device_id, connected)
+
+
+@shared_task
+def publish_updates_batch_task(updates_by_device: dict[str, list[dict]]):
+    publish_updates_batch(updates_by_device)

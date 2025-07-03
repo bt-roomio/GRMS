@@ -12,9 +12,6 @@ from shuttle.models import AttributeKv
 
 @receiver(post_save, sender=AttributeKv)
 def update_state_of_room_and_status_device(sender, instance, **kwargs):
-    if instance.attribute_key == "active" and instance.attribute_type == AttributeKv.SERVER_SCOPE:
-        instance.entity.status = bool(instance.bool_v)
-        instance.entity.save()
     if instance.attribute_type == AttributeKv.CLIENT_SCOPE and instance.attribute_key == "scanned_devices":
         AttributeKv.objects.update_or_create(
             attribute_key=instance.attribute_key,
@@ -46,19 +43,12 @@ def check_for_duplicate_state(instance, **kwargs):
     channel = connect_to_rabbitmq()
 
     if Room.Available in instance.state:
-        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS, False)
+        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECK_IN_OUT, False)
         if attr_device_id_device_name:
             send_msg_status_room(channel, *attr_device_id_device_name)
 
-        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS)
-        if attr_device_id_device_name:
-            send_msg_status_room(channel, *attr_device_id_device_name)
     elif Room.CheckedIn in instance.state:
-        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_IN_STATUS)
-        if attr_device_id_device_name:
-            send_msg_status_room(channel, *attr_device_id_device_name)
-
-        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECKED_OUT_STATUS, False)
+        attr_device_id_device_name = attribute_room_state(instance, StateEnum.CHECK_IN_OUT, True)
         if attr_device_id_device_name:
             send_msg_status_room(channel, *attr_device_id_device_name)
 

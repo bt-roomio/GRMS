@@ -1,8 +1,9 @@
+from typing import Any, Dict, Iterable, Union
 from uuid import UUID
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
-from django.db.models import CASCADE, SET_NULL, Q, UniqueConstraint
+from django.db.models import CASCADE, SET_NULL, Manager, Q, UniqueConstraint
 from django.db.models.functions import Lower
 
 from rest_framework.exceptions import ValidationError
@@ -15,13 +16,14 @@ from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.device_profile import DeviceProfileQuerySet
 from main.querysets.guest import GuestQuerySet
-from main.querysets.public_space import PublicSpaceQuerySet
+from main.querysets.public_space import DevicePublicSpacesQuerySet, PublicSpaceQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
+from shuttle.models import TsKvDictionary, TsKvLatest
 
 
 class Tenant(BaseModel):
@@ -122,6 +124,8 @@ class Room(BaseModel, UpdateByModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
 
+    devices: Manager["Device"]
+
     objects = RoomQuerySet.as_manager()
 
     def __str__(self):
@@ -182,6 +186,29 @@ class Room(BaseModel, UpdateByModel):
                 updated_by=self.updated_by,
                 room_id=str(self.pk),
             )
+
+    def ts_kvs_latest_values(self, keys: Union[Iterable[TsKvDictionary], Iterable[str]]) -> Dict[str, Any]:
+        """
+        Возвращает словарь {key_name: value} для всех ключей из списка keys.
+        keys может быть списком объектов TsKvDictionary или списка строк-имен ключей.
+        """
+        # если передали строки, отфильтруем по названиям
+        filter_kwargs = {}
+        if keys and isinstance(next(iter(keys)), str):
+            filter_kwargs["key__key__in"] = keys  # ключ.key – это строковое имя
+        else:
+            filter_kwargs["key__in"] = keys  # ключ – полноценный объект
+
+        qs = (
+            TsKvLatest.objects.filter(entity__room=self, **filter_kwargs)
+            .select_related("key")
+            .values_list("key__key", "long_v", "dbl_v")
+        )
+        result: Dict[str, Any] = {}
+        for key_name, long_v, dbl_v in qs:
+            # приоритет – long_v, если его нет, то dbl_v
+            result[key_name] = long_v if long_v is not None else dbl_v
+        return result
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room"
@@ -245,12 +272,14 @@ class RoomType(BaseModel):
 
 
 class Device(BaseModel):
+    id: UUID
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     tenant_id: UUID
     customer = models.ForeignKey("main.Customer", CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    device_profile_id: UUID
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", SET_NULL, "devices", null=True, blank=True)
@@ -464,8 +493,8 @@ class PublicSpace(BaseModel, CreatedByModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
+    accessible_for_guest = models.BooleanField(default=False)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
-    device = models.ForeignKey("main.Device", models.CASCADE, null=True, blank=True)
     dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -474,6 +503,27 @@ class PublicSpace(BaseModel, CreatedByModel):
     def __str__(self):
         return str(self.name)
 
+    @property
+    def devices(self):
+        return Device.objects.filter(device_public_spaces__public_space=self)
+
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "main_public_spaces"
         unique_together = ("name", "tenant")
+
+
+class DevicePublicSpaces(BaseModel):
+    device = models.ForeignKey("main.Device", CASCADE)
+    public_space = models.ForeignKey("main.PublicSpace", CASCADE)
+
+    objects = DevicePublicSpacesQuerySet.as_manager()
+
+    def clean(self):
+        super().clean()
+        if self.device.tenant != self.public_space.tenant:
+            raise ValidationError({"tenant": "Device's tenant and Public Space's tenant must be the same."})
+
+    class Meta(BaseModel.Meta):
+        db_table = "main_device_public_spaces"
+        unique_together = ("device", "public_space")
+        default_related_name = "device_public_spaces"

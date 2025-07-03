@@ -27,6 +27,9 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return query
 
     async def get_latest_activity(self, message, **kwargs):
+        for update in message.get("updates") or []:
+            await self.get_latest_activity(update, **kwargs)
+
         for request_id, params in self.request_ids.items():
             device = params.get("query_params").get("device")
             scope = params.get("query_params").get("scope")
@@ -48,9 +51,8 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def subscribe(self, request_id, action, query_params, **kwargs):
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("attribute_kv_updates", self.channel_name)
-            self.request_ids[request_id] = {"query_params": query_params, "action": action}
+        await self.add_group("attribute_kv_updates")
+        self.request_ids[request_id] = {"query_params": query_params, "action": action}
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
@@ -59,9 +61,8 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
         await self.send_list(action, query_params, request_id, **kwargs)
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("attribute_kv_updates", self.channel_name)
-            self.request_ids[request_id] = {"query_params": query_params, "action": action}
+        await self.add_group("attribute_kv_updates")
+        self.request_ids[request_id] = {"query_params": query_params, "action": action}
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):

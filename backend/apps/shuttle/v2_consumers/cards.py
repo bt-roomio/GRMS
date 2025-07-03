@@ -9,7 +9,7 @@ from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
 class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncAPIConsumer):
-    queryset = Card.objects.all()
+    queryset = Card.objects.filter(is_active=True)
     serializer_class = CardSerializer
 
     async def accept(self, *args, **kwargs):
@@ -30,6 +30,7 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
             sort_by=params.get("sort_by", []),
             search_field="number",
             search_value=params.get("search_value", None),
+            filters=params.get("filters", {})
         )
         return query
 

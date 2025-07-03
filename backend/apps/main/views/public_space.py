@@ -3,15 +3,15 @@ from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
-from main.models import PublicSpace
+from core.utils.permission import check_perms
+from main.models import DevicePublicSpaces, PublicSpace
 from main.serializers.public_space import PublicSpaceFilterParams, PublicSpaceSerializer
 from main.swagger.public_space import public_space_swagger
-from core.utils.permission import check_perms
 
 
 class PublicSpaceListView(APIView):
     @public_space_swagger()
-    @check_perms(["card.view_publicspace"])
+    @check_perms(["access_manager.view_publicspace"])
     def get(self, request):
         params = PublicSpaceFilterParams.check(request.GET)
         queryset = PublicSpace.objects.list(  # pyright: ignore
@@ -19,13 +19,14 @@ class PublicSpaceListView(APIView):
             sort_by=params.get("sort_by", []),  # pyright: ignore
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
+            accessible_for_guest=params.get("accessible_for_guest", None),
         )
         serializer = PublicSpaceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
         return Response(data)
 
     @public_space_swagger()
-    @check_perms(["card.add_publicspace"])
+    @check_perms(["access_manager.add_publicspace"])
     def post(self, request):
         data = with_tenant(request)
         serializer = PublicSpaceSerializer(data=data)
@@ -36,14 +37,14 @@ class PublicSpaceListView(APIView):
 
 class PublicSpaceDetailView(APIView):
     @public_space_swagger()
-    @check_perms(["card.view_publicspace"])
+    @check_perms(["access_manager.view_publicspace"])
     def get(self, request, pk):
         instance = get_object_or_404(PublicSpace, pk=pk, tenant_id=request.user.tenant_id)
         serializer = PublicSpaceSerializer(instance)
         return Response(serializer.data)
 
     @public_space_swagger()
-    @check_perms(["card.change_publicspace"])
+    @check_perms(["access_manager.change_publicspace"])
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(PublicSpace, id=pk, tenant_id=request.user.tenant_id)
@@ -53,8 +54,9 @@ class PublicSpaceDetailView(APIView):
         return Response(serializer.data)
 
     @public_space_swagger()
-    @check_perms(["card.delete_publicspace"])
+    @check_perms(["access_manager.delete_publicspace"])
     def delete(self, request, pk):
         instance = get_object_or_404(PublicSpace, id=pk, tenant_id=request.user.tenant_id)
+        DevicePublicSpaces.objects.filter(public_space=instance).delete()
         instance.delete()
         return Response({}, 204)

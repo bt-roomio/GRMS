@@ -1,0 +1,33 @@
+from django.db.models import Q
+
+from core.querysets.base_queryset import BaseQuerySet
+
+
+class CardLogQuerySet(BaseQuerySet):
+    def by_room(self, room_id):
+        return self.filter(device__room__id=room_id, device__is_active=True)
+
+    def by_user(self, user_id):
+        return self.filter(Q(guest_id=user_id) | Q(staff_id=user_id))
+
+    def by_card_num(self, card_number, tenant):
+        return self.filter(number=card_number, tenant=tenant)
+
+    def list(self, filters={}, sort_by=[], user_id=None, card_num=None, tenant=None, room_id=None):
+        query = self
+        from_date = filters.get("from_date")
+        to_date = filters.get("to_date")
+
+        if from_date:
+            query = query.filter(event_ts__gte=from_date)
+        if to_date:
+            query = query.filter(event_ts__lte=to_date)
+
+        if room_id:
+            query = query.by_room(room_id)
+        if user_id:
+            query = query.by_user(user_id)
+        if card_num and tenant:
+            query = query.by_card_num(card_num, tenant)
+
+        return query.order_by(*sort_by)

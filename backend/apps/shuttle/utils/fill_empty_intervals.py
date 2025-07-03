@@ -1,80 +1,86 @@
+import datetime
 import re
-from datetime import timedelta
 
 from dateutil.relativedelta import relativedelta
 
 
 def parse_interval(interval_str):
-    """
-    Parse a string like '2 hours', '15 minutes', '1 day', 'month', or 'year'.
-    Months and years must be singular (no quantities); others can have quantities.
-    Returns: (use_relativedelta: bool, kwargs: dict)
-    """
-    # allow optional quantity for seconds-minutes-hours-days-weeks
     pattern = (
         r"^(?:(?P<qty>\d+)\s+)?" r"(?P<unit>second|seconds|minute|minutes|hour|hours|day|days|week|weeks|month|year)$"
     )
     match = re.match(pattern, interval_str)
     if not match:
         raise ValueError(f"Invalid interval: {interval_str}")
-    qty = match.group("qty")
-    unit = match.group("unit")
+    qty = int(match.group("qty") or 1)
+    unit = match.group("unit").rstrip("s")
 
-    unit_s = unit.rstrip("s")
-
-    # months and year must be singular and no qty
-    if unit_s in ("month", "year"):
-        if qty is not None:
-            raise ValueError(f"Interval '{interval_str}' invalid: use 'month' or 'year' without a quantity")
-        return True, {unit_s + "s": 1}
-
-    # for other units, default qty to 1 if missing
-    qty = int(qty) if qty else 1
-    delta_arg = {unit_s + "s": qty}
-    # weeks still use timedelta
-    use_rd = False
-    return use_rd, delta_arg
+    # month/year singular only
+    if unit in ("month", "year") and match.group("qty"):
+        raise ValueError("Use 'month' or 'year' without quantity")
+    return (unit in ("month", "year")), {unit + "s": qty}
 
 
-def fill_missing_intervals(data, interval_str, start=None, end=None):
+def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
     """
-    data: list of dicts with 'ts', 'value', 'count', etc.
-    interval_str: string like '2 hours', '15 minutes', '1 day', 'month', or 'year'.
-    start, end: optional datetime bounds
+    data: list of dicts with 'ts' (timezone-aware or naive), 'value', 'count', 'key_name'
+    interval_str: interval string per parse_interval
+    start_ts: datetime or string in '%Y-%m-%d %H:%M:%S'
+    limit: number of intervals to generate
+    key_name: fallback name for empty intervals
+
+    Fills gaps by stepping from start_ts for 'limit' intervals.
+    Normalizes timezone awareness so lookups match.
     """
-    if not data:
+    if not interval_str or not start_ts or not limit:
         return []
 
-    if not interval_str:
-        return data
+    # parse start_ts
+    if isinstance(start_ts, str):
+        start_ts = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
 
-    data = sorted(data, key=lambda x: x["ts"])
+    # detect tzinfo from first data record (if any)
+    tz = None
+    if data:
+        tz = getattr(data[0]["ts"], "tzinfo", None)
+    # if start_ts is naive but records have tz, attach same tz to start_ts
+    if tz and start_ts.tzinfo is None:
+        start_ts = start_ts.replace(tzinfo=tz)
+
     use_rd, delta_kwargs = parse_interval(interval_str)
+    result = []
 
-    curr = start or data[0]["ts"]
-    last = end or data[-1]["ts"]
+    # Build lookup by normalized timestamp (float seconds since epoch)
+    def make_key(dt):
+        # ensure dt is timezone-aware if tz is set
+        if tz and dt.tzinfo is None:
+            dt = dt.replace(tzinfo=tz)
+        # drop tzinfo for consistent timestamp()
+        return dt.timestamp()
 
-    filled = []
-    idx = 0
-    prev = None
+    data_by_key = {make_key(rec["ts"]): rec for rec in data}
 
-    while curr <= last:
-        if idx < len(data) and data[idx]["ts"] == curr:
-            prev = data[idx]
-            filled.append(prev)
-            idx += 1
+    current = start_ts
+    last_known = None
+
+    for _ in range(limit):
+        key = make_key(current)
+        record = data_by_key.get(key)
+        if record:
+            result.append(record)
+            last_known = record
         else:
-            filled.append(
+            result.append(
                 {
-                    "ts": curr,
-                    "value": prev["value"] if prev else 0.0,
+                    "ts": current,
+                    "value": last_known["value"] if last_known else 0,
                     "count": 0,
-                    "key_name": prev["key_name"] if prev else None,
+                    "key_name": last_known["key_name"] if last_known else key_name,
                 }
             )
+        # advance
         if use_rd:
-            curr = curr + relativedelta(**delta_kwargs)  # pyright:ignore
+            current = current + relativedelta(**delta_kwargs)  # pyright: ignore
         else:
-            curr = curr + timedelta(**delta_kwargs)
+            current = current + datetime.timedelta(**delta_kwargs)
 
-    return filled
+    return result

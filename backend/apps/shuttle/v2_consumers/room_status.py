@@ -1,33 +1,27 @@
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
+
 from shuttle.consumers.aggregations.controller_status import controller_status
 from shuttle.models import TsKvDictionary, TsKvLatest
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
 class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
-
     async def accept(self, *args, **kwargs):
         self.subscribers = {}
+        self.data = {}
         self.user = self.scope["user"]
         self.user_obj = await sync_to_async(self.get_user_object)()
         await super().accept(*args, **kwargs)
 
-    @action()
-    async def list_subscribe(self, request_id, action, **kwargs):
-        await self.add_group("room_status")
-        self.subscribers[request_id] = {"action": action}
-        await self.get_latest_activity(request_id=request_id)
+    async def disconnect(self, code):
+        await self.remove_group("room_status")
+        await super().disconnect(code)
 
-    @action()
-    async def list_unsubscribe(self, request_id, **kwargs):
-        self.subscribers.pop(request_id, None)
-
-    async def get_latest_activity(self, message=None, request_id=None, **kwargs):
+    async def response(self, request_id):
         user_obj = self.user_obj
         tenant_id = getattr(self.user, "tenant_id", None)
         request_ids = [request_id] if request_id is not None else self.subscribers.keys()
-        print("request_ids", request_ids)
         for request_id in request_ids:
             dnd_count = await self.get_room_count_by_key("DND Relay", tenant_id)
             mur_count = await self.get_room_count_by_key("MUR Relay", tenant_id)
@@ -41,7 +35,31 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
                     "occupied": occupancy_count,
                 }
             )
+
+            return flat_data
+        return None
+
+    @action()
+    async def list_subscribe(self, request_id, action, **kwargs):
+        await self.add_group("room_status")
+        self.subscribers[request_id] = {"action": action}
+        self.data = await self.response(request_id)
+        await self.reply(data=self.data, action="list_subscribe", request_id=request_id)
+
+    @action()
+    async def list_unsubscribe(self, request_id, **kwargs):
+        await self.remove_group("room_status")
+        self.subscribers.pop(request_id, None)
+
+    async def get_latest_activity(self, message=None, request_id=None, **kwargs):
+        if message and message.get("updates"):
+            for update in message.get("updates"):
+                await self.get_latest_activity(update, **kwargs)
+
+        flat_data = await self.response(request_id)
+        if self.data != flat_data:
             await self.reply(data=flat_data, action="list_subscribe", request_id=request_id)
+            self.data = flat_data
 
     async def flatten_controller_status(self, data: dict) -> dict:
         result = {}
@@ -63,4 +81,5 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         key_id = TsKvDictionary.objects.filter(key=key_name).values_list("key_id", flat=True).first()
         if key_id is None:
             return 0
-        return TsKvLatest.objects.filter(key=key_id, long_v=1, entity__tenant_id=tenant_id).count()
+        return TsKvLatest.objects.filter(key=key_id, long_v=1, entity__room__isnull=False,
+                                         entity__tenant_id=tenant_id).count()

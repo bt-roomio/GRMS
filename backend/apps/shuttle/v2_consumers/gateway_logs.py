@@ -1,64 +1,67 @@
-from djangochannelsrestframework.mixins import ListModelMixin, action
+from django.utils import timezone
+from djangochannelsrestframework.mixins import action
 
-from core.utils.get_time import get_time
 from shuttle.models import TsKv
 from shuttle.serializers.ts_kv import GatewayLogsFilterParams, GatewayLogsSerializer
 from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class GatewayLogsConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
+def convert_datetime(date: str):
+    from django.utils.dateparse import parse_datetime
+    from django.utils.timezone import make_aware
+
+    dt = parse_datetime(date)
+    if dt and not timezone.is_aware(dt):
+        dt = make_aware(dt)
+    return dt
+
+
+class GatewayLogsConsumer(BaseGenericAsyncAPIConsumer):
     queryset = TsKv.objects.all()
     serializer_class = GatewayLogsSerializer
 
-    @action()
-    async def list(self, **kwargs):  # pyright: ignore
-        res = await super().list(**kwargs)  # pyright: ignore
-        return {"results": res[0], "count": self.count}, 200
-
-    async def accept(self, *args, **kwargs):
-        self.count = 0
-        self.request_ids = {}
-        await super().accept(*args, **kwargs)
-
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
-        user = self.scope["user"]
         params = GatewayLogsFilterParams.check(data=kwargs.get("query_params", {}))
-        query = (
-            query.by_device(entity=params.get("device"))  # pyright: ignore
-            .by_tenant(tenant=user.get("tenant_id"))
-            .gateway_logs(
-                key=params.get("key"),
-                start_ts=params.get("start_ts"),
-                end_ts=params.get("end_ts", get_time()),
-                sort_by=params.get("sort_by", []),
-            )
+        query = query.by_tenant(tenant=self.tenant_id).gateway_logs(  # pyright: ignore
+            entity=params.get("device"),
+            key=params.get("key"),
+            start_ts=params.get("start_ts"),
+            end_ts=params.get("end_ts"),
+            sort_by=params.get("sort_by", []),
         )
-        self.count = query[1]
-        return self.pagination(query[0], params.get("page", 1), params.get("size", 25))
+        return query
 
-    async def get_latest_activity(self, message, **kwargs):
-        entity = message.get("entity")
-        for request_id, params in self.request_ids.items():
-            device = params.get("query_params").get("device")
-            action = params.get("action")
+    async def ts_kv_activity(self, message):
+        updates = message.get("updates", []) or []
+        for update in updates:
+            await self.handle_ts_kv_activity(update)
+        if not updates:
+            await self.handle_ts_kv_activity(message.get("update"))
 
-            if device == entity and action == "subscribe":
-                _, value = get_non_null_column(message)
-                data = {
-                    "key_name": message.get("key"),
-                    "ts": message.get("ts"),
-                    "value": value,
-                }
-                await self.reply(data=data, action=action, request_id=request_id)
-
-    @action()
-    async def subscribe(self, request_id, action, query_params, **kwargs):
-        if self.channel_layer is not None:
-            await self.channel_layer.group_add("tskv_updates", self.channel_name)
-            self.request_ids[request_id] = {"query_params": query_params, "action": action}
+    async def handle_ts_kv_activity(self, payload):
+        entity, key = payload.get("entity"), payload.get("key")
+        for request_id, params in self.subscribers.items():
+            qp = params.get("query_params")
+            _, value = get_non_null_column(payload)
+            data = {
+                "key_name": payload.get("key"),
+                "ts": payload.get("ts"),
+                "value": value,
+            }
+            if qp.get("device") == entity and key == qp.get("key"):
+                await self.reply(params.get("action"), data, request_id=request_id)
 
     @action()
-    async def unsubscribe(self, request_id, **kwargs):
-        self.request_ids.pop(request_id, None)
+    async def list(self, request_id, action, query_params):
+        await self.send_list_paginated(action, query_params, request_id)
+
+    @action()
+    async def subscribe(self, request_id, action, query_params):
+        await self.add_group(f"tskv_updates_{query_params.get('device')}")
+        self.subscribers[request_id] = {"query_params": query_params, "action": action}
+
+    @action()
+    async def list_unsubscribe(self, request_id):
+        self.subscribers.pop(request_id, None)

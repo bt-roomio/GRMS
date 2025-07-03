@@ -1,8 +1,9 @@
-from access_manager.models import Group, Staff
+from access_manager.models import Group, Staff, StaffCard
 from access_manager.serializers.group import SimpleGroupSerializer
 
 from rest_framework import serializers
 
+from access_manager.serializers.staff_card import StaffCardSerializer
 from core.utils.serializers import ValidatorSerializer
 
 
@@ -15,11 +16,19 @@ class SimpleStaffSerializer(serializers.ModelSerializer):
 class StaffSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, read_only=True)
     group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), allow_null=True)
+    cards = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["group"] = SimpleGroupSerializer(instance.group).data if instance.group else None
         return data
+
+    def get_cards(self, obj):
+        staff_cards = StaffCard.objects.filter(
+            staff=obj,
+            is_active=True
+        ).select_related('card')
+        return StaffCardSerializer(staff_cards, many=True).data
 
     class Meta:
         model = Staff
@@ -32,6 +41,7 @@ class StaffSerializer(serializers.ModelSerializer):
             "group",
             "is_active",
             "tenant",
+            "cards",
             "additional_info",
         )
 

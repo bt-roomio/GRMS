@@ -5,6 +5,7 @@ from rest_framework import serializers
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
+from main.serializers.guest import SimpleGuestSerializer
 from main.serializers.room_type import RoomTypeSerializer
 from shuttle.models import AttributeKv
 
@@ -16,6 +17,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
         data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
         if hasattr(instance, "count_online_devices"):
@@ -35,7 +37,7 @@ class RoomSerializer(serializers.ModelSerializer):
         for device in validated_data.get("devices", {}):
             if device.room_id and device.room_id != instance.id:
                 raise serializers.ValidationError({"devices": "Device already assigned to another room!"})
-        AttributeKv.objects.update_or_create_or_delete(validated_data.get("devices"), instance)
+        AttributeKv.objects.update_or_create_or_delete(validated_data.get("devices"), instance)  # pyright: ignore
         data = super().update(instance, validated_data)
         return data
 
@@ -88,3 +90,27 @@ class RoomFilterParams(ValidatorSerializer):
         if "search_value" not in attrs and "search_field" in attrs:
             raise serializers.ValidationError({"search_value": "search_value is required!"})
         return attrs
+
+
+class RoomDetailWsSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
+        data["tenant"] = str(instance.tenant_id)
+        data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
+        if hasattr(instance, "count_online_devices"):
+            data["status"] = (
+                "ON"
+                if instance.count_online_devices == instance.count_devices and instance.count_devices > 0
+                else "OFF"
+            )
+        if self.context.get("detail"):
+            data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
+        else:
+            data["type"] = instance.type and instance.type.title
+        data["guest"] = SimpleGuestSerializer(instance.last_guests[0]).data if instance.last_guests else None
+        return data
+
+    class Meta:
+        model = Room
+        fields = ("id", "number", "floor", "block", "type", "state")

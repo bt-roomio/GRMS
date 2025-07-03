@@ -1,23 +1,27 @@
 import json
 import logging
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
-import aio_pika
+from access_manager.models import CardLog
 from celery.exceptions import Reject
-from django.conf import settings
-from django.db import transaction
 
 from core.management.handle_fias import handle_fias
 from core.rabbitmq.config import send_to_rabbitmq
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
+from core.utils.handle_card_event import handle_card_event
 from core.utils.random_letter import get_random_letter
 from main.models import Device, DeviceCredentials
 from shuttle.models import AttributeKv, Relation, RPCMessage, TsKv, TsKvDictionary, TsKvLatest
+from shuttle.services.attribute_kv import publish_updates_attribute_batch
+from shuttle.services.card_log_updates import publish_card_log_updates_batch
+from shuttle.services.ts_kv_latest import publish_updates_batch
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
 
-logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 logger_pika = logging.getLogger("pika")
 logger_pika.setLevel(logging.WARNING)
@@ -70,7 +74,6 @@ def _route_and_handle(device, topic, data):
 
 # Кеши
 _tskv_dict_cache = {}
-_device_dict_cache = {}
 _sub_device_dict_cache = {}
 _sub_device_dict_getcreate_cache = {}
 
@@ -183,8 +186,8 @@ def _update_attribute_store(device, data):
             "json_v": None,
             "entity_type": "DEVICE",
             "last_update_ts": ts_now,
+            field: value,
         }
-        base[field] = value
         if key in existing_map:
             inst = existing_map[key]
             for attr_name, attr_val in base.items():
@@ -206,10 +209,34 @@ def _update_attribute_store(device, data):
         fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
         AttributeKv.objects.bulk_update(to_update, fields)
 
+    # Prepare updates for WebSocket clients
+    updates_by_device = defaultdict(list)
+    for attr in to_create + to_update:
+        updates_by_device[device.id].append(
+            {
+                "entity": str(device.id),
+                "key_name": attr.attribute_key,
+                "last_update_ts": ts_now,
+                "scope": AttributeKv.CLIENT_SCOPE,
+                "bool_v": attr.bool_v,
+                "str_v": attr.str_v,
+                "long_v": attr.long_v,
+                "dbl_v": attr.dbl_v,
+                "json_v": attr.json_v,
+            }
+        )
+
+    # Send updates to WebSocket clients
+    if updates_by_device:
+        publish_updates_attribute_batch(updates_by_device)
+
     logger.debug(
         "Bulk attributes processed for device %s: created=%d updated=%d", device.id, len(to_create), len(to_update)
     )
     _update_activity_device(device)
+
+
+executor = ThreadPoolExecutor(max_workers=4)  # для handle_fias
 
 
 def _sync_telemetry(device, topic, payload):
@@ -219,88 +246,94 @@ def _sync_telemetry(device, topic, payload):
         topic,
         len(payload) if hasattr(payload, "__len__") else 1,
     )
+
+    # Обработка gateway-пакета: разбиваем на sub-device
+    if topic.startswith("v1/gateway/") and isinstance(payload, dict):
+        for sub_name, telemetry_list in payload.items():
+            key = f"{device.tenant_id}{sub_name}"
+            sub_device = _sub_device_dict_getcreate_cache.get(key)
+            if not sub_device:
+                sub_device = _get_or_create_device(sub_name, device)
+                _sub_device_dict_getcreate_cache[key] = sub_device
+            device = sub_device
+            payload = telemetry_list
+
+    # Собираем raw-entries [(ts_ms, values), …]
     entries = []
     if isinstance(payload, dict) and "ts" in payload and "values" in payload:
         entries.append((payload["ts"], payload["values"]))
     elif isinstance(payload, list):
-        entries.extend((d["ts"], d["values"]) for d in payload if "ts" in d and "values" in d)
+        entries.extend((d["ts"], d["values"]) for d in payload if isinstance(d, dict) and "ts" in d and "values" in d)
     if not entries:
         return
+
     ts_now = get_mil_sec()
-    historical = []
-    latest = []
+    historical_objs = []
+    latest_objs = []
+    card_logs = []
+    updates_by_device: dict[int, list[dict]] = defaultdict(list)
+
+    # Формируем объекты и пакетные updates
     for ts_ms, vals in entries:
         ts_dt = unix_to_datetime(ts_ms)
         for key, (field, value) in find_compatible_field(vals).items():
+            if key == "rfid_card_event":
+                card_log = handle_card_event(device, value, ts_dt)
+                if card_log:
+                    card_logs.append(card_log)
+                continue
             dict_obj = get_tskv_dict(key)
-            historical.append(TsKv(entity_id=device.id, key=dict_obj, ts=ts_dt, **{field: value}))
-            latest.append(TsKvLatest(entity_id=device.id, key=dict_obj, ts=ts_now, **{field: value}))
-            if key == "messageFromFIAS":
-                handle_fias(value, device)
-    # Bulk save
-    TsKv.objects.bulk_create(historical, ignore_conflicts=True)
-    # Upsert latest
-    unique_latest = {obj.key_id: obj for obj in latest}
-    existing = TsKvLatest.objects.filter(entity=device, key_id__in=unique_latest.keys())
-    existing_map = {e.key_id: e for e in existing}
-    to_create, to_update = [], []
-    for key_id, obj in unique_latest.items():
-        if key_id in existing_map:
-            existing_obj = existing_map[key_id]
-            for attr in ("ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"):
-                setattr(existing_obj, attr, getattr(obj, attr))
-            to_update.append(existing_obj)
-        else:
-            to_create.append(obj)
-    if to_create:
-        TsKvLatest.objects.bulk_create(to_create)
-    if to_update:
-        TsKvLatest.objects.bulk_update(to_update, ["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"])
-
-    # Emit signals on commit
-    def emit_signals():
-        from django.db.models.signals import post_save
-
-        for inst in to_create:
-            post_save.send(sender=TsKvLatest, instance=inst, created=True)
-        for inst in to_update:
-            post_save.send(
-                sender=TsKvLatest,
-                instance=inst,
-                created=False,
-                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+            # исторические записи
+            historical_objs.append(TsKv(entity_id=device.id, key=dict_obj, ts=ts_dt, **{field: value}))
+            # объекты для upsert
+            latest_objs.append(TsKvLatest(entity_id=device.id, key=dict_obj, ts=ts_now, **{field: value}))
+            # пакетное сообщение
+            updates_by_device[device.id].append(
+                {
+                    "entity": str(device.id),
+                    "key": key,
+                    "ts": ts_now,
+                    "bool_v": value if field == "bool_v" else None,
+                    "str_v": value if field == "str_v" else None,
+                    "long_v": value if field == "long_v" else None,
+                    "dbl_v": value if field == "dbl_v" else None,
+                    "json_v": value if field == "json_v" else None,
+                }
             )
 
-    transaction.on_commit(emit_signals)
+            if key == "messageFromFIAS":
+                # Асинхронный обработчик
+                executor.submit(handle_fias, value, device)
+
+    # Сохраняем исторические данные
+    TsKv.objects.bulk_create(historical_objs, ignore_conflicts=True)
+
+    if card_logs:
+        try:
+            CardLog.objects.bulk_create(card_logs, ignore_conflicts=True)
+            publish_card_log_updates_batch(card_logs)
+        except Exception as e:
+            logger.exception("Failed to create CardLog entries: %s", e)
+
+    # Upsert последних значений
+    if latest_objs:
+        try:
+            unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
+            TsKvLatest.objects.bulk_create(
+                list(unique.values()),
+                update_conflicts=True,
+                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+                unique_fields=["entity_id", "key_id"],
+            )
+        except Exception as e:
+            logger.exception("Failed to upsert TsKvLatest: %s", e)
+
+    # Пакетная отправка всем подписанным WebSocket-клиентам
+    if updates_by_device:
+        publish_updates_batch(updates_by_device)
+
+    # Обновляем активность устройства
     _update_activity_device(device)
-
-
-_response_connection = None
-_response_channel = None
-
-
-async def _get_response_channel():
-    global _response_connection, _response_channel
-    if _response_connection is None or _response_connection.is_closed:
-        logger.debug("Opening new aio-pika connection for responses")
-        _response_connection = await aio_pika.connect_robust(
-            host=settings.RABBIT_HOST,
-            port=settings.RABBIT_PORT,
-            login=settings.RABBIT_LOGIN,
-            password=settings.RABBIT_PASSWORD,
-        )
-        _response_channel = await _response_connection.channel()
-    return _response_channel
-
-
-async def send_to_rabbitmq_async(message: dict, routing_key: str):
-    logger.debug("Sending async response to routing_key=%s message=%s", routing_key, message)
-    channel = await _get_response_channel()
-    exchange = await channel.get_exchange("toGRMS")  # pyright:ignore
-    await exchange.publish(
-        aio_pika.Message(body=json.dumps(message).encode()),
-        routing_key=routing_key,
-    )
 
 
 def handle_attribute_request(ch, device_id: str, topic: str, data: dict):
@@ -316,7 +349,7 @@ def handle_attribute_request(ch, device_id: str, topic: str, data: dict):
             "topic": topic.replace("request", "response"),
             "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
         }
-        send_to_rabbitmq(ch, response, routing_key=response["topic"])
+        send_to_rabbitmq(ch, response, routing_key="fromGRMS")
         logger.debug("Attribute response sent for device %s", device_id)
     except Exception as exc:
         logger.exception("Failed to send attribute response: %s", exc)
@@ -331,7 +364,7 @@ def _update_activity_device(device, connected=True):
         entity=device, attribute_type=AttributeKv.SERVER_SCOPE, attribute_key="active"
     ).first()
 
-    if connected and attrs and attrs.last_update_ts > ts_now - 20000:  # 20 sec threshold
+    if connected and attrs and attrs.last_update_ts > ts_now - 1000:  # 1 sec threshold
         return
 
     if attrs:

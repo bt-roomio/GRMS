@@ -17,9 +17,21 @@ class UUIDEncoder(json.JSONEncoder):
 class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     pagination_class = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subscribers = {}
+
     @classmethod
     async def encode_json(cls, content):
         return json.dumps(content, cls=UUIDEncoder)
+
+    @property
+    def user_id(self):
+        return self.scope["user"].get("id")
+
+    @property
+    def tenant_id(self):
+        return self.scope["user"].get("tenant_id")
 
     def get_user_object(self):
         return User.objects.filter(pk=self.scope["user"].id).first()
@@ -37,6 +49,7 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     async def send_list_paginated(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
         await self.reply(data=data, action=action, request_id=request_id)
+        return data
 
     def get_data(self, **kwargs):
         queryset = self.get_queryset(query_params=kwargs.get("query_params"))

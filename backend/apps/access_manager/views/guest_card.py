@@ -1,17 +1,12 @@
 import logging
-import time
 
-from access_manager.models import Card, GuestCard
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard, CardDeviceSlot
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
-from core.utils.str_to_dict import str_to_dict
-from shuttle.models import Relation, RPCMessage
 
 logger = logging.getLogger("main")
 
@@ -20,7 +15,8 @@ class GuestCardView(APIView):
 
     @guest_card_swagger()
     def post(self, request):
-        from main.models import Device, Guest
+        from access_manager.utilits.send_rpc import send_rpc_request
+        from main.models import Device
 
         serializer = GuestCardRequestSerializer(data=request.data)
 
@@ -35,100 +31,21 @@ class GuestCardView(APIView):
             guest_id = validated_data["guest_id"]
             cards = validated_data["cards"]
 
-            guest = Guest.objects.get(pk=guest_id)
-            device = Device.objects.filter(room__guests=guest_id, is_active=True).first()
+            staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
+                                                   staff__tenant_id=request.user.tenant_id)
+            if staff_cards:
+                return Response({"message": "Card is connected to staff."}, 403)
 
-            if not guest:
-                return Response({"detail": "Not found guest."}, 404)
+            device = Device.objects.filter(room__guests=guest_id, is_active=True).first()
 
             if not device:
                 return Response({"detail": "Not found device."}, 404)
 
-            rpc_params = prepare_cards(cards, 1)
-            result = prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=guest)
-            return Response(result)
+            result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id)
+            if not result.get("success", True):
+                return Response(result, status=400)
+            return Response(result, status=200)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-def prepare_cards(cards, access):
-    rpc_params = []
-    for card_number in cards:
-        card_data = {
-            "cardNumber": card_number,
-            "access_group": str(access),
-            "start_time": "00:00",
-            "end_time": "23:59",
-            "weekdays": ["1", "2", "3", "4", "5", "6", "7"],
-            "slot_num": "1",
-        }
-        rpc_params.append(card_data)
-    return rpc_params
-
-
-def deactivate_guest_card(cards):
-    try:
-        for card in cards:
-            instance = GuestCard.objects.get(card__number=card, is_active=True)
-            instance.is_active = False
-            instance.save(update_fields=["is_active"])
-        return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
-    except Exception:
-        return {"success": False, "message": "Could not disconnect card, please try again !"}
-
-
-def prepare_mqtt_request(device, rpc_params, cards, guests=None, guest=None):
-    from main.models import Device
-
-    relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
-    device_id = relation and relation.from_id.id
-    gateway_or_none = Device.objects.gateway_or_none(device.id)
-    rpc_message = RPCMessage.objects.create(additional_info={})
-    request_id = rpc_message.id
-
-    message = {
-        "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device_id),
-        "topic": "v1/gateway/rpc",
-        "data": {
-            "device": str(device.name),
-            "data": {"id": request_id, "method": "writeRFID", "params": rpc_params, "timeout": 10000},
-        },
-    }
-    logger.debug(message)
-
-    if not rpc_params:
-        return {"success": False, "cards_empty": True, "message": "Cards doesn't exist. "}
-
-    channel = connect_to_rabbitmq()
-    send_to_rabbitmq(channel, message)
-
-    timeout_seconds = 5
-    start_time = time.time()
-
-    while time.time() - start_time < timeout_seconds:
-        has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
-        if has_message and str_to_dict(has_message.additional_info).get("success") == True and guests is not None:
-            result = deactivate_guest_card(cards)
-            return result
-        if has_message and str_to_dict(has_message.additional_info).get("success") == True and guest is not None:
-            result = activate_guest_card(cards, guest)
-            return result
-
-        time.sleep(1)
-
-    return {"success": False, "message": "Could not perform action with card, please try again !"}
-
-
-def activate_guest_card(cards, guest):
-    for card_number in cards:
-        card, _ = Card.objects.get_or_create(number=card_number, defaults={"tenant_id": guest.tenant_id})
-
-        if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
-            continue
-        GuestCard.objects.create(guest=guest, card=card, is_active=True)
-
-    return {
-        "success": True,
-        "message": "Successfully activated guest card.",
-    }

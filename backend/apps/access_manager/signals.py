@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from access_manager.models import GuestCard, StaffCard, Group
+from access_manager.models import GuestCard, StaffCard, Group, NeedSyncDevice
 
 
 @receiver(post_save, sender=GuestCard)
@@ -32,3 +32,11 @@ def group_signal_handler(sender, instance, **kwargs):
     channel_layer = get_channel_layer()
     if channel_layer is not None:
         async_to_sync(channel_layer.group_send)("cards", {"type": "get_list_activity"})
+
+
+@receiver(post_save, sender=NeedSyncDevice)
+def need_sync_signal_handler(sender, instance, **kwargs):
+    card = instance.card
+    if not card.is_active:
+        card.is_active = True
+        card.save()

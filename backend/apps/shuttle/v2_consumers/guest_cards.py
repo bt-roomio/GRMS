@@ -25,8 +25,7 @@ class GuestCardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericA
         user = self.scope["user"]
         params = GuestCardFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
-        )
+            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", []))
         return query
 
     async def get_list_activity(self, action, **kwargs):

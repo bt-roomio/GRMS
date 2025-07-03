@@ -1,25 +1,33 @@
 from uuid import UUID
 
 from access_manager.querysets.card import CardQuerySet
+from access_manager.querysets.card_log import CardLogQuerySet
 from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
 from access_manager.querysets.guest_card import GuestCardQuerySet
+from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
+from django.utils import timezone
 
 from core.models import BaseModel, CreatedByModel, UpdateByModel
 
-HOUSEKEEPING = 2
-ENGINEERING = 3
-MASTER_CARD = 4
+
+class TypeChoices(models.IntegerChoices):
+    HOUSEKEEPING = 2, "HOUSEKEEPING"
+    ENGINEERING = 3, "ENGINEERING"
+    MASTER_CARD = 4, "MASTER_CARD"
 
 
-TYPE_CHOICES = (
-    (HOUSEKEEPING, "HOUSEKEEPING"),
-    (ENGINEERING, "ENGINEERING"),
-    (MASTER_CARD, "MASTER CARD"),
-)
+class AccessGroupChoices(models.IntegerChoices):
+    DENIED = 0, "DENIED"
+    GUEST = 1, "GUEST"
+    HOUSEKEEPING = 2, "HOUSEKEEPING"
+    ENGINEERING = 3, "ENGINEERING"
+    MASTER_CARD = 4, "MASTER_CARD"
+    FAILED = 5, "FAILED"
 
 
 ALL_DAYS = "all_days"
@@ -49,10 +57,13 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
     week_days = ArrayField(models.CharField(max_length=10, choices=WEEK_DAYS))
     start_time = models.TimeField()
     end_time = models.TimeField()
-    expiry_date = models.DateTimeField()
+    expiry_date = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
-    group_type = models.CharField(choices=TYPE_CHOICES, default=HOUSEKEEPING)
+    group_type = models.IntegerField(
+        choices=TypeChoices.choices,
+        help_text="Must be one of: HOUSEKEEPING, ENGINEERING, MASTER_CARD",
+    )
 
     objects = GroupQuerySet.as_manager()
 
@@ -69,6 +80,7 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
 class Card(BaseModel, CreatedByModel, UpdateByModel):
     number = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    is_active = models.BooleanField(default=True)
 
     KNX = models.IntegerField(null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
@@ -83,11 +95,41 @@ class Card(BaseModel, CreatedByModel, UpdateByModel):
         unique_together = ("number", "tenant")
 
 
+class CardLog(BaseModel, CreatedByModel, UpdateByModel):
+    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now)
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    number = models.CharField(max_length=200)
+    event_ts = models.DateTimeField()
+    access_group = models.IntegerField(
+        choices=AccessGroupChoices.choices,
+        help_text="Must be one of: HOUSEKEEPING, ENGINEERING, MASTER_CARD",
+    )
+
+    device = models.ForeignKey("main.Device", models.DO_NOTHING)
+    staff = models.ForeignKey(
+        "access_manager.Staff", models.DO_NOTHING, null=True, blank=True, related_name="card_logs"
+    )
+    guest = models.ForeignKey("main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs")
+
+    additional_info = models.JSONField(null=True, blank=True)
+
+    objects = CardLogQuerySet.as_manager()
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+        db_table = "access_manager_card_logs"
+        ordering = ["-event_ts"]
+
+    def __str__(self):
+        return f"{self.number} - {self.device} - {self.event_ts} - {self.access_group}"
+
+
 class NeedSyncDevice(BaseModel, CreatedByModel):
     device = models.ForeignKey("main.Device", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     need_sync = models.BooleanField(default=True)
     additional_info = models.JSONField(null=True, blank=True)
+
+    objects = NeedSyncDeviceQuerySet.as_manager()
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_need_sync_devices"
@@ -122,12 +164,14 @@ class Staff(BaseModel, CreatedByModel):
 
 class StaffCard(BaseModel, CreatedByModel):
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
-    card = models.OneToOneField("access_manager.Card", models.CASCADE)
+    card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_staff_cards"
-        constraints = [UniqueConstraint("staff", "card", condition=Q(is_active=True), name="unique_active_staff_card")]
+        constraints = [
+            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_active_staff_card"),
+        ]
 
 
 class GuestCard(BaseModel, CreatedByModel):
@@ -139,10 +183,13 @@ class GuestCard(BaseModel, CreatedByModel):
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "access_manager_guest_cards"
-        constraints = [UniqueConstraint("guest", "card", condition=Q(is_active=True), name="unique_active_guest_card")]
+        constraints = [
+            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_card_active"),
+        ]
 
 
 class GroupRoom(BaseModel, CreatedByModel):
+    group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
     room = models.ForeignKey("main.Room", models.CASCADE, "group_room")
     additional_info = models.JSONField(null=True, blank=True)
@@ -157,6 +204,7 @@ class GroupRoom(BaseModel, CreatedByModel):
 
 
 class GroupPublicSpace(BaseModel, CreatedByModel):
+    group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
     public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)
@@ -178,3 +226,14 @@ class GuestPublicSpace(BaseModel):
 
     def __str__(self):
         return f"{self.guest} -> {self.public_space}"
+
+
+class CardDeviceSlot(BaseModel, UpdateByModel, CreatedByModel):
+    card_number = models.CharField(max_length=100)
+    device = models.ForeignKey("main.Device", models.CASCADE)
+    slot = models.PositiveBigIntegerField(validators=[MaxValueValidator(65535)])
+    additional_info = models.JSONField(null=True, blank=True)
+
+    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
+        unique_together = [("device", "card_number"), ("device", "slot")]
+        db_table = "access_manager_card_device_slots"

@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from access_manager.models import Card, StaffCard, GuestCard, Group
 
-# from access_manager.serializers.group import GroupSerializer
 from access_manager.serializers.staff import StaffSerializer
 from core.utils.serializers import ValidatorSerializer
 from main.serializers.guest import GuestSerializer
@@ -25,13 +24,15 @@ class GroupSerializer(serializers.ModelSerializer):
 
 class CardSerializer(serializers.Serializer):
     card_id = serializers.SerializerMethodField()
+    created_at = serializers.CharField()
     need_to_sync = serializers.SerializerMethodField()
     number = serializers.CharField()
+    is_active = serializers.BooleanField()
     card_user = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
-        fields = ["card_id", "card_number", "need_to_sync"]
+        fields = ["created_at", "card_id", "card_number", "need_to_sync", "is_active"]
 
     def get_card_user(self, obj):
         try:
@@ -71,3 +72,7 @@ class CardFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=20)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     search_value = serializers.CharField(required=False, allow_null=True)
+    filters = serializers.DictField(
+        required=False,
+        child=serializers.BooleanField()
+    )
