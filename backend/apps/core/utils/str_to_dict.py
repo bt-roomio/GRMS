@@ -4,16 +4,16 @@ import logging
 logger = logging.getLogger("django")
 
 
-def str_to_dict(input):
-    if type(input) is dict:
-        return input
+def str_to_dict(msg):
+    if type(msg) is dict:
+        return msg
     try:
-        if input.startswith('"') and input.endswith('"'):
-            input = input[1:-1]
+        if msg.startswith('"') and msg.endswith('"'):
+            msg = msg[1:-1]
 
-        input = input.replace('\\"', '"')
+        msg = msg.replace('\\"', '"')
 
-        return json.loads(input)
+        return json.loads(msg)
     except Exception as e:
         logger.warning(f"Second attempt failed: {e}")
-        return input
+        return msg

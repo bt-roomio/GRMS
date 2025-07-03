@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 from access_manager.models import Group
 from access_manager.utilits.batch_cards import batch_cards
 from access_manager.utilits.need_sync import need_sync
-from access_manager.views.staff_card import prepare_cards
+from access_manager.utilits.send_rpc import prepare_cards
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
@@ -145,7 +145,7 @@ def process_device_sequential(device: Device, cards: List[str], group: Group, ac
             f"Processing batch {i + 1}/{len(card_batches)} with {len(card_batch)} cards for device {device.name}"
         )
 
-        rpc_params = prepare_cards(card_batch, group, connect=(action == "connect"))
+        rpc_params = prepare_cards(card_batch, device, connect=(action == "connect"), group=group)
         result = send_card_rpc_request(device, rpc_params, card_batch, action)
         batch_results.append(result)
 

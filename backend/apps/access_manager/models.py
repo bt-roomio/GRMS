@@ -164,7 +164,7 @@ class Staff(BaseModel, CreatedByModel):
 
 class StaffCard(BaseModel, CreatedByModel):
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
-    card = models.OneToOneField("access_manager.Card", models.CASCADE)
+    card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
@@ -235,5 +235,8 @@ class CardDeviceSlot(BaseModel, UpdateByModel, CreatedByModel):
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
-        unique_together = ("device", "slot")
+        unique_together = [
+            ("device", "card_number"),
+            ("device", "slot")
+        ]
         db_table = "access_manager_card_device_slots"
