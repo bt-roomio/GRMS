@@ -1,5 +1,5 @@
 from access_manager.models import GuestCard
-from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+from access_manager.utilits.send_rpc import send_rpc_request
 
 from rest_framework import serializers
 
@@ -73,13 +73,12 @@ class GuestSerializer(serializers.ModelSerializer):
             room = Room.objects.filter(id=instance.room_id).first()
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-            device = (
+            device_id = str(
                 Device.objects.filter(room__id=room.id, is_active=True)  # pyright: ignore
                 .select_related("tenant")
-                .first()
+                .first().id
             )
-            rpc_params = prepare_cards(cards, 0, device)
-            deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
+            deactivate_result = send_rpc_request(device_id, cards)
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)
                 room.state.append(Room.Available)

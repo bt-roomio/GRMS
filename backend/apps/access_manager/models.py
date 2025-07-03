@@ -164,7 +164,7 @@ class Staff(BaseModel, CreatedByModel):
 
 class StaffCard(BaseModel, CreatedByModel):
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
-    card = models.OneToOneField("access_manager.Card", models.CASCADE)
+    card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):

@@ -6,7 +6,7 @@ from access_manager.models import Card, StaffCard, GuestCard, GroupRoom, GroupPu
 from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
 from access_manager.swagger.card import card_swagger, swagger_card_disconnect
 from access_manager.tasks import card_room, card_public_space
-from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+from access_manager.utilits.send_rpc import send_rpc_request
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -115,16 +115,12 @@ def disconnect_card(card):
             if guest.room:
                 room_devices = Device.objects.filter(room=guest.room, is_active=True)
                 for device in room_devices:
-                    rpc_params = prepare_cards([card_num], 0, device)
-                    prepare_mqtt_request.delay(None, rpc_params, [card_num], guests=True, guest=None,
-                                                        device_id=str(device.id))
+                    send_rpc_request.delay(str(device.id), [card_num], 0)
             guest_public_spaces = GuestPublicSpace.objects.filter(guest=guest).select_related('public_space')
             for guest_public_space in guest_public_spaces:
                 public_space = guest_public_space.public_space
                 if public_space.device and public_space.device.is_active:
-                    rpc_params = prepare_cards([card_num], 0, public_space.device)
-                    prepare_mqtt_request.delay(None, rpc_params, [card_num],
-                                                        guests=True, guest=None, device_id=str(public_space.device.id))
+                    send_rpc_request.delay(str(public_space.device.id), [card_num], 0)
 
         need_sync_objs = NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
 

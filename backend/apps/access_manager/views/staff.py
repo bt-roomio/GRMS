@@ -1,7 +1,7 @@
 from access_manager.models import GroupPublicSpace, GroupRoom, Staff, StaffCard
 from access_manager.serializers.staff import StaffFilterParams, StaffSerializer
 from access_manager.swagger.staff import staff_swagger
-from access_manager.views.staff_card import prepare_cards, prepare_mqtt_request
+from access_manager.utilits.send_rpc import send_rpc_request
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -72,10 +72,9 @@ class StaffDetailView(APIView):
         devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices])
         cards = StaffCard.objects.filter(staff=instance).values_list("card__number", flat=True)
 
-        rpc_params = prepare_cards(cards, instance.group, False)
         results = []
         for device in devices:
-            result = prepare_mqtt_request(device, rpc_params, cards, instance, True)
+            result = send_rpc_request(str(device.id), cards, False, staff_id=str(pk))
             results.append(result)
 
         instance.is_active = False
