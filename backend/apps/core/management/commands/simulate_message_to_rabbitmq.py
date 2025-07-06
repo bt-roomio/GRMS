@@ -11,12 +11,16 @@ class Command(BaseCommand):
     def handle(self, **_):
         msg = {
             "sourceDeviceUUID": "c6fe44a3-b349-491d-bd7b-31c32dcaf3db",
-            "data": {"test": "test"},
-            "topic": "v1/gateway/attributes",
+            "data": {
+                "keys": "roomNumber,Check-out date",
+                "device": "64:69:7d:4d:37:3c",
+                "client": False,
+                "id": 50860,
+            },
+            "topic": "v1/gateway/attributes/request",
         }
         ch = connect_to_rabbitmq()
-        for _ in range(100):
-            send_to_rabbitmq(ch, msg, "fromGRMS")
+        send_to_rabbitmq(ch, msg, "toGRMS")
         return
 
         with open("output_500.json", "r") as f:

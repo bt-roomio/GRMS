@@ -1,9 +1,9 @@
 from access_manager.views.card import CardDetailView, CardListView, DisconnectCardView
 from access_manager.views.group import GroupDetailView, GroupListView
 from access_manager.views.guest_card import GuestCardView
-from access_manager.views.sync_device import SyncDeviceView
 from access_manager.views.staff import StaffDetailView, StaffListView
 from access_manager.views.staff_card import StaffCardView
+from access_manager.views.sync_device import SyncDeviceDetailView, SyncDeviceView
 from django.urls import path
 
 urlpatterns = [
@@ -17,4 +17,5 @@ urlpatterns = [
     path("staff-card/", StaffCardView.as_view(), name="staff-card"),
     path("disconnect-card/", DisconnectCardView.as_view(), name="disconnect-card"),
     path("sync/", SyncDeviceView.as_view(), name="need-sync"),
+    path("sync/<uuid:pk>/", SyncDeviceDetailView.as_view(), name="need-sync-detail"),
 ]

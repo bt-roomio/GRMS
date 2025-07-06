@@ -1,4 +1,5 @@
 import logging
+
 from rest_framework import serializers
 
 from core.utils.random_letter import get_random_letter
@@ -12,12 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
+    public_spaces = serializers.SerializerMethodField()
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["device_profile"] = str(instance.device_profile_id)
         data["tenant"] = str(instance.tenant_id)
-        data["room"] = str(instance.room_id)
+        data["room"] = str(instance.room_id) if instance.room_id else None
         return data
+
+    def get_public_spaces(self, obj):
+        public_spaces = [dps.public_space.name for dps in getattr(obj, "prefetched_device_public_spaces", [])]
+        return public_spaces
 
     class Meta:
         model = Device
@@ -33,6 +40,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
             "label",
             "additional_info",
             "device_data",
+            "public_spaces",
             "external_id",
         )
 
@@ -53,7 +61,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
-                validated_data.get("tenant_id")
+            validated_data.get("tenant_id")
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
@@ -67,7 +75,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
-                validated_data.get("tenant_id"), instance.id
+            validated_data.get("tenant_id"), instance.id
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
@@ -77,10 +85,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
         new_room_id = updated_instance.room_id
 
-        if (old_room_id != new_room_id and
-                new_room_id and
-                updated_instance.is_active and
-                updated_instance.status):
+        if old_room_id != new_room_id and new_room_id and updated_instance.is_active and updated_instance.status:
             print("yesss")
             self._register_cards_for_room(new_room_id)
 
@@ -91,34 +96,20 @@ class DeviceSerializer(serializers.ModelSerializer):
         from access_manager.tasks import card_room
 
         try:
-            group_rooms = GroupRoom.objects.filter(
-                room_id=room_id,
-                group__is_active=True
-            ).select_related('group')
+            group_rooms = GroupRoom.objects.filter(room_id=room_id, group__is_active=True).select_related("group")
 
             print("group_rooms", group_rooms)
 
             for group_room in group_rooms:
                 try:
-                    card_room(
-                        group_id=group_room.group_id,
-                        room_id=room_id,
-                        action="connect"
-                    )
+                    card_room(group_id=group_room.group_id, room_id=room_id, action="connect")
                 except Exception as e:
                     logger.error(
-                        "Error registering cards for group %s to room %s: %s",
-                        group_room.group_id,
-                        room_id,
-                        str(e)
+                        "Error registering cards for group %s to room %s: %s", group_room.group_id, room_id, str(e)
                     )
 
         except Exception as e:
-            logger.error(
-                "Error in _register_cards_for_room for room %s: %s",
-                room_id,
-                str(e)
-            )
+            logger.error("Error in _register_cards_for_room for room %s: %s", room_id, str(e))
 
     class Meta:
         model = Device

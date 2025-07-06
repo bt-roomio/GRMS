@@ -1,5 +1,44 @@
+from access_manager.serializers.need_sync import SimpleNeedSyncDeviceSerializer
+
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+
+
+def sync_device_delete_swagger():
+    return swagger_auto_schema(
+        tags=["Access manager, Device Sync"],
+        responses={200: openapi.Response(description="Success")},
+        operation_description="""
+        Delete a specific NeedSyncDevice record by UUID.
+
+        **Parameters:**
+        - `id` (required): UUID of the NeedSyncDevice record to delete.
+
+        **Response codes:**
+        """,
+    )
+
+
+def sync_device_get_swagger():
+    return swagger_auto_schema(
+        tags=["Access manager, Device Sync"],
+        manual_parameters=[
+            openapi.Parameter(
+                "card_id",
+                openapi.IN_QUERY,
+                description="Filter devices by card ID",
+                type=openapi.TYPE_STRING,
+                required=False,
+            )
+        ],
+        responses={
+            200: SimpleNeedSyncDeviceSerializer,
+            404: openapi.Response(
+                description="No devices found needing synchronization",
+            ),
+        },
+    )
+
 
 SyncDeviceRequestSwagger = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -7,19 +46,13 @@ SyncDeviceRequestSwagger = openapi.Schema(
         "ids": openapi.Schema(
             type=openapi.TYPE_ARRAY,
             items=openapi.Schema(
-                type=openapi.TYPE_STRING,
-                format=openapi.FORMAT_UUID,
-                description="NeedSyncDevice UUID"
+                type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="NeedSyncDevice UUID"
             ),
             description="List of NeedSyncDevice UUIDs to sync. If not provided, all devices needing sync will be processed.",
         ),
         "device_ids": openapi.Schema(
             type=openapi.TYPE_ARRAY,
-            items=openapi.Schema(
-                type=openapi.TYPE_STRING,
-                format=openapi.FORMAT_UUID,
-                description="Device UUID"
-            ),
+            items=openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="Device UUID"),
             description="List of Device UUIDs to sync. If provided, all NeedSyncDevice objects for these devices will be processed.",
         ),
     },
@@ -42,23 +75,17 @@ SyncDeviceErrorResponseSwagger = openapi.Schema(
     },
 )
 
+
 def sync_device_swagger():
     return swagger_auto_schema(
         tags=["Access manager, Device Sync"],
         request_body=SyncDeviceRequestSwagger,
         responses={
-            200: openapi.Response(
-                description="No devices need syncing",
-                schema=SyncDeviceResponseSwagger
-            ),
+            200: openapi.Response(description="No devices need syncing", schema=SyncDeviceResponseSwagger),
             202: openapi.Response(
-                description="Device sync task started successfully",
-                schema=SyncDeviceResponseSwagger
+                description="Device sync task started successfully", schema=SyncDeviceResponseSwagger
             ),
-            400: openapi.Response(
-                description="Invalid request data",
-                schema=SyncDeviceErrorResponseSwagger
-            ),
+            400: openapi.Response(description="Invalid request data", schema=SyncDeviceErrorResponseSwagger),
         },
         operation_description="""
         Synchronize devices that have pending sync operations.
@@ -83,4 +110,4 @@ def sync_device_swagger():
         - `202`: Sync task started successfully (async operation)
         - `400`: Invalid request data
         """,
-    ) 
+    )
