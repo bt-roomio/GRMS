@@ -16,6 +16,13 @@ class DeviceQuerySet(BaseQuerySet):
     def gateway_or_none(self, pk):
         return self.filter(pk=pk, additional_info__gateway=True, is_active=True).first()
 
+    def active_inactive(self, devices, tenant):
+        device_objects = self.filter(id__in=devices, tenant=tenant)
+        active_devices = device_objects.filter(is_active=True, status=True)
+        inactive_devices = device_objects.filter(Q(is_active=False) | Q(status=False))
+
+        return active_devices, inactive_devices
+
     def is_active(self):
         return self.filter(is_active=True)
 

@@ -88,7 +88,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def _register_cards_for_room(self, room_id):
         from access_manager.models import GroupRoom
-        from access_manager.tasks import card_room
+        from access_manager.utilits.task_trigger import card_room
 
         try:
             group_rooms = GroupRoom.objects.filter(

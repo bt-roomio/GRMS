@@ -1,5 +1,5 @@
 from access_manager.models import GuestCard
-from access_manager.utilits.send_rpc import send_rpc_request
+from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 

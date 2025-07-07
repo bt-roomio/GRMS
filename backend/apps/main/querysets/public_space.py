@@ -34,3 +34,7 @@ class PublicSpaceQuerySet(BaseQuerySet):
 
 class DevicePublicSpacesQuerySet(BaseQuerySet):
     pass
+
+
+class RoomTypePublicSpacesQuerySet(BaseQuerySet):
+    pass

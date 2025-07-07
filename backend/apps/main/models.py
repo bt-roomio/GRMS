@@ -16,7 +16,7 @@ from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.device_profile import DeviceProfileQuerySet
 from main.querysets.guest import GuestQuerySet
-from main.querysets.public_space import DevicePublicSpacesQuerySet, PublicSpaceQuerySet
+from main.querysets.public_space import DevicePublicSpacesQuerySet, PublicSpaceQuerySet, RoomTypePublicSpacesQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
@@ -527,3 +527,15 @@ class DevicePublicSpaces(BaseModel):
         db_table = "main_device_public_spaces"
         unique_together = ("device", "public_space")
         default_related_name = "device_public_spaces"
+
+
+class RoomTypePublicSpaces(BaseModel):
+    room_type = models.ForeignKey("main.RoomType", CASCADE)
+    public_space = models.ForeignKey("main.PublicSpace", CASCADE)
+
+    objects = RoomTypePublicSpacesQuerySet.as_manager()
+
+    class Meta(BaseModel.Meta):
+        db_table = "main_room_type_public_spaces"
+        unique_together = ("room_type", "public_space")
+        default_related_name = "room_type_public_spaces"

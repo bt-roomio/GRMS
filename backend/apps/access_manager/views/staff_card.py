@@ -8,7 +8,7 @@ from access_manager.swagger.staff_card import staff_card_swagger
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from access_manager.utilits.send_rpc import send_rpc_request
+from access_manager.tasks.send_rpc import send_rpc_request
 from main.models import Device
 
 logger = logging.getLogger("main")
@@ -35,8 +35,9 @@ class StaffCardView(APIView):
                 "room__devices", flat=True
             )
             group_pub_spaces_devices = GroupPublicSpace.objects.filter(
-                group=group, public_space__device__is_active=True
-            ).values_list("public_space__device", flat=True)
+                group=group,
+                public_space__device_public_spaces__device__is_active=True
+            ).values_list("public_space__device_public_spaces__device", flat=True)
 
             devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices])
 

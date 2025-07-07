@@ -3,7 +3,7 @@ from access_manager.serializers.group_room import SimpleGroupPublicSpaceSerializ
 
 from rest_framework import serializers
 
-from access_manager.tasks import card_room, card_public_space
+from access_manager.utilits.task_trigger import card_room, card_public_space
 from core.utils.serializers import ValidatorSerializer
 from main.models import PublicSpace, Room
 from users.serializers.user import SimpleUserSerializer

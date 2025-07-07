@@ -36,42 +36,59 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
         return SimpleDeviceSerializer(devices, many=True).data
 
     def update(self, instance, validated_data):
-        device_ids = validated_data.pop("device_ids", None)
+        device_objects = validated_data.pop("device_ids", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        if device_ids is not None:
-            device_public_space = DevicePublicSpaces.objects.filter(public_space=instance)
-            public_space_devices = device_public_space.values_list("device_id", flat=True)
-            to_remove = public_space_devices.exclude(device_id__in=device_ids)
-            DevicePublicSpaces.objects.filter(device_id__in=to_remove).delete()
+        if device_objects is not None:
+            current_device_relations = DevicePublicSpaces.objects.filter(public_space=instance)
+            current_device_ids = list(current_device_relations.values_list("device_id", flat=True))
 
-            public_space_devices = [str(device) for device in public_space_devices]
-            new_devices = [device_id for device_id in device_ids if str(device_id.id) not in public_space_devices]
-            DevicePublicSpaces.objects.bulk_create(
-                [DevicePublicSpaces(device=device, public_space=instance) for device in new_devices]
-            )
-            self._register_cards_for_public_space(instance.id, new_devices)
+            incoming_device_ids = [device.id for device in device_objects]
+
+            devices_to_remove = [str(device_id) for device_id in current_device_ids if
+                                 device_id not in incoming_device_ids]
+            devices_to_add = [str(device_id) for device_id in incoming_device_ids if
+                              device_id not in current_device_ids]
+
+
+            if not device_objects:
+                devices_to_remove = current_device_ids
+
+            if devices_to_remove:
+                DevicePublicSpaces.objects.filter(
+                    public_space=instance,
+                    device_id__in=devices_to_remove
+                ).delete()
+                self._register_cards_for_public_space(instance.id, devices_to_remove, "disconnect")
+
+            if devices_to_add:
+                device_objects_to_add = [device for device in device_objects if str(device.id) in devices_to_add]
+                DevicePublicSpaces.objects.bulk_create(
+                    [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add]
+                )
+                self._register_cards_for_public_space(instance.id, devices_to_add, "connect")
 
         return instance
 
     def create(self, validated_data):
-        device_ids = validated_data.pop("device_ids", [])
+        device_objects = validated_data.pop("device_objects", [])
         instance = PublicSpace.objects.create(**validated_data)
 
-        if device_ids:
+        if device_objects:
             DevicePublicSpaces.objects.bulk_create(
-                [DevicePublicSpaces(device=device, public_space=instance) for device in device_ids]
+                [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects]
             )
-            self._register_cards_for_public_space(instance.id, device_ids)
+            devices = [device.id for device in device_objects]
+            self._register_cards_for_public_space(instance.id, devices, "connect")
 
         return instance
 
-    def _register_cards_for_public_space(self, public_space_id, new_devices):
+    def _register_cards_for_public_space(self, public_space_id, devices, action):
         from access_manager.models import GroupPublicSpace
-        from access_manager.tasks import card_public_space
+        from access_manager.utilits.task_trigger import card_public_space
 
         try:
             group_public_spaces = GroupPublicSpace.objects.filter(
@@ -80,12 +97,9 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
 
             for group_public_space in group_public_spaces:
                 try:
-                    card_public_space(
-                        group_id=group_public_space.group_id,
-                        public_space_id=public_space_id,
-                        devices=new_devices,
-                        action="connect",
-                    )
+                    card_public_space(group_id=group_public_space.group_id, public_space_id=public_space_id,
+                                      devices=devices, action=action)
+
                 except Exception as e:
                     logger.error(
                         "Error registering cards for group %s to public space %s: %s",

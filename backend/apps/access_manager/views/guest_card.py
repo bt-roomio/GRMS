@@ -1,6 +1,6 @@
 import logging
 
-from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard, CardDeviceSlot
+from access_manager.models import StaffCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
@@ -15,7 +15,7 @@ class GuestCardView(APIView):
 
     @guest_card_swagger()
     def post(self, request):
-        from access_manager.utilits.send_rpc import send_rpc_request
+        from access_manager.tasks.send_rpc import send_rpc_request
         from main.models import Device
 
         serializer = GuestCardRequestSerializer(data=request.data)

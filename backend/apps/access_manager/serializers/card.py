@@ -4,7 +4,7 @@ from access_manager.serializers.staff import SimpleStaffSerializer
 from rest_framework import serializers
 from rest_framework.fields import ValidationError
 
-from access_manager.utilits.send_rpc import send_rpc_request
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Guest
 

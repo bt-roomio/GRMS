@@ -1,5 +1,5 @@
 from access_manager.models import GuestCard
-from access_manager.utilits.send_rpc import send_rpc_request
+from access_manager.tasks.send_rpc import send_rpc_request
 
 from rest_framework import serializers
 

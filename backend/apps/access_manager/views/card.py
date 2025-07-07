@@ -12,8 +12,8 @@ from access_manager.models import (
 )
 from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
 from access_manager.swagger.card import card_swagger, swagger_card_disconnect
-from access_manager.tasks import card_public_space, card_room
-from access_manager.utilits.send_rpc import send_rpc_request
+from access_manager.utilits.task_trigger import card_public_space, card_room
+from access_manager.tasks.send_rpc import send_rpc_request
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -112,7 +112,14 @@ def disconnect_card(card):
 
                 group_public_spaces = GroupPublicSpace.objects.filter(group=group)
                 for group_public_space in group_public_spaces:
-                    card_public_space(group.id, group_public_space.public_space.id, "disconnect", card_num)
+                    public_space_devices = Device.objects.filter(
+                        device_public_spaces__public_space=group_public_space.public_space,
+                        is_active=True
+                    ).values_list('id', flat=True)
+
+                    devices = [str(device_id) for device_id in public_space_devices]
+                    card_public_space(group.id, group_public_space.public_space.id, "disconnect", devices, card_num)
+
                 staff_card.is_active = False
                 staff_card.save()
 
@@ -126,8 +133,12 @@ def disconnect_card(card):
             guest_public_spaces = GuestPublicSpace.objects.filter(guest=guest).select_related("public_space")
             for guest_public_space in guest_public_spaces:
                 public_space = guest_public_space.public_space
-                if public_space.device and public_space.device.is_active:
-                    send_rpc_request.delay(str(public_space.device.id), [card_num], 0)
+                public_space_devices = Device.objects.filter(
+                    device_public_spaces__public_space=public_space,
+                    is_active=True
+                )
+                for device in public_space_devices:
+                    send_rpc_request.delay(str(device.id), [card_num], 0)
 
         need_sync_objs = NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
 

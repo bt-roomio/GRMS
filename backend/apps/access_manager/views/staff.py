@@ -1,7 +1,7 @@
 from access_manager.models import GroupPublicSpace, GroupRoom, Staff, StaffCard
 from access_manager.serializers.staff import StaffFilterParams, StaffSerializer
 from access_manager.swagger.staff import staff_swagger
-from access_manager.utilits.send_rpc import send_rpc_request
+from access_manager.tasks.send_rpc import send_rpc_request
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
