@@ -260,6 +260,7 @@ class RoomType(BaseModel):
     vip_status_off_value = models.IntegerField(null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     dashboard = models.ForeignKey("main.Dashboard", CASCADE, "room_types", null=True, blank=True)
+    public_spaces = models.ManyToManyField("main.PublicSpace", through="main.RoomTypePublicSpaces", blank=True)
 
     objects = RoomTypeQuerySet.as_manager()
 
