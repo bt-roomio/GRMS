@@ -21,21 +21,32 @@ class AttributeRequestType(TypedDict):
 def handle_attribute_request(ch, topic: str, device: DeviceType, data: AttributeRequestType):
     logger.debug("handle_attribute_request: device=%s topic=%s", device["id"], topic)
     try:
-        device_id = device.get("id")
-        sub_device_id = None
-        if "gateway" in topic:
-            sub_device = get_sub_device(device, name=data.get("device"))
-            sub_device_id = sub_device.get("id")
-
         shared_keys = data.get("sharedKeys") or data.get("keys") or []
         keys = shared_keys.split(",") if isinstance(shared_keys, str) else shared_keys
-        attrs = AttributeKv.objects.filter(attribute_type=AttributeKv.SHARED_SCOPE, entity=sub_device_id or device_id)
-        attrs = attrs.filter(attribute_key__in=keys) if keys else attrs
-        response = {
-            "targetDeviceUUID": str(device_id),
-            "topic": topic.replace("request", "response"),
-            "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
-        }
+        device_id = device.get("id")
+
+        if "gateway" in topic:
+            sub_device = get_sub_device(device, name=data.get("device"))
+            attrs = AttributeKv.objects.filter(attribute_type=AttributeKv.SHARED_SCOPE, entity=sub_device.get("id"))
+            attrs = attrs.filter(attribute_key__in=keys) if keys else attrs
+            response = {
+                "targetDeviceUUID": str(device_id),
+                "topic": topic.replace("/request", ""),
+                "data": {
+                    "device": sub_device.get("name"),
+                    "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
+                    "id": data.get("id"),
+                },
+            }
+        else:
+            attrs = AttributeKv.objects.filter(attribute_type=AttributeKv.SHARED_SCOPE, entity=device_id)
+            attrs = attrs.filter(attribute_key__in=keys) if keys else attrs
+            response = {
+                "targetDeviceUUID": str(device_id),
+                "topic": topic.replace("request", "response"),
+                "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
+            }
+
         send_to_rabbitmq(ch, response, routing_key="fromGRMS")
         logger.debug("Attribute response sent for device %s %s", device_id, response)
     except Exception as exc:

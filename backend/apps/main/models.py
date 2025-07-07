@@ -485,6 +485,9 @@ class Guest(BaseModel):
 
     objects = GuestQuerySet.as_manager()
 
+    def get_name(self):
+        return str(self.name + " " + self.lastname)
+
     class Meta(BaseModel.Meta):
         db_table = "main_guest"
         ordering = ["created_at"]
