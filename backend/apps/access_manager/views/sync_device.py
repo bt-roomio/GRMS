@@ -9,7 +9,12 @@ from access_manager.serializers.need_sync import (
     SimpleNeedSyncDeviceSerializer,
     SyncDeviceSerializer,
 )
-from access_manager.swagger.sync_device import sync_device_delete_swagger, sync_device_get_swagger, sync_device_swagger
+from access_manager.swagger.sync_device import (
+    sync_device_delete_by_device_swagger,
+    sync_device_delete_swagger,
+    sync_device_get_swagger,
+    sync_device_swagger,
+)
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db.models import Prefetch
@@ -26,6 +31,22 @@ from main.models import DevicePublicSpaces
 from shuttle.models import RPCMessage
 
 logger = get_task_logger(__name__)
+
+
+class SyncDeviceByDeviceDetailView(APIView):
+    @sync_device_delete_by_device_swagger()
+    def delete(self, request, device_id):
+        instances = NeedSyncDevice.objects.filter(device_id=device_id, need_sync=True)
+        if not instances:
+            raise ValidationError("Any need sync device not found!")
+
+        removed_sync = 0
+        for instance in instances:
+            instance.need_sync = False
+            instance.save()
+            removed_sync += 1
+
+        return Response({"removed_sync": removed_sync})
 
 
 class SyncDeviceDetailView(APIView):
