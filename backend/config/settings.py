@@ -254,7 +254,6 @@ LOGGING = {
         "console": {
             "level": "DEBUG",
             "class": "rich.logging.RichHandler",
-            "formatter": "simple",
         },
         "file": {
             "level": "DEBUG",

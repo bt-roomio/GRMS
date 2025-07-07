@@ -16,7 +16,7 @@ from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.device_profile import DeviceProfileQuerySet
 from main.querysets.guest import GuestQuerySet
-from main.querysets.public_space import PublicSpaceQuerySet
+from main.querysets.public_space import DevicePublicSpacesQuerySet, PublicSpaceQuerySet, RoomTypePublicSpacesQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
@@ -260,6 +260,7 @@ class RoomType(BaseModel):
     vip_status_off_value = models.IntegerField(null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     dashboard = models.ForeignKey("main.Dashboard", CASCADE, "room_types", null=True, blank=True)
+    public_spaces = models.ManyToManyField("main.PublicSpace", through="main.RoomTypePublicSpaces", blank=True)
 
     objects = RoomTypeQuerySet.as_manager()
 
@@ -484,6 +485,9 @@ class Guest(BaseModel):
 
     objects = GuestQuerySet.as_manager()
 
+    def get_name(self):
+        return str(self.name + " " + self.lastname)
+
     class Meta(BaseModel.Meta):
         db_table = "main_guest"
         ordering = ["created_at"]
@@ -495,7 +499,6 @@ class PublicSpace(BaseModel, CreatedByModel):
     name = models.CharField(max_length=255)
     accessible_for_guest = models.BooleanField(default=False)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
-    device = models.ForeignKey("main.Device", models.CASCADE, null=True, blank=True)
     dashboard = models.ForeignKey("main.Dashboard", models.SET_NULL, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -504,6 +507,39 @@ class PublicSpace(BaseModel, CreatedByModel):
     def __str__(self):
         return str(self.name)
 
+    @property
+    def devices(self):
+        return Device.objects.filter(device_public_spaces__public_space=self)
+
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
         db_table = "main_public_spaces"
         unique_together = ("name", "tenant")
+
+
+class DevicePublicSpaces(BaseModel):
+    device = models.ForeignKey("main.Device", CASCADE)
+    public_space = models.ForeignKey("main.PublicSpace", CASCADE)
+
+    objects = DevicePublicSpacesQuerySet.as_manager()
+
+    def clean(self):
+        super().clean()
+        if self.device.tenant != self.public_space.tenant:
+            raise ValidationError({"tenant": "Device's tenant and Public Space's tenant must be the same."})
+
+    class Meta(BaseModel.Meta):
+        db_table = "main_device_public_spaces"
+        unique_together = ("device", "public_space")
+        default_related_name = "device_public_spaces"
+
+
+class RoomTypePublicSpaces(BaseModel):
+    room_type = models.ForeignKey("main.RoomType", CASCADE)
+    public_space = models.ForeignKey("main.PublicSpace", CASCADE)
+
+    objects = RoomTypePublicSpacesQuerySet.as_manager()
+
+    class Meta(BaseModel.Meta):
+        db_table = "main_room_type_public_spaces"
+        unique_together = ("room_type", "public_space")
+        default_related_name = "room_type_public_spaces"

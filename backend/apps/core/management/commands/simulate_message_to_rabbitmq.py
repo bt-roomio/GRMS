@@ -11,8 +11,13 @@ class Command(BaseCommand):
     def handle(self, **_):
         msg = {
             "sourceDeviceUUID": "c6fe44a3-b349-491d-bd7b-31c32dcaf3db",
-            "data": {"device": "d8:9c:e4:6a:bb:b3"},
-            "topic": "v1/gateway/disconnect",
+            "data": {
+                "keys": "roomNumber,Check-out date",
+                "device": "64:69:7d:4d:37:3c",
+                "client": False,
+                "id": 50860,
+            },
+            "topic": "v1/gateway/attributes/request",
         }
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, "toGRMS")

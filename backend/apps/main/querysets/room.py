@@ -1,5 +1,5 @@
 from access_manager.models import GuestCard
-from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 
@@ -88,9 +88,8 @@ class RoomQuerySet(BaseQuerySet):
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
         cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-        device = Device.objects.filter(room__id=room_id, is_active=True).select_related("tenant").first()
-        rpc_params = prepare_cards(cards, 0, device)
-        deactivate_result = prepare_mqtt_request(device, rpc_params, cards, guests=guests, guest=None)
+        device_id = str(Device.objects.filter(room__id=room_id, is_active=True).first().id)
+        deactivate_result = send_rpc_request(device_id, cards, 0)
         guests.update(is_active=False)
         # loop for send signal
         for room in query:

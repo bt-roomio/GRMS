@@ -4,7 +4,7 @@ from access_manager.serializers.staff import SimpleStaffSerializer
 from rest_framework import serializers
 from rest_framework.fields import ValidationError
 
-from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Guest
 
@@ -64,8 +64,7 @@ class DisconnectCardSerializer(serializers.Serializer):
             guest = Guest.objects.filter(id=card.guest.id).first()
             device = Device.objects.filter(room=guest.room, is_active=True).select_related("tenant").first()
             card_number = [card.card.number]
-            rpc_params = prepare_cards(card_number, 0, device)
-            deactivate_result = prepare_mqtt_request(device, rpc_params, card_number, guests=[guest], guest=None)
+            deactivate_result = send_rpc_request(str(device.id), card_number, 0)
             return deactivate_result
         except GuestCard.DoesNotExist:
             return {"success": False, "message": "Active guest card not found !"}

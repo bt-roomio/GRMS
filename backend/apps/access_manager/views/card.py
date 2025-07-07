@@ -1,12 +1,19 @@
 import logging
 import random
 
-from access_manager.models import Card, StaffCard, GuestCard, GroupRoom, GroupPublicSpace, GuestPublicSpace, \
-    NeedSyncDevice
+from access_manager.models import (
+    Card,
+    GroupPublicSpace,
+    GroupRoom,
+    GuestCard,
+    GuestPublicSpace,
+    NeedSyncDevice,
+    StaffCard,
+)
 from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
 from access_manager.swagger.card import card_swagger, swagger_card_disconnect
-from access_manager.tasks import card_room, card_public_space
-from access_manager.views.guest_card import prepare_cards, prepare_mqtt_request
+from access_manager.utilits.task_trigger import card_public_space, card_room
+from access_manager.tasks.send_rpc import send_rpc_request
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
@@ -85,7 +92,7 @@ class DisconnectCardView(APIView):
         if isinstance(result, dict) and not result.get("success", True):
             return Response(result, status=400)
 
-        return Response({"success": True, "message": f"Card is deactivated !"}, status=200)
+        return Response({"success": True, "message": "Card is deactivated !"}, status=200)
 
 
 def disconnect_card(card):
@@ -93,8 +100,8 @@ def disconnect_card(card):
         deactivate = True
         card_num = str(card.number)
 
-        staff_cards = StaffCard.objects.filter(card=card, is_active=True).select_related('staff', 'staff__group')
-        guest_cards = GuestCard.objects.filter(card=card, is_active=True).select_related('guest', 'guest__room')
+        staff_cards = StaffCard.objects.filter(card=card, is_active=True).select_related("staff", "staff__group")
+        guest_cards = GuestCard.objects.filter(card=card, is_active=True).select_related("guest", "guest__room")
 
         for staff_card in staff_cards:
             if staff_card.staff.group:
@@ -105,7 +112,14 @@ def disconnect_card(card):
 
                 group_public_spaces = GroupPublicSpace.objects.filter(group=group)
                 for group_public_space in group_public_spaces:
-                    card_public_space(group.id, group_public_space.public_space.id, "disconnect", card_num)
+                    public_space_devices = Device.objects.filter(
+                        device_public_spaces__public_space=group_public_space.public_space,
+                        is_active=True
+                    ).values_list('id', flat=True)
+
+                    devices = [str(device_id) for device_id in public_space_devices]
+                    card_public_space(group.id, group_public_space.public_space.id, "disconnect", devices, card_num)
+
                 staff_card.is_active = False
                 staff_card.save()
 
@@ -115,16 +129,16 @@ def disconnect_card(card):
             if guest.room:
                 room_devices = Device.objects.filter(room=guest.room, is_active=True)
                 for device in room_devices:
-                    rpc_params = prepare_cards([card_num], 0, device)
-                    prepare_mqtt_request.delay(None, rpc_params, [card_num], guests=True, guest=None,
-                                                        device_id=str(device.id))
-            guest_public_spaces = GuestPublicSpace.objects.filter(guest=guest).select_related('public_space')
+                    send_rpc_request.delay(str(device.id), [card_num], 0)
+            guest_public_spaces = GuestPublicSpace.objects.filter(guest=guest).select_related("public_space")
             for guest_public_space in guest_public_spaces:
                 public_space = guest_public_space.public_space
-                if public_space.device and public_space.device.is_active:
-                    rpc_params = prepare_cards([card_num], 0, public_space.device)
-                    prepare_mqtt_request.delay(None, rpc_params, [card_num],
-                                                        guests=True, guest=None, device_id=str(public_space.device.id))
+                public_space_devices = Device.objects.filter(
+                    device_public_spaces__public_space=public_space,
+                    is_active=True
+                )
+                for device in public_space_devices:
+                    send_rpc_request.delay(str(device.id), [card_num], 0)
 
         need_sync_objs = NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
 

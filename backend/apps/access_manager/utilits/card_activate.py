@@ -1,0 +1,39 @@
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
+
+
+def activate_guest_card(cards, device, guest):
+    error_cards = []
+    for card_number in cards:
+        try:
+            card, _ = Card.objects.get_or_create(number=card_number, tenant_id=guest.tenant_id,
+                                                 defaults={"is_active": True})
+
+            if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
+                continue
+            GuestCard.objects.create(guest=guest, card=card, is_active=True)
+            NeedSyncDevice.objects.filter(card=card, device=device).update(need_sync=False)
+        except Exception as e:
+            error_cards.append(card_number)
+    message = "Some cards are not activated."
+    return {
+        "success": error_cards == [],
+        "error_cards": error_cards,
+        "message": message if error_cards else "Successfully activated guest card.",
+    }
+
+
+def activate_staff_card(cards, staff, device):
+    for card_number in cards:
+        card, _ = Card.objects.get_or_create(number=card_number, tenant_id=staff.tenant_id,
+                                             defaults={"is_active": True})
+
+        if StaffCard.objects.filter(staff=staff, card=card, is_active=True).exists():
+            continue
+
+        StaffCard.objects.create(staff=staff, card=card, is_active=True)
+
+    return {
+        "success": True,
+        "device": device.name,
+        "message": "Successfully activated staff card.",
+    }

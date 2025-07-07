@@ -123,7 +123,7 @@ class CardLog(BaseModel, CreatedByModel, UpdateByModel):
         return f"{self.number} - {self.device} - {self.event_ts} - {self.access_group}"
 
 
-class NeedSyncDevice(BaseModel, CreatedByModel):
+class NeedSyncDevice(BaseModel, CreatedByModel, UpdateByModel):
     device = models.ForeignKey("main.Device", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     need_sync = models.BooleanField(default=True)
@@ -131,7 +131,19 @@ class NeedSyncDevice(BaseModel, CreatedByModel):
 
     objects = NeedSyncDeviceQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    @property
+    def get_card_holder_name(self):
+        staff_card = StaffCard.objects.select_related("staff").filter(card=self.card, is_active=True).first()
+        if staff_card:
+            return "staff", staff_card.staff.get_name()
+
+        guest_card = GuestCard.objects.select_related("guest").filter(card=self.card, is_active=True).first()
+        if guest_card:
+            return "guest", guest_card.guest.get_name()
+
+        return None, None
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_need_sync_devices"
 
 
@@ -164,7 +176,7 @@ class Staff(BaseModel, CreatedByModel):
 
 class StaffCard(BaseModel, CreatedByModel):
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
-    card = models.OneToOneField("access_manager.Card", models.CASCADE)
+    card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
 
     class Meta(BaseModel.Meta, CreatedByModel.Meta):
@@ -189,6 +201,7 @@ class GuestCard(BaseModel, CreatedByModel):
 
 
 class GroupRoom(BaseModel, CreatedByModel):
+    group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
     room = models.ForeignKey("main.Room", models.CASCADE, "group_room")
     additional_info = models.JSONField(null=True, blank=True)
@@ -203,6 +216,7 @@ class GroupRoom(BaseModel, CreatedByModel):
 
 
 class GroupPublicSpace(BaseModel, CreatedByModel):
+    group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
     public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)
@@ -233,8 +247,5 @@ class CardDeviceSlot(BaseModel, UpdateByModel, CreatedByModel):
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
-        unique_together = [
-            ("device", "card_number"),
-            ("device", "slot")
-        ]
+        unique_together = [("device", "card_number"), ("device", "slot")]
         db_table = "access_manager_card_device_slots"

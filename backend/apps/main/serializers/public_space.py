@@ -1,8 +1,9 @@
 import logging
+
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import PublicSpace
+from main.models import Device, DevicePublicSpaces, PublicSpace
 from main.serializers.dashboard import SimpleDashboardSerializer
 from main.serializers.device import SimpleDeviceSerializer
 
@@ -16,67 +17,99 @@ class SimplePublicSpaceSerializer(serializers.ModelSerializer):
 
 
 class PublicSpaceSerializer(serializers.ModelSerializer):
+    devices = serializers.SerializerMethodField(read_only=True)
+    device_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Device.objects.all(), many=True, required=False, write_only=True
+    )
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["device"] = SimpleDeviceSerializer(instance.device).data if instance.device else None
         data["dashboard"] = SimpleDashboardSerializer(instance.dashboard).data if instance.dashboard else None
         return data
 
+    def get_devices(self, obj):
+        if hasattr(obj, "prefetched_devices"):
+            devices = [device_public_space.device for device_public_space in obj.prefetched_devices]
+        else:
+            devices = Device.objects.filter(device_public_spaces__public_space=obj)
+
+        return SimpleDeviceSerializer(devices, many=True).data
+
     def update(self, instance, validated_data):
-        old_device_id = instance.device_id if instance.pk else None
+        device_objects = validated_data.pop("device_ids", None)
 
-        updated_instance = super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
 
-        new_device_id = updated_instance.device_id
-        if (old_device_id != new_device_id and
-                new_device_id and
-                updated_instance.device.is_active and
-                updated_instance.device.status):
-            self._register_cards_for_public_space(updated_instance.id)
+        if device_objects is not None:
+            current_device_relations = DevicePublicSpaces.objects.filter(public_space=instance)
+            current_device_ids = list(current_device_relations.values_list("device_id", flat=True))
 
-        return updated_instance
+            incoming_device_ids = [device.id for device in device_objects]
 
-    def create(self, validated_data):
-        instance = super().create(validated_data)
+            devices_to_remove = [str(device_id) for device_id in current_device_ids if
+                                 device_id not in incoming_device_ids]
+            devices_to_add = [str(device_id) for device_id in incoming_device_ids if
+                              device_id not in current_device_ids]
 
-        if (instance.device and
-                instance.device.is_active and
-                instance.device.status):
-            self._register_cards_for_public_space(instance.id)
+
+            if not device_objects:
+                devices_to_remove = current_device_ids
+
+            if devices_to_remove:
+                DevicePublicSpaces.objects.filter(
+                    public_space=instance,
+                    device_id__in=devices_to_remove
+                ).delete()
+                self._register_cards_for_public_space(instance.id, devices_to_remove, "disconnect")
+
+            if devices_to_add:
+                device_objects_to_add = [device for device in device_objects if str(device.id) in devices_to_add]
+                DevicePublicSpaces.objects.bulk_create(
+                    [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add]
+                )
+                self._register_cards_for_public_space(instance.id, devices_to_add, "connect")
 
         return instance
 
-    def _register_cards_for_public_space(self, public_space_id):
+    def create(self, validated_data):
+        device_objects = validated_data.pop("device_objects", [])
+        instance = PublicSpace.objects.create(**validated_data)
+
+        if device_objects:
+            DevicePublicSpaces.objects.bulk_create(
+                [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects]
+            )
+            devices = [device.id for device in device_objects]
+            self._register_cards_for_public_space(instance.id, devices, "connect")
+
+        return instance
+
+    def _register_cards_for_public_space(self, public_space_id, devices, action):
         from access_manager.models import GroupPublicSpace
-        from access_manager.tasks import card_public_space
+        from access_manager.utilits.task_trigger import card_public_space
 
         try:
             group_public_spaces = GroupPublicSpace.objects.filter(
-                public_space_id=public_space_id,
-                group__is_active=True
-            ).select_related('group')
+                public_space_id=public_space_id, group__is_active=True
+            ).select_related("group")
 
             for group_public_space in group_public_spaces:
                 try:
-                    card_public_space(
-                        group_id=group_public_space.group_id,
-                        public_space_id=public_space_id,
-                        action="connect"
-                    )
+                    card_public_space(group_id=group_public_space.group_id, public_space_id=public_space_id,
+                                      devices=devices, action=action)
+
                 except Exception as e:
                     logger.error(
                         "Error registering cards for group %s to public space %s: %s",
                         group_public_space.group_id,
                         public_space_id,
-                        str(e)
+                        str(e),
                     )
 
         except Exception as e:
-            logger.error(
-                "Error in _register_cards_for_public_space for public space %s: %s",
-                public_space_id,
-                str(e)
-            )
+            logger.error("Error in _register_cards_for_public_space for public space %s: %s", public_space_id, str(e))
 
     class Meta:
         model = PublicSpace
@@ -88,7 +121,8 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             "floor",
             "block",
             "accessible_for_guest",
-            "device",
+            "device_ids",
+            "devices",
             "tenant",
             "dashboard",
             "additional_info",
