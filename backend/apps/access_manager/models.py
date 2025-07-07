@@ -123,7 +123,7 @@ class CardLog(BaseModel, CreatedByModel, UpdateByModel):
         return f"{self.number} - {self.device} - {self.event_ts} - {self.access_group}"
 
 
-class NeedSyncDevice(BaseModel, CreatedByModel):
+class NeedSyncDevice(BaseModel, CreatedByModel, UpdateByModel):
     device = models.ForeignKey("main.Device", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     need_sync = models.BooleanField(default=True)
@@ -131,7 +131,19 @@ class NeedSyncDevice(BaseModel, CreatedByModel):
 
     objects = NeedSyncDeviceQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    @property
+    def get_card_holder_name(self):
+        staff_card = StaffCard.objects.select_related("staff").filter(card=self.card, is_active=True).first()
+        if staff_card:
+            return "staff", staff_card.staff.get_name()
+
+        guest_card = GuestCard.objects.select_related("guest").filter(card=self.card, is_active=True).first()
+        if guest_card:
+            return "guest", guest_card.guest.get_name()
+
+        return None, None
+
+    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_need_sync_devices"
 
 

@@ -1,7 +1,9 @@
+from access_manager.models import Card, NeedSyncDevice
+
 from rest_framework import serializers
 
-from access_manager.models import NeedSyncDevice
 from core.utils.serializers import ValidatorSerializer
+from main.serializers.device import SimpleDeviceSerializer
 
 
 class NeedSyncDeviceSerializer(serializers.ModelSerializer):
@@ -16,14 +18,14 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = NeedSyncDevice
         fields = [
-            'created_at',
-            'device_name',
-            'card_number',
-            'user_name',
-            'user_type',
-            'public_space',
-            'room',
-            'failed_requests_list'
+            "created_at",
+            "device_name",
+            "card_number",
+            "user_name",
+            "user_type",
+            "public_space",
+            "room",
+            "failed_requests_list",
         ]
 
     def get_failed_requests_list(self, obj):
@@ -37,7 +39,7 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
         return obj.card.number if obj.card else None
 
     def get_user_name(self, obj):
-        staff_card = getattr(obj.card, 'staffcard', None)
+        staff_card = getattr(obj.card, "staffcard", None)
         if staff_card and staff_card.is_active:
             return staff_card.staff.get_name()
 
@@ -52,13 +54,13 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
         return None
 
     def get_user_type(self, obj):
-        staff_card = getattr(obj.card, 'staffcard', None)
+        staff_card = getattr(obj.card, "staffcard", None)
         if staff_card and staff_card.is_active:
-            return 'Staff'
+            return "Staff"
 
         guest_cards = obj.card.guestcard_set.filter(is_active=True)
         if guest_cards.exists():
-            return 'Guest'
+            return "Guest"
 
         return None
 
@@ -93,11 +95,35 @@ class SyncDeviceSerializer(serializers.Serializer):
         child=serializers.UUIDField(),
         required=False,
         allow_empty=False,
-        help_text="List of NeedSyncDevice UUIDs to sync. If not provided, all devices needing sync will be processed."
+        help_text="List of NeedSyncDevice UUIDs to sync. If not provided, all devices needing sync will be processed.",
     )
     device_ids = serializers.ListField(
         child=serializers.UUIDField(),
         required=False,
         allow_empty=False,
-        help_text="List of Device UUIDs to sync. If not provided, all devices needing sync will be processed."
+        help_text="List of Device UUIDs to sync. If not provided, all devices needing sync will be processed.",
     )
+
+
+class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["device"] = SimpleDeviceSerializer(instance.device).data
+        holder = self.context.get("holder", {})
+        data["staff_name"] = holder.get("name") if holder.get("type") == "staff" else None
+        data["guest_name"] = holder.get("name") if holder.get("type") == "guest" else None
+        return data
+
+    class Meta:
+        model = NeedSyncDevice
+        fields = ("id", "created_at", "need_sync", "device", "card", "additional_info")
+
+
+class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
+    card_id = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), required=True)
+    sort_by = serializers.ListField(
+        child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at"),
+        required=False,
+    )
+    size = serializers.IntegerField(default=50, max_value=200)
+    page = serializers.IntegerField(default=1, min_value=1)
