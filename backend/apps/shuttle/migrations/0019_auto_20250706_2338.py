@@ -32,8 +32,8 @@ class Migration(migrations.Migration):
             -- Optimize indexes for time-series
             DROP INDEX IF EXISTS shuttle_ts_kv_entity_id_key_ts_0a191f45_uniq;
             DROP INDEX IF EXISTS shuttle_ts_kv_pkey;
-            DROP INDEX IF EXISTS shuttle_ts_kv_entity_id_291f3b1d
-            DROP INDEX IF EXISTS shuttle_ts_kv_key_2d803052
+            DROP INDEX IF EXISTS shuttle_ts_kv_entity_id_291f3b1d;
+            DROP INDEX IF EXISTS shuttle_ts_kv_key_2d803052;
 
             -- Ensure required columns are NOT NULL
             ALTER TABLE shuttle_ts_kv ALTER COLUMN ts SET NOT NULL;
