@@ -20,16 +20,16 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
     applications = {
         "rooms": RoomConsumer.as_asgi(),
         "room_detail": RoomDetailConsumer.as_asgi(),
+        "room_status": RoomStatusConsumer.as_asgi(),
         "guests": GuestConsumer.as_asgi(),
         "guest_cards": GuestCardConsumer.as_asgi(),
         "cards": CardConsumer.as_asgi(),
         "card_logs": CardLogConsumer.as_asgi(),
         "attributes": AttributeConsumer.as_asgi(),
-        "ts_kv_latest": TsKvLatestConsumer.as_asgi(),
         "gateway_logs": GatewayLogsConsumer.as_asgi(),
         "tag_logs": TagLogsConsumer.as_asgi(),
         "ts_kv_history": TsKvHistoryConsumer.as_asgi(),
-        "room_status": RoomStatusConsumer.as_asgi(),
+        "ts_kv_latest": TsKvLatestConsumer.as_asgi(),
         "emergency_status": EmergencyStatus.as_asgi(),
         "need_sync": NeedSyncConsumer.as_asgi(),
     }

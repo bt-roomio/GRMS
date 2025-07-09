@@ -5,11 +5,11 @@ from main.models import Device, Room, RoomHistory
 from shuttle.utils.response import response
 
 
-async def controller_status(cmd, user):
+async def controller_status(cmd, tenant_id):
     result = response({}, cmd.get("cmd_id"))
     try:
-        count_active_rooms = await get_status_devices(user)
-        status_controllers = await get_status_rooms(user)
+        count_active_rooms = await get_status_devices(tenant_id)
+        status_controllers = await get_status_rooms(tenant_id)
 
         result["data"]["status_controllers"] = status_controllers
         result["data"]["count_active_rooms"] = count_active_rooms
@@ -20,16 +20,16 @@ async def controller_status(cmd, user):
 
 
 @database_sync_to_async
-def get_status_rooms(user):
-    rooms = Room.objects.statuses(tenant=user.tenant)  # pyright: ignore
-    rooms_history = RoomHistory.objects.yesterday_statuses(tenant=user.tenant)  # pyright: ignore
+def get_status_rooms(tenant_id):
+    rooms = Room.objects.statuses(tenant=tenant_id)  # pyright: ignore
+    rooms_history = RoomHistory.objects.yesterday_statuses(tenant=tenant_id)  # pyright: ignore
     data = merge_statuses(rooms, rooms_history)
     return data
 
 
 @database_sync_to_async
-def get_status_devices(user):
-    queryset = Device.objects.is_active().filter(tenant=user.tenant, room__isnull=False)  # pyright: ignore
+def get_status_devices(tenant_id):
+    queryset = Device.objects.is_active().filter(tenant_id=tenant_id, room__isnull=False)  # pyright: ignore
     queryset = queryset.values("status")
     queryset = queryset.annotate(count=Count("status"))
     return list(queryset)
