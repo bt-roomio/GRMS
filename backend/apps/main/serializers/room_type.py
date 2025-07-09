@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import RoomType, PublicSpace
+from main.models import RoomType, PublicSpace, RoomTypePublicSpaces
 from main.serializers.dashboard import SimpleDashboardSerializer
 from main.serializers.public_space import SimplePublicSpaceSerializer
 
@@ -19,24 +19,39 @@ class RoomTypeSerializer(serializers.ModelSerializer):
         if hasattr(instance, "prefetched_public_spaces"):
             public_spaces = instance.prefetched_public_spaces
             data["public_spaces"] = SimplePublicSpaceSerializer(public_spaces, many=True).data
+        else:
+            public_spaces = PublicSpace.objects.filter(
+                room_type_public_spaces__room_type=instance
+            )
+            data["public_spaces"] = SimplePublicSpaceSerializer(public_spaces, many=True).data
 
         return data
 
     def create(self, validated_data):
-        public_spaces = validated_data.pop("public_spaces_ids", [])
+        public_spaces_ids = validated_data.pop("public_spaces_ids", [])
         instance = super().create(validated_data)
 
-        if public_spaces:
-            instance.public_spaces.set(public_spaces)
+        if public_spaces_ids:
+            for public_space_id in public_spaces_ids:
+                RoomTypePublicSpaces.objects.create(
+                    room_type=instance,
+                    public_space=public_space_id
+                )
 
         return instance
 
     def update(self, instance, validated_data):
-        public_spaces = validated_data.pop("public_spaces_ids", None)
+        public_spaces_ids = validated_data.pop("public_spaces_ids", None)
         instance = super().update(instance, validated_data)
 
-        if public_spaces is not None:
-            instance.public_spaces.set(public_spaces)
+        if public_spaces_ids is not None:
+            RoomTypePublicSpaces.objects.filter(room_type=instance).delete()
+
+            for public_space_id in public_spaces_ids:
+                RoomTypePublicSpaces.objects.create(
+                    room_type=instance,
+                    public_space=public_space_id
+                )
 
         return instance
 

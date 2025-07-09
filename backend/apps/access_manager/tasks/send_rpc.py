@@ -25,6 +25,11 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
     guest = get_object_or_404(Guest, id=guest_id) if guest_id else None
     staff = get_object_or_404(Staff, id=staff_id) if staff_id else None
     group = staff.group if staff else None
+    room_number = device.room.number if device.room else None
+    public_spaces = list(
+        device.device_public_spaces.select_related('public_space')
+        .values_list('public_space__name', flat=True)
+    )
 
     rpc_params = prepare_cards(cards, device, access, group=group)
 
@@ -48,8 +53,9 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
+    print(message, "\n\n")
 
-    timeout_seconds = 5
+    timeout_seconds = 10
     start_time = time.time()
 
     while time.time() - start_time < timeout_seconds:
@@ -58,15 +64,32 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
         if has_message and access == 0:
             if is_success:
                 result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device)
+                result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
             else:
                 need_sync(cards, device, message)
+                return {
+                    "success": False,
+                    "message": "Cards are not connected to device!",
+                    "cards": cards,
+                    "room": room_number,
+                    "public_spaces": public_spaces,
+                    "target_device": message.get("targetDeviceUUID")
+                }
         elif has_message and is_success and access != 0:
             result = activate_staff_card(cards, staff, device) if staff_id else activate_guest_card(cards, device,
                                                                                                     guest)
+            result.update({"room": room_number, "public_spaces": public_spaces})
             return result
 
         time.sleep(1)
     else:
         need_sync(cards, device, message)
-        return {"success": False, "message": "Timed out error !"}
+        return {
+            "success": False,
+            "message": "Time out error!",
+            "cards": cards,
+            "room": room_number,
+            "public_spaces": public_spaces,
+            "target_device": message.get("targetDeviceUUID")
+        }
