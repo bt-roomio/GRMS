@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db.models import (
     Avg,
     CharField,
@@ -111,6 +113,20 @@ class TsKvQuerySet(BaseQuerySet):
 
         for key in keys:
             query = self.filter(key__key=key, **({"ts__gte": start_ts} if start_ts else {}))
+
+            last_known = None
+            if (
+                datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S").strftime("%H:%M:%S") == "00:00:00"
+                and limit == 720
+                and interval == "2 minute"
+            ):
+                has_value = self.filter(key__key=key, ts=start_ts)
+                if not has_value:
+                    last_known = self.filter(key__key=key, ts__lt=start_ts).order_by("-ts").first()
+                    if last_known:
+                        query = self.filter(key__key=key, ts__gte=last_known.ts)
+                        origin_dt = Value(last_known.ts, output_field=DateTimeField())
+
             if interval in ["month", "year"]:
                 query = query.annotate(
                     interval_ts=Func(
@@ -155,7 +171,13 @@ class TsKvQuerySet(BaseQuerySet):
             )
 
             if auto_fill:
-                data = fill_missing_intervals(data, interval, start_ts, limit, key_name=key)
+                data = fill_missing_intervals(
+                    data,
+                    interval,
+                    last_known and last_known.ts or start_ts,
+                    limit,
+                    key_name=key,
+                )
 
             if "-interval_ts" in sort_by:
                 data = sorted(data, key=lambda d: d["ts"], reverse=True)

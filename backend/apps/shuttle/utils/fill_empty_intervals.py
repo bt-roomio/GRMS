@@ -40,9 +40,10 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
 
     # detect tzinfo from first data record (if any)
     tz = None
+
     if data:
         tz = getattr(data[0]["ts"], "tzinfo", None)
-    # if start_ts is naive but records have tz, attach same tz to start_ts
+
     if tz and start_ts.tzinfo is None:
         start_ts = start_ts.replace(tzinfo=tz)
 
@@ -65,6 +66,7 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
     for _ in range(limit):
         key = make_key(current)
         record = data_by_key.get(key)
+
         if record:
             result.append(record)
             last_known = record
