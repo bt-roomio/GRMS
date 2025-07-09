@@ -15,7 +15,7 @@ from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
 from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 
-class TsKv(BaseModelTs):
+class TsKv(models.Model):
     ts: models.DateTimeField = models.DateTimeField(default=timezone.now)
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     entity_id = UUID
@@ -34,8 +34,10 @@ class TsKv(BaseModelTs):
         super(TsKv, self).save(*args, **kwargs)
 
     class Meta(BaseModelTs.Meta):
+        # Double check the migration for this model, it is not managed from django.
+        managed = False
         db_table = "shuttle_ts_kv"
-        unique_together = ("entity", "key", "ts")
+        unique_together = ("ts", "key", "entity")
 
 
 class TsKvDictionary(models.Model):

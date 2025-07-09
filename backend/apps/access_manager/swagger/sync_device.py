@@ -4,6 +4,21 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 
+def sync_device_delete_by_device_swagger():
+    return swagger_auto_schema(
+        tags=["Access manager, Device Sync By Device"],
+        responses={200: openapi.Response(description="Success")},
+        operation_description="""
+        Delete a specific NeedSyncDevice record by DEVICE_UUID.
+
+        **Parameters:**
+        - `device_id` (required): UUID of the Device record to delete.
+
+        **Response codes:**
+        """,
+    )
+
+
 def sync_device_delete_swagger():
     return swagger_auto_schema(
         tags=["Access manager, Device Sync"],
