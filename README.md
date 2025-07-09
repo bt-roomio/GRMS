@@ -26,7 +26,7 @@ On your server, create a new environment file by copying the example file:
 cp -n prod.env.example prod.env
 ```
 
-*Alternatively, you can manually copy `prod.env.example` to `prod.env`.*
+_Alternatively, you can manually copy `prod.env.example` to `prod.env`._
 
 ### 3. Configure Environment Variables
 
@@ -71,8 +71,8 @@ Make sure the port mappings in the `docker-compose.yml` file are set correctly:
 ```yaml
 nginx:
   ports:
-    - "9000:8080"  # Maps port 9000 on the host to port 8080 in the container (Backend)
-    - "8095:80"    # Maps port 8095 on the host to port 80 in the container (Frontend)
+    - "9000:8080" # Maps port 9000 on the host to port 8080 in the container (Backend)
+    - "8095:80" # Maps port 8095 on the host to port 80 in the container (Frontend)
 ```
 
 ### 6. Deploy the Project
@@ -101,3 +101,30 @@ Usefull commands
 
 After starting all services, you can run this command to create new Tenant
 `docker exec -it django python manage.py create_tenant`
+
+# Install in Running Container
+
+# Enter the container
+
+docker exec -it your_postgres_container bash
+
+# Install TimescaleDB
+
+apt-get update
+apt-get install -y wget gnupg lsb-release
+
+# Add repository
+
+wget --quiet -O - <https://packagecloud.io/timescale/timescaledb/gpgkey> | gpg --dearmor -o /usr/share/keyrings/timescaledb.gpg
+echo "deb [signed-by=/usr/share/keyrings/timescaledb.gpg] <https://packagecloud.io/timescale/timescaledb/debian/> $(lsb_release -c -s) main" > /etc/apt/sources.list.d/timescaledb.list
+
+apt-get update
+apt-get install -y timescaledb-2-postgresql-16
+
+# Configure
+
+timescaledb-tune --quiet --yes
+
+# Restart PostgreSQL
+
+pg_ctl restart

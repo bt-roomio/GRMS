@@ -1,6 +1,8 @@
 import logging
 
-from access_manager.models import StaffCard
+from django.db.models import Q
+
+from access_manager.models import StaffCard, GuestPublicSpace
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
@@ -26,26 +28,46 @@ class GuestCardView(APIView):
             validated_data = serializer.validated_data
 
             if not validated_data or not isinstance(validated_data, dict):
-                return Response({"detail": "Incorrect data!"}, 400)
+                return Response({"message": "Incorrect data!"}, 400)
 
             guest_id = validated_data["guest_id"]
+            public_spaces = validated_data["public_spaces"]
             cards = validated_data["cards"]
+            errors = []
+            success = []
 
             staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
                                                    staff__tenant_id=request.user.tenant_id)
             if staff_cards:
                 return Response({"message": "Card is connected to staff."}, 403)
 
-            device = Device.objects.filter(room__guests=guest_id, is_active=True).first()
+            for public_space in public_spaces:
+                _, _ = GuestPublicSpace.objects.get_or_create(guest_id=guest_id, public_space_id=public_space)
 
-            if not device:
-                return Response({"detail": "Not found device."}, 404)
+            devices = Device.objects.filter(
+                Q(room__guests=guest_id) |
+                Q(device_public_spaces__public_space__in=public_spaces) |
+                Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests=guest_id),
+                is_active=True,
+                status=True
+            ).distinct()
 
-            result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id)
-            if not result.get("success", True):
-                return Response(result, status=400)
-            return Response(result, status=200)
+            if not devices:
+                return Response({"message": "Not found device."}, 404)
+
+            for device in devices:
+                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id)
+                if not result.get("success", False):
+                    errors.append(result)
+                else:
+                    success.append(result)
+
+            if not errors:
+                return Response({"success": True, "message": "Cards connected successfully !"}, status=200)
+            return Response(
+                {"message": "Some errors occurred while synchronizing !", "errors": errors, "success": success},
+                status=400)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            return Response(
+                {"message": "Server error !", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

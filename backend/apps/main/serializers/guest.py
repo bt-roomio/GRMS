@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from access_manager.models import GuestCard
 from access_manager.tasks.send_rpc import send_rpc_request
 
@@ -73,12 +75,15 @@ class GuestSerializer(serializers.ModelSerializer):
             room = Room.objects.filter(id=instance.room_id).first()
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-            device_id = str(
-                Device.objects.filter(room__id=room.id, is_active=True)  # pyright: ignore
-                .select_related("tenant")
-                .first().id
-            )
-            deactivate_result = send_rpc_request(device_id, cards)
+            devices = Device.objects.filter(
+                Q(room__id=room.id) |
+                Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
+                is_active=True,
+                status=True
+            ).select_related("tenant")
+            for device in devices:
+                deactivate_result = send_rpc_request(str(device.id), cards)
+
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)
                 room.state.append(Room.Available)

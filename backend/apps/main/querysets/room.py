@@ -88,8 +88,15 @@ class RoomQuerySet(BaseQuerySet):
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
         cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-        device_id = str(Device.objects.filter(room__id=room_id, is_active=True).first().id)
-        deactivate_result = send_rpc_request(device_id, cards, 0)
+        devices = Device.objects.filter(
+            Q(room__id=room_id) |
+            Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
+            is_active=True,
+            status=True
+        )
+        for device in devices:
+            deactivate_result = send_rpc_request(str(device.id), cards, 0)
+
         guests.update(is_active=False)
         # loop for send signal
         for room in query:

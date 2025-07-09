@@ -26,6 +26,6 @@ def deactivate_staff_card(staff, staff_card=None):
             StaffCard.objects.filter(id=staff_card, is_active=True).update(is_active=False)
         else:
             StaffCard.objects.filter(staff=staff, is_active=True).update(is_active=False)
-        return {"success": True, "error_guest_cards": 0, "message": "Card is deactivated."}
+        return {"success": True, "message": "Card is deactivated."}
     except Exception:
         return {"success": False, "message": "Could not disconnect card, please try again !"}
