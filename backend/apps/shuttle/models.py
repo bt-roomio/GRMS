@@ -38,7 +38,7 @@ class TsKv(models.Model):
         managed = False
         db_table = "shuttle_ts_kv"
         unique_together = ("ts", "key", "entity")
-        ordering = ("ts",)
+        ordering = ("-ts",)
 
 
 class TsKvDictionary(models.Model):

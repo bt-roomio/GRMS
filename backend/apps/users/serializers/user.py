@@ -76,6 +76,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["roles"] = RoleSimpleSerializer(instance.roles, many=True).data
+        data["tenant_name"] = instance.tenant.title
         return data
 
     class Meta:
