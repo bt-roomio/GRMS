@@ -34,9 +34,9 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         for request_id, params in self.subscribers.items():
             device = params.get("query_params").get("device")
             action = params.get("action")
-            response = params.get("response").get("results", [])
+            response = params.get("response")
             if device == entity and action == "list_subscribe" and await self.has_update(response, message):
-                params["response"]["results"] = response
+                params["response"] = response
                 await self.reply(data=params.get("response"), action=action, request_id=request_id)
 
             elif device == entity and action == "subscribe":
@@ -71,7 +71,7 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
-        data = await self.send_list_paginated(action, query_params, request_id, **kwargs)
+        data = await self.send_list(action, query_params, request_id, **kwargs)
         device_id = query_params.get("device")
         await self.add_group(f"tskv_latest_updates_{device_id}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": data}

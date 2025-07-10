@@ -59,6 +59,7 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     async def send_list(self, action, query_params, request_id, **kwargs):
         data = await sync_to_async(self.get_data)(query_params=query_params, **kwargs)
         await self.reply(data=data, action=action, request_id=request_id)
+        return data
 
     def pagination(self, queryset, page, size=15):
         page = page or 1
