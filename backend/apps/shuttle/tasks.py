@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.db import connection
+from django.db.models import Q
 from django.utils import timezone
 
 from core.management.mq.state_device import update_activity_device
@@ -43,7 +44,9 @@ def aggregate_table_ts_kv():
 
 @shared_task
 def delete_old_logs():
-    keys = TsKvDictionary.objects.filter(key__endswith="_LOGS")
+    keys = TsKvDictionary.objects.filter(
+        Q(key__endswith="_LOGS") | Q(key__contains="Events") | Q(key__contains="ERRORS")
+    )
     logger.info(f"Keys: {", ".join(keys.values_list('key', flat=True))}")
     logs = TsKv.objects.filter(key__in=keys, ts__lte=(timezone.now() - timedelta(days=7)))
     logger.info(f" {logs.delete()[0]} log(s) deleted!")

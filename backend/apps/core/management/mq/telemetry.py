@@ -95,7 +95,7 @@ def sync_telemetry(device, topic, payload):
                 TsKvLatest(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_now, **{field: value})
             )
             # пакетное сообщение в Redis
-            updates_by_device[str(device_id)].append(
+            updates_by_device[f"{device_id}_{device.get("tenant_id")}"].append(
                 {
                     "entity": str(device_id),
                     "key": key,
