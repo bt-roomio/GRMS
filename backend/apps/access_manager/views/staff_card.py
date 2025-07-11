@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.get_device_cards import get_device_cards
 from main.models import Device
 
 logger = logging.getLogger("main")
@@ -24,7 +25,11 @@ class StaffCardView(APIView):
             validated_data = cast(StaffCardRequestData, serializer.validated_data)
             staff = validated_data["staff_id"]
             cards = validated_data["cards"]
+            user = str(request.user.id)
             group = staff.group
+
+            errors = []
+            success = []
 
             guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards,
                                                    guest__tenant_id=request.user.tenant_id)
@@ -44,11 +49,20 @@ class StaffCardView(APIView):
             if not devices:
                 return Response({"detail": "Not found device."}, 404)
 
-            results = []
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, True, staff_id=str(staff.id))
-                results.append(result)
-            return Response(results)
+                cards_of_device = get_device_cards(device.id, tenant_id=request.user.tenant_id, cards=cards)
+                result = send_rpc_request(str(device.id), cards_of_device, True, staff_id=str(staff.id),
+                                          new_cards=cards, user=user)
+                if not result.get("success", False):
+                    errors.append(result)
+                else:
+                    success.append(result)
+
+            if not errors:
+                return Response({"success": True, "message": "Cards connected successfully !"}, status=200)
+            return Response(
+                {"message": "Some errors occurred while synchronizing !", "errors": errors, "success": success},
+                status=400)
 
         except Exception as e:
             return Response({"error": str(e)})
