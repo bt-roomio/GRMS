@@ -31,13 +31,20 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     async def handle_ts_kv_latest_activity(self, message):
         entity = message.get("entity")
-        for request_id, params in self.subscribers.items():
-            device = params.get("query_params").get("device")
-            action = params.get("action")
-            response = params.get("response")
+        for request_id, sub in self.subscribers.items():
+            params = sub.get("query_params")
+            device = params.get("device")
+            action = sub.get("action")
+            res = sub.get("response")
+            response = res.get("results", []) if params.get("with_pagination") else res
+
             if device == entity and action == "list_subscribe" and await self.has_update(response, message):
-                params["response"] = response
-                await self.reply(data=params.get("response"), action=action, request_id=request_id)
+                if params.get("with_pagination"):
+                    sub["response"]["results"] = response
+                else:
+                    sub["response"] = response
+
+                await self.reply(data=sub.get("response"), action=action, request_id=request_id)
 
             elif device == entity and action == "subscribe":
                 _, value = get_non_null_column(message)
@@ -71,7 +78,8 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
-        data = await self.send_list(action, query_params, request_id, **kwargs)
+        with_pagination = self.send_list_paginated if query_params.get("with_pagination") else self.send_list
+        data = await with_pagination(action, query_params, request_id, **kwargs)
         device_id = query_params.get("device")
         await self.add_group(f"tskv_latest_updates_{device_id}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": data}
