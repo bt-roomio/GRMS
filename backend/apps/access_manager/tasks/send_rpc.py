@@ -54,7 +54,6 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
-    print(message, "\n\n")
 
     timeout_seconds = 10
     start_time = time.time()
@@ -64,7 +63,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and access == 0:
             if is_success:
-                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device)
+                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(new_cards, device)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
             else:
