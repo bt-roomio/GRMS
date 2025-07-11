@@ -51,7 +51,9 @@ def tskv_latest_signal_handler(sender, instance, **kwargs):
             {"type": "ts_kv_latest_activity", "update": message},
         )
         async_to_sync(channel_layer.group_send)("room_status", {"type": "get_latest_activity", **message})
-        async_to_sync(channel_layer.group_send)("emergency_status", {"type": "get_latest_activity", **message})
+        async_to_sync(channel_layer.group_send)(
+            f"emergency_status_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
+        )
 
 
 @receiver(post_save, sender=AttributeKv)
