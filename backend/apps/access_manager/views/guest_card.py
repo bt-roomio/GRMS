@@ -10,6 +10,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.utilits.get_device_cards import get_device_cards
+
 logger = logging.getLogger("main")
 
 

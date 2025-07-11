@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.get_device_cards import get_device_cards
 from main.models import Device
 
 logger = logging.getLogger("main")
