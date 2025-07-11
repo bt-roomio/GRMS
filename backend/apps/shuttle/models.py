@@ -16,7 +16,7 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 
 class TsKv(models.Model):
-    ts: models.DateTimeField = models.DateTimeField(default=timezone.now)
+    ts: models.DateTimeField = models.DateTimeField(default=timezone.now, primary_key=True)
     entity = models.ForeignKey("main.Device", models.DO_NOTHING)
     entity_id = UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
@@ -38,6 +38,7 @@ class TsKv(models.Model):
         managed = False
         db_table = "shuttle_ts_kv"
         unique_together = ("ts", "key", "entity")
+        ordering = ("-ts",)
 
 
 class TsKvDictionary(models.Model):

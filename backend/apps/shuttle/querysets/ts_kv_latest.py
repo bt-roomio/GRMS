@@ -1,6 +1,7 @@
 from typing import List
 
-from django.db.models import F
+from django.db.models import CharField, F
+from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
 
@@ -24,15 +25,20 @@ class TsKvLatestQuerySet(BaseQuerySet):
     def get_ts_kv_latest(self, entity, tenant, sort_by=[]):
         query = (
             self.select_related("key")
-            .by_device(entity)
             .by_tenant(tenant)
-            .annotate(key_name=F("key__key"))
-            .values("ts", "str_v", "bool_v", "json_v", "long_v", "dbl_v", "key_name")
+            .by_device(entity)
+            .annotate(
+                key_name=F("key__key"),
+                value=Coalesce(
+                    Cast("bool_v", output_field=CharField()),
+                    Cast("str_v", output_field=CharField()),
+                    Cast("long_v", output_field=CharField()),
+                    Cast("dbl_v", output_field=CharField()),
+                    Cast("json_v", output_field=CharField()),
+                    output_field=CharField(),
+                ),
+            )
+            .values("ts", "key_name", "value")
             .order_by(*sort_by)
         )
-
-        cleaned_data = [{k: v for k, v in record.items() if v is not None} for record in query]
-        cleaned_data = [
-            {(k if k in ["ts", "key_name"] else "value"): v for k, v in record.items()} for record in cleaned_data
-        ]
-        return cleaned_data
+        return query

@@ -9,15 +9,16 @@ class Command(BaseCommand):
     help = "simulate_message_to_rabbitmq"
 
     def handle(self, **_):
+        val = 3
         msg = {
             "sourceDeviceUUID": "c6fe44a3-b349-491d-bd7b-31c32dcaf3db",
             "data": {
-                "keys": "roomNumber,Check-out date",
-                "device": "64:69:7d:4d:37:3c",
-                "client": False,
-                "id": 50860,
+                "2C:0C:15:F3:A9:00": [
+                    {"ts": 1749978216359, "values": {"WC Spot": val}},
+                    {"ts": 1749978216401, "values": {"WC Downlights": val, "DND Relay1": val}},
+                ]
             },
-            "topic": "v1/gateway/attributes/request",
+            "topic": "v1/gateway/telemetry",
         }
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, "toGRMS")
