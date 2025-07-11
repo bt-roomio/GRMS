@@ -17,7 +17,7 @@ logger = logging.getLogger("main")
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
+def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, new_cards=None):
     from main.models import Device, Guest
     from access_manager.models import Staff
 
@@ -31,6 +31,7 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
         .values_list('public_space__name', flat=True)
     )
 
+    new_cards = new_cards or cards
     rpc_params = prepare_cards(cards, device, access, group=group)
 
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
@@ -53,7 +54,6 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
-    print(message, "\n\n")
 
     timeout_seconds = 10
     start_time = time.time()
@@ -63,11 +63,11 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and access == 0:
             if is_success:
-                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device)
+                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(new_cards, device)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
             else:
-                need_sync(cards, device, message)
+                need_sync(new_cards, device, message, user=user)
                 return {
                     "success": False,
                     "message": "Cards are not connected to device!",
@@ -84,7 +84,7 @@ def send_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
 
         time.sleep(1)
     else:
-        need_sync(cards, device, message)
+        need_sync(new_cards, device, message, user=user)
         return {
             "success": False,
             "message": "Time out error!",

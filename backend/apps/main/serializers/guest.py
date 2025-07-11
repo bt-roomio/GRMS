@@ -80,9 +80,9 @@ class GuestSerializer(serializers.ModelSerializer):
                 Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
                 is_active=True,
                 status=True
-            ).select_related("tenant")
+            ).select_related("tenant").distinct()
             for device in devices:
-                deactivate_result = send_rpc_request(str(device.id), cards)
+                deactivate_result = send_rpc_request(str(device.id), cards, 0)
 
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)

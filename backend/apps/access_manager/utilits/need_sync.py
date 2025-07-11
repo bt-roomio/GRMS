@@ -7,7 +7,7 @@ from shuttle.services.publish_updates import publish_updates
 logger = get_task_logger(__name__)
 
 
-def need_sync(cards: List[str], device, message: dict):
+def need_sync(cards: List[str], device, message: dict, user=None):
     from access_manager.models import Card, NeedSyncDevice
     if not device:
         return
@@ -38,12 +38,13 @@ def need_sync(cards: List[str], device, message: dict):
                 defaults={
                     "need_sync": True,
                     "additional_info": {"failed_request": single_card_message},
+                    "created_by_id": user,
+                    "updated_by_id": user,
                 },
             )
             if created:
                 publish_updates("need_sync", "get_list_activity", {})
-
-            if not created:
+            else:
                 info = sync_obj.additional_info or {}
                 current_failed_request = info.get("failed_request")
 
@@ -53,6 +54,7 @@ def need_sync(cards: List[str], device, message: dict):
                 info["failed_request"] = single_card_message
 
                 sync_obj.need_sync = True
+                sync_obj.updated_by_id = user
                 sync_obj.additional_info = info
                 sync_obj.save()
                 publish_updates("need_sync", "get_list_activity", {})
