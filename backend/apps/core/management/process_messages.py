@@ -22,14 +22,6 @@ logger_pika = logging.getLogger("pika")
 logger_pika.setLevel(logging.WARNING)
 
 
-def validate_body(body: bytes):
-    msg = json.loads(body)
-    device = get_device(msg.get("sourceDeviceUUID"))
-    if not device:
-        raise ValueError("Device not found: %s", msg.get("sourceDeviceUUID"))
-    return device, msg
-
-
 def process_messages(ch: BlockingChannel, method: pika.spec.Basic.Deliver, body: bytes):
     logger.debug("Received message: %s", body)
     device, msg = validate_body(body)
@@ -48,3 +40,11 @@ def process_messages(ch: BlockingChannel, method: pika.spec.Basic.Deliver, body:
         sync_attributes(device, topic, data)
     else:
         logger.warning("Unhandled topic: %s", topic)
+
+
+def validate_body(body: bytes):
+    msg = json.loads(body)
+    device = get_device(msg.get("sourceDeviceUUID"))
+    if not device:
+        raise ValueError("Device not found: %s", msg.get("sourceDeviceUUID"))
+    return device, msg

@@ -1,5 +1,4 @@
 from asgiref.sync import sync_to_async
-from djangochannelsrestframework.mixins import ListModelMixin
 from djangochannelsrestframework.observer.generics import action
 
 from main.models import Device
@@ -8,25 +7,15 @@ from shuttle.serializers.emergency_status import DeviceTelemetrySerializer, Emer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
+class EmergencyStatus(BaseGenericAsyncAPIConsumer):
     queryset = Device.objects.all()
     serializer_class = DeviceTelemetrySerializer
-
-    async def accept(self, *args, **kwargs):
-        self.subscribers = {}
-        self.user = self.scope["user"]
-        self.data = {}
-        await super().accept(*args, **kwargs)
-
-    async def disconnect(self, code):
-        await self.remove_group("emergency_status")
-        await super().disconnect(code)
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = EmergencyStatusFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.emergency_status(  # pyright:ignore
-            tenant_id=self.user.tenant_id,
+            tenant_id=self.tenant_id,
             room_types=params.get("room_types"),
             delisting_devices=params.get("delisting_devices"),
         )
@@ -68,10 +57,13 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return all_data, 200
 
     async def get_latest_activity(self, message, **kwargs):
-        if message.get("updates"):
-            for update in message.get("updates", []):
-                await self.get_latest_activity(update, **kwargs)
+        updates = message.get("updates", []) or []
+        for update in updates:
+            await self.handle_ts_kv_activity(update)
+        if not updates:
+            await self.handle_ts_kv_activity(message.get("update"))
 
+    async def handle_ts_kv_activity(self, message):
         entity_id = message.get("entity")
         key = message.get("key")
 
@@ -108,9 +100,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 ],
             }
 
-            if self.data != result:
-                await self.reply(data=result, action="update", request_id=request_id)
-                self.data = result
+            await self.reply(data=result, action=sub.get("action"), request_id=request_id)
 
     @sync_to_async
     def get_key_ids(self, keys):
@@ -129,7 +119,7 @@ class EmergencyStatus(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def subscribe(self, request_id, action, **kwargs):
-        await self.add_group("emergency_status")
+        await self.add_group(f"emergency_status_{self.tenant_id}")
         self.subscribers[request_id] = {
             "action": action,
             "query_params": kwargs.get("query_params", {}),

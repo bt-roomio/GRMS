@@ -7,33 +7,39 @@ GROUP_SUFFIXES = (
     "tskv_latest_updates",
     "tskv_updates",
     "room_status",
-    "emergency_status",
+    "emergency_status_%s",
 )
 
 
 def publish_updates_batch(updates_by_device: dict[str, list[dict]]):
     """
-    Отправляем пачками: для каждого device_id шлём в каждую группу только изменившиеся данные.
+    Send updates in batches: for each device_id, send only changed data to each group.
     updates_by_device: { device_id: [ {entity, key, ts, bool_v...}, ... ] }
     """
     channel_layer = get_channel_layer()
     if not channel_layer:
         raise ValueError("No channel layer")
 
-    for device_id, messages in updates_by_device.items():
+    suffix_config = {
+        "tskv_latest_updates": "ts_kv_latest_activity",
+        "tskv_updates": "ts_kv_activity",
+        "emergency_status_%s": "get_latest_activity",
+    }
+
+    for device_id_tenant_id, messages in updates_by_device.items():
+        device_id, tenant_id = device_id_tenant_id.split("_")
         changed_messages = has_changed_and_update(device_id, messages)
         if not changed_messages:
             continue
 
-        payload = {"type": "get_latest_activity", "updates": changed_messages}
         for suffix in GROUP_SUFFIXES:
-            if suffix == "tskv_latest_updates":
-                group_name = f"{suffix}_{device_id}"
-                payload["type"] = "ts_kv_latest_activity"
-            elif suffix == "tskv_updates":
-                group_name = f"{suffix}_{device_id}"
-                payload["type"] = "ts_kv_activity"
-            else:
-                group_name = suffix
-                payload["type"] = "get_latest_activity"
+            group_name = (
+                f"emergency_status_{tenant_id}"
+                if suffix == "emergency_status_%s"
+                else f"{suffix}_{device_id}" if suffix in suffix_config else suffix
+            )
+            payload = {
+                "type": suffix_config.get(suffix, "get_latest_activity"),
+                "updates": changed_messages,
+            }
             async_to_sync(channel_layer.group_send)(group_name, payload)
