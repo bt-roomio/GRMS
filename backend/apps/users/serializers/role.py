@@ -1,4 +1,5 @@
 from django.contrib.auth.models import Permission
+
 from rest_framework import serializers
 
 from main.models import Tenant
@@ -20,7 +21,7 @@ class RoleSimpleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Role
-        fields = ("id", "name", "permissions")
+        fields = ("id", "name", "permissions", "additional_info")
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -52,4 +53,4 @@ class RoleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Role
-        fields = ("id", "name", "permissions", "tenant")
+        fields = ("id", "name", "permissions", "tenant", "additional_info")

@@ -66,6 +66,7 @@ class Role(BaseModel):
     name = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE, related_name="roles")
     permissions = models.ManyToManyField(Permission, verbose_name=_("permissions"), blank=True)
+    additional_info = models.JSONField(blank=True, null=True)
 
     objects = RoleQuerySet.as_manager()
 
