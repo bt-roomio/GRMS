@@ -6,14 +6,14 @@ from shuttle.services.publish_updates import publish_updates
 logger = get_task_logger(__name__)
 
 
-def not_need_sync(cards: List[str], device):
+def not_need_sync(cards: List[str], devices):
     from access_manager.models import NeedSyncDevice
-    if not device:
+    if not devices:
         return
 
     updated_count = NeedSyncDevice.objects.filter(
         card__number__in=cards,
-        device=device,
+        device__in=list(devices),
         need_sync=True
     ).update(need_sync=False)
 

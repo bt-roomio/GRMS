@@ -10,6 +10,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.utilits.get_device_cards import get_device_cards
+
 logger = logging.getLogger("main")
 
 
@@ -30,14 +32,16 @@ class GuestCardView(APIView):
             if not validated_data or not isinstance(validated_data, dict):
                 return Response({"message": "Incorrect data!"}, 400)
 
+            tenant_id = request.user.tenant_id
             guest_id = validated_data["guest_id"]
             public_spaces = validated_data["public_spaces"]
             cards = validated_data["cards"]
+            user = str(request.user.id)
             errors = []
             success = []
 
             staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
-                                                   staff__tenant_id=request.user.tenant_id)
+                                                   staff__tenant_id=tenant_id)
             if staff_cards:
                 return Response({"message": "Card is connected to staff."}, 403)
 
@@ -56,7 +60,9 @@ class GuestCardView(APIView):
                 return Response({"message": "Not found device."}, 404)
 
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id)
+                cards_of_device = get_device_cards(device.id, tenant_id, cards)
+                result = send_rpc_request(str(device.id), cards_of_device, 1, guest_id=guest_id, new_cards=cards,
+                                          user=user)
                 if not result.get("success", False):
                     errors.append(result)
                 else:
