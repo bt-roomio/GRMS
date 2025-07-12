@@ -77,7 +77,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
                     "target_device": message.get("targetDeviceUUID")
                 }
         elif has_message and is_success and access != 0:
-            result = activate_staff_card(cards, staff, device) if staff_id else activate_guest_card(cards, device,
+            result = activate_staff_card(new_cards, staff, device) if staff_id else activate_guest_card(new_cards, device,
                                                                                                     guest)
             result.update({"room": room_number, "public_spaces": public_spaces})
             return result
