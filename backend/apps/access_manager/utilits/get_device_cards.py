@@ -3,10 +3,10 @@ from django.db.models import Q
 from uuid import UUID
 
 from access_manager.models import StaffCard, GuestCard
-from main.models import Device
 
 
-def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = ()) -> List[str]:
+def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = (), connect: bool = True) -> List[str]:
+    from main.models import Device
     try:
         device = Device.objects.select_related('card', 'room').prefetch_related(
             'device_public_spaces__public_space'
@@ -18,9 +18,7 @@ def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = ()) -> List
         return cards
 
     card_numbers: Set[str] = set()
-
-    for card in cards:
-        card_numbers.add(card)
+    incoming_cards: Set[str] = set(cards)
 
     if device.card:
         card_numbers.add(device.card.number)
@@ -49,5 +47,13 @@ def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = ()) -> List
 
     for guest_card in guest_cards:
         card_numbers.add(guest_card.card.number)
+
+
+    if connect:
+        card_numbers.update(incoming_cards)
+    else:
+        card_numbers -= incoming_cards
+
+    print("card_numbers after ", card_numbers)
 
     return list(card_numbers)
