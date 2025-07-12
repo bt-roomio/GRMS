@@ -5,6 +5,7 @@ from access_manager.tasks.send_rpc import send_rpc_request
 
 from rest_framework import serializers
 
+from access_manager.utilits.get_device_cards import get_device_cards
 from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Guest, Room
@@ -82,7 +83,8 @@ class GuestSerializer(serializers.ModelSerializer):
                 status=True
             ).select_related("tenant").distinct()
             for device in devices:
-                deactivate_result = send_rpc_request(str(device.id), cards, 0)
+                cards_of_device = get_device_cards(device.id, device.tenant_id, cards, connect=False)
+                deactivate_result = send_rpc_request(str(device.id), cards_of_device, 0, new_cards=cards)
 
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)

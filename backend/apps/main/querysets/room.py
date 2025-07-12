@@ -3,6 +3,7 @@ from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 
+from access_manager.utilits.get_device_cards import get_device_cards
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.helpers import safely_remove
 from shuttle.models import TsKvDictionary, TsKvLatest
@@ -95,10 +96,10 @@ class RoomQuerySet(BaseQuerySet):
             status=True
         ).distinct()
         for device in devices:
-            deactivate_result = send_rpc_request(str(device.id), cards, 0)
+            cards_of_device = get_device_cards(device.id, device.tenant_id, cards, connect=False)
+            deactivate_result = send_rpc_request(str(device.id), cards_of_device, 0, new_cards=cards)
 
         guests.update(is_active=False)
-        # loop for send signal
         for room in query:
             room.state = safely_remove(room.state, Room.CheckedIn)
             room.state.append(Room.Available)
