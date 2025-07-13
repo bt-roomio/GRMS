@@ -61,6 +61,7 @@ class GuestSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        deactivate_result = {"success": True}
         old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
         if old_room and len(old_room.guests.all()) == 1:  # pyright: ignore
             old_room.state = safely_remove(old_room.state, Room.Available)
@@ -84,13 +85,15 @@ class GuestSerializer(serializers.ModelSerializer):
             ).select_related("tenant").distinct()
             for device in devices:
                 cards_of_device = get_device_cards(device.id, device.tenant_id, cards, connect=False)
-                deactivate_result = send_rpc_request(str(device.id), cards_of_device, 0, new_cards=cards)
+                access_card = 1 if device.device_profile.name != "default" else 0
+                result = send_rpc_request(str(device.id), cards_of_device, access_card, new_cards=cards)
+                not result.get("success") and deactivate_result.update({"success": False})
 
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)
                 room.state.append(Room.Available)
                 room.save(update_fields=["state"])
-                self.context["deactivate_result"] = deactivate_result
+                self.context["deactivate_results"] = deactivate_result
 
             self._deactivate_result = deactivate_result
         return super().update(instance, validated_data)
