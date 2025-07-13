@@ -58,6 +58,8 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     timeout_seconds = 10
     start_time = time.time()
 
+    print(message, "\n\n")
+
     while time.time() - start_time < timeout_seconds:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False

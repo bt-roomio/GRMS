@@ -1,3 +1,4 @@
+from django.db.models import Q
 from access_manager.models import Card, Staff, StaffCard, GuestCard
 from access_manager.serializers.staff import SimpleStaffSerializer
 
@@ -63,12 +64,20 @@ class DisconnectCardSerializer(serializers.Serializer):
             card = GuestCard.objects.get(card_id=validated_data["card_id"], is_active=True)
             deactivate_results = []
             guest = Guest.objects.filter(id=card.guest.id).first()
-            devices = Device.objects.filter(room=guest.room, is_active=True).select_related("tenant").distinct()
+            # devices = Device.objects.filter(room=guest.room, is_active=True).distinct()
+            devices = Device.objects.filter(
+                Q(room__id=guest.room.id) |
+                Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=[guest]),
+                is_active=True,
+                status=True
+            ).distinct()
             card_number = [card.card.number]
             for device in devices:
                 cards_of_device = get_device_cards(device.id, device.tenant_id, card_number, connect=False)
-                access_card = 1 if device.device_profile.name != "default" else 0
-                deactivate_result = send_rpc_request(str(device.id), cards_of_device, access_card, new_cards=card_number)
+                access_card = 1 if device.device_profile.name.lower() == "default" else 0
+                print("access_card", access_card)
+                deactivate_result = send_rpc_request(str(device.id), cards_of_device, access_card,
+                                                     new_cards=card_number)
                 deactivate_results.append(deactivate_result)
             return deactivate_results
         except GuestCard.DoesNotExist:

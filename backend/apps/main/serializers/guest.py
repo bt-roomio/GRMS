@@ -85,7 +85,8 @@ class GuestSerializer(serializers.ModelSerializer):
             ).select_related("tenant").distinct()
             for device in devices:
                 cards_of_device = get_device_cards(device.id, device.tenant_id, cards, connect=False)
-                access_card = 1 if device.device_profile.name != "default" else 0
+                access_card = 1 if device.device_profile.name.lower() == "default" else 0
+                print("access_card", access_card)
                 result = send_rpc_request(str(device.id), cards_of_device, access_card, new_cards=cards)
                 not result.get("success") and deactivate_result.update({"success": False})
 
