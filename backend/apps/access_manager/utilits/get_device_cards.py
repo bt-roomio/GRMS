@@ -14,7 +14,7 @@ def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = (), connect
     except Device.DoesNotExist:
         return []
 
-    if device.device_profile.name != "default":
+    if device.device_profile.name.lower() != "default":
         return cards
 
     card_numbers: Set[str] = set()
