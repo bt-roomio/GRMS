@@ -5,6 +5,7 @@ from rest_framework import serializers
 from rest_framework.fields import ValidationError
 
 from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.get_device_cards import get_device_cards
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Guest
 
@@ -60,11 +61,15 @@ class DisconnectCardSerializer(serializers.Serializer):
     def create(self, validated_data):
         try:
             card = GuestCard.objects.get(card_id=validated_data["card_id"], is_active=True)
-
+            deactivate_results = []
             guest = Guest.objects.filter(id=card.guest.id).first()
-            device = Device.objects.filter(room=guest.room, is_active=True).select_related("tenant").first()
+            devices = Device.objects.filter(room=guest.room, is_active=True).select_related("tenant").distinct()
             card_number = [card.card.number]
-            deactivate_result = send_rpc_request(str(device.id), card_number, 0)
-            return deactivate_result
+            for device in devices:
+                cards_of_device = get_device_cards(device.id, device.tenant_id, card_number, connect=False)
+                access_card = 1 if device.device_profile.name != "default" else 0
+                deactivate_result = send_rpc_request(str(device.id), cards_of_device, access_card, new_cards=card_number)
+                deactivate_results.append(deactivate_result)
+            return deactivate_results
         except GuestCard.DoesNotExist:
             return {"success": False, "message": "Active guest card not found !"}
