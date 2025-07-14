@@ -1,21 +1,22 @@
-from typing import List, Set
+from typing import List, Set, Any
 from django.db.models import Q
 from uuid import UUID
 
 from access_manager.models import StaffCard, GuestCard
 
 
-def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = (), connect: bool = True) -> List[str]:
+def get_device_cards(device_id: UUID, cards: List = (), connect: bool = True) -> tuple[list, int]:
     from main.models import Device
     try:
         device = Device.objects.select_related('card', 'room').prefetch_related(
             'device_public_spaces__public_space'
-        ).get(id=device_id, tenant_id=tenant_id)
+        ).get(id=device_id)
+        tenant_id = device.tenant_id
     except Device.DoesNotExist:
-        return []
+        return [], 0
 
     if device.device_profile.name.lower() != "default":
-        return cards
+        return cards, 0
 
     card_numbers: Set[str] = set()
     incoming_cards: Set[str] = set(cards)
@@ -48,12 +49,11 @@ def get_device_cards(device_id: UUID, tenant_id: UUID, cards: List = (), connect
     for guest_card in guest_cards:
         card_numbers.add(guest_card.card.number)
 
-
     if connect:
         card_numbers.update(incoming_cards)
     else:
         card_numbers -= incoming_cards
 
-    print("card_numbers after ", card_numbers)
+    card_numbers = card_numbers or ["00 00 00 00"]
 
-    return list(card_numbers)
+    return list(card_numbers), 1
