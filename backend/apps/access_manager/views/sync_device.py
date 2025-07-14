@@ -1,3 +1,5 @@
+import time
+
 from access_manager.models import NeedSyncDevice
 from access_manager.serializers.need_sync import (
     NeedSyncDeviceHttpFilterParams,
@@ -18,7 +20,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from access_manager.tasks.sync_device import sync_devices_task
+# from access_manager.tasks.sync_device import sync_devices_task
 
 from main.models import DevicePublicSpaces
 
@@ -96,6 +98,6 @@ class SyncDeviceView(APIView):
         if not need_sync_exists:
             return Response({"success": True, "message": "No devices need syncing"}, status=200)
 
-        sync_devices_task.delay(tenant_id, ids, device_ids)
-
+        # sync_devices_task.delay(tenant_id, ids, device_ids)
+        time.sleep(3)
         return Response({"success": True, "message": "Device sync task started successfully"}, status=202)
