@@ -60,7 +60,8 @@ class GuestCheckoutView(APIView):
     @swagger_guest_checkout()
     def post(self, request):
         params = GuestCheckoutParams.check(request.GET)
-        guests, result = Room.objects.guest_checkout(params.get("room").id)
+        user = str(request.user.id)
+        guests, result = Room.objects.guest_checkout(params.get("room").id, user=user)
 
         if isinstance(result, dict) and not result.get("success", True):
             return Response({"message": f"{guests} guests have left."}, status=400)

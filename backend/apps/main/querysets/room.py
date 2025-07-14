@@ -83,12 +83,12 @@ class RoomQuerySet(BaseQuerySet):
 
         return result
 
-    def guest_checkout(self, room_id):
+    def guest_checkout(self, room_id, user=None):
         from main.models import Device, Guest, Room
         deactivate_result = {"success": True}
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
-        cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
+        cards = list(GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True))
         devices = Device.objects.filter(
             Q(room__id=room_id) |
             Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
@@ -96,10 +96,7 @@ class RoomQuerySet(BaseQuerySet):
             status=True
         ).distinct()
         for device in devices:
-            cards_of_device = get_device_cards(device.id, device.tenant_id, cards, connect=False)
-            access_card = 1 if device.device_profile.name.lower() == "default" else 0
-            print("access_card", access_card)
-            result = send_rpc_request(str(device.id), cards_of_device, access_card, new_cards=cards)
+            result = send_rpc_request(str(device.id), cards, 0, user=user)
             not result.get("success") and deactivate_result.update({"success": False})
 
         guests.update(is_active=False)

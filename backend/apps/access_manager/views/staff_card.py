@@ -50,9 +50,7 @@ class StaffCardView(APIView):
                 return Response({"detail": "Not found device."}, 404)
 
             for device in devices:
-                cards_of_device = get_device_cards(device.id, tenant_id=request.user.tenant_id, cards=cards)
-                result = send_rpc_request(str(device.id), cards_of_device, True, staff_id=str(staff.id),
-                                          new_cards=cards, user=user)
+                result = send_rpc_request(str(device.id), cards, True, staff_id=str(staff.id), user=user)
                 if not result.get("success", False):
                     errors.append(result)
                 else:
