@@ -61,6 +61,7 @@ class StaffDetailView(APIView):
     @check_perms(["access_manager.delete_staff"])
     def delete(self, request, pk):
         instance = get_object_or_404(Staff, id=pk, tenant_id=request.user.tenant_id, is_active=True)
+        user = str(request.user.id)
 
         group_rooms_devices = GroupRoom.objects.filter(group=instance.group, room__devices__is_active=True).values_list(
             "room__devices", flat=True
@@ -74,7 +75,7 @@ class StaffDetailView(APIView):
 
         results = []
         for device in devices:
-            result = send_rpc_request(str(device.id), cards, False, staff_id=str(pk))
+            result = send_rpc_request(str(device.id), cards, False, staff_id=str(pk), user=user)
             results.append(result)
 
         instance.is_active = False

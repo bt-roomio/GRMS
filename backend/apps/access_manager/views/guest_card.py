@@ -60,9 +60,7 @@ class GuestCardView(APIView):
                 return Response({"message": "Not found device."}, 404)
 
             for device in devices:
-                cards_of_device = get_device_cards(device.id, tenant_id, cards)
-                result = send_rpc_request(str(device.id), cards_of_device, 1, guest_id=guest_id, new_cards=cards,
-                                          user=user)
+                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id, user=user)
                 if not result.get("success", False):
                     errors.append(result)
                 else:
