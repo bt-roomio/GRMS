@@ -37,6 +37,8 @@ def prepare_cards(cards: List[str], device, connect, group: Group = None, sync: 
         connect = get_connect(card_number, device, connect)
         if connect == 0 and sync and device.device_profile.name.lower() == "default":
             continue
+        elif connect == 0 and device.device_profile.name.lower() == "default":
+            connect = 1
         try:
             slot = find_or_assign_slot(card_number, device, connect)
             group = get_group(card_number, tenant_id) if not group else group
