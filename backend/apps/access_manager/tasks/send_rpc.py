@@ -36,6 +36,8 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
 
+
+    print("\n\n", message)
     start_time = time.time()
 
     while time.time() - start_time < TIMEOUT:
