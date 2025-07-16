@@ -16,8 +16,8 @@ TIMEOUT = 10
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None):
-    request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id)
+def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False):
+    request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id, sync=sync)
 
     message = request_params.get("message")
     request_id = request_params.get("request_id")
@@ -41,13 +41,18 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and access == 0:
             if is_success:
+                if sync:
+                    return {"success": True, "message": "Operation is passed successfully! "}
                 result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
             else:
-                need_sync(cards, device, message, user=user)
+                not sync and need_sync(cards, device, access, user=user)
                 return fail_response
+
         elif has_message and is_success and access != 0:
+            if sync:
+                return {"success": True, "message": "Operation is passed successfully! "}
             result = activate_staff_card(cards, staff, device) if staff_id else activate_guest_card(cards,
                                                                                                     device, guest)
             result.update({"room": room_number, "public_spaces": public_spaces})
@@ -55,5 +60,6 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
 
         time.sleep(1)
     else:
-        need_sync(cards, device, message, user=user)
-        return fail_response.update({"message": "Time out error!"})
+        not sync and need_sync(cards, device, access, user=user)
+        fail_response.update({"message": "Time out error!"})
+        return fail_response

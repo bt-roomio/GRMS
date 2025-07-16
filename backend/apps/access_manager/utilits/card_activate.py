@@ -13,7 +13,7 @@ def activate_guest_card(cards, device, guest):
             GuestCard.objects.create(guest=guest, card=card, is_active=True)
             NeedSyncDevice.objects.filter(card=card, device=device).update(need_sync=False)
         except Exception as e:
-            error_cards.append(card_number)
+            error_cards.append({"card_number": card_number, "error": str(e)})
     message = "Some cards are not activated."
     return {
         "success": error_cards == [],
@@ -31,6 +31,7 @@ def activate_staff_card(cards, staff, device):
             continue
 
         StaffCard.objects.create(staff=staff, card=card, is_active=True)
+        NeedSyncDevice.objects.filter(card=card, device=device).update(need_sync=False)
 
     return {
         "success": True,

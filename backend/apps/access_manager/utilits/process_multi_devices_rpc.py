@@ -54,6 +54,7 @@ def process_device_all_cards(device: Device, cards: List[str], group: Group, act
 
 
 def send_card_rpc_request(device: Device, rpc_params: List[dict], cards: List[str], action: str = "connect") -> dict:
+    access = 1 if action == "connect" else 0
     try:
         relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
         device_id = relation.from_id.id if relation else None
@@ -91,22 +92,21 @@ def send_card_rpc_request(device: Device, rpc_params: List[dict], cards: List[st
                         "message": f"Successfully {action}ed {len(cards)} cards to/from device {device.name}",
                     }
                 else:
-                    print(has_message)
-                    need_sync(cards, device, message)
+                    need_sync(cards, device, access)
                     return {
                         "success": False,
                         "message": f"Device {device.name} rejected card {action} request - added to sync queue",
                     }
             time.sleep(0.5)
 
-        need_sync(cards, device, message)
+        need_sync(cards, device, access)
         return {
             "success": False,
             "message": f"Timeout waiting for response from device {device.name} - added to sync queue",
         }
 
     except Exception as e:
-        need_sync(cards, device, message)
+        need_sync(cards, device, access)
         return {
             "success": False,
             "message": f"Error sending RPC {action} request to device {device.name}: {str(e)} - added to sync queue",

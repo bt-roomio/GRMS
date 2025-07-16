@@ -2,15 +2,13 @@ import logging
 
 from django.db.models import Q
 
-from access_manager.models import StaffCard, GuestPublicSpace
+from access_manager.models import StaffCard, GuestPublicSpace, GuestCard
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from access_manager.utilits.get_device_cards import get_device_cards
 
 logger = logging.getLogger("main")
 
@@ -42,8 +40,13 @@ class GuestCardView(APIView):
 
             staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
                                                    staff__tenant_id=tenant_id)
+            guest_cards = list(GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=tenant_id).values_list("card__number", flat=True))
+
             if staff_cards:
                 return Response({"message": "Card is connected to staff."}, 403)
+
+            if guest_cards:
+                return Response({"message": f"{guest_cards} connected to guests."}, 403)
 
             for public_space in public_spaces:
                 _, _ = GuestPublicSpace.objects.get_or_create(guest_id=guest_id, public_space_id=public_space)
