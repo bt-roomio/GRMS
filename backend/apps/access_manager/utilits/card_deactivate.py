@@ -3,9 +3,10 @@ from access_manager.models import GuestCard, NeedSyncDevice, CardDeviceSlot, Sta
 
 def deactivate_guest_card(cards, device):
     error_cards = []
+    tenant_id = device.tenant_id
     for card in cards:
         try:
-            instance = GuestCard.objects.get(card__number=card, is_active=True)
+            instance = GuestCard.objects.get(guest__tenant__id=tenant_id, card__number=card, is_active=True)
             instance.is_active = False
             instance.save(update_fields=["is_active"])
             CardDeviceSlot.objects.filter(card_number=card, device=device).delete()

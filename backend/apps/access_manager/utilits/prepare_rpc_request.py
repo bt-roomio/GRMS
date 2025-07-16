@@ -4,12 +4,12 @@ from shuttle.models import Relation, RPCMessage
 from rest_framework.generics import get_object_or_404
 
 
-def prepare_rpc_request(device_id, cards, access, guest_id, staff_id):
+def prepare_rpc_request(device_id, cards, access, guest_id, staff_id, sync=False):
     from main.models import Device, Guest
     from access_manager.models import Staff
 
     device = Device.objects.get(id=device_id)
-    cards_of_device, access = get_device_cards(device.id, cards, access)
+    cards_of_device = get_device_cards(device.id, cards, access)
     guest = get_object_or_404(Guest, id=guest_id) if guest_id else None
     staff = get_object_or_404(Staff, id=staff_id) if staff_id else None
     group = staff.group if staff else None
@@ -19,7 +19,7 @@ def prepare_rpc_request(device_id, cards, access, guest_id, staff_id):
         .values_list('public_space__name', flat=True)
     )
 
-    rpc_params = prepare_cards(cards_of_device, device, access, group=group)
+    rpc_params = prepare_cards(cards_of_device, device, access, group=group, sync=sync)
 
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     device_id = relation and relation.from_id.id

@@ -13,6 +13,7 @@ logger = get_task_logger(__name__)
 def manage_cards_for_public_space_task(group_id: str, public_space_id: str, devices, action: str, card_num=None):
     """Connect or disconnect cards to/from public space devices."""
     try:
+        access = 1 if action == "connect" else 0
         cards, group = Group.objects.get_staff_cards(group_id)
         cards = [card_num] if card_num else cards
         if not cards or not group:
@@ -22,16 +23,7 @@ def manage_cards_for_public_space_task(group_id: str, public_space_id: str, devi
 
         for device in inactive_devices:
             logger.info(f"Adding device {device.name} (ID: {device.id}) to sync queue - inactive or status false")
-            gateway_or_none = Device.objects.gateway_or_none(device.id)
-            dummy_message = {
-                "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device.id),
-                "topic": "v1/gateway/rpc",
-                "data": {
-                    "device": str(device.name),
-                    "data": {"method": "writeRFID", "params": [], "timeout": 10000},
-                },
-            }
-            need_sync(cards, device, dummy_message)
+            need_sync(cards, device, access)
 
         if not active_devices.exists():
             logger.info("No active devices found for public space '%s'", public_space_id)
