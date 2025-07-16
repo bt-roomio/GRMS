@@ -40,7 +40,9 @@ class GuestCardView(APIView):
 
             staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
                                                    staff__tenant_id=tenant_id)
-            guest_cards = list(GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=tenant_id).values_list("card__number", flat=True))
+            guest_cards = list(
+                GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=tenant_id).exclude(
+                    guest__id=guest_id).values_list("card__number", flat=True))
 
             if staff_cards:
                 return Response({"message": "Card is connected to staff."}, 403)
