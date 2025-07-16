@@ -7,37 +7,23 @@ from shuttle.services.publish_updates import publish_updates
 logger = get_task_logger(__name__)
 
 
-def need_sync(cards: List[str], device, message: dict, user=None):
+def need_sync(cards: List[str], device, access, user=None):
     from access_manager.models import Card, NeedSyncDevice
     if not device:
         return
 
-    original_params = message.get("data", {}).get("data", {}).get("params", [])
-
     for card_num in cards:
         try:
             card = Card.objects.get(number=card_num, tenant=device.tenant)
-            single_card_param = next((param for param in original_params if param.get("cardNumber") == card_num), None)
-            if not single_card_param:
-                continue
 
-            single_card_message = {
-                **message,
-                "data": {
-                    **message["data"],
-                    "data": {
-                        **message["data"]["data"],
-                        "params": [single_card_param],
-                    },
-                },
-            }
+            message_params = {"access": access}
 
             sync_obj, created = NeedSyncDevice.objects.get_or_create(
                 card=card,
                 device=device,
                 defaults={
                     "need_sync": True,
-                    "additional_info": {"failed_request": single_card_message},
+                    "additional_info": {"message_params": message_params},
                     "created_by_id": user,
                     "updated_by_id": user,
                 },
@@ -46,12 +32,7 @@ def need_sync(cards: List[str], device, message: dict, user=None):
                 publish_updates("need_sync", "get_list_activity", {})
             else:
                 info = sync_obj.additional_info or {}
-                current_failed_request = info.get("failed_request")
-
-                if current_failed_request and is_same_request(current_failed_request, single_card_message):
-                    continue
-
-                info["failed_request"] = single_card_message
+                info["message_params"] = message_params
 
                 sync_obj.need_sync = True
                 sync_obj.updated_by_id = user
