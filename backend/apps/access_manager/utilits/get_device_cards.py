@@ -13,10 +13,10 @@ def get_device_cards(device_id: UUID, cards: List = (), connect: bool = True) ->
         ).get(id=device_id)
         tenant_id = device.tenant_id
     except Device.DoesNotExist:
-        return [], 0
+        return []
 
     if device.device_profile.name.lower() != "default":
-        return cards, 0
+        return cards
 
     card_numbers: Set[str] = set()
     incoming_cards: Set[str] = set(cards)
@@ -56,4 +56,4 @@ def get_device_cards(device_id: UUID, cards: List = (), connect: bool = True) ->
 
     card_numbers = card_numbers or ["00 00 00 00"]
 
-    return list(card_numbers), 1
+    return list(card_numbers)

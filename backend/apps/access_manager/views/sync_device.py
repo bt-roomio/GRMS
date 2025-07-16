@@ -20,7 +20,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# from access_manager.tasks.sync_device import sync_devices_task
+from access_manager.tasks.sync_device import sync_devices_task
 
 from main.models import DevicePublicSpaces
 
