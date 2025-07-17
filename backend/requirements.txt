@@ -98,3 +98,5 @@ wsproto==1.2.0
 zope.interface==6.4.post2
 rich==14.0.0
 celery-types==0.23.0
+django-prometheus==2.4.1
+prometheus_client==0.22.0
