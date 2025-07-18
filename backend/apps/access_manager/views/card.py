@@ -26,6 +26,7 @@ class CardListView(APIView):
             sort_by=params.get("sort_by", []),  # pyright: ignore
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
+            staff_id=params.get("staff_id"),
         )
         serializer = CardSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
