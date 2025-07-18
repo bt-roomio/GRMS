@@ -1,7 +1,7 @@
 from access_manager.models import GuestCard, NeedSyncDevice, CardDeviceSlot, StaffCard
 
 
-def deactivate_guest_card(cards, device):
+def deactivate_guest_card(cards, device, sync):
     error_cards = []
     tenant_id = device.tenant_id
     for card in cards:
@@ -12,7 +12,7 @@ def deactivate_guest_card(cards, device):
             CardDeviceSlot.objects.filter(card_number=card, device=device).delete()
             NeedSyncDevice.objects.filter(card__number=card, device=device).update(need_sync=False)
         except Exception:
-            error_cards.append(card)
+            not sync and error_cards.append(card)
     message = "Some cards are not deactivated."
     return {
         "success": error_cards == [],
