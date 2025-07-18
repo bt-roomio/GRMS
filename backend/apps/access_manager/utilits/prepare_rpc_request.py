@@ -4,7 +4,7 @@ from shuttle.models import Relation, RPCMessage
 from rest_framework.generics import get_object_or_404
 
 
-def prepare_rpc_request(device_id, cards, access, guest_id, staff_id, sync=False):
+def prepare_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
     from main.models import Device, Guest
     from access_manager.models import Staff
 
@@ -19,7 +19,7 @@ def prepare_rpc_request(device_id, cards, access, guest_id, staff_id, sync=False
         .values_list('public_space__name', flat=True)
     )
 
-    rpc_params = prepare_cards(cards_of_device, device, access, group=group, sync=sync)
+    rpc_params = prepare_cards(cards_of_device, device, access, group=group)
 
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     device_id = relation and relation.from_id.id
