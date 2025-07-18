@@ -17,7 +17,7 @@ TIMEOUT = 10
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
 def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False):
-    request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id, sync=sync)
+    request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id)
 
     message = request_params.get("message")
     request_id = request_params.get("request_id")
@@ -31,11 +31,11 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     if not cards:
         return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
 
+    print(message, "\n\n")
+
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
 
-
-    print("\n\n", message)
     start_time = time.time()
 
     while time.time() - start_time < TIMEOUT:
@@ -43,9 +43,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and access == 0:
             if is_success:
-                if sync:
-                    return {"success": True, "message": "Operation is passed successfully! "}
-                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device)
+                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device, sync)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
             else:

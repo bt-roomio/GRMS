@@ -53,7 +53,6 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             devices_to_add = [str(device_id) for device_id in incoming_device_ids if
                               device_id not in current_device_ids]
 
-
             if not device_objects:
                 devices_to_remove = current_device_ids
 
@@ -98,7 +97,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             for group_public_space in group_public_spaces:
                 try:
                     card_public_space(group_id=group_public_space.group_id, public_space_id=public_space_id,
-                                      devices=devices, action=action)
+                                      action=action)
 
                 except Exception as e:
                     logger.error(

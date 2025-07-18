@@ -36,11 +36,11 @@ def sync_devices_task(tenant_id, ids=None, device_ids=None):
         grouped = defaultdict(list)
         for obj in need_sync_objects:
             device_id = obj.device_id
-            card = str(obj.card.number)
-            grouped[device_id].append(card)
+            access = (obj.additional_info or {}).get("message_params", {}).get("access", "UNKNOWN")
+            grouped[(device_id, access)].append(obj.card.number)
 
-        for device_id, cards in grouped.items():
-            result = send_rpc_request(str(device_id), cards, 1, sync=True)
+        for (device_id, access), cards in grouped.items():
+            result = send_rpc_request(str(device_id), cards, access, sync=True)
             if result.get("success", False):
                 queryset.filter(device_id=device_id).update(need_sync=False)
 

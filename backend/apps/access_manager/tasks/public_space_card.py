@@ -10,7 +10,7 @@ logger = get_task_logger(__name__)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
-def manage_cards_for_public_space_task(group_id: str, public_space_id: str, devices, action: str, card_num=None):
+def manage_cards_for_public_space_task(group_id: str, public_space_id: str, action: str, card_num=None):
     """Connect or disconnect cards to/from public space devices."""
     try:
         access = 1 if action == "connect" else 0
@@ -19,7 +19,7 @@ def manage_cards_for_public_space_task(group_id: str, public_space_id: str, devi
         if not cards or not group:
             return {"success": False, "message": f"No cards found for group {group_id}"}
 
-        active_devices, inactive_devices = Device.objects.active_inactive(devices, group.tenant)
+        active_devices, inactive_devices = Device.objects.active_inactive(public_space_id, group.tenant)
 
         for device in inactive_devices:
             logger.info(f"Adding device {device.name} (ID: {device.id}) to sync queue - inactive or status false")
