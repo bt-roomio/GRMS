@@ -30,7 +30,7 @@ def find_or_assign_slot(card_number: str, device, connect) -> int:
         return card_slot.slot
 
 
-def prepare_cards(cards: List[str], device, connect, group: Group = None, sync: bool = False) -> List[dict]:
+def prepare_cards(cards: List[str], device, connect, group: Group = None) -> List[dict]:
     rpc_params = []
     tenant_id = device.tenant_id
     for card_number in cards:
