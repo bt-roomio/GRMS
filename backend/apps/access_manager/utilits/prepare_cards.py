@@ -38,7 +38,8 @@ def prepare_cards(cards: List[str], device, connect, group: Group = None) -> Lis
             connect = 1
         try:
             slot = find_or_assign_slot(card_number, device, connect)
-            group = get_group(card_number, tenant_id) if group is None else group
+            group = get_group(card_number, tenant_id) if not group else group
+            group = group if group else None
         except CardDeviceSlot.DoesNotExist:
             continue
         card_data_params = data_params(card_number, group, connect, slot)

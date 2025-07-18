@@ -4,10 +4,16 @@ from core.querysets.base_queryset import BaseQuerySet
 
 
 class CardQuerySet(BaseQuerySet):
-    def list(self, tenant_id, sort_by=None, search_field=None, search_value=None, filters={}):
-        from access_manager.models import NeedSyncDevice
+    def list(self, tenant_id, sort_by=None, search_field=None, search_value=None, filters={}, staff_id=None):
+        from access_manager.models import NeedSyncDevice, StaffCard
 
         query = self.select_related("created_by").filter(tenant_id=tenant_id)
+
+        if staff_id:
+            query = query.filter(
+                id__in=StaffCard.objects.filter(staff_id=staff_id, is_active=True).values("card_id")
+            )
+
         if 'need_sync' in filters:
             need_sync = filters.get("need_sync")
             query = query.annotate(
