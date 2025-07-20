@@ -1,7 +1,7 @@
 import logging
 from typing import cast
 
-from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard
+from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, StaffCard
 from access_manager.serializers.staff_card import StaffCardRequestData, StaffCardRequestSerializer
 from access_manager.swagger.staff_card import staff_card_swagger
 
@@ -25,6 +25,7 @@ class StaffCardView(APIView):
             staff = validated_data["staff_id"]
             cards = validated_data["cards"]
             user = str(request.user.id)
+            tenant_id = request.user.tenant_id
             group = staff.group
 
             errors = []
@@ -32,8 +33,15 @@ class StaffCardView(APIView):
 
             guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards,
                                                    guest__tenant_id=request.user.tenant_id)
+            staff_cards = list(
+                StaffCard.objects.filter(is_active=True, card__number__in=cards, staff__tenant__id=tenant_id).exclude(
+                    staff=staff).values_list("card__number", flat=True))
+
             if guest_cards:
                 return Response({"message": "Card is connected to guest."}, 403)
+
+            if staff_cards:
+                return Response({"message": f"{staff_cards} connected to staff."}, 403)
 
             group_rooms_devices = GroupRoom.objects.filter(group=group, room__devices__is_active=True).values_list(
                 "room__devices", flat=True
