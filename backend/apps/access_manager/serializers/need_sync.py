@@ -116,7 +116,7 @@ class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = NeedSyncDevice
-        fields = ("id", "created_at", "need_sync", "device", "card", "additional_info")
+        fields = ("id", "created_at", "created_by_id", "updated_at", "updated_by", "need_sync", "device", "card")
 
 
 class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
