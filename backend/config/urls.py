@@ -20,6 +20,7 @@ urlpatterns = [
         ),
     ),
     path("", include(("hoteza.urls", "hoteza"), namespace="hoteza-integration")),
+    path("", include("django_prometheus.urls")),
 ]
 
 if settings.DEBUG:
