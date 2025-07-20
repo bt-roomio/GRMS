@@ -1,12 +1,11 @@
 from django.db.models import Q
-from access_manager.models import Card, Staff, StaffCard, GuestCard
+from access_manager.models import Card, Staff, StaffCard, GuestCard, NeedSyncDevice
 from access_manager.serializers.staff import SimpleStaffSerializer
 
 from rest_framework import serializers
 from rest_framework.fields import ValidationError
 
 from access_manager.tasks.send_rpc import send_rpc_request
-from access_manager.utilits.get_device_cards import get_device_cards
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Guest
 
@@ -14,6 +13,10 @@ from main.models import Device, Guest
 class CardSerializer(serializers.ModelSerializer):
     staff_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Staff.objects.all())
     staff = SimpleStaffSerializer(source="staffcard.staff", read_only=True)
+    need_sync = serializers.SerializerMethodField()
+
+    def get_need_sync(self, card):
+        return NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
 
     def create(self, validated_data):
         staff = validated_data.pop("staff_id") if validated_data.get("staff_id") else None
@@ -43,6 +46,7 @@ class CardSerializer(serializers.ModelSerializer):
             "staff",
             "staff_id",
             "additional_info",
+            "need_sync",
         )
 
 
@@ -54,6 +58,7 @@ class CardFilterParams(ValidatorSerializer):
     search_field = serializers.ChoiceField(choices=("number",), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    staff_id = serializers.CharField(required=False)
 
 
 class DisconnectCardSerializer(serializers.Serializer):
