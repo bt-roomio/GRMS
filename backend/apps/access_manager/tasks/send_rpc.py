@@ -31,7 +31,6 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     if not cards:
         return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
 
-    print(message, "\n\n")
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
