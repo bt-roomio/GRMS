@@ -39,10 +39,10 @@ def prepare_cards(cards: List[str], device, connect, group: Group = None) -> Lis
         try:
             slot = find_or_assign_slot(card_number, device, connect)
             staff_group, user = get_group(card_number, tenant_id)
-            group = staff_group if staff_group else group if staff_group is None and user is None else None
+            staff_group = staff_group if staff_group else group if staff_group is None and user is None else None
         except CardDeviceSlot.DoesNotExist:
             continue
-        card_data_params = data_params(card_number, group, connect, slot)
+        card_data_params = data_params(card_number, staff_group, connect, slot)
         card_data = {
             "cardNumber": card_data_params.get("cardNumber"),
             "access_group": card_data_params.get("access_group"),
