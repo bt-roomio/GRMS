@@ -1,0 +1,21 @@
+groups:
+- name: RabbitMQ Exporter
+  rules:
+    - alert: RabbitmqTooManyReadyMessages
+      expr: sum(rabbitmq_queue_messages_ready) BY (queue) > 1000
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: RabbitMQ too many ready messages (instance {{ $labels.instance }})
+        description: "RabbitMQ too many ready messages on {{ $labels.instace }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+    - alert: RabbitmqTooManyReadyMessages
+      expr: sum(rabbitmq_queue_messages_unacked) BY (queue) > 1000
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: RabbitMQ too many ready messages (instance {{ $labels.instance }})
+        description: "RabbitMQ too many ready messages on {{ $labels.instace }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
