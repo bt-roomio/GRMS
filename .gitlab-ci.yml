@@ -46,11 +46,5 @@ leto:
     - apk add --no-cache openssh-client
     - echo "$LETO_PRIVATE_KEY" | base64 -d >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
-      mkdir -p ~/GRMS;
       cd ~/GRMS;
       mkdir test;"
-      # docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
-      # docker compose pull backend &&
-      # docker compose down backend nginx &&
-      # docker compose up backend nginx -d;
-      # "
