@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "channels",
     "channels_demultiplexer",
+    "django_prometheus",
     # APPS
     "core",
     "users",
@@ -58,6 +59,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    # Should be start of middleware
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -67,6 +70,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "core.utils.middleware.CheckForTenantMiddleware",
+    # Should be end of middleware
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
