@@ -4,7 +4,7 @@ services:
 
 stages:
   - build
-  - production
+  - staging 
 
 variables:
   IMAGE_NAME: registry.gitlab.com/yroomio/grms
@@ -18,16 +18,16 @@ build:
     - cd backend && docker build -t $IMAGE_NAME:$IMAGE_TAG .
     - docker push $IMAGE_NAME:$IMAGE_TAG
 
-production:
-  stage: production
+vesna:
+  stage: staging
   when: manual
   image: alpine:latest
   only:
     - dev
   script:
     - apk add --no-cache openssh-client
-    - echo "$PROD_PRIVATE_KEY" >> publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey $PROD_USER@$PROD_HOST -p $PROD_PORT "
+    - echo "$VESNA_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $VESNA_USER@$VESNA_HOST -p $VESNA_PORT "
       mkdir -p ~/GRMS;
       cd ~/GRMS;
       docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
@@ -35,3 +35,22 @@ production:
       docker compose down backend nginx &&
       docker compose up backend nginx -d;
       "
+
+leto:
+  stage: staging
+  when: manual
+  image: alpine:latest
+  only:
+    - dev
+  script:
+    - apk add --no-cache openssh-client
+    - echo "$LETO_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
+      mkdir -p ~/GRMS;
+      cd ~/GRMS;
+      mkdir test;"
+      # docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
+      # docker compose pull backend &&
+      # docker compose down backend nginx &&
+      # docker compose up backend nginx -d;
+      # "
