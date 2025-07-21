@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from access_manager.models import CardDeviceSlot, StaffCard, Group, ALL_DAYS, WEEK_DAYS
+from access_manager.models import CardDeviceSlot, StaffCard, Group, ALL_DAYS, WEEK_DAYS, GuestCard
 
 logger = logging.getLogger("main")
 
@@ -38,8 +38,8 @@ def prepare_cards(cards: List[str], device, connect, group: Group = None) -> Lis
             connect = 1
         try:
             slot = find_or_assign_slot(card_number, device, connect)
-            group = get_group(card_number, tenant_id) if not group else group
-            group = group if group else None
+            staff_group, user = get_group(card_number, tenant_id)
+            group = staff_group if staff_group else group if staff_group is None and user is None else None
         except CardDeviceSlot.DoesNotExist:
             continue
         card_data_params = data_params(card_number, group, connect, slot)
@@ -77,13 +77,21 @@ def get_group(card_number: str, tenant_id):
             )
             .first()
         )
-        print("staff_card", staff_card)
+        guest_card = (
+            GuestCard.objects.filter(
+                is_active=True,
+                card__number=card_number,
+                card__tenant_id=tenant_id,
+                guest__tenant_id=tenant_id
+            )
+            .first()
+        )
 
-        group = staff_card.staff.group if staff_card.staff else None
-        return group
+        group = staff_card.staff.group if staff_card else None
+        user = "staff" if staff_card else "guest" if guest_card else None
+        return group, user
     except Exception:
-        return None
-
+        return None, None
 
 def data_params(card_number, group, connect, slot):
     params = {}
