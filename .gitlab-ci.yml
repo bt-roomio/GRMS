@@ -45,7 +45,7 @@ leto:
   script:
     - apk add --no-cache openssh-client
     - echo "$LETO_PRIVATE_KEY" | base64 -d >> publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST"
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
       mkdir -p ~/GRMS;
       cd ~/GRMS;
       mkdir test;"
