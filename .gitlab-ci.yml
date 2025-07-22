@@ -3,32 +3,32 @@ services:
   - docker:dind
 
 stages:
-  - build
-  - staging 
+  - BUILD
+  - backend-staging 
+  - frontend-staging 
 
-variables:
-  IMAGE_NAME: registry.gitlab.com/yroomio/grms
-  IMAGE_TAG: latest  
-
-build:
-  stage: build
+backend:
+  stage: BUILD
   when: manual
+  variables:
+    IMAGE_NAME: registry.gitlab.com/yroomio/grms
+    IMAGE_TAG: latest
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
     - cd backend && docker build -t $IMAGE_NAME:$IMAGE_TAG .
     - docker push $IMAGE_NAME:$IMAGE_TAG
 
-vesna:
-  stage: staging
+vesna-backend:
+  stage: backend-staging
   when: manual
   image: alpine:latest
   only:
     - dev
+    - test_ci_cd
   script:
     - apk add --no-cache openssh-client
     - echo "$VESNA_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $VESNA_USER@$VESNA_HOST -p $VESNA_PORT "
-      mkdir -p ~/GRMS;
       cd ~/GRMS;
       docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
       docker compose pull backend &&
@@ -36,13 +36,62 @@ vesna:
       docker compose up backend nginx -d;
       "
 
-leto:
-  stage: staging
+vesna-frontend:
+  stage: frontend-staging
   when: manual
   image: alpine:latest
   only:
     - dev
+    - test_ci_cd
   script:
     - apk add --no-cache openssh-client
-    - echo "$LETO_PRIVATE_KEY" | base64 -d > publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey -p $LETO_PORT $LETO_USER@$LETO_HOST "mkdir -p ~/GRMS; cd ~/GRMS; mkdir test;"
+    - echo "$VESNA_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $VESNA_USER@$VESNA_HOST -p $VESNA_PORT "
+      cd ~/GRMS;
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      docker compose pull frontend &&
+      docker compose up frontend -d &&
+      docker restart nginx;
+      "
+
+leto-backend:
+  stage: backend-staging
+  when: manual
+  image: alpine:latest
+  only:
+    - dev
+    - test_ci_cd
+  script:
+    - apk add --no-cache openssh-client
+    - echo "$LETO_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - echo $LETO_HOST
+    - echo $LETO_PRIVATE_KEY
+    - cat publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
+      mkdir -p ~/GRMS;
+      cd ~/GRMS;
+      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
+      docker compose pull django &&
+      docker compose down django proxy &&
+      docker compose up django proxy -d;
+      "
+
+leto-frontend:
+  stage: frontend-staging
+  when: manual
+  image: alpine:latest
+  only:
+    - dev
+    - test_ci_cd
+  script:
+    - apk add --no-cache openssh-client
+    - echo "$LETO_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
+      cd ~/GRMS;
+      echo "$CI_DEPLOY_PASSWORD";
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      docker compose pull frontend &&
+      docker compose up frontend -d &&
+      docker restart frontend-nginx;
+      "
+
