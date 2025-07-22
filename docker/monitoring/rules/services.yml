@@ -1,0 +1,12 @@
+groups:
+- name: instance-alerts
+  rules:
+  - alert: InstanceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Service unavailable: {{ $labels.instance }}"
+      description: "{{ $labels.job }} in {{ $labels.instance }} unavailable more than 1 min"
+

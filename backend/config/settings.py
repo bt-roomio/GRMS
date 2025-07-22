@@ -79,6 +79,9 @@ ROOT_URLCONF = "config.urls"
 # 'CORS_ORIGIN_WHITELIST' should be a single string of hosts with a space between each.
 # For example: 'CORS_ORIGIN_WHITELIST=http://localhost:8000'
 CORS_ORIGIN_WHITELIST = list(filter(None, [*os.getenv("DJANGO_CORS_ORIGIN_WHITELIST", "").split(" ")]))
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+]
 
 TEMPLATES = [
     {
