@@ -10,3 +10,4 @@ prod.env
 venv
 logs
 *.log
+*.json

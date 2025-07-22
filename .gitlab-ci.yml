@@ -4,31 +4,31 @@ services:
 
 stages:
   - build
-  - staging 
+  - deploy 
+  - production 
 
-variables:
-  IMAGE_NAME: registry.gitlab.com/yroomio/grms
-  IMAGE_TAG: latest  
-
-build:
+backend:
   stage: build
   when: manual
+  variables:
+    IMAGE_NAME: registry.gitlab.com/yroomio/grms
+    IMAGE_TAG: latest
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
     - cd backend && docker build -t $IMAGE_NAME:$IMAGE_TAG .
     - docker push $IMAGE_NAME:$IMAGE_TAG
 
-vesna:
-  stage: staging
+vesna-backend:
+  stage: deploy
   when: manual
   image: alpine:latest
   only:
     - dev
+    - test_ci_cd
   script:
     - apk add --no-cache openssh-client
     - echo "$VESNA_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $VESNA_USER@$VESNA_HOST -p $VESNA_PORT "
-      mkdir -p ~/GRMS;
       cd ~/GRMS;
       docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
       docker compose pull backend &&
@@ -36,13 +36,152 @@ vesna:
       docker compose up backend nginx -d;
       "
 
-leto:
-  stage: staging
+vesna-frontend:
+  stage: deploy
   when: manual
   image: alpine:latest
   only:
     - dev
+    - test_ci_cd
   script:
     - apk add --no-cache openssh-client
-    - echo "$LETO_PRIVATE_KEY" | base64 -d > publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey -p $LETO_PORT $LETO_USER@$LETO_HOST "mkdir -p ~/GRMS; cd ~/GRMS; mkdir test;"
+    - echo "$VESNA_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $VESNA_USER@$VESNA_HOST -p $VESNA_PORT "
+      cd ~/GRMS;
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      docker compose pull frontend &&
+      docker compose up frontend -d &&
+      docker restart nginx;
+      "
+
+leto-backend:
+  stage: deploy
+  when: manual
+  image: alpine:latest
+  only:
+    - dev
+    - test_ci_cd
+  script:
+    - apk add --no-cache openssh-client
+    - echo "$LETO_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
+      mkdir -p ~/GRMS;
+      cd ~/GRMS;
+      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
+      docker compose pull django &&
+      docker compose down django proxy &&
+      docker compose up django proxy -d;
+      "
+
+leto-frontend:
+  stage: deploy
+  when: manual
+  image: alpine:latest
+  only:
+    - dev
+    - test_ci_cd
+  script:
+    - apk add --no-cache openssh-client
+    - echo "$LETO_PRIVATE_KEY" >> publickey && chmod 600 publickey
+    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
+      cd ~/GRMS;
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      docker compose pull frontend &&
+      docker compose up frontend &&
+      docker restart frontend-nginx;
+      "
+
+grms-backend:
+  stage: production
+  when: manual
+  image: alpine:latest
+  only:
+    - stable
+    - test_ci_cd
+  before_script:
+    - apk update && apk add openssh-client
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$STROYTEKS_PRIVATE_KEY" > ~/.ssh/stroyteks && chmod 600 ~/.ssh/stroyteks
+    - echo "$ROOMIO_PRIVATE_KEY" > ~/.ssh/roomio && chmod 600 ~/.ssh/roomio
+    - ssh-keyscan -p $STROYTEKS_PORT $STROYTEKS_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - |
+      cat > ~/.ssh/config <<EOF
+      Host stroyteks
+        HostName $STROYTEKS_HOST
+        User $STROYTEKS_USER
+        Port $STROYTEKS_PORT
+        IdentityFile ~/.ssh/stroyteks
+        ForwardAgent yes
+        StrictHostKeyChecking yes
+        
+      Host roomio
+        HostName $ROOMIO_HOST
+        User $ROOMIO_USER
+        Port $ROOMIO_PORT
+        IdentityFile ~/.ssh/roomio
+        ProxyJump stroyteks
+        ForwardAgent yes
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+      EOF
+    - chmod 600 ~/.ssh/config
+  script:
+    - ssh stroyteks "echo 'Connected to stroyteks successfully'"
+    - ssh roomio "echo 'Connected to roomio through stroyteks successfully'"
+    - ssh roomio "
+      cd ~/GRMS;
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      docker compose pull backend &&
+      docker compose down backend nginx-proxy &&
+      docker compose up backend nginx-proxy -d;
+      "
+
+grms-frontend:
+  stage: production
+  when: manual
+  image: alpine:latest
+  only:
+    - stable
+    - test_ci_cd
+  before_script:
+    - apk update && apk add openssh-client
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$STROYTEKS_PRIVATE_KEY" > ~/.ssh/stroyteks && chmod 600 ~/.ssh/stroyteks
+    - echo "$ROOMIO_PRIVATE_KEY" > ~/.ssh/roomio && chmod 600 ~/.ssh/roomio
+    - ssh-keyscan -p $STROYTEKS_PORT $STROYTEKS_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - |
+      cat > ~/.ssh/config <<EOF
+      Host stroyteks
+        HostName $STROYTEKS_HOST
+        User $STROYTEKS_USER
+        Port $STROYTEKS_PORT
+        IdentityFile ~/.ssh/stroyteks
+        ForwardAgent yes
+        StrictHostKeyChecking yes
+        
+      Host roomio
+        HostName $ROOMIO_HOST
+        User $ROOMIO_USER
+        Port $ROOMIO_PORT
+        IdentityFile ~/.ssh/roomio
+        ProxyJump stroyteks
+        ForwardAgent yes
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+      EOF
+    - chmod 600 ~/.ssh/config
+  script:
+    - ssh stroyteks "echo 'Connected to stroyteks successfully'"
+    - ssh roomio "echo 'Connected to roomio through stroyteks successfully'"
+    - ssh roomio "
+      cd ~/GRMS;
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      docker compose pull frontend &&
+      docker compose up frontend &&
+      docker restart frontend-nginx;
+      "
+
