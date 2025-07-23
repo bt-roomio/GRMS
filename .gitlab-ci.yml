@@ -9,14 +9,21 @@ stages:
 
 backend:
   stage: build
-  when: manual
-  variables:
-    IMAGE_NAME: registry.gitlab.com/yroomio/grms
-    IMAGE_TAG: latest
+  only:
+    - dev
+    - stable
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
-    - cd backend && docker build -t $IMAGE_NAME:$IMAGE_TAG .
-    - docker push $IMAGE_NAME:$IMAGE_TAG
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "dev" ]; then
+        export IMAGE_TAG=dev
+      elif [ "$CI_COMMIT_BRANCH" == "stable" ]; then
+        export IMAGE_TAG=stable
+      else
+        export IMAGE_TAG=latest
+      fi
+    - cd backend && docker build -t $CI_REGISTRY_IMAGE:$IMAGE_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG
 
 vesna-backend:
   stage: deploy
