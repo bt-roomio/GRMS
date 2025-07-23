@@ -6,6 +6,12 @@ class EmergencyStatusFilterParams(ValidatorSerializer):
     delisting_devices = serializers.ListField(child=serializers.CharField(), required=False)
     keys = serializers.ListField(child=serializers.CharField())
     room_types = serializers.ListField(child=serializers.CharField(), required=False)
+    data_type = serializers.ChoiceField(choices=['telemetry', 'attribute'], required=True)
+    attribute_scope = serializers.ChoiceField(
+        choices=['CLIENT_SCOPE', 'SERVER_SCOPE', 'SHARED_SCOPE'],
+        required=False,
+        help_text="Required if data_type is 'attribute'"
+    )
 
 
 class TelemetryDataItemSerializer(serializers.Serializer):
