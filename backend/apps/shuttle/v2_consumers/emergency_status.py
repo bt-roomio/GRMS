@@ -22,100 +22,152 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         return query
 
     @action()
-    async def list(self, **kwargs):  # pyright: ignore
+    async def list(self, **kwargs):
         params = kwargs.get("query_params")
-        keys = params.get("keys", [])  # pyright: ignore
-        key_ids = await self.get_key_ids(keys)
-        if not key_ids:
+        data_type = params.get("data_type")
+        keys = params.get("keys", [])
+        scope = params.get("attribute_scope")
+        if not keys:
             return None
 
         devices = await sync_to_async(list)(self.get_queryset(query_params=params))
         all_data = []
 
         for device in devices:
-            latest_data = await self.get_latest_data(device, key_ids)
+            if data_type == "telemetry":
+                key_ids = await sync_to_async(self.get_key_ids)(keys)
+                if not key_ids:
+                    continue
+                latest_data = await sync_to_async(self.get_latest_telemetry_data)(device, key_ids)
+
+            else:
+                latest_data = await sync_to_async(self.get_latest_attribute_data)(device, keys, scope)
+
             data_list = [
                 {
-                    "key_name": telemetry["key"],
-                    "ts": telemetry["ts"],
-                    "value": telemetry["value"],
+                    "key_name": item["key"],
+                    "ts": item["ts"],
+                    "value": item["value"],
                 }
-                for telemetry in latest_data
+                for item in latest_data
             ]
-            all_data.append(
-                {
-                    "device_id": device.id,
-                    "device_name": device.name,
-                    "room": {
-                        "number": device.room.number if device and device.room else None,
-                        "id": str(device.room.id) if device and device.room else None,
-                    },
-                    "data": data_list,
-                }
-            )
+
+            all_data.append({
+                "device_id": device.id,
+                "device_name": device.name,
+                "room": {
+                    "number": device.room.number if device and device.room else None,
+                    "id": str(device.room.id) if device and device.room else None,
+                },
+                "data": data_list,
+            })
 
         return all_data, 200
 
-    async def get_latest_activity(self, message, **kwargs):
-        updates = message.get("updates", []) or []
-        for update in updates:
-            await self.handle_ts_kv_activity(update)
-        if not updates:
-            await self.handle_ts_kv_activity(message.get("update"))
-
-    async def handle_ts_kv_activity(self, message):
-        entity_id = message.get("entity")
-        key = message.get("key")
-
-        for request_id, sub in self.subscribers.items():
-            params = sub.get("query_params", {})
-            keys = params.get("keys", [])
-            delisting_devices = params.get("delisting_devices", [])
-
-            if key not in keys or entity_id in delisting_devices:
-                continue
-
-            try:
-                device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
-            except Device.DoesNotExist:
-                continue
-
-            value = (  # TODO use get_non_null_column() method here
-                message.get("bool_v")
-                or message.get("str_v")
-                or message.get("long_v")
-                or message.get("dbl_v")
-                or message.get("json_v")
-            )
-            result = {
-                "device_id": entity_id,
-                "room": device.room.number if device.room else None,
-                "room_id": str(device.room.id) if device.room else None,
-                "data": [
-                    {
-                        "key_name": key,
-                        "ts": message.get("ts"),
-                        "value": value if value else None,
-                    }
-                ],
-            }
-
-            await self.reply(data=result, action=sub.get("action"), request_id=request_id)
-
-    @sync_to_async
     def get_key_ids(self, keys):
         return dict(TsKvDictionary.objects.filter(key__in=keys).values_list("key", "key_id"))
 
-    @sync_to_async
-    def get_latest_data(self, device, key_ids: dict):
+    def get_latest_telemetry_data(self, device, key_ids: dict):
         data = []
         queryset = TsKvLatest.objects.filter(entity=device, key__in=key_ids.values()).values(
             "bool_v", "str_v", "long_v", "dbl_v", "json_v", "key__key", "ts"
         )
         for obj in queryset:
-            value = obj.get("bool_v") or obj.get("str_v") or obj.get("long_v") or obj.get("dbl_v") or obj.get("json_v")
-            data.append({"key": obj.get("key__key"), "ts": obj.get("ts"), "value": value})
+            value = self.resolve_value(obj)
+            data.append({
+                "key": obj.get("key__key"),
+                "ts": obj.get("ts"),
+                "value": value
+            })
         return data
+
+    def get_latest_attribute_data(self, device, keys, scope):
+        data = []
+        queryset = device.attribute_kvs.filter(attribute_key__in=keys, attribute_type=scope).values(
+            "attribute_key", "last_update_ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"
+        )
+        for obj in queryset:
+            value = self.resolve_value(obj)
+            data.append({
+                "key": obj["attribute_key"],
+                "ts": obj["last_update_ts"],
+                "value": value
+            })
+        return data
+
+    @staticmethod
+    def resolve_value(obj):
+        return obj.get("bool_v") or obj.get("str_v") or obj.get("long_v") or obj.get("dbl_v") or obj.get("json_v")
+
+    async def get_latest_activity(self, message, **kwargs):
+        message = message.get("update", {}) or []
+        await self.handle_ts_kv_activity(message)
+
+    async def handle_ts_kv_activity(self, message):
+        entity_id = message.get("entity")
+
+        for request_id, sub in self.subscribers.items():
+            params = sub.get("query_params", {})
+            data_type = params.get("data_type", "telemetry")
+            keys = params.get("keys", [])
+            delisting_devices = params.get("delisting_devices", [])
+            scope = params.get("attribute_scope")
+
+            if entity_id in delisting_devices:
+                continue
+
+            if data_type == "telemetry":
+                await self.handle_telemetry_update(message, keys, entity_id, request_id, sub)
+            elif data_type == "attribute":
+                await self.handle_attribute_update(message, keys, scope, entity_id, request_id, sub)
+
+    async def handle_telemetry_update(self, message, keys, entity_id, request_id, sub):
+        key = message.get("key")
+        if key not in keys:
+            return
+
+        try:
+            device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
+        except Device.DoesNotExist:
+            return
+
+        value = self.resolve_value(message)
+        result = {
+            "device_id": entity_id,
+            "room": device.room.number if device.room else None,
+            "room_id": str(device.room.id) if device.room else None,
+            "data": [{
+                "key_name": key,
+                "ts": message.get("ts"),
+                "value": value
+            }],
+        }
+        await self.reply(data=result, action=sub.get("action"), request_id=request_id)
+
+    async def handle_attribute_update(self, message, keys, scope, entity_id, request_id, sub):
+        key = message.get("key_name")
+        msg_scope = message.get("scope")
+
+        if key not in keys or scope != msg_scope:
+            return
+
+        try:
+            device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
+        except Device.DoesNotExist:
+            return
+
+        value = self.resolve_value(message)
+        result = {
+            "device_id": entity_id,
+            "room": device.room.number if device.room else None,
+            "room_id": str(device.room.id) if device.room else None,
+            "data": [{
+                "key_name": key,
+                "ts": message.get("last_update_ts"),
+                "value": value
+            }],
+        }
+        await self.reply(data=result, action=sub.get("action"), request_id=request_id)
 
     @action()
     async def subscribe(self, request_id, action, **kwargs):
@@ -127,5 +179,5 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
-        await self.remove_group("emergency_status")
+        await self.remove_group(f"emergency_status_{self.tenant_id}")
         self.subscribers.pop(request_id, None)
