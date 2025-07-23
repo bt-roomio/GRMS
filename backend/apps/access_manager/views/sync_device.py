@@ -73,7 +73,7 @@ class SyncDeviceView(APIView):
             )
         )
         if not queryset.exists():
-            raise Exception("Not found any devices need syncing")
+            return Response({"message": "No devices need syncing"}, status=200)
 
         first = queryset.first()
         holder_type, holder_name = first.get_card_holder_name if first else (None, None)
