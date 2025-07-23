@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -73,6 +74,10 @@ MIDDLEWARE = [
     # Should be end of middleware
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
+
+DJANGO_GATEWAYS_MONITORING = list(filter(None, re.split(r"[,\s]+", os.getenv("DJANGO_GATEWAYS_MONITORING", ""))))
+if isinstance(DJANGO_GATEWAYS_MONITORING, list) and DJANGO_GATEWAYS_MONITORING:
+    MIDDLEWARE.insert(-1, "main.middlewares.update_device.UpdateDeviceMetricsMiddleware")
 
 ROOT_URLCONF = "config.urls"
 

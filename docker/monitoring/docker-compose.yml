@@ -2,6 +2,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
+    restart: always
     ports:
       - "9090:9090"
     volumes:
@@ -21,6 +22,7 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
+    restart: always
     ports:
       - "9100:9100"
     volumes:
@@ -38,6 +40,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    restart: always
     ports:
       - "9060:3000"
     volumes:
@@ -51,17 +54,24 @@ services:
       - roomio_net
 
   alertmanager:
-    image: prom/alertmanager:latest
+    build:
+      context: ./alertmanager
     container_name: alertmanager
+    restart: always
     ports:
       - "9093:9093"
     volumes:
       - ./alertmanager:/etc/alertmanager
+    entrypoint: ["/etc/alertmanager/entrypoint.sh"]
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     networks:
       - roomio_net
+
 
 volumes:
   prometheus_data:

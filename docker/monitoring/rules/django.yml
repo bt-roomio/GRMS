@@ -1,0 +1,15 @@
+groups:
+  - name: gateway_tenant_device_alerts
+    interval: 5s
+    rules:
+      - alert: TenantGatewaysOffline
+        expr: group by (tenant_name, device_id) (offline_gateway_devices_total)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Tenant {{ $labels.tenant_name }} has offline gateway."
+          description: "Tenant '{{ $labels.tenant_name }}' (ID: {{ $labels.tenant_id }}) has {{ $labels.device_id }} gateway device(s) offline for more than 2 minutes."
+          tenant_id: "{{ $labels.tenant_id }}"
+          device_name: "{{ $labels.device_name }}"
+          offline_count: "{{ $value }}"
