@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import RoomType, PublicSpace, RoomTypePublicSpaces
+from main.models import PublicSpace, RoomType, RoomTypePublicSpaces
 from main.serializers.dashboard import SimpleDashboardSerializer
 from main.serializers.public_space import SimplePublicSpaceSerializer
 
@@ -20,9 +20,7 @@ class RoomTypeSerializer(serializers.ModelSerializer):
             public_spaces = instance.prefetched_public_spaces
             data["public_spaces"] = SimplePublicSpaceSerializer(public_spaces, many=True).data
         else:
-            public_spaces = PublicSpace.objects.filter(
-                room_type_public_spaces__room_type=instance
-            )
+            public_spaces = PublicSpace.objects.filter(room_type_public_spaces__room_type=instance)
             data["public_spaces"] = SimplePublicSpaceSerializer(public_spaces, many=True).data
 
         return data
@@ -33,10 +31,7 @@ class RoomTypeSerializer(serializers.ModelSerializer):
 
         if public_spaces_ids:
             for public_space_id in public_spaces_ids:
-                RoomTypePublicSpaces.objects.create(
-                    room_type=instance,
-                    public_space=public_space_id
-                )
+                RoomTypePublicSpaces.objects.create(room_type=instance, public_space=public_space_id)
 
         return instance
 
@@ -48,17 +43,23 @@ class RoomTypeSerializer(serializers.ModelSerializer):
             RoomTypePublicSpaces.objects.filter(room_type=instance).delete()
 
             for public_space_id in public_spaces_ids:
-                RoomTypePublicSpaces.objects.create(
-                    room_type=instance,
-                    public_space=public_space_id
-                )
+                RoomTypePublicSpaces.objects.create(room_type=instance, public_space=public_space_id)
 
         return instance
 
     class Meta:
         model = RoomType
-        fields = ("id", "title", "check_in_out_address", "check_in_value", "check_out_value", "dashboard", "tenant",
-                  "public_spaces_ids", "public_spaces")
+        fields = (
+            "id",
+            "title",
+            "check_in_out_address",
+            "check_in_value",
+            "check_out_value",
+            "dashboard",
+            "tenant",
+            "public_spaces_ids",
+            "public_spaces",
+        )
 
 
 class RoomTypeFilterParams(ValidatorSerializer):
