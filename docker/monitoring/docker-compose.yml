@@ -42,33 +42,30 @@ services:
     container_name: grafana
     restart: always
     ports:
-      - "9060:3000"
+      - "3000:3000"
     volumes:
-      - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/etc/grafana/dashboards
     environment:
+      # - VIRTUAL_HOST=api.domain.com
+      # - LETSENCRYPT_HOST=api.domain.com
+      # - LETSENCRYPT_EMAIL=grms@room.io
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - roomio_net
 
   alertmanager:
-    build:
-      context: ./alertmanager
+    image: prom/alertmanager:latest
     container_name: alertmanager
     restart: always
     ports:
       - "9093:9093"
     volumes:
       - ./alertmanager:/etc/alertmanager
-    entrypoint: ["/etc/alertmanager/entrypoint.sh"]
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
-    environment:
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     networks:
       - roomio_net
 
