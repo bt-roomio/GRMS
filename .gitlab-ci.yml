@@ -9,14 +9,20 @@ stages:
 
 backend:
   stage: build
-  when: manual
-  variables:
-    IMAGE_NAME: registry.gitlab.com/yroomio/grms
-    IMAGE_TAG: latest
+  only:
+    - dev
+    - stable
+    - test_ci_cd
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
-    - cd backend && docker build -t $IMAGE_NAME:$IMAGE_TAG .
-    - docker push $IMAGE_NAME:$IMAGE_TAG
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "dev" ]; then
+        export IMAGE_TAG=dev
+      else
+        export IMAGE_TAG=latest
+      fi
+    - cd backend && docker build -t $CI_REGISTRY_IMAGE:$IMAGE_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG
 
 vesna-backend:
   stage: deploy
@@ -30,7 +36,7 @@ vesna-backend:
     - echo "$VESNA_PRIVATE_KEY" >> publickey && chmod 600 publickey
     - ssh -o "StrictHostKeyChecking=no" -i publickey $VESNA_USER@$VESNA_HOST -p $VESNA_PORT "
       cd ~/GRMS;
-      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
+      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
       docker compose pull backend &&
       docker compose down backend nginx &&
       docker compose up backend nginx -d;
@@ -67,7 +73,7 @@ leto-backend:
     - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
       mkdir -p ~/GRMS;
       cd ~/GRMS;
-      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY";
+      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
       docker compose pull django &&
       docker compose down django proxy &&
       docker compose up django proxy -d;
@@ -132,7 +138,7 @@ grms-backend:
     - ssh roomio "echo 'Connected to roomio through stroyteks successfully'"
     - ssh roomio "
       cd ~/GRMS;
-      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
       docker compose pull backend &&
       docker compose down backend nginx-proxy &&
       docker compose up backend nginx-proxy -d;

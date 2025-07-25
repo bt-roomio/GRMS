@@ -183,10 +183,8 @@ services:
     networks:
       - roomio_net
     depends_on:
-      - rabbitmq:
-          condition: service_healthy
-      - django:
-          condition: service_started
+      - rabbitmq
+      - django
 
   nodered:
     image: registry.gitlab.com/grms1/node-red-nodes:latest
@@ -213,6 +211,7 @@ volumes:
   frontend:
   rabbitmq:
   certs:
+  dhparam:
   vhost:
   html:
   nodered:

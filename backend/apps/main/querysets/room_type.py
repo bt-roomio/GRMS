@@ -1,4 +1,4 @@
-from django.db.models import Q, Prefetch
+from django.db.models import Prefetch, Q
 
 from core.querysets.base_queryset import BaseQuerySet
 
@@ -7,7 +7,7 @@ class RoomTypeQuerySet(BaseQuerySet):
     def list(self, tenant, search_field=None, search_value=None, search=None):
         query = self.filter(tenant=tenant).prefetch_related(
             Prefetch(
-                "public_spaces",
+                "room_type_public_spaces__room_type",
                 queryset=None,  # Use default queryset
                 to_attr="prefetched_public_spaces",
             )
