@@ -70,7 +70,7 @@ class StaffDetailView(APIView):
             group=instance.group, public_space__device__is_active=True
         ).values_list("public_space__device", flat=True)
 
-        devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices])
+        devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices], is_active=True)
         cards = StaffCard.objects.filter(staff=instance).values_list("card__number", flat=True)
 
         results = []

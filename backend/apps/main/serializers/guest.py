@@ -80,8 +80,7 @@ class GuestSerializer(serializers.ModelSerializer):
             devices = Device.objects.filter(
                 Q(room__id=room.id) |
                 Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
-                is_active=True,
-                status=True
+                is_active=True
             ).select_related("tenant").distinct()
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 0)

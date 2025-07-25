@@ -19,10 +19,11 @@ class DeviceQuerySet(BaseQuerySet):
     def active_inactive(self, public_space_id, tenant):
         device_objects = self.filter(
             device_public_spaces__public_space__id=public_space_id,
-            tenant=tenant
+            tenant=tenant,
+            is_active=True
         ).distinct()
-        active_devices = device_objects.filter(is_active=True, status=True)
-        inactive_devices = device_objects.filter(Q(is_active=False) | Q(status=False))
+        active_devices = device_objects.filter(status=True)
+        inactive_devices = device_objects.filter(status=False)
 
         return active_devices, inactive_devices
 

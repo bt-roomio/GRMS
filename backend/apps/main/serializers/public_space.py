@@ -2,6 +2,7 @@ import logging
 
 from rest_framework import serializers
 
+from access_manager.utilits.cards_public_space import register_cards_for_public_space
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DevicePublicSpaces, PublicSpace
 from main.serializers.dashboard import SimpleDashboardSerializer
@@ -48,27 +49,25 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
 
             incoming_device_ids = [device.id for device in device_objects]
 
-            devices_to_remove = [str(device_id) for device_id in current_device_ids if
-                                 device_id not in incoming_device_ids]
-            devices_to_add = [str(device_id) for device_id in incoming_device_ids if
-                              device_id not in current_device_ids]
+            devices_to_remove = set(current_device_ids) - set(incoming_device_ids)
+            devices_to_add = set(incoming_device_ids) - set(current_device_ids)
 
             if not device_objects:
                 devices_to_remove = current_device_ids
 
             if devices_to_remove:
+                register_cards_for_public_space(instance.id, devices_to_remove, False)
                 DevicePublicSpaces.objects.filter(
                     public_space=instance,
                     device_id__in=devices_to_remove
                 ).delete()
-                self._register_cards_for_public_space(instance.id, devices_to_remove, "disconnect")
 
             if devices_to_add:
-                device_objects_to_add = [device for device in device_objects if str(device.id) in devices_to_add]
+                device_objects_to_add = [device for device in device_objects if device.id in devices_to_add]
                 DevicePublicSpaces.objects.bulk_create(
                     [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add]
                 )
-                self._register_cards_for_public_space(instance.id, devices_to_add, "connect")
+                register_cards_for_public_space(instance.id, devices_to_add, True)
 
         return instance
 
@@ -81,34 +80,9 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
                 [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects]
             )
             devices = [device.id for device in device_objects]
-            self._register_cards_for_public_space(instance.id, devices, "connect")
+            register_cards_for_public_space(instance.id, devices, True)
 
         return instance
-
-    def _register_cards_for_public_space(self, public_space_id, devices, action):
-        from access_manager.models import GroupPublicSpace
-        from access_manager.utilits.task_trigger import card_public_space
-
-        try:
-            group_public_spaces = GroupPublicSpace.objects.filter(
-                public_space_id=public_space_id, group__is_active=True
-            ).select_related("group")
-
-            for group_public_space in group_public_spaces:
-                try:
-                    card_public_space(group_id=group_public_space.group_id, public_space_id=public_space_id,
-                                      action=action)
-
-                except Exception as e:
-                    logger.error(
-                        "Error registering cards for group %s to public space %s: %s",
-                        group_public_space.group_id,
-                        public_space_id,
-                        str(e),
-                    )
-
-        except Exception as e:
-            logger.error("Error in _register_cards_for_public_space for public space %s: %s", public_space_id, str(e))
 
     class Meta:
         model = PublicSpace
