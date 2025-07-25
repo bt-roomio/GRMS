@@ -8,6 +8,8 @@ class CardLogSerializer(serializers.ModelSerializer):
     user_id = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     user_type = serializers.SerializerMethodField()
+    room_number = serializers.SerializerMethodField()
+    public_spaces = serializers.SerializerMethodField()
     access_group = serializers.CharField(source='get_access_group_display', read_only=True)
     device_name = serializers.CharField(source='device.name', read_only=True)
 
@@ -19,6 +21,8 @@ class CardLogSerializer(serializers.ModelSerializer):
             'access_group',
             'device_id',
             'device_name',
+            'room_number',
+            'public_spaces',
             'user_id',
             'user_name',
             'user_type',
@@ -44,6 +48,21 @@ class CardLogSerializer(serializers.ModelSerializer):
         elif obj.staff:
             return 'Staff'
         return None
+
+    def get_room_number(self, obj):
+        # Return the room number if device is linked to a room
+        if obj.device and obj.device.room:
+            return obj.device.room.number
+        return None
+
+    def get_public_spaces(self, obj):
+        # Return a list of connected public space names
+        if obj.device:
+            return [
+                dps.public_space.name
+                for dps in obj.device.device_public_spaces.select_related('public_space')
+            ]
+        return []
 
 
 class CardLogFilterParams(ValidatorSerializer):
