@@ -9,6 +9,7 @@ from celery import shared_task
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
+
 from shuttle.models import RPCMessage
 
 logger = logging.getLogger("main")
