@@ -18,7 +18,6 @@ def sync_devices_task(tenant_id, ids=None, device_ids=None):
             "card__guestcard_set__guest"
         ).filter(
             need_sync=True,
-            device__status=True,
             device__is_active=True,
             device__tenant_id=tenant_id
         )

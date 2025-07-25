@@ -51,7 +51,7 @@ class StaffCardView(APIView):
                 public_space__device_public_spaces__device__is_active=True
             ).values_list("public_space__device_public_spaces__device", flat=True)
 
-            devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices])
+            devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices], is_active=True)
 
             if not devices:
                 return Response({"detail": "Not found device."}, 404)

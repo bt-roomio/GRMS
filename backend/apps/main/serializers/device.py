@@ -86,7 +86,6 @@ class DeviceSerializer(serializers.ModelSerializer):
         new_room_id = updated_instance.room_id
 
         if old_room_id != new_room_id and new_room_id and updated_instance.is_active and updated_instance.status:
-            print("yesss")
             self._register_cards_for_room(new_room_id)
 
         return updated_instance
@@ -97,9 +96,6 @@ class DeviceSerializer(serializers.ModelSerializer):
 
         try:
             group_rooms = GroupRoom.objects.filter(room_id=room_id, group__is_active=True).select_related("group")
-
-            print("group_rooms", group_rooms)
-
             for group_room in group_rooms:
                 try:
                     card_room(group_id=group_room.group_id, room_id=room_id, action="connect")
