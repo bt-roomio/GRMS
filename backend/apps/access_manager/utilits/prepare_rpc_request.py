@@ -38,7 +38,7 @@ def prepare_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
 
     fail_response = {
         "success": False, "message": "Cards are not connected to device!", "cards": cards,
-        "room": room_number, "public_spaces": public_spaces,
+        "device": str(device.name), "room": room_number, "public_spaces": public_spaces,
         "target_device": message.get("targetDeviceUUID")
     }
 

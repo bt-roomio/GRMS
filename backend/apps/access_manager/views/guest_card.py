@@ -57,9 +57,7 @@ class GuestCardView(APIView):
                 Q(room__guests=guest_id) |
                 Q(device_public_spaces__public_space__in=public_spaces) |
                 Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests=guest_id),
-                is_active=True,
-                status=True
-            ).distinct()
+                is_active=True).distinct()
 
             if not devices:
                 return Response({"message": "Not found device."}, 404)

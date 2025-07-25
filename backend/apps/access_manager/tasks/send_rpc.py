@@ -31,6 +31,13 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     if not cards:
         return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
 
+    if not device.status:
+        print(cards)
+        need_sync(cards, device, access, user=user)
+        fail_response.update({"success": False, "message": "Device is not connected !"})
+        return fail_response
+
+    print(message, "\n\n")
 
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)

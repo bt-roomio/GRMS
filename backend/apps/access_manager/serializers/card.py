@@ -73,7 +73,6 @@ class DisconnectCardSerializer(serializers.Serializer):
                 Q(room__id=guest.room.id) |
                 Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=[guest]),
                 is_active=True,
-                status=True
             ).distinct()
             card_number = [card.card.number]
             for device in devices:
