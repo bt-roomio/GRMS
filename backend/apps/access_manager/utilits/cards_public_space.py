@@ -12,9 +12,14 @@ def register_cards_for_public_space(public_space_id, devices, connect):
         for device in devices:
             try:
                 cards_of_device = get_device_cards(device, [], connect)
+                print("cards_of_device", cards_of_device)
                 # send_rpc_request.delay(str(device.id), cards_of_device, connect, sync=True)
                 send_rpc_request(str(device), cards_of_device, connect, sync=True)
             except Exception as e:
-                logger.error("Error registering cards for device %s : %s", device.id, str(e))
+                logger.error(
+                    "Error registering cards for device %s : %s",
+                    device.id,
+                    str(e)
+                )
     except Exception as e:
         logger.error("Error in cards_for_public_space for public space %s: %s", public_space_id, str(e))
