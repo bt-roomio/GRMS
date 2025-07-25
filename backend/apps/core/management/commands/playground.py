@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
 
+from shuttle.models import RPCMessage
+
 
 class Command(BaseCommand):
     help = "Playground"
