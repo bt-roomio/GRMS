@@ -22,7 +22,7 @@ class JsonRPCView(APIView):
     permission_classes = (WhiteListOrIsAuthenticated,)
 
     @json_rpc_swagger()
-    @check_perms(["shuttle.add_jsonrpc"])
+    @check_perms(["shuttle.send_jsonrpc"])
     def post(self, request, **kwargs):
         kwargs = self.handle_params(**kwargs)
         device = Device.objects.filter(**kwargs).first()

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from pika.adapters.blocking_connection import BlockingChannel
 
-from core.management.process_messages import process_messages
+from core.management.mq.process_messages import process_messages
 
 QUEUE_CONFIG = {
     "toGRMS": 1,

@@ -47,6 +47,14 @@ class Tenant(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_tenant"
+        permissions = [
+            ("view_alarmsettings", "Can view alarms"),
+            ("change_alarmsettings", "Can change alarms"),
+            ("view_generalsettings", "Can view general settings"),
+            ("change_generalsettings", "Can change general settings"),
+            ("view_integrationsettings", "Can view integration settings"),
+            ("change_integrationsettings", "Can change integration settings"),
+        ]
 
 
 class TenantProfile(BaseModel):
@@ -217,6 +225,10 @@ class Room(BaseModel, UpdateByModel):
                 fields=["number", "floor", "block", "tenant"], condition=Q(active=True), name="unique_active_room"
             )
         ]
+        permissions = [
+            ("add_roomfromconf", "Can add room from conf"),
+            ("view_roomstatus", "Can view room status"),
+        ]
 
 
 class RoomHistory(BaseModel, UpdateByModel):
@@ -320,6 +332,9 @@ class Device(BaseModel):
             UniqueConstraint(
                 Lower("name"), "tenant", condition=Q(is_active=True), name="unique_device_name_tenant_is_active"
             ),
+        ]
+        permissions = [
+            ("add_devicefromconf", "Can add device from conf"),
         ]
 
 
@@ -441,6 +456,9 @@ class Dashboard(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "main_dashboard"
         constraints = [UniqueConstraint(Lower("title"), "tenant", name="unique_dashboard_title_tenant")]
+        permissions = [
+            ("view_dashboardtype", "Can view dashboard types"),
+        ]
 
 
 class WidgetType(BaseModel):
@@ -490,6 +508,9 @@ class Guest(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "main_guest"
         ordering = ["created_at"]
+        permissions = [
+            ("change_guestmoveroom", "Can change guest move room"),
+        ]
 
 
 class PublicSpace(BaseModel, CreatedByModel):

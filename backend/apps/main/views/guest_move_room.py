@@ -1,5 +1,4 @@
 from drf_yasg.utils import swagger_auto_schema
-
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,7 +16,7 @@ class GuestMoveRoomListView(APIView):
         },
         query_serializer=GuestMoveRoomFilterParams(),
     )
-    @check_perms(["shuttle.change_guestmoveroom"])
+    @check_perms(["main.change_guestmoveroom"])
     def put(self, request):
         params = GuestMoveRoomFilterParams.check(request.GET)
         instance = Guest.objects.filter(room_id=params.get("from_room"), is_active=True)

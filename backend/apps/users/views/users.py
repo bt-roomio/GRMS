@@ -4,10 +4,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from users.models import User
 from users.serializers.user import UserDetailSerializer, UserParams, UserSerializer
 from users.swagger.users import UserDetailSwagger, UserSwagger
-from core.utils.permission import check_perms
 
 
 class UserListView(APIView):

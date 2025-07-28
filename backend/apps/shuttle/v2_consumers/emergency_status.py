@@ -52,15 +52,17 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
                 for item in latest_data
             ]
 
-            all_data.append({
-                "device_id": device.id,
-                "device_name": device.name,
-                "room": {
-                    "number": device.room.number if device and device.room else None,
-                    "id": str(device.room.id) if device and device.room else None,
-                },
-                "data": data_list,
-            })
+            all_data.append(
+                {
+                    "device_id": device.id,
+                    "device_name": device.name,
+                    "room": {
+                        "number": device.room.number if device and device.room else None,
+                        "id": str(device.room.id) if device and device.room else None,
+                    },
+                    "data": data_list,
+                }
+            )
 
         return all_data, 200
 
@@ -74,11 +76,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         )
         for obj in queryset:
             value = self.resolve_value(obj)
-            data.append({
-                "key": obj.get("key__key"),
-                "ts": obj.get("ts"),
-                "value": value
-            })
+            data.append({"key": obj.get("key__key"), "ts": obj.get("ts"), "value": value})
         return data
 
     def get_latest_attribute_data(self, device, keys, scope):
@@ -88,22 +86,23 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         )
         for obj in queryset:
             value = self.resolve_value(obj)
-            data.append({
-                "key": obj["attribute_key"],
-                "ts": obj["last_update_ts"],
-                "value": value
-            })
+            data.append({"key": obj["attribute_key"], "ts": obj["last_update_ts"], "value": value})
         return data
 
     @staticmethod
     def resolve_value(obj):
-        return obj.get("bool_v") or obj.get("str_v") or obj.get("long_v") or obj.get("dbl_v") or obj.get("json_v")
+        fields = ["bool_v", "str_v", "dbl_v", "long_v", "json_v"]
+        value = next((obj[field] for field in fields if field in obj and obj[field] is not None), None)
+        return value
 
     async def get_latest_activity(self, message, **kwargs):
-        message = message.get("update", {}) or []
-        await self.handle_ts_kv_activity(message)
+        updates = message.get("updates", []) or []
+        for update in updates:
+            await self.handle_activity(update)
+        if not updates:
+            await self.handle_activity(message.get("update"))
 
-    async def handle_ts_kv_activity(self, message):
+    async def handle_activity(self, message):
         entity_id = message.get("entity")
 
         for request_id, sub in self.subscribers.items():
@@ -123,6 +122,8 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
     async def handle_telemetry_update(self, message, keys, entity_id, request_id, sub):
         key = message.get("key")
+        value = message.get("value")
+
         if key not in keys:
             return
 
@@ -131,22 +132,18 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         except Device.DoesNotExist:
             return
 
-        value = self.resolve_value(message)
         result = {
             "device_id": entity_id,
             "room": device.room.number if device.room else None,
             "room_id": str(device.room.id) if device.room else None,
-            "data": [{
-                "key_name": key,
-                "ts": message.get("ts"),
-                "value": value
-            }],
+            "data": [{"key_name": key, "ts": message.get("ts"), "value": value}],
         }
         await self.reply(data=result, action=sub.get("action"), request_id=request_id)
 
     async def handle_attribute_update(self, message, keys, scope, entity_id, request_id, sub):
         key = message.get("key_name")
         msg_scope = message.get("scope")
+        value = message.get("value")
 
         if key not in keys or scope != msg_scope:
             return
@@ -156,16 +153,11 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         except Device.DoesNotExist:
             return
 
-        value = self.resolve_value(message)
         result = {
             "device_id": entity_id,
             "room": device.room.number if device.room else None,
             "room_id": str(device.room.id) if device.room else None,
-            "data": [{
-                "key_name": key,
-                "ts": message.get("last_update_ts"),
-                "value": value
-            }],
+            "data": [{"key_name": key, "ts": message.get("last_update_ts"), "value": value}],
         }
         await self.reply(data=result, action=sub.get("action"), request_id=request_id)
 
