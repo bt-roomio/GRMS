@@ -8,17 +8,45 @@ from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 class Command(BaseCommand):
     help = "simulate_message_to_rabbitmq"
 
-    def handle(self, **_):
-        val = 3
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--value",
+            type=str,
+            help="Queue name",
+            default="v1/devices/me/attributes/request",
+        )
+
+    def handle(self, *args, **kwargs):
+        val = kwargs["value"]
+
         msg = {
-            "sourceDeviceUUID": "c6fe44a3-b349-491d-bd7b-31c32dcaf3db",
+            "sourceDeviceUUID": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
             "data": {
-                "2C:0C:15:F3:A9:00": [
-                    {"ts": 1749978216359, "values": {"WC Spot": val}},
-                    {"ts": 1749978216401, "values": {"WC Downlights": val, "DND Relay1": val}},
-                ]
+                "38:0c:6e:41:02:80": {
+                    "macAddress": "04:60:e8:78:d3:e4",
+                    "cmd": "getSystemInfo",
+                    "dressing_light": val,
+                    "systemType": "HCM350V",
+                    "hwRevision": "V4.1",
+                    "mainBootVersion": 1025,
+                    "mainFwVersion": 16896014,
+                    "peripheryBootVersion": 4294967295,
+                    "peripheryFwVersion": 11,
+                    "configFileSiteVersion": 115,
+                    "configFileDate": "20241023",
+                    "configFileTime": "1501",
+                    "configFileCrc32": 2208071169,
+                    "bootDefaultsSiteVersion": 0,
+                    "bootDefaultsDate": "",
+                    "bootDefaultsTime": "",
+                    "bootDefaultsCrc32": 0,
+                    "siteVersion": 111,
+                    "rfidCfgFileCrc32": 0,
+                    "ready": "true",
+                    "ipAddress": "10.10.214.251",
+                }
             },
-            "topic": "v1/gateway/telemetry",
+            "topic": "v1/gateway/attributes",
         }
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, "toGRMS")
