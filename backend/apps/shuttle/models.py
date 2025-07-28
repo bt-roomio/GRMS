@@ -105,6 +105,11 @@ class AttributeKv(BaseModel):
                 name="unique_attrkv_type_scope_entity_key",
             ),
         ]
+        permissions = [
+            ("view_attributelist", "Can view attribute lists"),
+            ("add_attributelist", "Can add attribute lists"),
+            ("add_attributerpc", "Can add attribute rpc"),
+        ]
 
 
 class Relation(BaseModel, UpdateByModel):
@@ -134,6 +139,9 @@ class RPCMessage(models.Model):
 
     class Meta:
         db_table = "shuttle_rpc_message"
+        permissions = [
+            ("send_jsonrpc", "Can send json rpc request"),
+        ]
 
 
 class ControllerFile(BaseModel, UpdateByModel, CreatedByModel):

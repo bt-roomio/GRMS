@@ -4,10 +4,10 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.permission import check_perms
 from main.models import EmailConfiguration
 from main.serializers.email_config import EmailConfigSerializer
 from main.swagger.email_configuration import EmailConfigSwagger, EmailConfigUpdateSwagger
-from core.utils.permission import check_perms
 
 
 class EmailConfigDetailView(APIView):

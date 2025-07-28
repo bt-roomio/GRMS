@@ -9,7 +9,7 @@ from shuttle.swagger.remove_attribute import remove_attribute_swagger
 
 class RemoveAttribute(APIView):
     @remove_attribute_swagger()
-    @check_perms(["shuttle.delete_removeattribute"])
+    @check_perms(["shuttle.delete_attributekv"])
     def delete(self, request, *args, **kwargs):
         path = RemoveAttributeFilterPath.check(kwargs)
         params = RemoveAttributeFilterParams.check(request.GET)
