@@ -94,18 +94,15 @@ def _update_attribute_store(device, data):
 
     # Prepare updates for WebSocket clients
     updates_by_device = defaultdict(list)
+    fields = ["bool_v", "str_v", "dbl_v", "long_v", "json_v"]
     for attr in to_create + to_update:
-        updates_by_device[device_id].append(
+        updates_by_device[f"{device_id}_{device.get("tenant_id")}"].append(
             {
                 "entity": str(device_id),
                 "key_name": attr.attribute_key,
                 "last_update_ts": ts_now,
                 "scope": AttributeKv.CLIENT_SCOPE,
-                "bool_v": attr.bool_v,
-                "str_v": attr.str_v,
-                "long_v": attr.long_v,
-                "dbl_v": attr.dbl_v,
-                "json_v": attr.json_v,
+                "value": next((getattr(attr, field) for field in fields if getattr(attr, field) is not None), None),
             }
         )
 

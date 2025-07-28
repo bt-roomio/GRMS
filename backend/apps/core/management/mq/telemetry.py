@@ -7,8 +7,8 @@ import redis
 from access_manager.models import CardLog
 from django.conf import settings
 
-from core.management.handle_fias import handle_fias
 from core.management.mq.get_device import get_sub_device
+from core.management.mq.handle_fias import handle_fias
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
 from core.utils.handle_card_event import handle_card_event
