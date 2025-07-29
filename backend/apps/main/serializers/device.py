@@ -19,7 +19,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["device_profile"] = str(instance.device_profile_id)
         data["tenant"] = str(instance.tenant_id)
-        data["room"] = str(instance.room_id) if instance.room_id else None
+        data["room"] = str(instance.room.number) if instance.room_id else None
         return data
 
     def get_public_spaces(self, obj):
