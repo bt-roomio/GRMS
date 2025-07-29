@@ -4,8 +4,9 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
-from core.utils.permission import check_perms
+
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import Dashboard, Tenant
 from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer, DashboardTypeSerializer
 from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger

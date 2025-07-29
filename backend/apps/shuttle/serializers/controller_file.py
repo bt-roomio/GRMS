@@ -1,6 +1,5 @@
-from rest_framework.fields import RegexValidator
-
 from rest_framework import serializers
+from rest_framework.fields import RegexValidator
 
 from shuttle.models import Controller, ControllerFile
 
@@ -36,7 +35,7 @@ class ControllerSerializer(serializers.Serializer):
         data = {"controllers": [], "file": controller_file_serializer.data}
 
         for mac_address in mac_addresses:
-            controller = Controller.objects.create(
+            Controller.objects.create(
                 mac_address=mac_address,
                 tenant_id=tenant_id,
                 file_id=controller_file.id,
