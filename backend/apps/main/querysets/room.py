@@ -90,9 +90,10 @@ class RoomQuerySet(BaseQuerySet):
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
         cards = list(GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True))
         devices = Device.objects.filter(
-            Q(room__id=room_id) |
-            Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
-            is_active=True).distinct()
+            Q(room__id=room_id)
+            | Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
+            is_active=True,
+        ).distinct()
         for device in devices:
             result = send_rpc_request(str(device.id), cards, 0, user=user)
             not result.get("success") and deactivate_result.update({"success": False})
