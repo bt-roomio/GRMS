@@ -68,6 +68,26 @@ class RoomSerializer(serializers.ModelSerializer):
         )
 
 
+class SimpleRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = (
+            "id",
+            "created_at",
+            "number",
+            "floor",
+            "block",
+            "type",
+            "state",
+            "pan_id",
+            "building",
+            "door_lock_id",
+            "suite",
+            "tenant",
+            "status",
+        )
+
+
 class RoomFilterParams(ValidatorSerializer):
     SORT_FIELDS = ("created_at", "-created_at", "number", "floor", "block", "-number", "-floor", "-block")
 
