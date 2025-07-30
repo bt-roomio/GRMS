@@ -15,20 +15,19 @@ logger = logging.getLogger(__name__)
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
     public_spaces = serializers.SerializerMethodField()
-    room_obj = serializers.SerializerMethodField()
+    room = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["device_profile"] = str(instance.device_profile_id)
         data["tenant"] = str(instance.tenant_id)
-        data["room"] = str(instance.room_id) if instance.room_id else None
         return data
 
     def get_public_spaces(self, obj):
         public_spaces = [dps.public_space.name for dps in getattr(obj, "prefetched_device_public_spaces", [])]
         return public_spaces
 
-    def get_room_obj(self, obj):
+    def get_room(self, obj):
         from main.serializers.room import SimpleRoomSerializer
         if self.context.get("exclude_room_obj", True):
             return None
