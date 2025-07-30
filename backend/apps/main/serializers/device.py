@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class SimpleDeviceSerializer(serializers.ModelSerializer):
     public_spaces = serializers.SerializerMethodField()
-    room = serializers.SerializerMethodField()
+    room_obj = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -28,7 +28,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
         public_spaces = [dps.public_space.name for dps in getattr(obj, "prefetched_device_public_spaces", [])]
         return public_spaces
 
-    def get_room(self, obj):
+    def get_room_obj(self, obj):
         from main.serializers.room import SimpleRoomSerializer
         if self.context.get("exclude_room_obj", True):
             return None
