@@ -1,9 +1,10 @@
 import json
 from pprint import pprint
-from rest_framework.test import APITestCase
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import authenticate
+
+from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class BaseTestCase(APITestCase):

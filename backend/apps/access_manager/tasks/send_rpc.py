@@ -1,21 +1,21 @@
 import logging
 import time
 
-from celery import shared_task
-from access_manager.utilits.card_activate import activate_staff_card, activate_guest_card
-from access_manager.utilits.card_deactivate import deactivate_staff_card, deactivate_guest_card
+from access_manager.utilits.card_activate import activate_guest_card, activate_staff_card
+from access_manager.utilits.card_deactivate import deactivate_guest_card, deactivate_staff_card
 from access_manager.utilits.need_sync import need_sync
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
+from celery import shared_task
+
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
-
 from shuttle.models import RPCMessage
 
 logger = logging.getLogger("main")
 TIMEOUT = 10
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False):
     request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id)
 
@@ -59,8 +59,9 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         elif has_message and is_success and access != 0:
             if sync:
                 return {"success": True, "message": "Operation is passed successfully! "}
-            result = activate_staff_card(cards, staff, device) if staff_id else activate_guest_card(cards,
-                                                                                                    device, guest)
+            result = (
+                activate_staff_card(cards, staff, device) if staff_id else activate_guest_card(cards, device, guest)
+            )
             result.update({"room": room_number, "public_spaces": public_spaces})
             return result
 
