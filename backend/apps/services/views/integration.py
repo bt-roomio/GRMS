@@ -1,8 +1,10 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 
+from rest_framework import filters, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from core.utils.permission import check_perms
 from services.models import Integration
 from services.serializers.integration import IntegrationSerializer
 from services.swagger.integration import (
@@ -10,7 +12,6 @@ from services.swagger.integration import (
     integration_swagger_retrive,
     integration_swagger_update,
 )
-from core.utils.permission import check_perms
 
 
 class IntegrationListView(APIView):
@@ -29,8 +30,6 @@ class IntegrationListView(APIView):
 @check_perms(["services.view_integration"])
 def get(self, request, *args, **kwargs):
     queryset = self.get_queryset()
-
-    # Apply filters
     for backend in self.filter_backends:
         queryset = backend().filter_queryset(request, queryset, self)
 

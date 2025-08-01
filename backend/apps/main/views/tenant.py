@@ -13,7 +13,7 @@ class TenantListView(APIView):
 
     @swagger_auto_schema(tags=["Main, Tenant"], responses=TenantSwagger)
     @check_perms(["main.view_tenant"])
-    def get(self, request):
+    def get(self):
         tenants = Tenant.objects.all()
         serializer = TenantSerializer(tenants, many=True)
         return Response(serializer.data)

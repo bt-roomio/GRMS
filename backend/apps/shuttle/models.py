@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models import CASCADE
 from django.utils import timezone
 
-from core.models import BaseModel, BaseModelTs, CreatedByModel, UpdateByModel
+from core.models import BaseModel, BaseModelTs, UpdateByModel
 from core.utils.files import controller_file
 from core.utils.get_time import get_mil_sec
 from core.utils.unix_timestamp import UnixTimeStampField
@@ -144,20 +144,20 @@ class RPCMessage(models.Model):
         ]
 
 
-class ControllerFile(BaseModel, UpdateByModel, CreatedByModel):
+class ControllerFile(BaseModel, UpdateByModel):
     content = models.FileField(upload_to=controller_file)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     file_type = models.CharField(max_length=255, default="firmware")
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "shuttle_controller_file"
 
 
-class Controller(BaseModel, UpdateByModel, CreatedByModel):
+class Controller(BaseModel, UpdateByModel):
     name = models.CharField(max_length=255, blank=True, null=True)
     mac_address = models.CharField(max_length=255)
     file = models.ForeignKey(ControllerFile, CASCADE)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "shuttle_controller"
