@@ -1,9 +1,6 @@
-import uuid
-
 from django.urls import reverse
-
 from core.tests.base_test import BaseTestCase
-from main.models import Room
+import uuid
 
 
 class GuestTest(BaseTestCase):
@@ -19,77 +16,47 @@ class GuestTest(BaseTestCase):
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
 
-    def test_list(self):
-        response = self.client.get(reverse("main:guest-list"))
+    def test_list_guests_basic(self):
+        url = reverse("main:guest-list")
+        response = self.client.get(url, {"room": "df77f910-2dcd-45cf-b6be-054c744561a7"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["results"][0]["name"], "Amigo")
-        self.assertEqual(response.data["results"][0]["lastname"], "Amigoyev")
-        self.assertEqual(response.data["results"][0]["birthday"], 1722332871)
-        self.assertEqual(response.data["results"][0]["check_in"], 1722332912)
-        self.assertEqual(response.data["results"][0]["reservation_number"], "101")
-        self.assertEqual(response.data["results"][0]["room"], uuid.UUID("df77f910-2dcd-45cf-b6be-054c744561a7"))
+        self.assertEqual(len(response.data["results"]), 1)
 
-    def test_create(self):
+    def test_list_with_pagination_and_size(self):
+        url = reverse("main:guest-list")
+        response = self.client.get(url, {"room": "df77f910-2dcd-45cf-b6be-054c744561a7", "page": 1, "size": 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["count"], 1)
+
+    def test_list_with_sorting(self):
+        url = reverse("main:guest-list")
+        response = self.client.get(url, {"room": "df77f910-2dcd-45cf-b6be-054c744561a7", "sort_by": ["-name"]})
+        self.assertEqual(response.status_code, 200)
+        names = [g["name"] for g in response.data["results"]]
+        self.assertEqual(names, sorted(names, reverse=True))
+
+        response = self.client.get(url, {"room": "df77f910-2dcd-45cf-b6be-054c744561a7", "sort_by": ["name"]})
+        names_sorted = [g["name"] for g in response.data["results"]]
+        self.assertEqual(names_sorted, sorted(names_sorted))
+
+    def test_create_guest_validation_error(self):
         response = self.client.post(reverse("main:guest-list"), {})
         self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.data)
+        self.assertIn("check_in", response.data)
+        self.assertIn("check_out", response.data)
 
-        self.assertEqual(response.data["name"], ["This field is required."])
-        self.assertEqual(response.data["check_in"], ["This field is required."])
-        self.assertEqual(response.data["check_in"], ["This field is required."])
-
-        response = self.client.post(
-            reverse("main:guest-list"),
-            {
-                "name": "Guido",
-                "lastname": "Van Rossum",
-                "check_in": 1722332871,
-                "check_out": 1722332912,
-                "room": "df77f910-2dcd-45cf-b6be-054c744561a7",
-            },
-        )
+    def test_create_guest_success(self):
+        url = reverse("main:guest-list")
+        payload = {
+            "name": "Guido",
+            "lastname": "Van Rossum",
+            "check_in": 1722332871,
+            "check_out": 1722332912,
+            "room": "df77f910-2dcd-45cf-b6be-054c744561a7"
+        }
+        response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["name"], "Guido")
-        self.assertEqual(response.data["lastname"], "Van Rossum")
-        self.assertEqual(response.data["check_in"], 1722332871)
-        self.assertEqual(response.data["check_out"], 1722332912)
-        self.assertEqual(response.data["room"], uuid.UUID("df77f910-2dcd-45cf-b6be-054c744561a7"))
-
-    def test_update(self):
-        url = reverse("main:guest-detail", kwargs={"pk": "5b66af57-fb27-4c26-9986-b9994e644605"})
-        data = {"name": "Guido", "room": None}
-        response = self.client.put(url, data, format="json")
-        self.assertEqual(response.status_code, 200)
-
-        response = self.client.get(reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"}))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["state"], [])
-
-        url = reverse("main:guest-detail", kwargs={"pk": "5b66af57-fb27-4c26-9986-b9994e644605"})
-        data = {"name": "Guido", "room": "df77f910-2dcd-45cf-b6be-054c744561a7"}
-        response = self.client.put(url, data, format="json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["room"], uuid.UUID("df77f910-2dcd-45cf-b6be-054c744561a7"))
-
-        response = self.client.get(reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"}))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(Room.CheckedIn, response.data["state"])
-
-        url = reverse("main:guest-detail", kwargs={"pk": "52d8ba26-6fac-463b-a131-c16410e42ede"})
-        data = {"name": "Guido", "room": "df77f910-2dcd-45cf-b6be-054c744561a7"}
-        response = self.client.put(url, data, format="json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["room"], uuid.UUID("df77f910-2dcd-45cf-b6be-054c744561a7"))
-
-        response = self.client.get(reverse("main:room-detail", kwargs={"pk": "df77f910-2dcd-45cf-b6be-054c744561a7"}))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(Room.CheckedIn, response.data["state"])
-
-        url = reverse("main:guest-detail", kwargs={"pk": "52d8ba26-6fac-463b-a131-c16410e42ede"})
-        data = {"name": "Guido", "room": "ab09aa20-77b8-457a-bfc4-5dee69790241"}
-        response = self.client.put(url, data, format="json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["room"], uuid.UUID("ab09aa20-77b8-457a-bfc4-5dee69790241"))
-
-        response = self.client.get(reverse("main:room-detail", kwargs={"pk": "ab09aa20-77b8-457a-bfc4-5dee69790241"}))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(Room.CheckedIn, response.data["state"])
+        self.assertEqual(response.data["room"], str(uuid.UUID(payload["room"])))

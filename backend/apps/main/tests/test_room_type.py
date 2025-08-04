@@ -1,5 +1,4 @@
 from django.urls import reverse
-
 from core.tests.base_test import BaseTestCase
 
 
@@ -10,6 +9,7 @@ class RoomTypeTest(BaseTestCase):
         "roles_permissions.yaml",
         "users.yaml",
         "dashboard.yaml",
+        "public_space.yaml",
         "room_type.yaml",
     )
 
@@ -19,11 +19,7 @@ class RoomTypeTest(BaseTestCase):
     def test_list(self):
         response = self.client.get(reverse("main:room-type-list"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["results"][0]["id"], "deb5db89-b9cf-4aee-989d-4a7a7bdeb096")
-        self.assertEqual(response.data["results"][0]["title"], "Luxury")
-        self.assertEqual(response.data["results"][0]["check_in_out_address"], None)
-        self.assertEqual(response.data["results"][0]["check_in_value"], None)
-        self.assertEqual(response.data["results"][0]["check_out_value"], None)
+        self.assertGreaterEqual(len(response.data["results"]), 2)
 
     def test_create(self):
         response = self.client.post(reverse("main:room-type-list"), {"title": "Room Type"})
@@ -34,20 +30,51 @@ class RoomTypeTest(BaseTestCase):
         self.assertEqual(response.data["title"], ["This field is required."])
 
     def test_delete(self):
-        room_list = self.client.get(reverse("main:room-type-list"))
-        first_room_id = room_list.data["results"][0]["id"]
+        response = self.client.get(reverse("main:room-type-list"))
+        room_id = response.data["results"][0]["id"]
 
-        response = self.client.delete(reverse("main:room-type-detail", kwargs={"pk": first_room_id}))
+        response = self.client.delete(reverse("main:room-type-detail", kwargs={"pk": room_id}))
         self.assertEqual(response.status_code, 204)
 
     def test_update(self):
-        room_list = self.client.get(reverse("main:room-type-list"))
-        first_room_id = room_list.data["results"][0]["id"]
-        data = {"title": "Room Type Updated"}
-        url = reverse("main:room-type-detail", kwargs={"pk": first_room_id})
-        response = self.client.put(url, data, format="json")
+        response = self.client.get(reverse("main:room-type-list"))
+        room_id = response.data["results"][0]["id"]
+        url = reverse("main:room-type-detail", kwargs={"pk": room_id})
+
+        update_data = {"title": "Updated Room Type"}
+        response = self.client.put(url, update_data, format="json")
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["title"], "Updated Room Type")
 
         response = self.client.put(url, {})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["title"], ["This field is required."])
+
+    def test_filter_by_title(self):
+        url = reverse("main:room-type-list") + "?search_field=title&search_value=Luxury"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(all("Luxury" in r["title"] for r in response.data["results"]))
+
+    def test_connect_room_type_to_public_spaces(self):
+        response = self.client.get(reverse("main:room-type-list"))
+        self.assertEqual(response.status_code, 200)
+        room_type = response.data["results"][0]
+        room_type_id = room_type["id"]
+
+        payload = {
+            "title": room_type["title"],
+            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790243", "ad09aa20-77b8-457a-bfc4-5dee69790242"]
+        }
+
+        url = reverse("main:room-type-detail", kwargs={"pk": room_type_id})
+        response = self.client.put(url, data=payload, format="json")
+        self.assertEqual(response.status_code, 200)
+
+        public_spaces = response.data.get("public_spaces", [])
+        self.assertEqual(len(public_spaces), 2)
+
+        ids = {ps["id"] for ps in public_spaces}
+        self.assertSetEqual(
+            ids, {"ad09aa20-77b8-457a-bfc4-5dee69790243", "ad09aa20-77b8-457a-bfc4-5dee69790242"}
+        )

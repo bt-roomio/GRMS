@@ -1,0 +1,22 @@
+- model: main.publicspace
+  pk: "ad09aa20-77b8-457a-bfc4-5dee69790243"
+  fields:
+    floor: "1st"
+    block: "A"
+    name: "Lobby"
+    accessible_for_guest: true
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    additional_info:
+      area: "100 sqm"
+      open_hours: "24/7"
+
+- model: main.publicspace
+  pk: "ad09aa20-77b8-457a-bfc4-5dee69790242"
+  fields:
+    floor: "2nd"
+    block: "B"
+    name: "Conference Room"
+    accessible_for_guest: false
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    additional_info:
+      capacity: 20

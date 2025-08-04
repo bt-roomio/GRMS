@@ -22,8 +22,11 @@ class PublicSpaceListView(APIView):
             accessible_for_guest=params.get("accessible_for_guest", None),
         )
         serializer = PublicSpaceSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
-        return Response(data)
+        try:
+            data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
+            return Response(data)
+        except Exception:
+            return Response({"message": "Internal server error"}, status=500)
 
     @public_space_swagger()
     @check_perms(["access_manager.add_publicspace"])
