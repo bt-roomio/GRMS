@@ -113,6 +113,7 @@ def get_dnd_rooms(tenant):
             entity__tenant=tenant,
             key=key_dict.key_id,
         ).values_list("entity__room_id", flat=True)
+    return []
 
 
 def get_mur_rooms(tenant):
@@ -123,6 +124,7 @@ def get_mur_rooms(tenant):
             entity__tenant=tenant,
             key=key_dict.key_id,
         ).values_list("entity__room_id", flat=True)
+    return []
 
 
 def get_occupied_rooms(tenant):
