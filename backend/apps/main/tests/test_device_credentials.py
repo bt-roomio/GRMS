@@ -1,4 +1,5 @@
 from django.urls import reverse
+from core.tests.base import BaseTestCase
 from core.tests.base_test import BaseTestCase
 
 
@@ -17,6 +18,7 @@ class DeviceCredentialsDetailViewTest(BaseTestCase):
 
     def setUp(self):
         super().setUp()
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
 
     def test_get_device_credentials_success(self):
