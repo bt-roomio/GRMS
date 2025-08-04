@@ -16,11 +16,7 @@ class RolesTest(BaseTestCase):
     def test_list(self):
         response = cast(Response, self.client.get(reverse("users:roles-list")))
         self.assertEqual(response.status_code, 200)
-
-        if response.data is None:
-            self.assertIsNotNone(response.data, "Expected response.data to be present")
-            return
-
+        assert response.data is not None
         self.assertEqual(response.data[0]["name"], "TENANT_ADMIN")
         self.assertEqual(response.data[0]["id"], "bb436b2a-2ff5-4835-a264-fe27e30710e6")
 
@@ -29,10 +25,7 @@ class RolesTest(BaseTestCase):
             Response,
             self.client.post(reverse("users:roles-list"), data={"name": "NEW_ROLE", "permissions": []}, format="json"),
         )
-        if response.data is None:
-            self.assertIsNotNone(response.data, "Expected response.data to be present")
-            return
-
+        assert response.data is not None
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["name"], "NEW_ROLE")
         self.assertEqual(response.data["permissions"], [])
@@ -45,9 +38,7 @@ class RolesTest(BaseTestCase):
                 data={"name": "UPDATED_ROLE"},
             ),
         )
-        if response.data is None:
-            self.assertIsNotNone(response.data, "Expected response.data to be present")
-            return
+        assert response.data is not None
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name"], "UPDATED_ROLE")
@@ -57,10 +48,7 @@ class RolesTest(BaseTestCase):
             Response,
             self.client.get(reverse("users:roles-detail", kwargs={"pk": "bb436b2a-2ff5-4835-a264-fe27e30710e6"})),
         )
-        if response.data is None:
-            self.assertIsNotNone(response.data, "Expected response.data to be present")
-            return
-
+        assert response.data is not None
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name"], "TENANT_ADMIN")
 

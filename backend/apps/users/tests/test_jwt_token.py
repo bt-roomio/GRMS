@@ -15,18 +15,13 @@ class CustomTokenViewsTests(APITestCase):
         user_data = {"email": "angelina@gmail.com", "password": "password"}
         response = cast(Response, self.client.post(reverse("users:access-token"), user_data))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        if response.data is None:
-            self.assertIsNotNone(response.data, "Expected response.data to be present")
-            return
+        assert response.data is not None
         self.assertIn("access", response.data)
         self.assertIn("refresh", response.data)
 
         # Case
         refresh_token = response.data["refresh"]
         response = cast(Response, self.client.post(reverse("users:refresh-token"), {"refresh": refresh_token}))
-        if response.data is None:
-            self.assertIsNotNone(response.data, "Expected response.data to be present")
-            return
-
+        assert response.data is not None
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access", response.data)
