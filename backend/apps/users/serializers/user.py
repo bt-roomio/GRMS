@@ -28,26 +28,29 @@ class AdditionalInfoField(serializers.JSONField):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all())
+    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=False)
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["created_at"] = instance.date_joined
+        return data
+
     def validate_email(self, value):
-        # Normalize the email by converting it to lowercase
         normalized_email = value.lower()
 
-        # Check for uniqueness in a case-insensitive manner
+        user = User.objects.filter(email__iexact=normalized_email)
         if self.instance:
-            # Exclude the current instance if updating
-            if User.objects.filter(email__iexact=normalized_email).exclude(pk=self.instance.pk).exists():
-                raise serializers.ValidationError("user with this email already exists.")
+            if user.exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError("User with this email already exists!")
         else:
-            if User.objects.filter(email__iexact=normalized_email).exists():
-                raise serializers.ValidationError("user with this email already exists.")
+            if user.exists():
+                raise serializers.ValidationError("User with this email already exists!")
 
         return normalized_email
 
     def create(self, validated_data):
-        roles_data = validated_data.pop("roles")
+        roles_data = validated_data.pop("roles") if "roles" in validated_data else []
         user = User.objects.create(**validated_data)
         user.roles.set(roles_data)
         return user
@@ -62,7 +65,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "additional_info",
             "phone",
-            "created_at",
+            "date_joined",
             "tenant",
             "roles",
             "is_active",
@@ -89,7 +92,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "is_superuser",
             "additional_info",
             "phone",
-            "created_at",
+            "date_joined",
             "tenant",
             "roles",
             "is_active",

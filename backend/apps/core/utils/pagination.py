@@ -2,8 +2,10 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 
-def pagination(queryset, serializer, page, size=15):
+def pagination(queryset, serializer, page, size):
     page = page or 1
+    size = size or 15
+
     offset = (page - 1) * size
     limit = offset + size
     serializer.instance = queryset[offset:limit]

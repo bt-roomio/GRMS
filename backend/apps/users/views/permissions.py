@@ -29,7 +29,7 @@ HIDDEN_PERMS = [
 
 class PermissionsListView(APIView):
     @swagger_auto_schema(tags=["Users, Permissions"], responses=PermissionsSwagger)
-    @check_perms(["users.view_permissions"])
+    @check_perms(["auth.view_permission"])
     def get(self, request):
         instance = Permission.objects.exclude(content_type__model__in=HIDDEN_PERMS).order_by("id")
         serializer = PermissionsSerializer(instance, many=True)

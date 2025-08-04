@@ -1,7 +1,13 @@
+from typing import TypedDict
+
 from rest_framework import serializers
 from rest_framework.fields import RegexValidator
 
 from core.utils.serializers import ValidatorSerializer
+
+
+class ActivationLinkParamsDict(TypedDict):
+    send_activation_mail: bool
 
 
 class ActivationLinkParams(ValidatorSerializer):

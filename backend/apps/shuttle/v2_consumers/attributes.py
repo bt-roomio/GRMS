@@ -26,7 +26,6 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMi
         return query
 
     async def get_latest_activity(self, message):
-        print(message)
         updates = message.get("updates", []) or []
         for update in updates:
             await self.handle_ts_kv_activity(update)

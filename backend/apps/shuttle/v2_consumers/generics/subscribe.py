@@ -11,7 +11,6 @@ class SubscribeMixin:
 
     @action()
     async def subscribe(self, request_id, action, query_params):
-        print(self.group_name)
         await self.add_group(self.group_name)
         self.subscribers[request_id] = {"query_params": query_params, "action": action}
 
