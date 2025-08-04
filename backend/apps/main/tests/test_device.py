@@ -46,6 +46,7 @@ class DeviceTest(BaseTestCase):
         self.assertIn("credentials", first_device)
         self.assertIsNotNone(first_device["credentials"])
 
+
     def test_list_with_search_field_name(self):
         response = self.client.get(reverse("main:device-list"), {"search_field": "name", "search_value": "DHT11"})
         self.assertEqual(response.status_code, 200)
