@@ -3,7 +3,7 @@ from uuid import UUID
 
 from _typeshed import Incomplete
 
-from core.models import BaseModel, CreatedByModel, UpdateByModel
+from core.models import BaseModel, UpdateByModel
 from main.querysets.device import DeviceQuerySet
 from main.querysets.room import RoomQuerySet
 from shuttle.models import TsKvDictionary as TsKvDictionary
@@ -275,7 +275,7 @@ class Guest(BaseModel):
         ordering: Incomplete
         permissions: Incomplete
 
-class PublicSpace(BaseModel, CreatedByModel):
+class PublicSpace(BaseModel):
     floor: Incomplete
     block: Incomplete
     name: Incomplete
@@ -287,7 +287,7 @@ class PublicSpace(BaseModel, CreatedByModel):
     @property
     def devices(self): ...
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table: str
         unique_together: Incomplete
 

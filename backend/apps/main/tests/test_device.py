@@ -1,9 +1,9 @@
 import uuid
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.urls import reverse
 
-from core.tests.base_test import BaseTestCase
+from core.tests.base import BaseTestCase
 from main.models import Device, DeviceCredentials
 
 
@@ -47,38 +47,27 @@ class DeviceTest(BaseTestCase):
         self.assertIsNotNone(first_device["credentials"])
 
     def test_list_with_search_field_name(self):
-        response = self.client.get(reverse("main:device-list"), {
-            "search_field": "name",
-            "search_value": "DHT11"
-        })
+        response = self.client.get(reverse("main:device-list"), {"search_field": "name", "search_value": "DHT11"})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.data["results"]) >= 1)
 
     def test_list_with_search_field_device_profile(self):
-        response = self.client.get(reverse("main:device-list"), {
-            "search_field": "device_profile__name",
-            "search_value": "default"
-        })
+        response = self.client.get(
+            reverse("main:device-list"), {"search_field": "device_profile__name", "search_value": "default"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.data["results"]) >= 1)
 
     def test_list_with_status_filter(self):
-        response = self.client.get(reverse("main:device-list"), {
-            "status": "true"
-        })
+        response = self.client.get(reverse("main:device-list"), {"status": "true"})
         self.assertEqual(response.status_code, 200)
 
     def test_list_with_sorting(self):
-        response = self.client.get(reverse("main:device-list"), {
-            "sort_by": ["name", "-created_at"]
-        })
+        response = self.client.get(reverse("main:device-list"), {"sort_by": ["name", "-created_at"]})
         self.assertEqual(response.status_code, 200)
 
     def test_list_with_pagination(self):
-        response = self.client.get(reverse("main:device-list"), {
-            "page": 1,
-            "size": 10
-        })
+        response = self.client.get(reverse("main:device-list"), {"page": 1, "size": 10})
         self.assertEqual(response.status_code, 200)
 
     def test_create_missing_required_fields(self):
@@ -103,9 +92,9 @@ class DeviceTest(BaseTestCase):
                 "label": "Test Label",
                 "additional_info": {"test": "data"},
                 "device_data": {"config": "test"},
-                "external_id": "EXT123"
+                "external_id": "EXT123",
             },
-            format="json"
+            format="json",
         )
 
         self.assertEqual(response.status_code, 201)
@@ -124,7 +113,7 @@ class DeviceTest(BaseTestCase):
         new_device = Device.objects.get(id=response.data["id"])
         self.assertTrue(DeviceCredentials.objects.filter(device=new_device).exists())
 
-    @patch('main.serializers.device.has_roomio_node')
+    @patch("main.serializers.device.has_roomio_node")
     def test_create_with_roomio_node_validation_error(self, mock_has_roomio_node):
         mock_has_roomio_node.return_value = True
 
@@ -134,16 +123,16 @@ class DeviceTest(BaseTestCase):
                 "name": "Device DHT",
                 "type": "default",
                 "device_profile": self.device_profile_id,
-                "additional_info": {"roomio_node": True}
+                "additional_info": {"roomio_node": True},
             },
-            format="json"
+            format="json",
         )
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.data)
         self.assertEqual(response.data["detail"], "You already have a device with a 'roomio_node'.")
 
-    @patch('main.serializers.device.has_roomio_node')
+    @patch("main.serializers.device.has_roomio_node")
     def test_create_with_roomio_node_success(self, mock_has_roomio_node):
         mock_has_roomio_node.return_value = False
 
@@ -153,9 +142,9 @@ class DeviceTest(BaseTestCase):
                 "name": "Device DHT",
                 "type": "default",
                 "device_profile": self.device_profile_id,
-                "additional_info": {"roomio_node": True}
+                "additional_info": {"roomio_node": True},
             },
-            format="json"
+            format="json",
         )
 
         self.assertEqual(response.status_code, 201)
@@ -204,7 +193,7 @@ class DeviceTest(BaseTestCase):
             "label": "Updated Label",
             "additional_info": {"updated": True},
             "device_data": {"updated_config": "test"},
-            "external_id": "UPDATED123"
+            "external_id": "UPDATED123",
         }
         response = self.client.put(url, data, format="json")
 
@@ -232,7 +221,7 @@ class DeviceTest(BaseTestCase):
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 404)
 
-    @patch('main.views.device.remove_need_sync')
+    @patch("main.views.device.remove_need_sync")
     def test_delete_success(self, mock_remove_need_sync):
         url = reverse("main:device-detail", kwargs={"pk": self.device_id})
         response = self.client.delete(url)
@@ -258,8 +247,8 @@ class DeviceTest(BaseTestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 404)
 
-    @patch('main.models.PublicSpace.objects.filter')
-    @patch('access_manager.models.NeedSyncDevice.objects.filter')
+    @patch("main.models.PublicSpace.objects.filter")
+    @patch("access_manager.models.NeedSyncDevice.objects.filter")
     def test_remove_need_sync_function(self, mock_need_sync_filter, mock_public_space_filter):
         from main.views.device import remove_need_sync
 
@@ -288,11 +277,9 @@ class DeviceTest(BaseTestCase):
     def test_serializer_representation_with_credentials(self):
         device = Device.objects.get(pk=self.device_id)
 
-        if not hasattr(device, 'credentials'):
+        if not hasattr(device, "credentials"):
             DeviceCredentials.objects.create(
-                device=device,
-                credentials_id="test-credentials",
-                credentials_type="ACCESS_TOKEN"
+                device=device, credentials_id="test-credentials", credentials_type="ACCESS_TOKEN"
             )
 
         url = reverse("main:device-detail", kwargs={"pk": self.device_id})
@@ -312,12 +299,8 @@ class DeviceTest(BaseTestCase):
     def test_serializer_representation_without_credentials(self):
         response = self.client.post(
             reverse("main:device-list"),
-            {
-                "name": "Device Without Creds",
-                "type": "default",
-                "device_profile": self.device_profile_id
-            },
-            format="json"
+            {"name": "Device Without Creds", "type": "default", "device_profile": self.device_profile_id},
+            format="json",
         )
 
         device_id = response.data["id"]
@@ -331,15 +314,12 @@ class DeviceTest(BaseTestCase):
         self.assertIsNone(response.data["credentials"])
 
     def test_invalid_filter_params(self):
-        response = self.client.get(reverse("main:device-list"), {
-            "search_field": "invalid_field",
-            "search_value": "test"
-        })
+        response = self.client.get(
+            reverse("main:device-list"), {"search_field": "invalid_field", "search_value": "test"}
+        )
         self.assertEqual(response.status_code, 400)
 
-        response = self.client.get(reverse("main:device-list"), {
-            "sort_by": ["invalid_field"]
-        })
+        response = self.client.get(reverse("main:device-list"), {"sort_by": ["invalid_field"]})
         self.assertEqual(response.status_code, 400)
 
     def test_edge_cases_pagination(self):

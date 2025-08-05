@@ -1,9 +1,6 @@
-from typing import cast
-
-from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
-from core.tests.base_test import BaseTestCase
+from core.tests.base import BaseTestCase
 
 
 class PermissionsListViewTests(BaseTestCase):
@@ -18,7 +15,7 @@ class PermissionsListViewTests(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.angelina_token)
 
     def test_permissions_list(self):
-        response = cast(Response, self.client.get(reverse("users:permissions-list")))
+        response = self.get(reverse("users:permissions-list"))
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.data, "Expected response.data to be present")
 

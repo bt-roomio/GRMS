@@ -1,12 +1,11 @@
-from django_filters.rest_framework import DjangoFilterBackend
-
-from rest_framework import filters, status
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.pagination import pagination
 from core.utils.permission import check_perms
 from services.models import Integration
-from services.serializers.integration import IntegrationSerializer
+from services.serializers.integration import IntegrationParams, IntegrationSerializer
 from services.swagger.integration import (
     integration_swagger_list,
     integration_swagger_retrive,
@@ -15,55 +14,29 @@ from services.swagger.integration import (
 
 
 class IntegrationListView(APIView):
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["name"]
-    search_fields = ["name", "type"]
-
-    def get_queryset(self):
-        return Integration.objects.filter(
-            is_active=True,
-            tenant=self.request.user.tenant,
-        )
-
-
-@integration_swagger_list()
-@check_perms(["services.view_integration"])
-def get(self, request, *args, **kwargs):
-    queryset = self.get_queryset()
-    for backend in self.filter_backends:
-        queryset = backend().filter_queryset(request, queryset, self)
-
-    serializer = IntegrationSerializer(queryset, many=True)
-    return Response(serializer.data)
+    @integration_swagger_list()
+    def get(self, request):
+        params = IntegrationParams.check(request.GET)
+        page, size = params.pop("page"), params.pop("size")
+        queryset = Integration.objects.list(tenant_id=request.user.tenant_id, **params)
+        serializer = IntegrationSerializer(queryset, many=True)
+        data = pagination(queryset, serializer, page, size)
+        return Response(data)
 
 
 class IntegrationDetailView(APIView):
-    def get_object(self, pk):
-        try:
-            return Integration.objects.get(pk=pk, is_active=True, tenant=self.request.user.tenant)
-        except Integration.DoesNotExist:
-            return None
-
     @integration_swagger_retrive()
     @check_perms(["services.view_integration"])
-    def get(self, request, pk, *args, **kwargs):
-        instance = self.get_object(pk)
-        if not instance:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+    def get(self, request, pk):
+        instance = get_object_or_404(Integration, pk=pk, is_active=True, enable=True, tenant_id=request.user.tenant_id)
         serializer = IntegrationSerializer(instance)
         return Response(serializer.data)
 
     @integration_swagger_update()
     @check_perms(["services.change_integration"])
-    def put(self, request, pk, *args, **kwargs):
-        instance = self.get_object(pk)
-        if not instance:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+    def put(self, request, pk):
+        instance = get_object_or_404(Integration, pk=pk, is_active=True, enable=True, tenant_id=request.user.tenant_id)
         serializer = IntegrationSerializer(instance, data=request.data, partial=False)
-        if serializer.is_valid():
-            serializer.save(updated_by=request.user)
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def patch(self, request, *args, **kwargs):
-        return Response({"detail": 'Method "PATCH" not allowed.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(updated_by=request.user)
+        return Response(serializer.data)

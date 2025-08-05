@@ -1,5 +1,5 @@
 from django.urls import reverse
-from core.tests.base_test import BaseTestCase
+from core.tests.base import BaseTestCase
 from main.models import WidgetType
 
 

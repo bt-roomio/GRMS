@@ -27,7 +27,7 @@
       first_name: Angelina
       last_name: Jolie
       phone: "+999987654321"
-      roles: [bb436b2a-2ff5-4835-a264-fe27e30710e6]
+      roles: [bb436b2a-2ff5-4835-a264-fe27e30710e6] # TENANT_ADMIN
       date_joined: 2025-01-01T00:00:00
       password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
       tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc

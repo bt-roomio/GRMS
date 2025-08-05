@@ -67,6 +67,19 @@
             - users
             - role
 
+          - - view_integration
+            - services
+            - integration
+          - - add_integration
+            - services
+            - integration
+          - - change_integration
+            - services
+            - integration
+          - - delete_integration
+            - services
+            - integration
+
           - - view_permission
             - auth
             - permission

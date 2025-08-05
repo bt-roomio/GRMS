@@ -3,6 +3,8 @@ import uuid
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 
+from services.querysets.integration import IntegrationQuerySet
+
 
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -17,7 +19,6 @@ class BaseModel(models.Model):
 
 
 class Integration(BaseModel):
-
     TYPES = (("FIAS", "FIAS"), ("hoteza", "hoteza"))
 
     name = models.CharField(max_length=100)
@@ -32,6 +33,8 @@ class Integration(BaseModel):
         "Unselect this instead of deleting accounts.",
     )
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+
+    objects = IntegrationQuerySet.as_manager()
 
     class Meta(BaseModel.Meta):
         db_table = "services_integration"
