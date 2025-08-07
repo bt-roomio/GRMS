@@ -1,11 +1,9 @@
-from django.db.models import Q
-
 from access_manager.models import GuestCard
 from access_manager.tasks.send_rpc import send_rpc_request
+from django.db.models import Q
 
 from rest_framework import serializers
 
-from access_manager.utilits.get_device_cards import get_device_cards
 from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Guest, Room
@@ -75,13 +73,21 @@ class GuestSerializer(serializers.ModelSerializer):
 
         if validated_data.get("is_active") == False:
             room = Room.objects.filter(id=instance.room_id).first()
+            if room is None:
+                raise serializers.ValidationError({"room": "Room not found!"})
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-            devices = Device.objects.filter(
-                Q(room__id=room.id) |
-                Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
-                is_active=True
-            ).select_related("tenant").distinct()
+            devices = (
+                Device.objects.filter(
+                    Q(room__id=room.id)
+                    | Q(
+                        device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests
+                    ),
+                    is_active=True,
+                )
+                .select_related("tenant")
+                .distinct()
+            )
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 0)
                 not result.get("success") and deactivate_result.update({"success": False})
