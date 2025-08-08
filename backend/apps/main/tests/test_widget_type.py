@@ -7,7 +7,7 @@ class WidgetTypeTest(BaseTestCase):
     fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "widget_type.yaml")
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
 
     def test_list_widget_types_success(self):

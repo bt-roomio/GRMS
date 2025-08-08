@@ -6,7 +6,7 @@ class PublicSpaceTest(BaseTestCase):
     fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "public_space.yaml")
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.list_url = reverse("main:public-space-list")
         self.lobby_id = "ad09aa20-77b8-457a-bfc4-5dee69790243"
         self.conference_room_id = "ad09aa20-77b8-457a-bfc4-5dee69790242"

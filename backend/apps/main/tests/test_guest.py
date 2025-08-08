@@ -16,7 +16,7 @@ class GuestTest(BaseTestCase):
     )
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
 
     def test_list_guests_basic(self):
         url = reverse("main:guest-list")

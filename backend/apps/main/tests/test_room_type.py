@@ -14,7 +14,7 @@ class RoomTypeTest(BaseTestCase):
     )
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
 
     def test_list(self):
         response = self.client.get(reverse("main:room-type-list"))

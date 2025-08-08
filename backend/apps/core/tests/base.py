@@ -30,6 +30,16 @@ class BaseTestCase(APITestCase):
 
         return ""
 
+    @property
+    def karina_token(self):
+        user = authenticate(email="karina@gmail.com", password="password")
+        if not user:
+            return ""
+
+        refresh = cast(RefreshToken, RefreshToken.for_user(user))
+        return f"Bearer {refresh.access_token}"
+
+
     def dump(self, response):
         print("-" * 40)
         print("Response:", response.status_code)

@@ -8,12 +8,12 @@ class RoomTest(BaseTestCase):
     fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "room.yaml")
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
 
     def test_list(self):
         response = self.client.get(reverse("main:room-list"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(len(response.data["results"]), 3)
         self.assertEqual(response.data["results"][0]["number"], 101)
         self.assertEqual(response.data["results"][1]["number"], 102)
 
@@ -49,7 +49,7 @@ class RoomTest(BaseTestCase):
         response = self.client.get(reverse("main:room-list"), {"page": 1, "size": 1})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(response.data["count"], 3)
 
     def test_sorting_fields(self):
         url = reverse("main:room-list")

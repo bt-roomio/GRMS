@@ -15,8 +15,9 @@ class EmailConfigurationTest(BaseTestCase):
     )
 
     def setUp(self):
-        self.user = User.objects.get(pk='da16dcfd-b885-4966-84db-c3e26ff50afc')
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
+        self.user = User.objects.get(pk='e1fcc1ff-cce1-47e9-9952-88665815a9bd')
+        self.tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
 
     def test_get_success(self):
         response = self.client.get(reverse("main:email-config-detail"))
@@ -28,10 +29,8 @@ class EmailConfigurationTest(BaseTestCase):
         self.assertEqual(response.data["username"], "Admin")
 
     def test_get_no_configuration(self):
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        user = User.objects.first()
-        EmailConfiguration.objects.filter(tenant=user.tenant).delete()
+        tenant_id = self.tenant_id
+        EmailConfiguration.objects.filter(tenant=tenant_id).delete()
 
         response = self.client.get(reverse("main:email-config-detail"))
         self.assertEqual(response.status_code, 200)
