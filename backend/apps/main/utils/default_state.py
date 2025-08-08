@@ -9,7 +9,7 @@ def default_state():
 
 
 class StateEnum(str, Enum):
-    CHECK_IN_OUT = "Room reservation status"
+    CHECK_IN_OUT = "CHECK IN/OUT"
     OCCUPANCY_STATUS = "OCCUPANCY STATUS"
 
 
@@ -26,7 +26,7 @@ def attribute_room_state(room, state: StateEnum, value=True):
         attribute_key=state.value,
         entity_type="DEVICE",
         attribute_type=AttributeKv.SHARED_SCOPE,
-        defaults={"last_update_ts": time.time(), "long_v": 1 if value else 2},
+        defaults={"last_update_ts": time.time(), "long_v": int(value)},
     )
     device_gateway = Device.objects.get_relation_or_gateway(device.id)  # pyright: ignore
     return ({state.value: int(value)}, str(device_gateway), device.name)
