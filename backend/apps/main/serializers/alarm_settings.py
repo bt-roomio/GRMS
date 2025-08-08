@@ -6,17 +6,19 @@ class AlarmSettingsSerializer(serializers.Serializer):
     humidity_enable = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):
+        updated_by = validated_data.pop("updated_by", None)
         instance.additional_info = {
             "general_settings": {
                 **(instance.additional_info and instance.additional_info.get("general_settings", {}) or {}),
             }
         }
-
-        if "bathroom_enable" in self.initial_data:
+        if "bathroom_enable" in validated_data:
             instance.additional_info["general_settings"]["bathroom_enable"] = validated_data["bathroom_enable"]
-
-        if "humidity_enable" in self.initial_data:
+        if "humidity_enable" in validated_data:
             instance.additional_info["general_settings"]["humidity_enable"] = validated_data["humidity_enable"]
+
+        if updated_by is not None:
+            instance.updated_by = updated_by
         instance.save()
         return instance
 

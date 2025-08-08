@@ -35,3 +35,19 @@
       customer_id: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
       tenant_id: "5b2b6879-0791-4b14-8545-6abf61e73b68"
       device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
+
+- model: "main.Device"
+  pk: "1829490d-f742-400e-8f48-aae5155e4b27"
+  fields:
+    name: "Test Device"
+    type: "default"
+    device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.Device"
+  pk: "3829490d-f742-400e-8f38-aae5155d0b27"
+  fields:
+    name: "Fixture Device"
+    type: "TEST"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"

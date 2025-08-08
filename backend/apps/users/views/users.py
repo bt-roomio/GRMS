@@ -31,7 +31,7 @@ class UserListView(APIView):
         serializer = UserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
-        return Response(serializer.data)
+        return Response(serializer.data, 201)
 
 
 class UserDetailView(APIView):

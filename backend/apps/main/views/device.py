@@ -1,13 +1,15 @@
+from access_manager.models import NeedSyncDevice
+
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from access_manager.models import NeedSyncDevice
+
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import Device, PublicSpace
 from main.serializers.device import DeviceFilterParams, DeviceSerializer
 from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
-from core.utils.permission import check_perms
 
 
 class DeviceListView(APIView):
@@ -15,7 +17,7 @@ class DeviceListView(APIView):
     @check_perms(["main.view_device"])
     def get(self, request):
         params = DeviceFilterParams.check(request.GET)
-        queryset = Device.objects.list(  # pyright: ignore
+        queryset = Device.objects.list(
             tenant=request.user.tenant,
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
@@ -72,4 +74,3 @@ def remove_need_sync(device: Device):
     if device.room:
         device.room = None
         device.save()
-

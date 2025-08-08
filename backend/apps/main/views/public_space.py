@@ -11,7 +11,7 @@ from main.swagger.public_space import public_space_swagger
 
 class PublicSpaceListView(APIView):
     @public_space_swagger()
-    @check_perms(["access_manager.view_publicspace"])
+    @check_perms(["main.view_publicspace"])
     def get(self, request):
         params = PublicSpaceFilterParams.check(request.GET)
         queryset = PublicSpace.objects.list(  # pyright: ignore
@@ -22,11 +22,14 @@ class PublicSpaceListView(APIView):
             accessible_for_guest=params.get("accessible_for_guest", None),
         )
         serializer = PublicSpaceSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
-        return Response(data)
+        try:
+            data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
+            return Response(data)
+        except Exception:
+            return Response({"message": "Internal server error"}, status=500)
 
     @public_space_swagger()
-    @check_perms(["access_manager.add_publicspace"])
+    @check_perms(["main.add_publicspace"])
     def post(self, request):
         data = with_tenant(request)
         serializer = PublicSpaceSerializer(data=data)
@@ -37,14 +40,14 @@ class PublicSpaceListView(APIView):
 
 class PublicSpaceDetailView(APIView):
     @public_space_swagger()
-    @check_perms(["access_manager.view_publicspace"])
+    @check_perms(["main.view_publicspace"])
     def get(self, request, pk):
         instance = get_object_or_404(PublicSpace, pk=pk, tenant_id=request.user.tenant_id)
         serializer = PublicSpaceSerializer(instance)
         return Response(serializer.data)
 
     @public_space_swagger()
-    @check_perms(["access_manager.change_publicspace"])
+    @check_perms(["main.change_publicspace"])
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(PublicSpace, id=pk, tenant_id=request.user.tenant_id)
@@ -54,7 +57,7 @@ class PublicSpaceDetailView(APIView):
         return Response(serializer.data)
 
     @public_space_swagger()
-    @check_perms(["access_manager.delete_publicspace"])
+    @check_perms(["main.delete_publicspace"])
     def delete(self, request, pk):
         instance = get_object_or_404(PublicSpace, id=pk, tenant_id=request.user.tenant_id)
         DevicePublicSpaces.objects.filter(public_space=instance).delete()

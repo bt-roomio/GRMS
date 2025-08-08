@@ -10,6 +10,18 @@ from core.utils.unix_timestamp import UnixTimeStampField
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = UnixTimeStampField(default=get_mil_sec, editable=False, null=True)
+    created_by = models.ForeignKey(
+        "users.User", SET_NULL, null=True, blank=True, related_name="created_%(model_name)ss"
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ("id",)
+
+
+class NewUpdateByModel(models.Model):
+    updated_at = models.DateTimeField(auto_now=True, editable=False, null=True)
+    updated_by = models.ForeignKey("users.User", models.SET_NULL, "updated_%(model_name)ss", null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -42,19 +54,6 @@ class UpdateByModel(models.Model):
         if self.pk:
             self.updated_at = get_mil_sec()
         return super(UpdateByModel, self).save(*args, **kwargs)
-
-    class Meta:
-        abstract = True
-
-
-class CreatedByModel(models.Model):
-    created_by = models.ForeignKey(
-        "users.User",
-        SET_NULL,
-        null=True,
-        blank=True,
-        related_name="created_%(model_name)ss",
-    )
 
     class Meta:
         abstract = True

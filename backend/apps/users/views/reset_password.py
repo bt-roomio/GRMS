@@ -1,15 +1,16 @@
 import time
+from typing import cast
 
 from django.http import HttpResponse
-from drf_yasg.utils import APIView, swagger_auto_schema
 
+from drf_yasg.utils import APIView, swagger_auto_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView, get_object_or_404
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from users.models import ResetPassword, User
-from users.serializers.reset_password import ActivationLinkParams, ResetPasswordValidator
+from users.serializers.reset_password import ActivationLinkParams, ActivationLinkParamsDict, ResetPasswordValidator
 from users.swagger.reset_password import ActivationLinkSwagger, ResetPasswordSwagger
 from users.utils.emails import send_reset_link_email
 
@@ -21,7 +22,7 @@ class ActivationLinkView(APIView):
         tags=["Users, Activation Link"], responses=ActivationLinkSwagger, query_serializer=ActivationLinkParams
     )
     def get(self, request, user_id):
-        params = ActivationLinkParams.check(request.GET)
+        params = cast(ActivationLinkParamsDict, ActivationLinkParams.check(request.GET))
         user = get_object_or_404(User, pk=user_id)
         return HttpResponse(send_reset_link_email(user, params.get("send_activation_mail")))
 

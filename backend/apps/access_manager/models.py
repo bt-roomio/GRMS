@@ -12,7 +12,7 @@ from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
-from core.models import BaseModel, CreatedByModel, UpdateByModel
+from core.models import BaseModel, UpdateByModel
 
 
 class TypeChoices(models.IntegerChoices):
@@ -51,7 +51,7 @@ WEEK_DAYS = (
 )
 
 
-class Group(BaseModel, CreatedByModel, UpdateByModel):
+class Group(BaseModel, UpdateByModel):
     name = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE)
     week_days = ArrayField(models.CharField(max_length=10, choices=WEEK_DAYS))
@@ -70,14 +70,14 @@ class Group(BaseModel, CreatedByModel, UpdateByModel):
     def __str__(self):
         return str(self.id)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_groups"
         constraints = [
             UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_card_group")
         ]
 
 
-class Card(BaseModel, CreatedByModel, UpdateByModel):
+class Card(BaseModel, UpdateByModel):
     number = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     is_active = models.BooleanField(default=True)
@@ -90,12 +90,12 @@ class Card(BaseModel, CreatedByModel, UpdateByModel):
     def __str__(self):
         return str(self.id)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_cards"
         unique_together = ("number", "tenant")
 
 
-class CardLog(BaseModel, CreatedByModel, UpdateByModel):
+class CardLog(BaseModel, UpdateByModel):
     created_at: models.DateTimeField = models.DateTimeField(default=timezone.now)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     number = models.CharField(max_length=200)
@@ -115,7 +115,7 @@ class CardLog(BaseModel, CreatedByModel, UpdateByModel):
 
     objects = CardLogQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_card_logs"
         ordering = ["-event_ts"]
 
@@ -123,7 +123,7 @@ class CardLog(BaseModel, CreatedByModel, UpdateByModel):
         return f"{self.number} - {self.device} - {self.event_ts} - {self.access_group}"
 
 
-class NeedSyncDevice(BaseModel, CreatedByModel, UpdateByModel):
+class NeedSyncDevice(BaseModel, UpdateByModel):
     device = models.ForeignKey("main.Device", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     need_sync = models.BooleanField(default=True)
@@ -143,11 +143,11 @@ class NeedSyncDevice(BaseModel, CreatedByModel, UpdateByModel):
 
         return None, None
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta, UpdateByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_need_sync_devices"
 
 
-class Staff(BaseModel, CreatedByModel):
+class Staff(BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
@@ -165,7 +165,7 @@ class Staff(BaseModel, CreatedByModel):
     def get_name(self):
         return str(self.first_name + " " + self.last_name)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table = "access_manager_staff"
         constraints = [
             UniqueConstraint(
@@ -174,33 +174,33 @@ class Staff(BaseModel, CreatedByModel):
         ]
 
 
-class StaffCard(BaseModel, CreatedByModel):
+class StaffCard(BaseModel):
     staff = models.ForeignKey("access_manager.Staff", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table = "access_manager_staff_cards"
         constraints = [
             UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_active_staff_card"),
         ]
 
 
-class GuestCard(BaseModel, CreatedByModel):
+class GuestCard(BaseModel):
     guest = models.ForeignKey("main.Guest", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
 
     objects = GuestCardQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table = "access_manager_guest_cards"
         constraints = [
             UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_card_active"),
         ]
 
 
-class GroupRoom(BaseModel, CreatedByModel):
+class GroupRoom(BaseModel):
     group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_room")
     room = models.ForeignKey("main.Room", models.CASCADE, "group_room")
@@ -211,17 +211,17 @@ class GroupRoom(BaseModel, CreatedByModel):
     def __str__(self):
         return str(self.id)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table = "access_manager_group_rooms"
 
 
-class GroupPublicSpace(BaseModel, CreatedByModel):
+class GroupPublicSpace(BaseModel):
     group_id: UUID
     group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
     public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table = "access_manager_group_public_spaces"
 
     def __str__(self):
@@ -240,12 +240,12 @@ class GuestPublicSpace(BaseModel):
         return f"{self.guest} -> {self.public_space}"
 
 
-class CardDeviceSlot(BaseModel, UpdateByModel, CreatedByModel):
+class CardDeviceSlot(BaseModel, UpdateByModel):
     card_number = models.CharField(max_length=100)
     device = models.ForeignKey("main.Device", models.CASCADE)
     slot = models.PositiveBigIntegerField(validators=[MaxValueValidator(65535)])
     additional_info = models.JSONField(null=True, blank=True)
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         unique_together = [("device", "card_number"), ("device", "slot")]
         db_table = "access_manager_card_device_slots"

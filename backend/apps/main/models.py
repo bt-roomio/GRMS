@@ -8,7 +8,7 @@ from django.db.models.functions import Lower
 
 from rest_framework.exceptions import ValidationError
 
-from core.models import BaseModel, CreatedByModel, UpdateByModel
+from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
 from main.querysets.customer import CustomerQuerySet
 from main.querysets.dashboard import DashboardQuerySet
@@ -23,10 +23,11 @@ from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
+from services.models import BaseModel as ServiceBaseModel
 from shuttle.models import TsKvDictionary, TsKvLatest
 
 
-class Tenant(BaseModel):
+class Tenant(ServiceBaseModel):
     tenant_profile = models.ForeignKey("main.TenantProfile", CASCADE)
     additional_info = models.JSONField(null=True, blank=True)
     address = models.CharField(null=True, blank=True)
@@ -45,7 +46,7 @@ class Tenant(BaseModel):
 
     objects = TenantQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta):
+    class Meta(ServiceBaseModel.Meta):
         db_table = "main_tenant"
         permissions = [
             ("view_alarmsettings", "Can view alarms"),
@@ -78,7 +79,7 @@ class AdminSettings(BaseModel):
         db_table = "main_admin_settings"
 
 
-class EmailConfiguration(BaseModel, UpdateByModel):
+class EmailConfiguration(ServiceBaseModel):
     email = models.EmailField()
     host = models.CharField(max_length=255)
     port = models.CharField(max_length=255)
@@ -90,7 +91,7 @@ class EmailConfiguration(BaseModel, UpdateByModel):
 
     tenant = models.OneToOneField("main.Tenant", CASCADE)
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+    class Meta(ServiceBaseModel.Meta):
         db_table = "main_email_configuration"
         default_related_name = "email_configurations"
 
@@ -513,7 +514,7 @@ class Guest(BaseModel):
         ]
 
 
-class PublicSpace(BaseModel, CreatedByModel):
+class PublicSpace(BaseModel):
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
@@ -531,7 +532,7 @@ class PublicSpace(BaseModel, CreatedByModel):
     def devices(self):
         return Device.objects.filter(device_public_spaces__public_space=self)
 
-    class Meta(BaseModel.Meta, CreatedByModel.Meta):
+    class Meta(BaseModel.Meta):
         db_table = "main_public_spaces"
         unique_together = ("name", "tenant")
 

@@ -1,4 +1,4 @@
-import time
+import uuid
 
 from django.contrib.auth.models import AbstractUser, Permission
 from django.db import models
@@ -12,12 +12,11 @@ from users.utils import tokens
 from users.utils.fields import expires_hour
 
 
-class User(AbstractUser, BaseModel):
+class User(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     additional_info = models.JSONField(blank=True, null=True)
     phone = models.CharField(max_length=255, blank=True, null=True)
-    date_joined = models.BigIntegerField(default=time.time, editable=False)
-    last_login = UnixTimeStampField(default=time.time, blank=True, null=True)
     tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE, null=True, blank=True)
     customer_id = models.ForeignKey("main.Customer", on_delete=models.CASCADE, null=True, blank=True)
     roles = models.ManyToManyField(
@@ -35,12 +34,13 @@ class User(AbstractUser, BaseModel):
 
     objects = UsersManager()
 
+    # TODO: optimise
     def save(self, *args, **kwargs):
         if self.email:
             self.email = self.email.lower()
         super().save(*args, **kwargs)
 
-    class Meta(AbstractUser.Meta):
+    class Meta:
         db_table = "users_users"
         default_related_name = "users"
 

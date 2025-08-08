@@ -1,49 +1,250 @@
-# Role Permissions
 - model: users.Role
   pk: 4131460f-05d5-4597-aba5-53f34fbfc66e
   fields:
-      name: SYS_ADMIN
-      tenant: 28c81921-f78e-4864-87d2-cec674f19d1c
+    name: SYS_ADMIN
+    tenant: 28c81921-f78e-4864-87d2-cec674f19d1c
+
+- model: users.Role
+  pk: d3c94703-ab5e-4926-ac52-a9bf8cf34ac6
+  fields:
+    name: Reception
+    tenant: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
+    permissions:
+      - - view_room
+        - main
+        - room
+      - - add_room
+        - main
+        - room
+      - - change_room
+        - main
+        - room
+      - - delete_room
+        - main
+        - room
+      - - view_roomtype
+        - main
+        - roomtype
+      - - add_roomtype
+        - main
+        - roomtype
+      - - change_roomtype
+        - main
+        - roomtype
+      - - delete_roomtype
+        - main
+        - roomtype
 
 - model: users.Role
   pk: bb436b2a-2ff5-4835-a264-fe27e30710e6
   fields:
-      name: TENANT_ADMIN
-      tenant: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
-      permissions:
-          - - view_room
-            - main
-            - room
-          - - add_room
-            - main
-            - room
-          - - change_room
-            - main
-            - room
-          - - delete_room
-            - main
-            - room
-          - - view_roomtype
-            - main
-            - roomtype
-          - - add_roomtype
-            - main
-            - roomtype
-          - - change_roomtype
-            - main
-            - roomtype
-          - - delete_roomtype
-            - main
-            - roomtype
-          - - view_emailconfiguration
-            - main
-            - emailconfiguration
-          - - add_emailconfiguration
-            - main
-            - emailconfiguration
-          - - change_emailconfiguration
-            - main
-            - emailconfiguration
-          - - delete_emailconfiguration
-            - main
-            - emailconfiguration
+    name: TENANT_ADMIN
+    tenant: 28c81921-f78e-4864-87d2-cec674f19d1c
+    permissions:
+      - - view_user
+        - users
+        - user
+      - - add_user
+        - users
+        - user
+      - - change_user
+        - users
+        - user
+      - - delete_user
+        - users
+        - user
+      - - view_role
+        - users
+        - role
+      - - add_role
+        - users
+        - role
+      - - change_role
+        - users
+        - role
+      - - delete_role
+        - users
+        - role
+      - - view_integration
+        - services
+        - integration
+      - - add_integration
+        - services
+        - integration
+      - - change_integration
+        - services
+        - integration
+      - - delete_integration
+        - services
+        - integration
+      - - view_permission
+        - auth
+        - permission
+      - - view_tenant
+        - main
+        - tenant
+      - - add_tenant
+        - main
+        - tenant
+      - - change_tenant
+        - main
+        - tenant
+      - - delete_tenant
+        - main
+        - tenant
+      - - view_room
+        - main
+        - room
+      - - add_room
+        - main
+        - room
+      - - change_room
+        - main
+        - room
+      - - delete_room
+        - main
+        - room
+
+      - - add_roomfromconf
+        - main
+        - room
+
+      - - view_roomtype
+        - main
+        - roomtype
+      - - add_roomtype
+        - main
+        - roomtype
+      - - change_roomtype
+        - main
+        - roomtype
+      - - delete_roomtype
+        - main
+        - roomtype
+      - - view_emailconfiguration
+        - main
+        - emailconfiguration
+      - - add_emailconfiguration
+        - main
+        - emailconfiguration
+      - - change_emailconfiguration
+        - main
+        - emailconfiguration
+      - - delete_emailconfiguration
+        - main
+        - emailconfiguration
+
+      - - view_device
+        - main
+        - device
+      - - add_device
+        - main
+        - device
+      - - change_device
+        - main
+        - device
+      - - delete_device
+        - main
+        - device
+
+      - - view_deviceprofile
+        - main
+        - deviceprofile
+      - - add_deviceprofile
+        - main
+        - deviceprofile
+      - - change_deviceprofile
+        - main
+        - deviceprofile
+      - - delete_deviceprofile
+        - main
+        - deviceprofile
+
+      - - view_dashboard
+        - main
+        - dashboard
+      - - add_dashboard
+        - main
+        - dashboard
+      - - change_dashboard
+        - main
+        - dashboard
+      - - delete_dashboard
+        - main
+        - dashboard
+
+      - - view_dashboardtype
+        - main
+        - dashboard
+
+      - - view_guest
+        - main
+        - guest
+      - - add_guest
+        - main
+        - guest
+      - - change_guest
+        - main
+        - guest
+      - - delete_guest
+        - main
+        - guest
+      - - change_guestmoveroom
+        - main
+        - guest
+
+      - - view_publicspace
+        - main
+        - publicspace
+      - - add_publicspace
+        - main
+        - publicspace
+      - - change_publicspace
+        - main
+        - publicspace
+      - - delete_publicspace
+        - main
+        - publicspace
+
+      - - view_devicepublicspaces
+        - main
+        - devicepublicspaces
+      - - add_devicepublicspaces
+        - main
+        - devicepublicspaces
+      - - change_devicepublicspaces
+        - main
+        - devicepublicspaces
+      - - delete_devicepublicspaces
+        - main
+        - devicepublicspaces
+
+      - - view_roomtypepublicspaces
+        - main
+        - roomtypepublicspaces
+      - - add_roomtypepublicspaces
+        - main
+        - roomtypepublicspaces
+      - - change_roomtypepublicspaces
+        - main
+        - roomtypepublicspaces
+      - - delete_roomtypepublicspaces
+        - main
+        - roomtypepublicspaces
+
+      - - view_widgettype
+        - main
+        - widgettype
+      - - add_widgettype
+        - main
+        - widgettype
+      - - change_widgettype
+        - main
+        - widgettype
+      - - delete_widgettype
+        - main
+        - widgettype
+
+      - - add_devicefromconf
+        - main
+        - device

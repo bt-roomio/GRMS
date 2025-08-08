@@ -13,3 +13,11 @@
       floor: 2
       block: 3
       tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.Room"
+  pk: "cb09aa20-77b8-457a-bfc5-5dee69790243"
+  fields:
+      number: 103
+      floor: 2
+      block: 2
+      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"

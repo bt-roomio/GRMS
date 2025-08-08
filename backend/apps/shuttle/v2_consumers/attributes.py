@@ -3,6 +3,7 @@ from djangochannelsrestframework.mixins import ListModelMixin
 
 from shuttle.models import AttributeKv
 from shuttle.serializers.attributes import AttributeFilterParams, AttributeSerializer
+from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 from shuttle.v2_consumers.generics.list_subscribe import ListSubscribeMixin
 from shuttle.v2_consumers.generics.subscribe import SubscribeMixin
@@ -25,7 +26,6 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMi
         return query
 
     async def get_latest_activity(self, message):
-        print(message)
         updates = message.get("updates", []) or []
         for update in updates:
             await self.handle_ts_kv_activity(update)
@@ -44,9 +44,10 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMi
                     await self.reply(data=data, action="list_subscribe", request_id=request_id)
 
             elif device == payload.get("entity") and action == "subscribe" and scope == payload.get("scope"):
+                _, value = get_non_null_column(payload)
                 payload = {
                     "key_name": payload.get("key_name"),
                     "last_update_ts": payload.get("last_update_ts"),
-                    "value": payload.get("value"),
+                    "value": value,
                 }
                 await self.reply(data=payload, action="subscribe", request_id=request_id)

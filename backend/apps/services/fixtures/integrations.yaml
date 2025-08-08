@@ -1,7 +1,19 @@
-- model: "services.Integration"
-  pk: ""
+- model: services.Integration
+  pk: d5793548-ed8b-4ae4-872d-877cc7c2c38b
   fields:
-      name:
-      type:
-      description:
-      tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+      name: Test
+      type: FIAS
+      description: Test description
+      enable: true
+      tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
+      created_at: 2025-01-01T00:00:00
+
+- model: services.Integration
+  pk: 3639490f-d247-4558-a512-e245280d8971
+  fields:
+      name: Test 2
+      type: hoteza
+      description: Test description
+      enable: true
+      tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
+      created_at: 2025-01-01T00:00:00

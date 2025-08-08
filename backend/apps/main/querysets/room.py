@@ -3,7 +3,6 @@ from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 
-from access_manager.utilits.get_device_cards import get_device_cards
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.helpers import safely_remove
 from shuttle.models import TsKvDictionary, TsKvLatest
@@ -85,6 +84,7 @@ class RoomQuerySet(BaseQuerySet):
 
     def guest_checkout(self, room_id, user=None):
         from main.models import Device, Guest, Room
+
         deactivate_result = {"success": True}
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
@@ -113,6 +113,7 @@ def get_dnd_rooms(tenant):
             entity__tenant=tenant,
             key=key_dict.key_id,
         ).values_list("entity__room_id", flat=True)
+    return []
 
 
 def get_mur_rooms(tenant):
@@ -123,6 +124,7 @@ def get_mur_rooms(tenant):
             entity__tenant=tenant,
             key=key_dict.key_id,
         ).values_list("entity__room_id", flat=True)
+    return []
 
 
 def get_occupied_rooms(tenant):

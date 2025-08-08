@@ -1,6 +1,7 @@
+from django.db.models import Q
+
 from access_manager.models import GuestCard
 from access_manager.tasks.send_rpc import send_rpc_request
-from django.db.models import Q
 
 from rest_framework import serializers
 
@@ -73,21 +74,13 @@ class GuestSerializer(serializers.ModelSerializer):
 
         if validated_data.get("is_active") == False:
             room = Room.objects.filter(id=instance.room_id).first()
-            if room is None:
-                raise serializers.ValidationError({"room": "Room not found!"})
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-            devices = (
-                Device.objects.filter(
-                    Q(room__id=room.id)
-                    | Q(
-                        device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests
-                    ),
-                    is_active=True,
-                )
-                .select_related("tenant")
-                .distinct()
-            )
+            devices = Device.objects.filter(
+                Q(room__id=room.id) |
+                Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
+                is_active=True
+            ).select_related("tenant").distinct()
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 0)
                 not result.get("success") and deactivate_result.update({"success": False})
@@ -144,7 +137,7 @@ class GuestFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all())
+    room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 

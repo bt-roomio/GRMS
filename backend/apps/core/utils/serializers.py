@@ -16,6 +16,7 @@ class BaseSerializer(Serializer):
 
 
 class ValidatorSerializer(BaseSerializer, object):
+    # TODO: We can use generics for type hints
     @classmethod
     def check(cls, data: Any, many: bool = False, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         serializer = cls(data=data, many=many, context=context or {})

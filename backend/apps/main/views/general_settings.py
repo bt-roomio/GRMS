@@ -27,5 +27,5 @@ class GeneralSettingsDetailView(APIView):
         instance = get_object_or_404(Tenant, id=request.user.tenant_id)
         serializer = GeneralSettingsSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(updated_by=request.user)
         return Response(serializer.data)

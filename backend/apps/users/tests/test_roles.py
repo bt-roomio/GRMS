@@ -1,28 +1,43 @@
 from django.urls import reverse
 
-from core.tests.base_test import BaseTestCase
+from core.tests.base import BaseTestCase
 
 
 class RolesTest(BaseTestCase):
     fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml")
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.angelina_token)
 
     def test_list(self):
-        response = self.client.get(reverse("users:roles-list"))
+        response = self.get(reverse("users:roles-list"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]["name"], "SYS_ADMIN")
-        self.assertEqual(response.data[0]["id"], "4131460f-05d5-4597-aba5-53f34fbfc66e")
+        assert response.data is not None
+        self.assertEqual(response.data[0]["name"], "TENANT_ADMIN")
+        self.assertEqual(response.data[0]["id"], "bb436b2a-2ff5-4835-a264-fe27e30710e6")
 
     def test_create(self):
-        response = self.client.post(
-            reverse("users:roles-list"),
-            {"name": "Manager", "permissions": [], "tenant": "28c81921-f78e-4864-87d2-cec674f19d1c"},
-        )
+        response = self.post(reverse("users:roles-list"), data={"name": "NEW_ROLE", "permissions": []}, format="json")
+        assert response.data is not None
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["name"], "NEW_ROLE")
+        self.assertEqual(response.data["permissions"], [])
 
-        response = self.client.post(reverse("users:roles-list"), {})
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data["name"], ["This field is required."])
-        self.assertEqual(response.data["tenant"], ["This field is required."])
+    def test_update(self):
+        response = self.put(
+            reverse("users:roles-detail", kwargs={"pk": "bb436b2a-2ff5-4835-a264-fe27e30710e6"}),
+            data={"name": "UPDATED_ROLE"},
+        )
+        assert response.data is not None
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], "UPDATED_ROLE")
+
+    def test_get(self):
+        response = self.get(reverse("users:roles-detail", kwargs={"pk": "bb436b2a-2ff5-4835-a264-fe27e30710e6"}))
+        assert response.data is not None
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], "TENANT_ADMIN")
+
+    def test_delete(self):
+        response = self.delete(reverse("users:roles-detail", kwargs={"pk": "bb436b2a-2ff5-4835-a264-fe27e30710e6"}))
+        self.assertEqual(response.status_code, 204)

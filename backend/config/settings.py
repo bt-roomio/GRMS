@@ -265,8 +265,8 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
-            "class": "rich.logging.RichHandler",
+            "level": "INFO",
+            "class": "logging.StreamHandler",
         },
         "file": {
             "level": "DEBUG",
@@ -288,8 +288,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "propagate": False,
-            "level": "WARNING",
+            "level": "INFO",
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
@@ -300,6 +299,11 @@ LOGGING = {
             "handlers": ["console"],
             "propagate": False,
             "level": "WARNING",
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
 }

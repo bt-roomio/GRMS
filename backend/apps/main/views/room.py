@@ -18,7 +18,7 @@ class RoomListView(APIView):
     @check_perms(["main.view_room"])
     def get(self, request):
         params = RoomFilterParams.check(request.query_params)
-        queryset = Room.objects.list(  # pyright: ignore
+        queryset = Room.objects.list(
             tenant=request.user.tenant,
             state=params.get("state"),  # pyright: ignore
             status=params.get("status"),  # pyright: ignore
