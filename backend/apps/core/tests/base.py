@@ -15,20 +15,21 @@ class BaseTestCase(APITestCase):
     @property
     def bearer_token(self):
         user = authenticate(email="admin@gmail.com", password="password")
-        if user:
-            refresh = cast(RefreshToken, RefreshToken.for_user(user))
-            return f"Bearer {refresh.access_token}"
+        if not user:
+            return ""
 
-        return ""
+        refresh = cast(RefreshToken, RefreshToken.for_user(user))
+        return f"Bearer {refresh.access_token}"
+
 
     @property
     def angelina_token(self):
         user = authenticate(email="angelina@gmail.com", password="password")
-        if user:
-            refresh = cast(RefreshToken, RefreshToken.for_user(user))
-            return f"Bearer {refresh.access_token}"
+        if not user:
+            return ""
 
-        return ""
+        refresh = cast(RefreshToken, RefreshToken.for_user(user))
+        return f"Bearer {refresh.access_token}"
 
     @property
     def karina_token(self):
