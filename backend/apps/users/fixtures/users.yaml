@@ -41,3 +41,16 @@
       date_joined: 2025-01-01T00:00:00
       password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
       tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
+
+
+- model: users.User
+  pk: e1fcc1ff-cce1-47e9-9952-88665815a9bd
+  fields:
+      email: karina@gmail.com
+      first_name: Karina
+      last_name: Karina
+      phone: "+999987654322"
+      roles: [bb436b2a-2ff5-4835-a264-fe27e30710e6] # TENANT_ADMIN
+      date_joined: 2025-01-01T00:00:00
+      password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
+      tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c

@@ -4,3 +4,24 @@
     name: "default"
     type: "DEFAULT"
     tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.DeviceProfile"
+  pk: "be17d30b-9785-4415-bfa5-e7fdaf19e57c"
+  fields:
+    name: "test_default"
+    type: "DEFAULT"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.DeviceProfile"
+  pk: "be17d30b-9985-4415-bfa5-e7fdaf19e57c"
+  fields:
+    name: "test_default_1"
+    type: "DEFAULT"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+
+- model: "main.DeviceProfile"
+  pk: "be17d30b-9985-4415-bfa5-e7fdaf19e57c"
+  fields:
+    name: "card_reader"
+    type: "DEFAULT"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"

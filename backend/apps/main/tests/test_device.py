@@ -21,7 +21,7 @@ class DeviceTest(BaseTestCase):
     )
 
     def setUp(self):
-        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.device_id = "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
         self.device_profile_id = "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
         self.tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
@@ -35,7 +35,7 @@ class DeviceTest(BaseTestCase):
         self.assertIn("results", response.data)
         self.assertIn("count", response.data)
 
-        first_device = response.data["results"][0]
+        first_device = response.data["results"][2]
         self.assertEqual(first_device["name"], "DHT11 Demo Device")
         self.assertEqual(first_device["type"], "default")
         self.assertEqual(str(first_device["room"]), self.room_id)
