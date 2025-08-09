@@ -30,6 +30,8 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
 
     def get_room_obj(self, obj):
         from main.serializers.room import SimpleRoomSerializer
+        if self.context.get("exclude_room_obj", True):
+            return None
         if obj.room:
             return SimpleRoomSerializer(obj.room).data
         return None
