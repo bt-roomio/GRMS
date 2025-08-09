@@ -27,7 +27,7 @@ class RoomQuerySet(BaseQuerySet):
             count_online_devices=Count("devices", filter=Q(Q(devices__status=True) & Q(devices__is_active=True)))
         )
         query = query.annotate(count_devices=Count("devices", filter=Q(devices__is_active=True)))
-        query = query.filter(state__contains=[state]) if state and state not in [2, 3, 4] else query
+        query = query.filter(state__contains=[state]) if state is not None and state not in [2, 3, 4] else query
         query = query.filter(id__in=get_occupied_rooms(tenant)) if state == 2 else query
         query = query.filter(id__in=get_dnd_rooms(tenant)) if state == 3 else query
         query = query.filter(id__in=get_mur_rooms(tenant)) if state == 4 else query
