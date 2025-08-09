@@ -108,7 +108,9 @@ class SyncDeviceSerializer(serializers.Serializer):
 class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["device"] = SimpleDeviceSerializer(instance.device).data
+        data["device"] = SimpleDeviceSerializer(instance.device,
+                                                context={**self.context, "exclude_room_obj": False}).data
+
         holder = self.context.get("holder", {})
         data["staff_name"] = holder.get("name") if holder.get("type") == "staff" else None
         data["guest_name"] = holder.get("name") if holder.get("type") == "guest" else None
