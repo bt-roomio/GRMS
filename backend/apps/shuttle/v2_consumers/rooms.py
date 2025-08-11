@@ -88,7 +88,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     async def unsubscribe(self, request_id, **kwargs):
         await self.get_latest_room_activity.unsubscribe(request_id=request_id, **kwargs)
 
-    @model_observer(Room, serializer_class=RoomSerializer)
+    @model_observer(Room, serializer_class=RoomSerializer)  # pyright: ignore
     async def get_list_activity(self, message, action, **kwargs):
         for request_id, params in self.query_params.items():
             tenant_id = self.scope["user"].get("tenant_id")
