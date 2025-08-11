@@ -71,8 +71,8 @@ class RoomSerializer(serializers.ModelSerializer):
 class SimpleRoomSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["tenant"] = str(instance.tenant_id)
-        data["type"] = str(instance.type_id)
+        data["tenant"] = instance.tenant_id
+        data["type"] = instance.type_id
         return data
 
     class Meta:
