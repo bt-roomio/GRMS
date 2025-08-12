@@ -73,6 +73,8 @@ class GuestSerializer(serializers.ModelSerializer):
 
         if validated_data.get("is_active") == False:
             room = Room.objects.filter(id=instance.room_id).first()
+            if room is None:
+                raise serializers.ValidationError({"room": "Room not found!"})
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
             devices = (

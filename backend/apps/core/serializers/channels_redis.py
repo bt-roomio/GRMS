@@ -14,7 +14,6 @@ class UUIDSafeJSONSerializer(BaseMessageSerializer):
     def as_bytes(self, message):
         def default(o):
             if isinstance(o, uuid.UUID):
-                print(o)
                 return str(o)
             return str(o)
 
