@@ -14,6 +14,8 @@ class DeviceTest(BaseTestCase):
         "roles_permissions.yaml",
         "users.yaml",
         "room.yaml",
+        "public_space.yaml",
+        "public_space_device.yaml",
         "customer.yaml",
         "device_profile.yaml",
         "device.yaml",
@@ -23,6 +25,8 @@ class DeviceTest(BaseTestCase):
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.device_id = "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
+        self.room_without_device = "cb09aa20-77b8-457a-bfc5-5dee69790243"
+        self.device_without_room = "1829490d-f742-400e-8f48-aae5155e4b27"
         self.device_profile_id = "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
         self.tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
         self.room_id = "df77f910-2dcd-45cf-b6be-054c744561a7"
@@ -332,3 +336,21 @@ class DeviceTest(BaseTestCase):
 
         response = self.client.get(reverse("main:device-list"), {"size": 1000})
         self.assertEqual(response.status_code, 200)
+
+    def test_update_fail(self):
+        device = Device.objects.get(pk=self.device_id)
+        url = reverse("main:device-detail", kwargs={"pk": self.device_without_room})
+        data = {
+            "name": "Fail update",
+            "type": "custom",
+            "device_profile": str(device.device_profile_id),
+            "customer": str(device.customer_id) if device.customer_id else None,
+            "room": device.room_id,
+            "tenant": str(device.tenant_id),
+            "label": "Updated Label",
+            "additional_info": {"updated": True},
+            "device_data": {"updated_config": "test"},
+            "external_id": "UPDATED123",
+        }
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, 400)

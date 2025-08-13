@@ -323,6 +323,11 @@ class Device(BaseModel):
             if qs.exists():
                 raise ValidationError({"name": "A device with this name, tenant, and active status already exists."})
 
+        if self.room and self.device_public_spaces.exists():
+            raise ValidationError({
+                "room": "Device cannot be connected to a room and a public space at the same time."
+            })
+
     def save(self, *args, **kwargs):
         self.full_clean()  # This will raise ValidationError if clean() fails.
         super().save(*args, **kwargs)
@@ -547,6 +552,10 @@ class DevicePublicSpaces(BaseModel):
         super().clean()
         if self.device.tenant != self.public_space.tenant:
             raise ValidationError({"tenant": "Device's tenant and Public Space's tenant must be the same."})
+        if self.device.room:
+            raise ValidationError({
+                "device": "Device is already connected to a room and cannot be linked to a public space."
+            })
 
     class Meta(BaseModel.Meta):
         db_table = "main_device_public_spaces"
