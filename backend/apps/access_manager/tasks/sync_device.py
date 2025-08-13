@@ -9,7 +9,7 @@ logger = logging.getLogger("main")
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def sync_devices_task(tenant_id, ids=None, device_ids=None):
+def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
     try:
         queryset = NeedSyncDevice.objects.select_related(
             "device", "card"
@@ -19,9 +19,10 @@ def sync_devices_task(tenant_id, ids=None, device_ids=None):
         ).filter(
             need_sync=True,
             device__is_active=True,
-            device__tenant_id=tenant_id
         )
 
+        if tenant_id:
+            queryset = queryset.filter(device__tenant_id=tenant_id)
         if ids:
             queryset = queryset.filter(id__in=ids)
         elif device_ids:

@@ -64,9 +64,10 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
 
             if devices_to_add:
                 device_objects_to_add = [device for device in device_objects if device.id in devices_to_add]
-                DevicePublicSpaces.objects.bulk_create(
-                    [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add]
-                )
+                new_devices = [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add]
+                for d in new_devices:
+                    d.full_clean()
+                DevicePublicSpaces.objects.bulk_create(new_devices)
                 register_cards_for_public_space(instance.id, devices_to_add, True)
 
         return instance
