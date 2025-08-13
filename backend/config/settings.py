@@ -234,6 +234,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "main.tasks.auto_check_out",
         "schedule": 30.0,
     },
+    "sync_device": {
+        "task": "access_manager.tasks.sync_device.sync_devices_task",
+        "schedule": 300.0,
+    },
     "clean_logs": {
         "task": "shuttle.tasks.delete_old_logs",
         "schedule": crontab(hour="0", minute="0"),

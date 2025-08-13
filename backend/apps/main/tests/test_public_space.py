@@ -3,7 +3,7 @@ from core.tests.base import BaseTestCase
 
 
 class PublicSpaceTest(BaseTestCase):
-    fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "public_space.yaml")
+    fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "public_space.yaml", "customer.yaml", "device_profile.yaml", "device.yaml", "room.yaml", "public_space_device.yaml")
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
@@ -144,6 +144,22 @@ class PublicSpaceTest(BaseTestCase):
         data = {"name": "Unauthorized Update"}
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 401)
+
+    def test_update_fail(self):
+        url = reverse("main:public-space-detail", kwargs={"pk": self.lobby_id})
+        data = {
+            "name": "Updated Lobby",
+            "floor": "1st",
+            "block": "A",
+            "accessible_for_guest": False,
+            "device_ids": ["47aef21b-6cc9-4ec5-8573-1a6f491940c0"],
+            "additional_info": {
+                "area": "120 sqm",
+                "open_hours": "6AM-10PM"
+            }
+        }
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, 400)
 
     # DELETE TESTS
     def test_delete_success(self):
