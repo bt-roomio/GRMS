@@ -1,7 +1,9 @@
 from uuid import uuid4
+
 from django.urls import reverse
+
 from core.tests.base import BaseTestCase
-from main.models import DeviceProfile, Device
+from main.models import Device, DeviceProfile
 
 
 class DeviceProfileViewTest(BaseTestCase):

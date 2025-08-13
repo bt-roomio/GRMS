@@ -1,9 +1,20 @@
 from django.urls import reverse
-from core.tests.base_test import BaseTestCase
+
+from core.tests.base import BaseTestCase
 
 
 class PublicSpaceTest(BaseTestCase):
-    fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "public_space.yaml", "customer.yaml", "device_profile.yaml", "device.yaml", "room.yaml", "public_space_device.yaml")
+    fixtures = (
+        "tenant_profile.yaml",
+        "tenant.yaml",
+        "roles_permissions.yaml",
+        "users.yaml",
+        "public_space.yaml",
+        "customer.yaml",
+        "device_profile.yaml",
+        "device.yaml",
+        "room.yaml",
+    )
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
@@ -26,10 +37,7 @@ class PublicSpaceTest(BaseTestCase):
         self.assertEqual(response.data["count"], 2)
 
     def test_list_with_search(self):
-        response = self.client.get(self.list_url, {
-            "search_field": "name",
-            "search_value": "Lobby"
-        })
+        response = self.client.get(self.list_url, {"search_field": "name", "search_value": "Lobby"})
         self.assertEqual(response.status_code, 200)
         found_lobby = any(item["name"] == "Lobby" for item in response.data["results"])
         self.assertTrue(found_lobby)
@@ -57,10 +65,7 @@ class PublicSpaceTest(BaseTestCase):
             "floor": "Ground",
             "block": "C",
             "accessible_for_guest": True,
-            "additional_info": {
-                "area": "200 sqm",
-                "features": ["fountain", "seating"]
-            }
+            "additional_info": {"area": "200 sqm", "features": ["fountain", "seating"]},
         }
         response = self.client.post(self.list_url, data, format="json")
         self.assertEqual(response.status_code, 201)
@@ -110,10 +115,7 @@ class PublicSpaceTest(BaseTestCase):
             "floor": "1st",
             "block": "A",
             "accessible_for_guest": False,
-            "additional_info": {
-                "area": "120 sqm",
-                "open_hours": "6AM-10PM"
-            }
+            "additional_info": {"area": "120 sqm", "open_hours": "6AM-10PM"},
         }
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 200)
@@ -122,12 +124,7 @@ class PublicSpaceTest(BaseTestCase):
 
     def test_update_partial(self):
         url = reverse("main:public-space-detail", kwargs={"pk": self.lobby_id})
-        data = {
-            "name": "Partially Updated Lobby",
-            "floor": "1st",
-            "block": "A",
-            "accessible_for_guest": True
-        }
+        data = {"name": "Partially Updated Lobby", "floor": "1st", "block": "A", "accessible_for_guest": True}
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name"], "Partially Updated Lobby")
@@ -153,10 +150,7 @@ class PublicSpaceTest(BaseTestCase):
             "block": "A",
             "accessible_for_guest": False,
             "device_ids": ["47aef21b-6cc9-4ec5-8573-1a6f491940c0"],
-            "additional_info": {
-                "area": "120 sqm",
-                "open_hours": "6AM-10PM"
-            }
+            "additional_info": {"area": "120 sqm", "open_hours": "6AM-10PM"},
         }
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 400)
@@ -182,11 +176,7 @@ class PublicSpaceTest(BaseTestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_create_with_invalid_json(self):
-        response = self.client.post(
-            self.list_url,
-            "invalid json",
-            content_type="application/json"
-        )
+        response = self.client.post(self.list_url, "invalid json", content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
     def test_list_with_invalid_pagination(self):
@@ -194,13 +184,8 @@ class PublicSpaceTest(BaseTestCase):
         response = self.client.get(self.list_url, {"page": 0, "size": -1})
         self.assertEqual(response.status_code, 500)
 
-
     def test_create_with_extra_long_name(self):
-        data = {
-            "name": "x" * 300,
-            "floor": "1st",
-            "block": "A"
-        }
+        data = {"name": "x" * 300, "floor": "1st", "block": "A"}
         response = self.client.post(self.list_url, data, format="json")
         self.assertIn(response.status_code, [201, 400])
 

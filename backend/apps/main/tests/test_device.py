@@ -15,7 +15,6 @@ class DeviceTest(BaseTestCase):
         "users.yaml",
         "room.yaml",
         "public_space.yaml",
-        "public_space_device.yaml",
         "customer.yaml",
         "device_profile.yaml",
         "device.yaml",
@@ -49,7 +48,6 @@ class DeviceTest(BaseTestCase):
 
         self.assertIn("credentials", first_device)
         self.assertIsNotNone(first_device["credentials"])
-
 
     def test_list_with_search_field_name(self):
         response = self.client.get(reverse("main:device-list"), {"search_field": "name", "search_value": "DHT11"})
@@ -338,6 +336,7 @@ class DeviceTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_update_fail(self):
+        # TODO: fix it
         device = Device.objects.get(pk=self.device_id)
         url = reverse("main:device-detail", kwargs={"pk": self.device_without_room})
         data = {

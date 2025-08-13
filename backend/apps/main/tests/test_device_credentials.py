@@ -1,6 +1,6 @@
 from django.urls import reverse
+
 from core.tests.base import BaseTestCase
-from core.tests.base_test import BaseTestCase
 
 
 class DeviceCredentialsDetailViewTest(BaseTestCase):
@@ -13,7 +13,7 @@ class DeviceCredentialsDetailViewTest(BaseTestCase):
         "room.yaml",
         "device_profile.yaml",
         "device.yaml",
-        "device_credentials.yaml"
+        "device_credentials.yaml",
     )
 
     def setUp(self):

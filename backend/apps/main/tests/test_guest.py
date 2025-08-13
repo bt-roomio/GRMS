@@ -1,6 +1,8 @@
-from django.urls import reverse
-from core.tests.base_test import BaseTestCase
 import uuid
+
+from django.urls import reverse
+
+from core.tests.base import BaseTestCase
 
 
 class GuestTest(BaseTestCase):
@@ -54,7 +56,7 @@ class GuestTest(BaseTestCase):
             "lastname": "Van Rossum",
             "check_in": 1722332871,
             "check_out": 1722332912,
-            "room": "df77f910-2dcd-45cf-b6be-054c744561a7"
+            "room": "df77f910-2dcd-45cf-b6be-054c744561a7",
         }
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, 201)

@@ -70,12 +70,12 @@ class TenantProfile(BaseModel):
         db_table = "main_tenant_profile"
 
 
-class AdminSettings(BaseModel):
+class AdminSettings(ServiceBaseModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     key = models.CharField(max_length=255)
     json_value = models.JSONField(null=True, blank=True)
 
-    class Meta(BaseModel.Meta):
+    class Meta(ServiceBaseModel.Meta):
         db_table = "main_admin_settings"
 
 
@@ -324,9 +324,7 @@ class Device(BaseModel):
                 raise ValidationError({"name": "A device with this name, tenant, and active status already exists."})
 
         if self.room and self.device_public_spaces.exists():
-            raise ValidationError({
-                "room": "Device cannot be connected to a room and a public space at the same time."
-            })
+            raise ValidationError({"room": "Device cannot be connected to a room and a public space at the same time."})
 
     def save(self, *args, **kwargs):
         self.full_clean()  # This will raise ValidationError if clean() fails.
@@ -553,9 +551,9 @@ class DevicePublicSpaces(BaseModel):
         if self.device.tenant != self.public_space.tenant:
             raise ValidationError({"tenant": "Device's tenant and Public Space's tenant must be the same."})
         if self.device.room:
-            raise ValidationError({
-                "device": "Device is already connected to a room and cannot be linked to a public space."
-            })
+            raise ValidationError(
+                {"device": "Device is already connected to a room and cannot be linked to a public space."}
+            )
 
     class Meta(BaseModel.Meta):
         db_table = "main_device_public_spaces"

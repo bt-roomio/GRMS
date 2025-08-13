@@ -1,5 +1,6 @@
 from django.urls import reverse
-from core.tests.base_test import BaseTestCase
+
+from core.tests.base import BaseTestCase
 from main.models import Room
 
 
@@ -34,12 +35,7 @@ class RoomTest(BaseTestCase):
     def test_update(self):
         url = reverse("main:room-detail", kwargs={"pk": "ab09aa20-77b8-457a-bfc4-5dee69790241"})
 
-        data = {
-            "number": 103,
-            "floor": "5",
-            "block": "2",
-            "devices": []
-        }
+        data = {"number": 103, "floor": "5", "block": "2", "devices": []}
         response = self.client.put(url, data, format="json")
         self.assertEqual(response.status_code, 200)
 
@@ -77,10 +73,7 @@ class RoomTest(BaseTestCase):
 
     def test_all_sort_fields_return_200(self):
         url = reverse("main:room-list")
-        sort_fields = [
-            "created_at", "-created_at", "number", "-number",
-            "floor", "-floor", "block", "-block"
-        ]
+        sort_fields = ["created_at", "-created_at", "number", "-number", "floor", "-floor", "block", "-block"]
         for field in sort_fields:
             with self.subTest(field=field):
                 response = self.client.get(url, {"sort_by": [field]})

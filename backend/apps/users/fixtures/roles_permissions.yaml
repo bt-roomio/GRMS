@@ -41,6 +41,27 @@
     name: TENANT_ADMIN
     tenant: 28c81921-f78e-4864-87d2-cec674f19d1c
     permissions:
+      - - view_generalsettings
+        - main
+        - tenant
+      - - change_generalsettings
+        - main
+        - tenant
+
+      - - view_integrationsettings
+        - main
+        - tenant
+      - - change_integrationsettings
+        - main
+        - tenant
+
+      - - view_alarmsettings
+        - main
+        - tenant
+      - - change_alarmsettings
+        - main
+        - tenant
+
       - - view_user
         - users
         - user
