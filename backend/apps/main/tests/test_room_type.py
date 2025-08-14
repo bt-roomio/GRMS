@@ -1,4 +1,5 @@
 from django.urls import reverse
+
 from core.tests.base import BaseTestCase
 
 
@@ -64,7 +65,7 @@ class RoomTypeTest(BaseTestCase):
 
         payload = {
             "title": room_type["title"],
-            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790243", "ad09aa20-77b8-457a-bfc4-5dee69790242"]
+            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790243", "ad09aa20-77b8-457a-bfc4-5dee69790242"],
         }
 
         url = reverse("main:room-type-detail", kwargs={"pk": room_type_id})
@@ -75,6 +76,4 @@ class RoomTypeTest(BaseTestCase):
         self.assertEqual(len(public_spaces), 2)
 
         ids = {ps["id"] for ps in public_spaces}
-        self.assertSetEqual(
-            ids, {"ad09aa20-77b8-457a-bfc4-5dee69790243", "ad09aa20-77b8-457a-bfc4-5dee69790242"}
-        )
+        self.assertSetEqual(ids, {"ad09aa20-77b8-457a-bfc4-5dee69790243", "ad09aa20-77b8-457a-bfc4-5dee69790242"})

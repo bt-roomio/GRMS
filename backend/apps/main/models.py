@@ -70,12 +70,12 @@ class TenantProfile(BaseModel):
         db_table = "main_tenant_profile"
 
 
-class AdminSettings(BaseModel):
+class AdminSettings(ServiceBaseModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     key = models.CharField(max_length=255)
     json_value = models.JSONField(null=True, blank=True)
 
-    class Meta(BaseModel.Meta):
+    class Meta(ServiceBaseModel.Meta):
         db_table = "main_admin_settings"
 
 
