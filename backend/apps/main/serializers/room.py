@@ -16,10 +16,11 @@ class RoomSerializer(serializers.ModelSerializer):
     devices = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), many=True, required=False)
 
     def to_representation(self, instance):
+        need_sync = self.context.get("need_sync", False)
         data = super().to_representation(instance)
         data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
         data["tenant"] = str(instance.tenant_id)
-        data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
+        data["devices"] = SimpleDeviceSerializer(instance.devices, many=True, context={"need_sync": need_sync}).data
         if hasattr(instance, "count_online_devices"):
             data["status"] = (
                 "ON"

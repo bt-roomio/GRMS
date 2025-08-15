@@ -14,9 +14,21 @@ class CardSerializer(serializers.ModelSerializer):
     staff_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Staff.objects.all())
     staff = SimpleStaffSerializer(source="staffcard.staff", read_only=True)
     need_sync = serializers.SerializerMethodField()
+    rooms = serializers.SerializerMethodField()
+    public_spaces = serializers.SerializerMethodField()
 
     def get_need_sync(self, card):
         return NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
+
+    def get_rooms(self, card):
+        from main.serializers.room import RoomSerializer
+        return RoomSerializer(
+            Card.objects.get_rooms(card), many=True, context={'need_sync': True}).data
+
+    def get_public_spaces(self, card):
+        from main.serializers.public_space import PublicSpaceSerializer
+        return PublicSpaceSerializer(
+            Card.objects.get_public_spaces(card), many=True, context={'need_sync': True}).data
 
     def create(self, validated_data):
         staff = validated_data.pop("staff_id") if validated_data.get("staff_id") else None
@@ -47,6 +59,8 @@ class CardSerializer(serializers.ModelSerializer):
             "staff_id",
             "additional_info",
             "need_sync",
+            "rooms",
+            "public_spaces",
         )
 
 
