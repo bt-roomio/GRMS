@@ -2,6 +2,7 @@ import logging
 
 from rest_framework import serializers
 
+from access_manager.models import NeedSyncDevice
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DeviceCredentials, Tenant
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 class SimpleDeviceSerializer(serializers.ModelSerializer):
     public_spaces = serializers.SerializerMethodField()
     room_obj = serializers.SerializerMethodField()
+    need_sync = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -36,6 +38,11 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
             return SimpleRoomSerializer(obj.room).data
         return None
 
+    def get_need_sync(self, obj):
+        if self.context.get("need_sync", False):
+            return NeedSyncDevice.objects.filter(device=obj, need_sync=True).exists()
+        return None
+
     class Meta:
         model = Device
         fields = (
@@ -53,6 +60,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
             "device_data",
             "public_spaces",
             "external_id",
+            "need_sync"
         )
 
 

@@ -30,3 +30,35 @@ class CardQuerySet(BaseQuerySet):
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
         return query.order_by(*sort_by)
+
+    def get_rooms(self, card):
+        from access_manager.models import StaffCard, GroupRoom, GuestCard
+
+        staff_card = StaffCard.objects.filter(card=card, is_active=True).first()
+        if staff_card and staff_card.staff.group:
+            return [gr.room for gr in GroupRoom.objects.filter(group=staff_card.staff.group).select_related('room')]
+
+        guest_card = GuestCard.objects.filter(card=card, is_active=True).first()
+        if guest_card and hasattr(guest_card.guest, 'room'):
+            return [guest_card.guest.room]
+
+        return []
+
+    def get_public_spaces(self, card):
+        from access_manager.models import StaffCard, GroupPublicSpace, GuestCard, GuestPublicSpace
+
+        staff_card = StaffCard.objects.filter(card=card, is_active=True).first()
+        if staff_card and staff_card.staff.group:
+            return [
+                gps.public_space
+                for gps in GroupPublicSpace.objects.filter(group=staff_card.staff.group).select_related('public_space')
+            ]
+
+        guest_card = GuestCard.objects.filter(card=card, is_active=True).first()
+        if guest_card:
+            return [
+                gps.public_space
+                for gps in GuestPublicSpace.objects.filter(guest=guest_card.guest).select_related('public_space')
+            ]
+
+        return []
