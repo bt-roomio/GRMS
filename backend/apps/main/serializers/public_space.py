@@ -29,13 +29,12 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
         return data
 
     def get_devices(self, obj):
-        need_sync = self.context.get("need_sync")
         if hasattr(obj, "prefetched_devices"):
             devices = [device_public_space.device for device_public_space in obj.prefetched_devices]
         else:
             devices = Device.objects.filter(device_public_spaces__public_space=obj)
 
-        return SimpleDeviceSerializer(devices, many=True, context={"need_sync": need_sync}).data
+        return SimpleDeviceSerializer(devices, many=True).data
 
     def update(self, instance, validated_data):
         device_objects = validated_data.pop("device_ids", None)

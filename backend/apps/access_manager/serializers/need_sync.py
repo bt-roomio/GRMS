@@ -123,6 +123,7 @@ class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
 
 class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
     card_id = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), required=True)
+    need_sync = serializers.BooleanField(required=False)
     sort_by = serializers.ListField(
         child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at"),
         required=False,
