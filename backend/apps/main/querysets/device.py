@@ -1,5 +1,6 @@
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef, Prefetch
 
+from access_manager.models import NeedSyncDevice
 from core.querysets.base_queryset import BaseQuerySet
 
 
@@ -52,3 +53,42 @@ class DeviceQuerySet(BaseQuerySet):
         query = query.filter(room__type__title__in=room_types) if room_types else query
         query = query.exclude(id__in=delisting_devices) if delisting_devices else query
         return query
+
+    def get_card_related_devices(self, card_id, need_sync=None):
+        from main.models import DevicePublicSpaces
+        qs = self.select_related("tenant", "room").prefetch_related(
+            Prefetch(
+                "device_public_spaces",
+                queryset=DevicePublicSpaces.objects.select_related("public_space"),
+                to_attr="prefetched_device_public_spaces",
+            )
+        ).filter(
+            Q(room__group_room__group__staff__staffcard__card=card_id,
+              room__group_room__group__staff__staffcard__is_active=True) |
+
+            Q(device_public_spaces__public_space__group_public_space__group__staff__staffcard__card=card_id,
+              device_public_spaces__public_space__group_public_space__group__staff__staffcard__is_active=True, ) |
+
+            Q(room__guests__guestcard__card=card_id,
+              room__guests__guestcard__is_active=True) |
+
+            Q(device_public_spaces__public_space__guestpublicspace__guest__guestcard__card=card_id,
+              device_public_spaces__public_space__guestpublicspace__guest__guestcard__is_active=True) |
+
+            Q(needsyncdevice__card=card_id,
+              needsyncdevice__need_sync=True)
+        ).annotate(
+            need_sync=Exists(
+                NeedSyncDevice.objects.filter(
+                    device=OuterRef('pk'),
+                    card=card_id,
+                    need_sync=True
+                )
+            )
+        ).distinct()
+
+
+        if need_sync is not None:
+            qs = qs.filter(need_sync=need_sync)
+
+        return qs

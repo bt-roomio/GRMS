@@ -3,8 +3,7 @@ import time
 from access_manager.models import NeedSyncDevice
 from access_manager.serializers.need_sync import (
     NeedSyncDeviceHttpFilterParams,
-    SimpleNeedSyncDeviceSerializer,
-    SyncDeviceSerializer,
+    SyncDeviceSerializer, SimpleNeedSyncDeviceSerializer,
 )
 from access_manager.swagger.sync_device import (
     sync_device_delete_by_device_swagger,
@@ -13,7 +12,6 @@ from access_manager.swagger.sync_device import (
     sync_device_swagger,
 )
 from celery.utils.log import get_task_logger
-from django.db.models import Prefetch
 
 from rest_framework.fields import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -21,8 +19,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from access_manager.tasks.sync_device import sync_devices_task
+from access_manager.utilits.card_user import get_card_user
 
-from main.models import DevicePublicSpaces
+from main.models import Device
 
 logger = get_task_logger(__name__)
 
@@ -58,27 +57,14 @@ class SyncDeviceView(APIView):
     @sync_device_get_swagger()
     def get(self, request):
         params = NeedSyncDeviceHttpFilterParams.check(request.GET)
-        queryset = (
-            NeedSyncDevice.objects.select_related("device__tenant", "device__room")
-            .prefetch_related(
-                Prefetch(
-                    "device__device_public_spaces",
-                    queryset=DevicePublicSpaces.objects.select_related("public_space"),
-                    to_attr="prefetched_device_public_spaces",
-                )
-            )
-            .filter(
-                need_sync=True,
-                card_id=params.get("card_id"),
-            )
-        )
+        print(params.get("need_sync", None))
+        queryset = Device.objects.get_card_related_devices(params.get("card_id"), params.get("need_sync", None))
         if not queryset.exists():
             return Response({"message": "No devices need syncing"}, status=200)
 
-        first = queryset.first()
-        holder_type, holder_name = first.get_card_holder_name if first else (None, None)
+        holder = get_card_user(params.get("card_id"))
         serializer = SimpleNeedSyncDeviceSerializer(
-            queryset, many=True, context={"holder": {"type": holder_type, "name": holder_name}}
+            queryset, many=True, context={"holder": holder}
         )
         return Response(serializer.data, 200)
 
