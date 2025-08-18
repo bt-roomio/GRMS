@@ -39,6 +39,8 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
         return None
 
     def get_need_sync(self, obj):
+        if hasattr(obj, 'need_sync'):
+            return obj.need_sync
         if self.context.get("need_sync", False):
             return NeedSyncDevice.objects.filter(device=obj, need_sync=True).exists()
         return None
