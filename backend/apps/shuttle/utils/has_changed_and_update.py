@@ -37,7 +37,7 @@ def has_changed_and_update(device_id: str, updates: list[dict], is_attribute_kv:
 
     # Обновляем кэш в Redis
     if changed:
-        redis_client.set(key, json.dumps(cached))
+        redis_client.set(key, json.dumps(cached), ex=3600)
 
     return changed
 

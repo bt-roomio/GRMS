@@ -1,0 +1,15 @@
+from django.contrib.auth.models import Permission
+from django.core.management.base import BaseCommand
+
+from users.models import Role
+
+
+class Command(BaseCommand):
+    help = "Grant all permissions to all tenant admins"
+
+    def handle(self, *args, **options):
+        tenant_admins = Role.objects.filter(name__in=["TENANT_ADMIN", "SYS_ADMIN"])
+        permissions = Permission.objects.all()
+        for tenant_admin in tenant_admins:
+            tenant_admin.permissions.clear()
+            tenant_admin.permissions.add(*permissions)

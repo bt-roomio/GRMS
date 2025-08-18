@@ -35,6 +35,9 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
     }
 
     async def receive_json(self, content, **kwargs):
+        """
+        Override receive_json method to handle invalid stream
+        """
         try:
             await super().receive_json(content, **kwargs)
         except ValueError as e:

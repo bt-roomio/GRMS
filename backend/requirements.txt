@@ -1,7 +1,7 @@
 aio-pika==9.5.5
 amqp==5.2.0
 anyio==4.4.0
-asgiref==3.8.1
+asgiref==3.9.1
 attrs==23.2.0
 autobahn==23.6.2
 Automat==22.10.0
@@ -11,9 +11,9 @@ black==24.4.2
 celery==5.4.0
 certifi==2025.1.31
 cffi==1.16.0
-channels==4.1.0
+channels==4.3.1
 channels-demultiplexer==2.2.0
-channels-redis==4.2.0
+channels-redis==4.3.0
 channelsmultiplexer==0.0.3
 charset-normalizer==3.4.1
 click==8.1.7

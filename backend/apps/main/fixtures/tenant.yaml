@@ -1,19 +1,51 @@
 - model: "main.Tenant"
   pk: "28c81921-f78e-4864-87d2-cec674f19d1c"
   fields:
-      tenant_profile_id: "da16dcf1-b885-4966-84db-c3e26ff50aad"
-      region: "General"
-      title: "Tenant"
+    tenant_profile_id: "da16dcf1-b885-4966-84db-c3e26ff50aad"
+    region: "General"
+    title: "Tenant"
+    additional_info:
+      {
+        "general_settings":
+          {
+            "tenant_id": "28c81921-f78e-4864-87d2-cec674f19d1c",
+            "lang": "en",
+            "roomio_node_url": "",
+            "timezone": 0,
+            "controllers_sync": false,
+            "check_in_out": false,
+            "vip_status": false,
+            "suite_rooms_controls_sync": false,
+            "laundry": false,
+            "visionline": false,
+            "opera_integration": false,
+            "visionline_card_system": false,
+            "aperio_locks": false,
+            "door_lock": { "ving_card": false, "kaba": false },
+            "auto_checkout": false,
+            "aggregate_db": false,
+            "main_dashboard": null,
+            "humidity_enable": false,
+            "bathroom_enable": true,
+          },
+        "integration_settings":
+          {
+            "hoteza": { "enable": true, "hotel_id": "999" },
+            "PMS_type": "FIAS",
+            "is_active": true,
+            "integration_device": "01b72123-dbba-4aaa-b827-d2a12eadda5a",
+          },
+      }
 
 - model: "main.Tenant"
   pk: "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
   fields:
-      tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
-      region: "UE-1"
-      title: "Tenant 2"
+    tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
+    region: "UE-1"
+    title: "Tenant 2"
 
 - model: "main.Tenant"
   pk: "5b2b6879-0791-4b14-8545-6abf61e73b68"
   fields:
-      tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
-      title: "For Internal Purpose"
+    tenant_profile_id: "da16dcfd-b885-4966-84db-c3e26ff50aac"
+    title: "For Internal Purpose"

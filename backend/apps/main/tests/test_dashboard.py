@@ -1,4 +1,5 @@
 from django.urls import reverse
+
 from core.tests.base import BaseTestCase
 from main.models import Dashboard
 
@@ -94,4 +95,3 @@ class DashboardViewTests(BaseTestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Dashboard.objects.filter(id=dashboard.id).exists())
-

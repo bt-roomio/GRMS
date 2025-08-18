@@ -1,7 +1,9 @@
 from django.urls import reverse
+
 from rest_framework import status
-from main.models import Room, RoomType, Device
+
 from core.tests.base import BaseTestCase
+from main.models import Device, Room, RoomType
 
 
 class RoomFromConfTestCase(BaseTestCase):
@@ -11,7 +13,7 @@ class RoomFromConfTestCase(BaseTestCase):
         "users.yaml",
         "roles_permissions.yaml",
         "device_without_room.yaml",
-        "device_profile.yaml"
+        "device_profile.yaml",
     )
 
     def setUp(self):
@@ -21,28 +23,12 @@ class RoomFromConfTestCase(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
 
-
     def test_create_rooms_from_conf_success(self):
         payload = {
             "rooms": [
-                {
-                    "number": 101,
-                    "floor": "1",
-                    "block": "A",
-                    "type": "Deluxe",
-                    "devices": ["DHT11 Demo Device"]
-                },
-                {
-                    "number": 102,
-                    "floor": "1",
-                    "block": "A",
-                    "devices": ["FF:EE:DD:CC:BB:AA"]
-                },
-                {
-                    "number": 103,
-                    "floor": "2",
-                    "block": "B"
-                }
+                {"number": 101, "floor": "1", "block": "A", "type": "Deluxe", "devices": ["DHT11 Demo Device"]},
+                {"number": 102, "floor": "1", "block": "A", "devices": ["FF:EE:DD:CC:BB:AA"]},
+                {"number": 103, "floor": "2", "block": "B"},
             ]
         }
 

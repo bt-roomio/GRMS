@@ -12,7 +12,7 @@ class AdminSettingsView(APIView):
 
     @admin_settings_swagger()
     @check_perms(["main.view_adminsettings"])
-    def get(self, request, key):
+    def get(self, _, key):
         instance = AdminSettings.objects.filter(key=key).first()
         serializer = AdminSettingsSerializer(instance)
         return Response(serializer.data)

@@ -27,11 +27,15 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
 
     @property
     def user_id(self):
-        return self.scope["user"].get("id")
+        if isinstance(self.scope["user"], dict):
+            return self.scope["user"].get("id")
+        return self.scope["user"].id
 
     @property
     def tenant_id(self):
-        return self.scope["user"].get("tenant_id")
+        if isinstance(self.scope["user"], dict):
+            return self.scope["user"].get("tenant_id")
+        return self.scope["user"].tenant_id
 
     def get_user_object(self):
         return User.objects.filter(pk=self.scope["user"].id).first()
