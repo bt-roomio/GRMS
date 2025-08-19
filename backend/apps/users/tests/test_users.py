@@ -15,7 +15,7 @@ class UserTest(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.angelina_token)
 
     def test_list(self):
-        response = self.get(reverse("users:users-list"))
+        response = self.get(reverse("users:users-list"), {"sort_by": "first_name"})
         assert response.data is not None
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 2)
@@ -25,7 +25,7 @@ class UserTest(BaseTestCase):
         self.assertEqual(response.data["results"][0]["email"], "angelina@gmail.com")
         self.assertEqual(response.data["results"][0]["additional_info"], None)
         self.assertEqual(response.data["results"][0]["phone"], "+999987654321")
-        self.assertEqual(response.data["results"][0]["date_joined"], "2025-01-01T02:00:00")
+        self.assertEqual(response.data["results"][0]["date_joined"], "2025-01-01T00:00:00Z")
         self.assertEqual(str(response.data["results"][0]["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
         self.assertEqual(str(response.data["results"][0]["roles"][0]), "bb436b2a-2ff5-4835-a264-fe27e30710e6")
         self.assertEqual(response.data["results"][0]["is_active"], True)
