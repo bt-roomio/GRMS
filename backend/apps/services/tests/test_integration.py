@@ -47,7 +47,7 @@ class IntegrationListViewTest(BaseTestCase):
         self.assertEqual(response.data["enable"], True)
         self.assertEqual(response.data["is_active"], True)
         self.assertEqual(str(response.data["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
-        self.assertEqual(response.data["created_at"], "2025-01-01T00:00:00")
+        self.assertEqual(response.data["created_at"], "2025-01-01T00:00:00Z")
 
     def test_put(self):
         response = self.put(
@@ -65,4 +65,4 @@ class IntegrationListViewTest(BaseTestCase):
         self.assertEqual(response.data["enable"], True)
         self.assertEqual(response.data["is_active"], True)
         self.assertEqual(str(response.data["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
-        self.assertEqual(response.data["created_at"], "2025-01-01T00:00:00")
+        self.assertEqual(response.data["created_at"], "2025-01-01T00:00:00Z")

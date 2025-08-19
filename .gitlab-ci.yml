@@ -14,12 +14,16 @@ test:
     services:
         - name: timescale/timescaledb:2.21.0-pg16
           alias: postgres
+        - name: redis:7-alpine
+          alias: redis
     variables:
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
         POSTGRES_DB: test_db
         POSTGRES_HOST: postgres
         POSTGRES_PORT: 5432
+        REDIS_HOST: redis
+        REDIS_PORT: 6379
     before_script:
         - cd backend
         - pip install -r requirements.txt
