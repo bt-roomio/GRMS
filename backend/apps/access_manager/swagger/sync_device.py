@@ -81,7 +81,7 @@ def sync_device_get_swagger():
                             "updated_by": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
                             "need_sync": openapi.Schema(type=openapi.TYPE_BOOLEAN),
                             "device": openapi.Schema(type=openapi.TYPE_OBJECT),  # For brevity
-                            "card": openapi.Schema(type=openapi.TYPE_OBJECT),    # For brevity
+                            "card": openapi.Schema(type=openapi.TYPE_OBJECT),  # For brevity
                             "staff_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
                             "guest_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
                         }
@@ -130,6 +130,7 @@ SyncDeviceErrorResponseSwagger = openapi.Schema(
     },
 )
 
+
 def sync_device_get_swagger():
     return swagger_auto_schema(
         tags=["Access manager, Device Sync"],
@@ -137,11 +138,12 @@ def sync_device_get_swagger():
         operation_description="""
         Retrieve a list of devices that require synchronization.
 
-        This endpoint filters `NeedSyncDevice` objects by `card_id`. If there are matching records,
+        This endpoint filters `Device` objects that have `need_sync=True`. If there are matching records,
         it returns detailed information about each device that is pending synchronization.
 
         **Query Parameters:**
-        - `card_id` (UUID, required): Filter devices by card ID. Only devices linked to this card will be returned.
+        - `card_id` (UUID, optional): Filter devices by card ID. Only devices linked to this card will be returned.
+        - `need_sync` (boolean, optional): Filter devices by sync status. Defaults to True to show only devices needing sync.
 
         **Response:**
         - `200 OK`: Returns a list of devices that need synchronization.
@@ -149,9 +151,9 @@ def sync_device_get_swagger():
 
         **Response Format:**
         Each device includes details such as:
-        - Device info (ID, name, timestamps)
-        - Card info
-        - Related staff/guest name (if available)
+        - Device info (ID, name, IP address, location, sync status)
+        - Associated card information (if filtered by card_id)
+        - Device type and status information
         """,
         manual_parameters=[
             openapi.Parameter(
@@ -159,8 +161,16 @@ def sync_device_get_swagger():
                 in_=openapi.IN_QUERY,
                 type=openapi.TYPE_STRING,
                 format=openapi.FORMAT_UUID,
-                required=True,
-                description="Filter devices by Card UUID",
+                required=False,
+                description="Filter devices by Card UUID (optional)",
+            ),
+            openapi.Parameter(
+                name="need_sync",
+                in_=openapi.IN_QUERY,
+                type=openapi.TYPE_BOOLEAN,
+                required=False,
+                default=None,
+                description="Filter devices by sync status. Defaults to True (devices needing sync)",
             )
         ],
         responses={
@@ -171,26 +181,56 @@ def sync_device_get_swagger():
                     items=openapi.Schema(
                         type=openapi.TYPE_OBJECT,
                         properties={
-                            "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                            "created_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
-                            "created_by_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                            "updated_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
-                            "updated_by": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                            "need_sync": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                            "device": openapi.Schema(type=openapi.TYPE_OBJECT),  # For brevity
-                            "card": openapi.Schema(type=openapi.TYPE_OBJECT),    # For brevity
-                            "staff_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                            "guest_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                            "id": openapi.Schema(
+                                type=openapi.TYPE_STRING,
+                                format=openapi.FORMAT_UUID,
+                                description="Unique device identifier"
+                            ),
+                            "name": openapi.Schema(
+                                type=openapi.TYPE_STRING,
+                                description="Device name"
+                            ),
+                            "need_sync": openapi.Schema(
+                                type=openapi.TYPE_BOOLEAN,
+                                description="Whether the device needs synchronization"
+                            ),
+                            "guest_name": openapi.Schema(
+                                type=openapi.TYPE_STRING,
+                                description="Guest name card connected with"
+                            ),
+                            "staff_name": openapi.Schema(
+                                type=openapi.TYPE_STRING,
+                                description="Staff name card connected with"
+                            ),
+                            "room": openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                additional_properties=True,
+                                description="Room data card device connected with"
+                            ),
+                            "public_spaces": openapi.Schema(
+                                type=openapi.TYPE_ARRAY,
+                                items={"public spaces names": openapi.Schema(type=openapi.TYPE_STRING)},
+                                description="Names of public spaces"
+                            ),
+                            "device_type": openapi.Schema(
+                                type=openapi.TYPE_STRING,
+                                description="Type of the device"
+                            ),
+                            "is_active": openapi.Schema(
+                                type=openapi.TYPE_BOOLEAN,
+                                description="Whether the device is active"
+                            ),
+                            "created_at": openapi.Schema(
+                                type=openapi.TYPE_STRING,
+                                format="date-time",
+                                description="Device creation timestamp"
+                            ),
                         }
                     )
                 )
             ),
-            404: openapi.Response(
-                description="No devices found needing synchronization",
-            ),
         },
     )
-
 
 
 def sync_device_swagger():

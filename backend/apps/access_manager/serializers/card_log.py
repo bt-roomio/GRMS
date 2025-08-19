@@ -70,7 +70,7 @@ class CardLogFilterParams(ValidatorSerializer):
     user = serializers.CharField(required=False, help_text="User ID (can be guest or staff)")
     card_num = serializers.CharField(required=False, help_text="Card number to filter by")
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=["-event_ts", "event_ts"], default="-event_ts", required=False)
+        child=serializers.ChoiceField(choices=["-event_ts", "event_ts"], default="-event_ts", required=False), required=False
     )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)
@@ -78,3 +78,4 @@ class CardLogFilterParams(ValidatorSerializer):
         required=False,
         child=serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", input_formats=["%Y-%m-%d %H:%M:%S"])
     )
+    device_ids = serializers.ListField(child=serializers.CharField(), required=False)

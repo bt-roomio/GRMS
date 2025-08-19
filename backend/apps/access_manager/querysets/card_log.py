@@ -13,15 +13,20 @@ class CardLogQuerySet(BaseQuerySet):
     def by_card_num(self, card_number, tenant):
         return self.filter(number=card_number, tenant=tenant)
 
-    def list(self, filters={}, sort_by=[], user_id=None, card_num=None, tenant=None, room_id=None):
+    def list(self, tenant_id=None, filters={}, device_ids=[], sort_by=[], user_id=None, card_num=None, tenant=None, room_id=None):
         query = self
         from_date = filters.get("from_date")
         to_date = filters.get("to_date")
 
+        if tenant_id:
+            query = self.filter(device__tenant_id=tenant_id)
         if from_date:
             query = query.filter(event_ts__gte=from_date)
         if to_date:
             query = query.filter(event_ts__lte=to_date)
+
+        if device_ids:
+            query = query.filter(device_id__in=device_ids)
 
         if room_id:
             query = query.by_room(room_id)

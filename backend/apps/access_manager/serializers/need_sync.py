@@ -3,6 +3,7 @@ from access_manager.models import Card, NeedSyncDevice
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
+from main.models import Device
 from main.serializers.device import SimpleDeviceSerializer
 
 
@@ -108,8 +109,7 @@ class SyncDeviceSerializer(serializers.Serializer):
 class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["device"] = SimpleDeviceSerializer(instance.device,
-                                                context={**self.context, "exclude_room_obj": False}).data
+        data.update(SimpleDeviceSerializer(instance, context={**self.context, "exclude_room_obj": False}).data)
 
         holder = self.context.get("holder", {})
         data["staff_name"] = holder.get("name") if holder.get("type") == "staff" else None
@@ -117,12 +117,13 @@ class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
         return data
 
     class Meta:
-        model = NeedSyncDevice
-        fields = ("id", "created_at", "created_by_id", "updated_at", "updated_by", "need_sync", "device", "card")
+        model = Device
+        fields = ("id",)
 
 
 class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
     card_id = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), required=True)
+    need_sync = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(
         child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at"),
         required=False,
