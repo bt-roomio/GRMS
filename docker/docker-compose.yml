@@ -23,6 +23,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
     restart: always
     ports:
       - "6379:6379"
