@@ -12,6 +12,6 @@ def get_card_user(card_id):
         if guest_card:
             guest = guest_card.guest
             return {"type": "guest", "name": guest.get_name()}
-        return None
+        return {}
     except Exception:
-        return None
+        return {}
