@@ -58,7 +58,7 @@ class ResetPassword(BaseModel):
     def __str__(self):
         return self.key
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         db_table = "users_reset_password"
 
 
@@ -70,7 +70,7 @@ class Role(BaseModel):
 
     objects = RoleQuerySet.as_manager()
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         verbose_name = "role"
         verbose_name_plural = "roles"
         db_table = "users_roles"

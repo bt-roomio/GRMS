@@ -32,6 +32,7 @@ def tskv_signal_handler(sender, instance, **kwargs):
 def tskv_latest_signal_handler(sender, instance, **kwargs):
     channel_layer = get_channel_layer()
     if channel_layer is not None:
+        fields = ["bool_v", "str_v", "dbl_v", "long_v", "json_v"]
         message = {
             "entity": str(instance.entity_id),
             "key": instance.key.key,
@@ -41,6 +42,7 @@ def tskv_latest_signal_handler(sender, instance, **kwargs):
             "long_v": instance.long_v,
             "dbl_v": instance.dbl_v,
             "json_v": instance.json_v,
+            "value": next((getattr(instance, field) for field in fields if getattr(instance, field) is not None), None),
         }
         changed_messages = has_changed_and_update(instance.entity_id, [message])
         if not changed_messages:

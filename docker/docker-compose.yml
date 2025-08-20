@@ -23,6 +23,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
     restart: always
     ports:
       - "6379:6379"
@@ -188,8 +189,9 @@ services:
 
   nodered:
     image: registry.gitlab.com/grms1/node-red-nodes:latest
+    container_name: nodered
     ports:
-      - "1880"
+      - "1880:1880"
     environment:
       - VIRTUAL_HOST=nodered.domain.com
       - VIRTUAL_PORT=1880
@@ -203,6 +205,9 @@ services:
     networks:
       - roomio_net
     profiles: ["nodered"]
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
 
 volumes:
   static_volume:
