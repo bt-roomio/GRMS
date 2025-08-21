@@ -14,7 +14,7 @@ class SberGetRoomDetailView(APIView):
         if not room:
             body["messageName"] = "ANSWER_TO_USER"
             body["payload"] = {
-                "pronounceText": "Ошибка, но мы уже работает над проблемой",  # TODO: answer
+                "pronounceText": "Сбер девайс не найдено",
                 "auto_listening": False,
                 "finished": True,
             }
@@ -23,7 +23,7 @@ class SberGetRoomDetailView(APIView):
         if not guest:
             body["messageName"] = "ANSWER_TO_USER"
             body["payload"] = {
-                "pronounceText": "Ошибка, но мы уже работает над проблемой",  # TODO: answer
+                "pronounceText": "Гостя не найдено",
                 "auto_listening": False,
                 "finished": True,
             }
@@ -35,4 +35,6 @@ class SberGetRoomDetailView(APIView):
             "auto_listening": False,
             "finished": True,
         }
+        guest.additional_info = {"greeted": True}
+        guest.save()
         return Response(body)

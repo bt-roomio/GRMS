@@ -19,7 +19,11 @@ class GuestListView(APIView):
     @check_perms(["main.view_guest"])
     def get(self, request):
         params = GuestFilterParams.check(request.GET)
-        queryset = Guest.objects.list(tenant_id=request.user.tenant_id, room=params.get("room"))
+        queryset = Guest.objects.list(
+            tenant_id=request.user.tenant_id,
+            room=params.get("room"),
+            sort_by=params.get("sort_by"),
+        )
         serializer = GuestSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
         return Response(data)
