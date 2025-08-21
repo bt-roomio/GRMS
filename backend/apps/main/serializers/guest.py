@@ -143,7 +143,7 @@ class GuestFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)
-    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), default=[], required=False)
 
 
 class GuestCheckoutParams(ValidatorSerializer):
