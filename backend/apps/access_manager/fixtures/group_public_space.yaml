@@ -1,0 +1,13 @@
+- model: "access_manager.GroupPublicSpace"
+  pk: "c8aff6f1-f96f-41d6-b546-13f352b154bf"
+  fields:
+    group_id: "ee74097b-fb0a-4e7b-9cdc-10dc54eab55c"
+    public_space_id: "ad09aa20-77b8-457a-bfc4-5dee69790242"
+    created_at: "1751437177895"
+
+- model: "access_manager.GroupPublicSpace"
+  pk: "908dfb87-3446-4afb-8756-cc2b3e365b5e"
+  fields:
+    group_id: "ee74097b-fb0a-4e7b-9cdc-10dc54eab55c"
+    public_space_id: "ad09aa20-77b8-457a-bfc4-5dee69790243"
+    created_at: "1751437177895"

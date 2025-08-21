@@ -1,0 +1,15 @@
+- model: "access_manager.StaffCard"
+  pk: "ed642b9e-3c1a-3180-a87f-c89d0d0a8d12"
+  fields:
+    staff_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+    card_id: "f3db0b43-5537-3d9e-a44b-0411ff10dcb5"
+    is_active: true
+    created_at: "1755012654"
+
+- model: "access_manager.StaffCard"
+  pk: "ed642b9e-3c1a-3180-a87f-c89d0d0a8d40"
+  fields:
+    staff_id: "a47ac10b-58cc-4372-a567-0e02b2c3d480"
+    card_id: "f3db0b26-5237-3d9e-a44b-0411ff10dcb5"
+    is_active: true
+    created_at: "1755012654"

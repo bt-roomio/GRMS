@@ -1,0 +1,7 @@
+- model: "access_manager.GuestCard"
+  pk: "987fcdeb-51a2-4567-8901-123456789abc"
+  fields:
+    guest_id: "5b66af57-fb27-4c26-9986-b9994e644605"  # Amigo from guest.yaml
+    card_id: "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"
+    is_active: true
+    created_at: "1755012654"

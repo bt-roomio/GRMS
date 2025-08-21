@@ -1,0 +1,29 @@
+- model: "access_manager.Card"
+  pk: "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"
+  fields:
+    number: "12 23 34 45"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    is_active: true
+    additional_info:
+      "type": "staff"
+    created_at: "1751437177895"
+
+- model: "access_manager.Card"
+  pk: "f3db0b43-5537-3d9e-a44b-0411ff10dcb5"
+  fields:
+    number: "65 28 23 12"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    is_active: true
+    additional_info:
+      "type": "guest"
+    created_at: "1751437177895"
+
+- model: "access_manager.Card"
+  pk: "f3db0b26-5237-3d9e-a44b-0411ff10dcb5"
+  fields:
+    number: "09 87 65 98"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    is_active: true
+    additional_info:
+      "type": "master"
+    created_at: "1751437177895"

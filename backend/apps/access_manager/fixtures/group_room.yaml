@@ -1,0 +1,26 @@
+- model: "access_manager.GroupRoom"
+  pk: "7cc14802-995c-4512-8b4d-d71d2c3f78dd"
+  fields:
+    group_id: "eb3452a8-de98-4a2b-84c9-61d103669830"
+    room_id: "df77f910-2dcd-45cf-b6be-054c744561a7"  # Room 101 from room.yaml
+    additional_info:
+      "access_level": "full"
+    created_at: "1755012654"
+
+- model: "access_manager.GroupRoom"
+  pk: "bd4f5b3b-3459-47f0-9fc4-6f7a148c6a9b"
+  fields:
+    group_id: "ee74097b-fb0a-4e7b-9cdc-10dc54eab55c"
+    room_id: "ab09aa20-77b8-457a-bfc4-5dee69790241"  # Room 102 from room.yaml
+    additional_info:
+      "access_level": "maintenance"
+    created_at: "1755012654"
+
+- model: "access_manager.GroupRoom"
+  pk: "7cc14802-995c-4512-8b4d-d71d2c3f78bb"
+  fields:
+    group_id: "ee74097b-fb0a-4e7b-9cdc-10dc54eab55c"
+    room_id: "df77f910-2dcd-45cf-b6be-054c744561a7"  # Room 101 from room.yaml
+    additional_info:
+      "access_level": "full"
+    created_at: "1755012654"

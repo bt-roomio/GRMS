@@ -78,6 +78,8 @@ class DisconnectCardSerializer(serializers.Serializer):
             for device in devices:
                 deactivate_result = send_rpc_request(str(device.id), card_number, 0)
                 deactivate_results.append(deactivate_result)
-            return deactivate_results
+            if any(not r.get("success", False) for r in deactivate_results):
+                return {"success": False, "message": "Card is not deactivated from some devices !", "results": deactivate_results}
+            return {"success": True, "message": "Card is deactivated !"}
         except GuestCard.DoesNotExist:
             return {"success": False, "message": "Active guest card not found !"}
