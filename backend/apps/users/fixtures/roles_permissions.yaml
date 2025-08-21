@@ -269,3 +269,146 @@
       - - add_devicefromconf
         - main
         - device
+
+      - - view_group
+        - access_manager
+        - group
+      - - add_group
+        - access_manager
+        - group
+      - - change_group
+        - access_manager
+        - group
+      - - delete_group
+        - access_manager
+        - group
+
+      - - view_card
+        - access_manager
+        - card
+      - - add_card
+        - access_manager
+        - card
+      - - change_card
+        - access_manager
+        - card
+      - - delete_card
+        - access_manager
+        - card
+
+      - - view_cardlog
+        - access_manager
+        - cardlog
+      - - add_cardlog
+        - access_manager
+        - cardlog
+      - - change_cardlog
+        - access_manager
+        - cardlog
+      - - delete_cardlog
+        - access_manager
+        - cardlog
+
+      - - view_needsyncdevice
+        - access_manager
+        - needsyncdevice
+      - - add_needsyncdevice
+        - access_manager
+        - needsyncdevice
+      - - change_needsyncdevice
+        - access_manager
+        - needsyncdevice
+      - - delete_needsyncdevice
+        - access_manager
+        - needsyncdevice
+
+      - - view_staff
+        - access_manager
+        - staff
+      - - add_staff
+        - access_manager
+        - staff
+      - - change_staff
+        - access_manager
+        - staff
+      - - delete_staff
+        - access_manager
+        - staff
+
+      - - view_staffcard
+        - access_manager
+        - staffcard
+      - - add_staffcard
+        - access_manager
+        - staffcard
+      - - change_staffcard
+        - access_manager
+        - staffcard
+      - - delete_staffcard
+        - access_manager
+        - staffcard
+
+      - - view_guestcard
+        - access_manager
+        - guestcard
+      - - add_guestcard
+        - access_manager
+        - guestcard
+      - - change_guestcard
+        - access_manager
+        - guestcard
+      - - delete_guestcard
+        - access_manager
+        - guestcard
+
+      - - view_grouproom
+        - access_manager
+        - grouproom
+      - - add_grouproom
+        - access_manager
+        - grouproom
+      - - change_grouproom
+        - access_manager
+        - grouproom
+      - - delete_grouproom
+        - access_manager
+        - grouproom
+
+      - - view_grouppublicspace
+        - access_manager
+        - grouppublicspace
+      - - add_grouppublicspace
+        - access_manager
+        - grouppublicspace
+      - - change_grouppublicspace
+        - access_manager
+        - grouppublicspace
+      - - delete_grouppublicspace
+        - access_manager
+        - grouppublicspace
+
+      - - view_guestpublicspace
+        - access_manager
+        - guestpublicspace
+      - - add_guestpublicspace
+        - access_manager
+        - guestpublicspace
+      - - change_guestpublicspace
+        - access_manager
+        - guestpublicspace
+      - - delete_guestpublicspace
+        - access_manager
+        - guestpublicspace
+
+      - - view_carddeviceslot
+        - access_manager
+        - carddeviceslot
+      - - add_carddeviceslot
+        - access_manager
+        - carddeviceslot
+      - - change_carddeviceslot
+        - access_manager
+        - carddeviceslot
+      - - delete_carddeviceslot
+        - access_manager
+        - carddeviceslot

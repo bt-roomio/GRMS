@@ -50,9 +50,8 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
                 result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device, sync)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
-            else:
-                not sync and need_sync(cards, device, access, user=user)
-                return fail_response
+            not sync and need_sync(cards, device, access, user=user)
+            return fail_response
 
         elif has_message and is_success and access != 0:
             if sync:

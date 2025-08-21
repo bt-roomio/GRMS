@@ -1,0 +1,23 @@
+- model: "access_manager.Group"
+  pk: "ee74097b-fb0a-4e7b-9cdc-10dc54eab55c"
+  fields:
+    name: "Housekeeping Group"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    week_days: ["all_days"]
+    start_time: "08:00:00"
+    end_time: "18:00:00"
+    is_active: true
+    group_type: 2
+    created_at: "1751437177895"
+
+- model: "access_manager.Group"
+  pk: "eb3452a8-de98-4a2b-84c9-61d103669830"
+  fields:
+    name: "Engineering Group"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    week_days: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    start_time: "09:00:00"
+    end_time: "17:00:00"
+    is_active: true
+    group_type: 3
+    created_at: "1751437177895"
