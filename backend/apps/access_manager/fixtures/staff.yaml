@@ -1,0 +1,19 @@
+- model: "access_manager.Staff"
+  pk: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+  fields:
+    first_name: "John"
+    last_name: "Doe"
+    is_active: true
+    group_id: "ee74097b-fb0a-4e7b-9cdc-10dc54eab55c"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    created_at: "1755012654"
+
+- model: "access_manager.Staff"
+  pk: "a47ac10b-58cc-4372-a567-0e02b2c3d480"
+  fields:
+    first_name: "Jane"
+    last_name: "Smith"
+    is_active: true
+    group_id: "eb3452a8-de98-4a2b-84c9-61d103669830"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    created_at: "1755012654"

@@ -1,0 +1,23 @@
+- model: "access_manager.CardDeviceSlot"
+  pk: "47aef21b-6cc9-4ec5-8576-1a2f491940c0"
+  fields:
+    card_number: "12 23 34 45"
+    device_id: "47aef21b-6cc9-4ec5-8573-1a6f491940c0"  # DHT11 Demo Device
+    slot: 1
+    created_at: "1751437177897"
+
+- model: "access_manager.CardDeviceSlot"
+  pk: "47aef21b-6cc9-4ec5-8573-1a6f491240c0"
+  fields:
+    card_number: "65 28 23 12"
+    device_id: "a1561fb2-e031-42ce-812a-0ce84843c0f0"  # Raspberry Pi Demo Device
+    slot: 1
+    created_at: "1751437177897"
+
+- model: "access_manager.CardDeviceSlot"
+  pk: "34aef41b-6cc9-4ec5-8573-1a6f491240c0"
+  fields:
+    card_number: "09 87 65 98"
+    device_id: "a1561fb2-e031-42ce-812a-0ce84843c0f0"  # Raspberry Pi Demo Device
+    slot: 2
+    created_at: "1751437177897"

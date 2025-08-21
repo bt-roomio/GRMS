@@ -1,0 +1,9 @@
+- model: "access_manager.NeedSyncDevice"
+  pk: "fe30ab6d-fa7a-42b1-bed8-fc3e668d1470"
+  fields:
+    device_id: "47aef21b-6cc9-4ec5-8573-1a6f491940c0"  # DHT11 Demo Device
+    card_id: "f3db0b43-5537-3d9e-a44b-0411ff10dcb5"
+    need_sync: false
+    additional_info:
+      "message_params": { "access": true }
+    created_at: "1755012654"

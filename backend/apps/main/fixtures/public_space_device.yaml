@@ -1,0 +1,17 @@
+- model: main.devicepublicspaces
+  pk: "9829490d-f742-400e-8f38-aae5155e0b34"
+  fields:
+    device: "1829490d-f742-400e-8f48-aae5155e4b27"  # Test Device
+    public_space: "ad09aa20-77b8-457a-bfc4-5dee69790243"  # Lobby
+
+- model: main.devicepublicspaces
+  pk: "9829490d-f742-400e-8f38-aae5155e0b45"
+  fields:
+    device: "3829490d-f742-400e-8f38-aae5155d0b27"  # Fixture Device
+    public_space: "ad09aa20-77b8-457a-bfc4-5dee69790242"  # Conference Room
+
+- model: main.devicepublicspaces
+  pk: "9829490d-f742-400e-8f38-aae5155e0b56"
+  fields:
+    device: "9829490d-f742-400e-8f38-aae5155e0b27"  # CPU RAM Usage
+    public_space: "ad09aa20-77b8-457a-bfc4-5dee69790243"  # Lobby

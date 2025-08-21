@@ -1,0 +1,8 @@
+- model: "access_manager.GuestPublicSpace"
+  pk: "3fb8f53d-8bc5-4624-92d0-a6c88a0a59f9"
+  fields:
+    guest_id: "5b66af57-fb27-4c26-9986-b9994e644605"  # Amigo from guest.yaml
+    public_space_id: "ad09aa20-77b8-457a-bfc4-5dee69790243"
+    additional_info:
+      "access_hours": "24/7"
+    created_at: "1755012654"

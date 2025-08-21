@@ -56,4 +56,4 @@ def get_device_cards(device_id: UUID, cards: List = (), connect: bool = True) ->
 
     card_numbers = card_numbers or ["00 00 00 00"]
 
-    return list(card_numbers)
+    return sorted(card_numbers)
