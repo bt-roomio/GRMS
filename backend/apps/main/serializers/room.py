@@ -65,6 +65,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "tenant",
             "status",
             "devices",
+            "additional_info",
         )
 
 
@@ -91,6 +92,7 @@ class SimpleRoomSerializer(serializers.ModelSerializer):
             "suite",
             "tenant",
             "status",
+            "additional_info",
         )
 
 
@@ -139,4 +141,4 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Room
-        fields = ("id", "number", "floor", "block", "type", "state")
+        fields = ("id", "number", "floor", "block", "type", "state", "additional_info")
