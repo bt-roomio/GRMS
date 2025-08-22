@@ -31,7 +31,7 @@ class SberGetRoomDetailView(APIView):
 
         body["messageName"] = "ANSWER_TO_USER"
         body["payload"] = {
-            "pronounceText": f"Добро пожаловать, {guest.lastname} {guest.name}, в номер {room.number}!",
+            "pronounceText": f"Welcome, {guest.lastname} {guest.name}, in room one hundred twenty nine number!",  # TODO: translate if guest nationality is not russian
             "auto_listening": False,
             "finished": True,
         }
