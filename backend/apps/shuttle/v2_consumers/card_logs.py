@@ -25,6 +25,7 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
             filters=params.get("filters", {}),
             sort_by=params.get("sort_by", ["-event_ts"]),
             room_id=params.get("room"),
+            public_space_id=params.get("public_space"),
             user_id=params.get("user"),
             card_num=params.get("card_num"),
             tenant=tenant

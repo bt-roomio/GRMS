@@ -26,7 +26,7 @@ def swagger_export_card_logs():
         - **Event Timestamp**
         - **Access Group**
         - **Device**
-        - **Spaces**
+        - **Spaces**  (line of names of spaces like Room 123, Restaurant)
         - **User Type** (Staff / Guest)
         - **User Name**
         - **Created At**
@@ -35,6 +35,7 @@ def swagger_export_card_logs():
         You can filter the logs by sending JSON in the request body:
 
         - `room` (string): Room ID  
+        - `public_space` (string): Public Space ID  
         - `user` (string): User ID (staff or guest)  
         - `card_num` (string): Card number to filter by  
         - `device_ids` (list of strings): Filter by device IDs  
@@ -45,9 +46,10 @@ def swagger_export_card_logs():
         ### Example Request Body:
         ```json
         {
-          "room": "101",
-          "user": "123",
-          "card_num": "987654321",
+          "room": "uuid",
+          "public_space": "uuid",
+          "user": "uuid",
+          "card_num": "98 76 54 32",
           "device_ids": ["dev_1", "dev_2"],
           "filters": {
             "from_date": "2025-07-21 10:00:00",

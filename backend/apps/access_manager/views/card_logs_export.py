@@ -1,10 +1,13 @@
-import openpyxl
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+
 from django.http import HttpResponse, JsonResponse
 from rest_framework.views import APIView
-from openpyxl.styles import Font
+
 from access_manager.models import CardLog
 from access_manager.serializers.card_log import CardLogFilterParams
 from access_manager.swagger.card_log_export import swagger_export_card_logs
+
 from main.utils.get_device_space import get_space
 
 
@@ -19,6 +22,7 @@ class ExportCardLogsExcelView(APIView):
             device_ids=params.get("device_ids", []),
             sort_by=params.get("sort_by", ["-event_ts"]),
             room_id=params.get("room"),
+            public_space_id=params.get("public_space"),
             user_id=params.get("user"),
             card_num=params.get("card_num"),
             tenant_id=tenant_id)
@@ -26,7 +30,7 @@ class ExportCardLogsExcelView(APIView):
         if not logs.exists():
             return JsonResponse({"detail": "No logs found for given filters."}, status=404)
 
-        wb = openpyxl.Workbook()
+        wb = Workbook()
         ws = wb.active
         ws.title = "Card Logs"
 
@@ -34,8 +38,13 @@ class ExportCardLogsExcelView(APIView):
             "Card Number", "Event Timestamp", "Access Group",
             "Device", "Spaces", "User Type", "User Name", "Created At"
         ])
+
+        header_fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+
         for cell in ws[1]:
-            cell.font = Font(bold=True, size=14)
+            cell.font = Font(bold=True, size=14, color="000000")
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
 
         for log in logs:
             if log.staff:
