@@ -1,5 +1,6 @@
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 
 from django.http import HttpResponse, JsonResponse
 from rest_framework.views import APIView
@@ -25,7 +26,8 @@ class ExportCardLogsExcelView(APIView):
             public_space_id=params.get("public_space"),
             user_id=params.get("user"),
             card_num=params.get("card_num"),
-            tenant_id=tenant_id)
+            tenant_id=tenant_id,
+        )
 
         if not logs.exists():
             return JsonResponse({"detail": "No logs found for given filters."}, status=404)
@@ -34,17 +36,23 @@ class ExportCardLogsExcelView(APIView):
         ws = wb.active
         ws.title = "Card Logs"
 
-        ws.append([
+        # --- Headers ---
+        headers = [
             "Card Number", "Event Timestamp", "Access Group",
             "Device", "Spaces", "User Type", "User Name", "Created At"
-        ])
+        ]
+        ws.append(headers)
 
         header_fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
 
         for cell in ws[1]:
             cell.font = Font(bold=True, size=14, color="000000")
             cell.fill = header_fill
-            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.alignment = header_alignment
+
+        # --- Data rows ---
+        data_alignment = Alignment(horizontal="center", vertical="center")
 
         for log in logs:
             if log.staff:
@@ -57,7 +65,7 @@ class ExportCardLogsExcelView(APIView):
             spaces = get_space(log.device.id)
             space_field = ", ".join(spaces) if spaces else ""
 
-            ws.append([
+            row = [
                 log.number,
                 log.event_ts.strftime("%Y-%m-%d %H:%M:%S"),
                 log.get_access_group_display(),
@@ -66,8 +74,29 @@ class ExportCardLogsExcelView(APIView):
                 user_type,
                 user_name,
                 log.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            ])
+            ]
+            ws.append(row)
 
+            # Center align the just-added row
+            for cell in ws[ws.max_row]:
+                cell.alignment = data_alignment
+
+        # --- Auto-adjust column widths ---
+        for col_cells in ws.columns:
+            max_length = 0
+            col_letter = get_column_letter(col_cells[0].column)
+            for cell in col_cells:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except Exception:
+                    pass
+            adjusted_width = max_length + 1  # tighter spacing
+            if adjusted_width < 20:          # min width for readability
+                adjusted_width = 20
+            ws.column_dimensions[col_letter].width = adjusted_width
+
+        # --- Response ---
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
