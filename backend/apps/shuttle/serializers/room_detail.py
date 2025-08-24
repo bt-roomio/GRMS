@@ -33,5 +33,3 @@ class RoomDetailWsFilterBodySerializer(ValidatorSerializer):
         if not value:
             value = []
         return list(set(value + list(STATIC_KEYS.keys())))
-
-    request_id = serializers.CharField(required=True, help_text="Unique request ID")

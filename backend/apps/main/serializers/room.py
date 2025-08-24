@@ -136,7 +136,11 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
             data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
         else:
             data["type"] = instance.type and instance.type.title
-        data["guest"] = SimpleGuestSerializer(instance.last_guests[0]).data if instance.last_guests else None
+        data["guest"] = (
+            SimpleGuestSerializer(instance.last_guests[0]).data
+            if hasattr(instance, "last_guests") and instance.last_guests
+            else None
+        )
         return data
 
     class Meta:

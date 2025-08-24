@@ -77,7 +77,7 @@ class GuestSerializer(serializers.ModelSerializer):
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
             devices = (
                 Device.objects.filter(
-                    Q(room__id=room.id)
+                    Q(room__id=room.id)  # pyright: ignore
                     | Q(
                         device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests
                     ),
@@ -88,7 +88,7 @@ class GuestSerializer(serializers.ModelSerializer):
             )
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 0)
-                not result.get("success") and deactivate_result.update({"success": False})
+                not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)
@@ -143,7 +143,7 @@ class GuestFilterParams(ValidatorSerializer):
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)
-    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), default=[], required=False)
 
 
 class GuestCheckoutParams(ValidatorSerializer):
