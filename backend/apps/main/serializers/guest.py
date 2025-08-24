@@ -48,6 +48,12 @@ class GuestSerializer(serializers.ModelSerializer):
         data["room"] = str(instance.room_id) if instance.room_id else None
         return data
 
+    def validate_room(self, value):
+        tenant_id = self.context.get("tenant_id")
+        if value and value.tenant_id != tenant_id:
+            raise serializers.ValidationError("Room does not found.")
+        return value
+
     def create(self, validated_data):
         instance = super().create(validated_data)
 

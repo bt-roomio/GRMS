@@ -31,7 +31,7 @@ class GuestListView(APIView):
     @swagger_auto_schema(tags=["Main, Guest"], responses=GuestSwagger, request_body=GuestSerializer)
     @check_perms(["main.add_guest"])
     def post(self, request):
-        serializer = GuestSerializer(data=request.data)
+        serializer = GuestSerializer(data=request.data, context={"tenant_id": request.user.tenant_id})
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data, 201)
