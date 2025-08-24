@@ -52,8 +52,7 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
             room = params.get("room")
             if room == message.get("room"):
                 data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
-                if any([message.get("id") == i["id"] for i in data.get("results", [])]):
-                    await self.reply(data=data, action=action, request_id=request_id)
+                await self.reply(data=data, action=action, request_id=request_id)
 
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
