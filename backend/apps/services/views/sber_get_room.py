@@ -1,11 +1,30 @@
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView, Response
 
+from core.utils.replace_num_to_words import replace_numbers_with_words
 from main.models import Guest, Room
 
 
 class SberGetRoomDetailView(APIView):
     permission_classes = (AllowAny,)
+
+    rus_list = (
+        "UA",
+        "MD",
+        "GE",
+        "AM",
+        "AZ",
+        "TJ",
+        "UZ",
+        "TM",
+        "LV",
+        "LT",
+        "EE",
+        "RU",
+        "BY",
+        "KZ",
+        "KG",
+    )
 
     def post(self, request):
         body = request.data
@@ -29,9 +48,16 @@ class SberGetRoomDetailView(APIView):
             }
             return Response(body)
 
+        text = f"Добро пожаловать, {guest.lastname} {guest.name} в номер {room.number}!"
+        if guest.nationality and guest.nationality not in self.rus_list:
+            from deep_translator import GoogleTranslator
+
+            text_en = GoogleTranslator("ru", "en").translate(text)
+            text = replace_numbers_with_words(text_en)
+
         body["messageName"] = "ANSWER_TO_USER"
         body["payload"] = {
-            "pronounceText": f"Welcome, {guest.lastname} {guest.name}, in room one hundred twenty nine number!",  # TODO: translate if guest nationality is not russian
+            "pronounceText": text,
             "auto_listening": False,
             "finished": True,
         }
