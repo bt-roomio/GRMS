@@ -29,8 +29,8 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
             await self.handle_ts_kv_activity(message.get("update"))
 
     async def handle_ts_kv_activity(self, payload):
-        entity = payload.pop("entity")
-        key = payload.pop("key")
+        entity = payload.get("entity")
+        key = payload.get("key")
         _, value = get_non_null_column(payload)
 
         for request_id, params in self.subscribers.items():
@@ -41,7 +41,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
                 if not last_value_same:
                     res.insert(0, {"ts": payload.get("ts"), "key_name": key, "value": value})
                     params["response"]["results"] = res
-                    await self.reply(data=res, action=params.get("action"), request_id=request_id)
+                    await self.reply(data=params, action=params.get("action"), request_id=request_id)
 
     def find_last_value(self, results, key, value):
         for result in results:
@@ -55,5 +55,5 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}
 
     @action()
-    async def list_unsubscribe(self, request_id):
+    async def list_unsubscribe(self, request_id, **kwargs):
         self.subscribers.pop(request_id, None)
