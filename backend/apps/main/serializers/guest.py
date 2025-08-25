@@ -48,6 +48,12 @@ class GuestSerializer(serializers.ModelSerializer):
         data["room"] = str(instance.room_id) if instance.room_id else None
         return data
 
+    def validate_room(self, value):
+        tenant_id = self.context.get("tenant_id")
+        if value and value.tenant_id != tenant_id:
+            raise serializers.ValidationError("Room does not found.")
+        return value
+
     def create(self, validated_data):
         instance = super().create(validated_data)
 
@@ -77,7 +83,7 @@ class GuestSerializer(serializers.ModelSerializer):
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
             devices = (
                 Device.objects.filter(
-                    Q(room__id=room.id)
+                    Q(room__id=room.id)  # pyright: ignore
                     | Q(
                         device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests
                     ),
@@ -88,7 +94,7 @@ class GuestSerializer(serializers.ModelSerializer):
             )
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 0)
-                not result.get("success") and deactivate_result.update({"success": False})
+                not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
                 room.state = safely_remove(room.state, Room.CheckedIn)

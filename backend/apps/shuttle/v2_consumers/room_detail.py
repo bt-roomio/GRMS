@@ -1,6 +1,7 @@
 from asgiref.sync import sync_to_async
 from django.db.models import Prefetch
 from djangochannelsrestframework.mixins import action
+from djangochannelsrestframework.observer import model_observer
 
 from rest_framework.fields import ValidationError
 
@@ -17,7 +18,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
     lookup_field = "pk"
 
     def get_device_id(self, request_id):
-        data = self.request_ids.get(request_id)
+        data = self.subscribers.get(request_id)
         if not data:
             raise ValidationError("Incorrect request_id!")
 
@@ -27,37 +28,37 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
 
         return devices[0].get("id")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.request_ids = {}
+    @model_observer(Room, serializer_class=RoomDetailWsSerializer)  # pyright: ignore
+    async def room_activity(self, message, **kwargs):
+        for request_id, value in self.subscribers.items():
+            pk, keys = value.get("pk"), value.get("keys")
+            await self.send_data(request_id=request_id, pk=pk, keys=keys)
 
     @action()
-    async def subscribe(self, **kwargs):
+    async def subscribe(self, request_id, **kwargs):
         body = RoomDetailWsFilterBodySerializer.check(data=kwargs)
-        req_id = body.get("request_id")
-        self.request_ids[req_id] = body
-        await self.send_data(**body)
-        device_id = self.get_device_id(req_id)
+        self.subscribers[request_id] = body
+        await self.send_data(request_id=request_id, pk=body.get("pk"), keys=body.get("keys"))
+        device_id = self.get_device_id(request_id)
         await self.add_group(f"tskv_latest_updates_{device_id}")
+        await self.room_activity.subscribe(request_id=request_id, **kwargs)
 
     @action()
-    async def unsubscribe(self, **kwargs):
-        req_id = str(kwargs.get("request_id"))
-        data = self.request_ids.get(req_id)
+    async def unsubscribe(self, request_id, **kwargs):
+        data = self.subscribers.get(request_id)
         if not data:
-            return await self.reply(data={"message": "Room not found!"}, action="unsubscribe", request_id=req_id)
-        device_id = self.get_device_id(req_id)
+            return await self.reply(data={"message": "Room not found!"}, action="unsubscribe", request_id=request_id)
+        device_id = self.get_device_id(request_id)
         await self.remove_group(f"tskv_latest_updates_{device_id}")
-        del self.request_ids[req_id]
+        del self.subscribers[request_id]
 
-    async def send_data(self, **kwargs):
-        req_id = kwargs.get("request_id")
-        data = await sync_to_async(self.get)(**kwargs)
-        self.request_ids[req_id]["response"] = data
-        await self.reply(data=data, action="subscribe", request_id=req_id)
+    async def send_data(self, request_id, pk, keys):
+        data = await sync_to_async(self.get)(pk=pk, keys=keys)
+        self.subscribers[request_id]["response"] = data
+        await self.reply(data=data, action="subscribe", request_id=request_id)
 
-    def get(self, **kwargs):
-        query = self.get_queryset().filter(pk=kwargs.get("pk"), tenant=self.tenant_id)
+    def get(self, pk, keys):
+        query = self.get_queryset().filter(pk=pk, tenant=self.tenant_id)
         if not query:
             raise ValidationError("Room not found!")
 
@@ -68,8 +69,8 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
                 to_attr="last_guests",
             )
         )
-        instance = query.rooms_ts_kvs(tenant=self.tenant_id, keys=kwargs.get("keys")).first()  # pyright: ignore
-        serializer = self.get_serializer(instance=instance, action_kwargs=kwargs)
+        instance = query.rooms_ts_kvs(tenant=self.tenant_id, keys=keys).first()  # pyright: ignore
+        serializer = self.get_serializer(instance=instance, action_kwargs={"detail": True})
         return serializer.data
 
     async def ts_kv_latest_activity(self, message, **kwargs):
@@ -77,7 +78,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
             await self.ts_kv_latest_activity({"update": update}, **kwargs)
             continue
 
-        for request_id, params in self.request_ids.items():
+        for request_id, params in self.subscribers.items():
             payload = message.get("update")
             device_id = self.get_device_id(request_id)
 

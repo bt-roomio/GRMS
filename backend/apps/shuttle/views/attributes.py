@@ -5,7 +5,6 @@ from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.permission import check_perms
 from main.models import Device
 from main.utils.save_attributes import save_attributes
-from shuttle.consumers.aggregations.latest_telemetry import get_ts_kv_dict
 from shuttle.models import AttributeKv, Relation, TsKvDictionary, TsKvLatest
 from shuttle.serializers.attributes import AttributeKvPath, AttributesChangeFilterPath, AttributesChangeSerializer
 from shuttle.serializers.tag import TagFilterParams, TagFilterPath
@@ -47,10 +46,9 @@ class AttributeListView(APIView):
                 entity__tenant_id=request.user.tenant_id,
             )
             for d in queryset:
-                ts_kv_dict = get_ts_kv_dict(d.key)
                 _, value = get_non_null_field(d)
-                result["data"][ts_kv_dict.key] = [[d.ts, value]]
-                result["latestValues"][ts_kv_dict.key] = d.ts
+                result["data"][str(d.key.key)] = [[d.ts, value]]
+                result["latestValues"][str(d.key.key)] = d.ts
 
         return Response(result)
 
