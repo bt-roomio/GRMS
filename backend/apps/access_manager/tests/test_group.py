@@ -416,7 +416,6 @@ class GroupViewTest(BaseTestCase):
 
         # The view should still succeed even if tasks fail
         response = self.client.post(self.list_url, payload, format="json")
-        print(response.data)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["name"], "Test Group with Task Error")

@@ -57,7 +57,6 @@ class SyncDeviceView(APIView):
     @sync_device_get_swagger()
     def get(self, request):
         params = NeedSyncDeviceHttpFilterParams.check(request.GET)
-        print(params.get("need_sync", None))
         queryset = Device.objects.get_card_related_devices(params.get("card_id"), params.get("need_sync", None))
         if not queryset.exists():
             return Response({"message": "No devices need syncing"}, status=200)

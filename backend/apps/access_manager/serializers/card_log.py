@@ -67,6 +67,7 @@ class CardLogSerializer(serializers.ModelSerializer):
 
 class CardLogFilterParams(ValidatorSerializer):
     room = serializers.CharField(required=False)
+    public_space = serializers.CharField(required=False)
     user = serializers.CharField(required=False, help_text="User ID (can be guest or staff)")
     card_num = serializers.CharField(required=False, help_text="Card number to filter by")
     sort_by = serializers.ListField(
