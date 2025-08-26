@@ -72,7 +72,7 @@ class GuestCardView(APIView):
             if not errors:
                 return Response({"success": True, "message": "Cards connected successfully !"}, status=200)
             return Response(
-                {"message": "Some errors occurred while synchronizing !", "errors": errors, "success": success},
+                {"message": "Couldn't synchronize the card with all devices !", "errors": errors, "success": success},
                 status=400)
 
         except Exception as e:
