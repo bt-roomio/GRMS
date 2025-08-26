@@ -16,6 +16,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
         query = query.by_tenant(self.tenant_id).tag_logs(  # pyright: ignore
             entity=params.get("device"),
             keys=params.get("keys"),
+            all_tags=params.get("all_tags"),
             start_ts=params.get("start_ts"),
             sort_by=params.get("sort_by", []),
         )
@@ -36,7 +37,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
         for request_id, params in self.subscribers.items():
             qp = params.get("query_params")
             res = params.get("response").get("results", [])
-            if qp.get("device") == entity and key in qp.get("keys"):
+            if qp.get("device") == entity and (qp.get("all_tags") or key in qp.get("keys", [])):
                 last_value_same = self.find_last_value(res, key, value)
                 if not last_value_same:
                     res.insert(0, {"ts": payload.get("ts"), "key_name": key, "value": value})
@@ -52,7 +53,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
     @action()
     async def list_subscribe(self, request_id, query_params, action):
         res = await self.send_list_paginated(action, query_params, request_id)
-        await self.add_group(f"tskv_updates_{query_params.get('device')}")
+        await self.add_group(f"tskv_updates_{query_params.get("device")}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}
 
     @action()

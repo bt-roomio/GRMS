@@ -69,6 +69,7 @@ class TagLogsFilterParams(ValidatorSerializer):
     )
     device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
     keys = serializers.ListField(child=serializers.CharField())
+    all_tags = serializers.BooleanField(default=False)
     start_ts = serializers.DateTimeField()
     page = serializers.IntegerField(default=1, min_value=1, required=False)
     size = serializers.IntegerField(default=15, max_value=500, required=False)
