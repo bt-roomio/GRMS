@@ -98,7 +98,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("errors", response.data)
         self.assertIn("success", response.data)
-        self.assertEqual(response.data["message"], "Some errors occurred while synchronizing !")
+        self.assertEqual(response.data["message"], "Couldn't synchronize the card with all devices !")
 
     def test_connect_cards_already_connected_to_staff(self):
         """Test error when card is already connected to staff"""

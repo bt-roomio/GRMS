@@ -7,7 +7,7 @@ from shuttle.views.latest_ts_kv import LatestTsKvListView
 from shuttle.views.relation import RelationDetailView, RelationListView
 from shuttle.views.remove_attribute import RemoveAttribute
 from shuttle.views.temp_change import TempAPIChangeTsKvLatest
-from shuttle.views.ts_kv import TsKvListView
+from shuttle.views.ts_kv import TsKvListView, ExportTsKvExcelView
 
 urlpatterns = [
     path("attributes/<uuid:device_id>/<str:scope>/", AttributeListView.as_view(), name="attributes-list"),
@@ -15,6 +15,7 @@ urlpatterns = [
     path("relation/<uuid:pk>/", RelationDetailView.as_view(), name="relation-detail"),
     path("rpc/<uuid:device_id>/", JsonRPCView.as_view(), name="json-rpc-view"),
     path("controller/file/", ControllerFileListView.as_view(), name="controller-file-view"),
+    path("telemetry/export/", ExportTsKvExcelView.as_view(), name="telemetry-export"),
     path("telemetry/<uuid:device_id>/<str:scope>/", RemoveAttribute.as_view(), name="remove-attribute-view"),
     path("telemetry/<str:entity_type>/<uuid:entity_id>/", TsKvListView.as_view(), name="ts-kv-list-view"),
     path(

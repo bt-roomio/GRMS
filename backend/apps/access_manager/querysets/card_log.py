@@ -7,13 +7,16 @@ class CardLogQuerySet(BaseQuerySet):
     def by_room(self, room_id):
         return self.filter(device__room__id=room_id, device__is_active=True)
 
+    def by_public_space(self, public_space_id):
+        return self.filter(device__device_public_spaces__public_space=public_space_id, device__is_active=True)
+
     def by_user(self, user_id):
         return self.filter(Q(guest_id=user_id) | Q(staff_id=user_id))
 
     def by_card_num(self, card_number, tenant):
         return self.filter(number=card_number, tenant=tenant)
 
-    def list(self, tenant_id=None, filters={}, device_ids=[], sort_by=[], user_id=None, card_num=None, tenant=None, room_id=None):
+    def list(self, tenant_id=None, filters={}, device_ids=None, sort_by=None, user_id=None, card_num=None, tenant=None, room_id=None, public_space_id=None):
         query = self
         from_date = filters.get("from_date")
         to_date = filters.get("to_date")
@@ -30,6 +33,9 @@ class CardLogQuerySet(BaseQuerySet):
 
         if room_id:
             query = query.by_room(room_id)
+        if public_space_id:
+            query = query.by_public_space(public_space_id)
+
         if user_id:
             query = query.by_user(user_id)
         if card_num and tenant:
