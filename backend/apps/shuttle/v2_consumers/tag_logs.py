@@ -41,7 +41,8 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
                 if not last_value_same:
                     res.insert(0, {"ts": payload.get("ts"), "key_name": key, "value": value})
                     params["response"]["results"] = res
-                    await self.reply(data=params, action=params.get("action"), request_id=request_id)
+                    params["response"]["count"] += 1
+                    await self.reply(data=params["response"], action=params.get("action"), request_id=request_id)
 
     def find_last_value(self, results, key, value):
         for result in results:
