@@ -45,48 +45,45 @@ class TsKvQuerySet(BaseQuerySet):
 
         return query
 
-    def tag_logs(self, entity, keys, start_ts, sort_by=None):
+    def tag_logs(self, entity, keys, start_ts, all_tags, sort_by=None):
         if sort_by is None:
             sort_by = ["-ts"]
 
         # Base queryset: filter early and include select_related for join optimizations.
-        qs = (
-            self.select_related("key")
-            .by_device(entity)
-            .filter(ts__gte=start_ts, key__key__in=keys)
-            .annotate(
-                # Create window functions for each value field.
-                prev_dbl_v=Window(
-                    expression=Lag("dbl_v"),
-                    order_by=F("ts").asc(),
-                ),
-                prev_json_v=Window(
-                    expression=Lag("json_v"),
-                    order_by=F("ts").asc(),
-                ),
-                prev_long_v=Window(
-                    expression=Lag("long_v"),
-                    order_by=F("ts").asc(),
-                ),
-                prev_str_v=Window(
-                    expression=Lag("str_v"),
-                    order_by=F("ts").asc(),
-                ),
-                prev_bool_v=Window(
-                    expression=Lag("bool_v"),
-                    order_by=F("ts").asc(),
-                ),
-                # Annotate key name and a merged value across possible types.
-                key_name=F("key__key"),
-                value=Coalesce(
-                    Cast(F("dbl_v"), output_field=CharField()),
-                    Cast(F("long_v"), output_field=CharField()),
-                    F("str_v"),
-                    Cast(F("bool_v"), output_field=CharField()),
-                    Cast(F("json_v"), output_field=CharField()),
-                    output_field=CharField(),
-                ),
-            )
+        qs = self.select_related("key").by_device(entity).filter(ts__gte=start_ts)
+        qs = qs.filter(key__key__in=keys) if not all_tags else qs
+        qs = qs.annotate(
+            # Create window functions for each value field.
+            prev_dbl_v=Window(
+                expression=Lag("dbl_v"),
+                order_by=F("ts").asc(),
+            ),
+            prev_json_v=Window(
+                expression=Lag("json_v"),
+                order_by=F("ts").asc(),
+            ),
+            prev_long_v=Window(
+                expression=Lag("long_v"),
+                order_by=F("ts").asc(),
+            ),
+            prev_str_v=Window(
+                expression=Lag("str_v"),
+                order_by=F("ts").asc(),
+            ),
+            prev_bool_v=Window(
+                expression=Lag("bool_v"),
+                order_by=F("ts").asc(),
+            ),
+            # Annotate key name and a merged value across possible types.
+            key_name=F("key__key"),
+            value=Coalesce(
+                Cast(F("dbl_v"), output_field=CharField()),
+                Cast(F("long_v"), output_field=CharField()),
+                F("str_v"),
+                Cast(F("bool_v"), output_field=CharField()),
+                Cast(F("json_v"), output_field=CharField()),
+                output_field=CharField(),
+            ),
         )
 
         # Dynamically build filter conditions for detecting change in values.

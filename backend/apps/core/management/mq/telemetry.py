@@ -105,6 +105,7 @@ def sync_telemetry(device, topic, payload):
                     "long_v": value if field == "long_v" else None,
                     "dbl_v": value if field == "dbl_v" else None,
                     "json_v": value if field == "json_v" else None,
+                    "value": value,
                 }
             )
             if key == "messageFromFIAS":
