@@ -21,9 +21,9 @@ class ExportCardLogsExcelView(APIView):
         logs = CardLog.objects.select_related("staff", "guest", "device").list(
             filters=params.get("filters", {}),
             device_ids=params.get("device_ids", []),
+            room_ids=params.get("room_ids", []),
+            public_space_ids=params.get("public_space_ids", []),
             sort_by=params.get("sort_by", ["-event_ts"]),
-            room_id=params.get("room"),
-            public_space_id=params.get("public_space"),
             user_id=params.get("user"),
             card_num=params.get("card_num"),
             tenant_id=tenant_id,
