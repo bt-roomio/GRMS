@@ -80,3 +80,5 @@ class CardLogFilterParams(ValidatorSerializer):
         child=serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", input_formats=["%Y-%m-%d %H:%M:%S"])
     )
     device_ids = serializers.ListField(child=serializers.CharField(), required=False)
+    room_ids = serializers.ListField(child=serializers.CharField(), required=False)
+    public_space_ids = serializers.ListField(child=serializers.CharField(), required=False)
