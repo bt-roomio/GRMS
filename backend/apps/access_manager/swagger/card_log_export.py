@@ -34,21 +34,24 @@ def swagger_export_card_logs():
         ### Filtering Options:
         You can filter the logs by sending JSON in the request body:
 
-        - `room` (string): Room ID  
-        - `public_space` (string): Public Space ID  
+        - `room_ids` (array of strings): List of Room IDs  
+        - `public_space_ids` (array of strings): List of Public Space IDs  
         - `user` (string): User ID (staff or guest)  
         - `card_num` (string): Card number to filter by  
-        - `device_ids` (list of strings): Filter by device IDs  
+        - `device_ids` (array of strings): Filter by device IDs  
         - `filters` (object): Key-value pairs with datetime filtering  
-          - Format: `"YYYY-MM-DD HH:MM:SS"`  
-        - `sort_by` (list): Sorting options, e.g. `["-event_ts"]`  
+          - `from_date` (string, format `"YYYY-MM-DD HH:MM:SS"`)  
+          - `to_date` (string, format `"YYYY-MM-DD HH:MM:SS"`)  
+        - `sort_by` (array of strings): Sorting options, e.g. `["-event_ts"]`  
+        - `size` (integer): Page size, default 50, max 200  
+        - `page` (integer): Page number, default 1  
 
         ### Example Request Body:
         ```json
         {
-          "room": "uuid",
-          "public_space": "uuid",
-          "user": "uuid",
+          "room_ids": ["uuid-room-1", "uuid-room-2"],
+          "public_space_ids": ["uuid-ps-1"],
+          "user": "uuid-user",
           "card_num": "98 76 54 32",
           "device_ids": ["dev_1", "dev_2"],
           "filters": {
@@ -56,6 +59,8 @@ def swagger_export_card_logs():
             "to_date": "2025-07-25 23:59:59"
           },
           "sort_by": ["-event_ts"],
+          "size": 100,
+          "page": 1
         }
         ```
 
