@@ -1,0 +1,14 @@
+modules:
+  https_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+
+  https_relaxed:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      follow_redirects: true
+      valid_status_codes: [200, 204, 301, 302, 401, 403, 404, 405]
