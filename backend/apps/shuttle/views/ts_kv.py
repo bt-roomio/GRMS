@@ -46,6 +46,7 @@ class ExportTsKvExcelView(APIView):
             entity=params.get("device"),
             keys=params.get("keys"),
             start_ts=params.get("start_ts"),
+            all_tags=params.get("all_tags"),
             sort_by=params.get("sort_by", ["-ts"]),
         )
 
