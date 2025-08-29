@@ -13,8 +13,7 @@ from core.utils.permission import check_perms
 from core.utils.serializers import dict_of_lists
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
-from main.serializers.room_bulk_create import RoomBulkCreateOut, RoomNumberValidator
-from main.signals import check_for_duplicate_state
+from main.serializers.room_bulk_create import RoomNumberValidator
 from main.swagger.room import RoomDetailSwagger, RoomSwagger
 from main.utils.parse_room_numbers import parse_room_numbers
 
@@ -58,7 +57,6 @@ class RoomListView(APIView):
             raise DRFValidationError({"number": "Room number already exists"})
 
         if len(to_create) > 1:
-            print(to_create)
             with transaction.atomic():
                 rooms = []
                 for n in to_create:
@@ -80,6 +78,9 @@ class RoomListView(APIView):
             serializer.save()
         except DjangoValidationError as e:
             raise DRFValidationError(e.message_dict)
+        if not isinstance(serializer.data, ReturnDict):
+            raise DRFValidationError({"number": "Invalid room number"})
+
         return Response(dict_of_lists(serializer.data), 201)
 
 

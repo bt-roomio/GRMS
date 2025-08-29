@@ -16,3 +16,5 @@ class RoomNumberValidator(ValidatorSerializer):
             )
         ],
     )
+    floor = serializers.CharField(required=True)
+    block = serializers.CharField(required=True)
