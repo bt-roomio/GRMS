@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, cast
 from rest_framework import serializers
 from rest_framework.generics import CreateAPIView
 from rest_framework.serializers import Serializer
+from rest_framework.utils.serializer_helpers import ReturnDict
 
 from core.utils.perform_request import with_tenant
 
@@ -44,3 +45,7 @@ class BaseCreateAPIView(CreateAPIView):
 class MillisecondDateTimeField(serializers.DateTimeField):
     def to_representation(self, value):
         return int(value.timestamp() * 1000)
+
+
+def dict_of_lists(data: ReturnDict) -> list:
+    return [{k: v for k, v in dict(data).items()}]

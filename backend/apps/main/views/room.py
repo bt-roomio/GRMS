@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.exceptions import ReturnDict
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -8,9 +10,12 @@ from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
+from core.utils.serializers import dict_of_lists
 from main.models import Room
 from main.serializers.room import RoomFilterParams, RoomSerializer
+from main.serializers.room_bulk_create import RoomNumberValidator
 from main.swagger.room import RoomDetailSwagger, RoomSwagger
+from main.utils.parse_room_numbers import parse_room_numbers
 
 
 class RoomListView(APIView):
@@ -36,13 +41,47 @@ class RoomListView(APIView):
         tenant_id = request.user.tenant_id
         data = request.data.copy()
         data["tenant"] = tenant_id
+        room_number = RoomNumberValidator(data=data)
+        room_number.is_valid(raise_exception=True)
+
+        if not isinstance(room_number.data, ReturnDict):
+            raise DRFValidationError({"number": "Invalid room number"})
+
+        numbers = parse_room_numbers(room_number.data.get("number", ""))
+        existing = set(
+            Room.objects.filter(number__in=numbers, tenant_id=tenant_id, active=True).values_list("number", flat=True)
+        )
+        to_create = [n for n in numbers if n not in existing]
+
+        if not to_create or len(to_create) == 0:
+            raise DRFValidationError({"number": "Room number already exists"})
+
+        if len(to_create) > 1:
+            with transaction.atomic():
+                rooms = []
+                for n in to_create:
+                    obj = Room.objects.get_or_create(
+                        number=n,
+                        tenant_id=tenant_id,
+                        type_id=data.get("type"),
+                        floor=data.get("floor"),
+                        block=data.get("block"),
+                    )
+                    rooms.append(obj[0])
+                serializer = RoomSerializer(instance=rooms, many=True)
+                return Response(serializer.data, 201)
+
+        data["number"] = to_create[0]
         serializer = RoomSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         try:
             serializer.save()
         except DjangoValidationError as e:
             raise DRFValidationError(e.message_dict)
-        return Response(serializer.data, 201)
+        if not isinstance(serializer.data, ReturnDict):
+            raise DRFValidationError({"number": "Invalid room number"})
+
+        return Response(dict_of_lists(serializer.data), 201)
 
 
 class RoomDetailView(APIView):
