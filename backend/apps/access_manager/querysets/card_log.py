@@ -46,4 +46,4 @@ class CardLogQuerySet(BaseQuerySet):
         if card_num and tenant:
             query = query.by_card_num(card_num, tenant)
 
-        return query.order_by(*sort_by)
+        return query.order_by(*sort_by).distinct()
