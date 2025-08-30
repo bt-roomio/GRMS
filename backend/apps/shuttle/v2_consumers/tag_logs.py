@@ -18,6 +18,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
             keys=params.get("keys"),
             all_tags=params.get("all_tags"),
             start_ts=params.get("start_ts"),
+            end_ts=params.get("end_ts"),
             sort_by=params.get("sort_by", []),
         )
         return query
