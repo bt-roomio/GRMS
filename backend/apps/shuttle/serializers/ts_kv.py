@@ -71,6 +71,7 @@ class TagLogsFilterParams(ValidatorSerializer):
     keys = serializers.ListField(child=serializers.CharField())
     all_tags = serializers.BooleanField(default=False)
     start_ts = serializers.DateTimeField()
+    end_ts = serializers.DateTimeField(required=False)
     page = serializers.IntegerField(default=1, min_value=1, required=False)
     size = serializers.IntegerField(default=15, max_value=500, required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)

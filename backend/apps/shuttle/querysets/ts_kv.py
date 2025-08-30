@@ -45,12 +45,13 @@ class TsKvQuerySet(BaseQuerySet):
 
         return query
 
-    def tag_logs(self, entity, keys, start_ts, all_tags, sort_by=None):
+    def tag_logs(self, entity, keys, start_ts, all_tags, end_ts=None, sort_by=None):
         if sort_by is None:
             sort_by = ["-ts"]
 
         # Base queryset: filter early and include select_related for join optimizations.
         qs = self.select_related("key").by_device(entity).filter(ts__gte=start_ts)
+        qs = qs.filter(ts__lte=end_ts) if end_ts else qs
         qs = qs.filter(key__key__in=keys) if not all_tags else qs
         qs = qs.annotate(
             # Create window functions for each value field.
