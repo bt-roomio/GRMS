@@ -10,6 +10,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.utilits.check_card_assignment import get_card_assignments
+
 logger = logging.getLogger("main")
 
 
@@ -38,17 +40,11 @@ class GuestCardView(APIView):
             errors = []
             success = []
 
-            staff_cards = StaffCard.objects.filter(is_active=True, card__number__in=cards,
-                                                   staff__tenant_id=tenant_id)
-            guest_cards = list(
-                GuestCard.objects.filter(is_active=True, card__number__in=cards, guest__tenant_id=tenant_id).exclude(
-                    guest__id=guest_id).values_list("card__number", flat=True))
+            assigned_cards = get_card_assignments(cards=cards, tenant_id=tenant_id, exclude_guest_id=guest_id)
 
-            if staff_cards:
-                return Response({"message": "Card is connected to staff."}, 403)
-
-            if guest_cards:
-                return Response({"message": f"{guest_cards} connected to guests."}, 403)
+            if assigned_cards:
+                return Response({"success": False, "message": f"Card is already assigned .",
+                                 "assigned_cards": assigned_cards}, 403)
 
             for public_space in public_spaces:
                 _, _ = GuestPublicSpace.objects.get_or_create(guest_id=guest_id, public_space_id=public_space)
