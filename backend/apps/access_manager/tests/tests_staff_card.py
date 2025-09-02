@@ -133,7 +133,7 @@ class StaffCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data["message"], "Card is connected to guest.")
+        self.assertEqual(response.data["message"], "Card is already assigned .")
 
     def test_connect_cards_already_connected_to_other_staff(self):
         """Test error when card is already connected to another staff member"""
@@ -145,7 +145,7 @@ class StaffCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 403)
-        self.assertIn("connected to staff", response.data["message"])
+        self.assertEqual(response.data["message"], "Card is already assigned .")
 
     def test_connect_cards_no_devices_found(self):
         """Test error when no devices are found for the staff's group"""

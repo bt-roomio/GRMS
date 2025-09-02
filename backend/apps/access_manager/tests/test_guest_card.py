@@ -111,7 +111,7 @@ class GuestCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data["message"], "Card is connected to staff.")
+        self.assertEqual(response.data["message"], "Card is already assigned .")
 
     def test_connect_cards_already_connected_to_other_guest(self):
         """Test error when card is already connected to another guest"""
@@ -124,7 +124,7 @@ class GuestCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 403)
-        self.assertIn("connected to guests", response.data["message"])
+        self.assertEqual(response.data["message"], "Card is already assigned .")
 
     def test_connect_cards_same_guest_allowed(self):
         """Test that connecting cards to the same guest is allowed"""
