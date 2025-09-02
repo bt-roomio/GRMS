@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.check_card_assignment import get_card_assignments
 from main.models import Device
 
 logger = logging.getLogger("main")
@@ -31,17 +32,11 @@ class StaffCardView(APIView):
             errors = []
             success = []
 
-            guest_cards = GuestCard.objects.filter(is_active=True, card__number__in=cards,
-                                                   guest__tenant_id=request.user.tenant_id)
-            staff_cards = list(
-                StaffCard.objects.filter(is_active=True, card__number__in=cards, staff__tenant__id=tenant_id).exclude(
-                    staff=staff).values_list("card__number", flat=True))
+            assigned_cards = get_card_assignments(cards=cards, tenant_id=tenant_id, exclude_staff=staff)
 
-            if guest_cards:
-                return Response({"message": "Card is connected to guest."}, 403)
-
-            if staff_cards:
-                return Response({"message": f"{staff_cards} connected to staff."}, 403)
+            if assigned_cards:
+                return Response({"success": False, "message": f"Card is already assigned .",
+                                 "assigned_cards": assigned_cards}, 403)
 
             group_rooms_devices = GroupRoom.objects.filter(group=group, room__devices__is_active=True).values_list(
                 "room__devices", flat=True
