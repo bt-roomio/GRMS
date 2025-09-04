@@ -65,7 +65,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         query = query.prefetch_related(
             Prefetch(
                 "guests",
-                queryset=Guest.objects.order_by("-created_at")[:1],
+                queryset=Guest.objects.filter(tenant_id=self.tenant_id, is_active=True).order_by("-created_at")[:1],
                 to_attr="last_guests",
             )
         )
