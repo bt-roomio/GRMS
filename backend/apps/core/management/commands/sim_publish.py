@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from core.utils.get_time import get_mil_sec
-from shuttle.models import AttributeKv
+from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
 
@@ -20,18 +20,19 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         value = options["value"]
-        # telemetry(value)
-        attributes(value)
+        telemetry("Balcony Door", value)
+        # attributes(value)
 
 
-def telemetry(value):
+def telemetry(tag="Window", value=1):
     device_id = "00136d0a-f59b-4049-a35d-01bf86b07d3e"
     tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-    tag = "Window"
     field = "long_v"
     key = f"{device_id}_{tenant_id}"
+    update_ts_kv_latets(tag, device_id, value, field)
+    update_ts_kv_latets("Temperature", device_id, value, field)
     updates_by_device = {key: []}
-    updates_by_device[key].append(
+    updates_by_device[key] = [
         {
             "entity": str(device_id),
             "key": tag,
@@ -42,9 +43,36 @@ def telemetry(value):
             "dbl_v": value if field == "dbl_v" else None,
             "json_v": value if field == "json_v" else None,
             "value": value,
-        }
-    )
+        },
+        {
+            "entity": str(device_id),
+            "key": "Temperature",
+            "ts": timezone.now(),
+            "bool_v": value if field == "bool_v" else None,
+            "str_v": value if field == "str_v" else None,
+            "long_v": value if field == "long_v" else None,
+            "dbl_v": value if field == "dbl_v" else None,
+            "json_v": value if field == "json_v" else None,
+            "value": value,
+        },
+    ]
     publish_updates_batch(updates_by_device)
+
+
+def update_ts_kv_latets(tag, device_id, value, field="long_v"):
+    key, _ = TsKvDictionary.objects.get_or_create(key=tag)
+    TsKvLatest.objects.update_or_create(
+        entity_id=device_id,
+        key_id=key.key_id,
+        defaults={
+            "long_v": value if field == "long_v" else None,
+            "bool_v": value if field == "bool_v" else None,
+            "str_v": value if field == "str_v" else None,
+            "dbl_v": value if field == "dbl_v" else None,
+            "json_v": value if field == "json_v" else None,
+            "ts": get_mil_sec(),
+        },
+    )
 
 
 def attributes(value):

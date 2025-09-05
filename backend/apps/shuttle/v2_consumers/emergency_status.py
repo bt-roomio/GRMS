@@ -2,7 +2,7 @@ from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
 
 from main.models import Device
-from shuttle.models import TsKvDictionary, TsKvLatest
+from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 from shuttle.serializers.emergency_status import DeviceTelemetrySerializer, EmergencyStatusFilterParams
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
@@ -132,6 +132,11 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         except Device.DoesNotExist:
             return
 
+        # avoid duplicates
+        last_data = sub.get("response").get(key, {}).get("data")
+        if last_data and last_data[-1].get("value") == value:
+            return
+
         result = {
             "device_id": entity_id,
             "room": device.room.number if device.room else None,
@@ -139,6 +144,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
             "data": [{"key_name": key, "ts": message.get("ts"), "value": value}],
         }
         await self.reply(data=result, action=sub.get("action"), request_id=request_id)
+        self.subscribers[request_id]["response"][key] = result
 
     async def handle_attribute_update(self, message, keys, scope, entity_id, request_id, sub):
         key = message.get("key_name")
@@ -153,6 +159,10 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         except Device.DoesNotExist:
             return
 
+        last_data = sub.get("response").get(key, {}).get("data")
+        if last_data and last_data[-1].get("value") == value:
+            return
+
         result = {
             "device_id": entity_id,
             "room": device.room.number if device.room else None,
@@ -160,6 +170,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
             "data": [{"key_name": key, "ts": message.get("last_update_ts"), "value": value}],
         }
         await self.reply(data=result, action=sub.get("action"), request_id=request_id)
+        self.subscribers[request_id]["response"][key] = result
 
     @action()
     async def subscribe(self, request_id, action, **kwargs):
@@ -167,6 +178,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         self.subscribers[request_id] = {
             "action": action,
             "query_params": kwargs.get("query_params", {}),
+            "response": {},
         }
 
     @action()
