@@ -2,7 +2,7 @@ from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
 
 from main.models import Device
-from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
+from shuttle.models import TsKvDictionary, TsKvLatest
 from shuttle.serializers.emergency_status import DeviceTelemetrySerializer, EmergencyStatusFilterParams
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
@@ -24,9 +24,9 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
     @action()
     async def list(self, **kwargs):
         params = kwargs.get("query_params")
-        data_type = params.get("data_type")
-        keys = params.get("keys", [])
-        scope = params.get("attribute_scope")
+        data_type = params.get("data_type")  # pyright: ignore
+        keys = params.get("keys", [])  # pyright: ignore
+        scope = params.get("attribute_scope")  # pyright: ignore
         if not keys:
             return None
 
@@ -129,7 +129,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
         try:
             device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
-        except Device.DoesNotExist:
+        except Device.DoesNotExist:  # pyright: ignore
             return
 
         # avoid duplicates
@@ -156,7 +156,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
         try:
             device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
-        except Device.DoesNotExist:
+        except Device.DoesNotExist:  # pyright: ignore
             return
 
         last_data = sub.get("response").get(key, {}).get("data")
