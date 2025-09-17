@@ -2,7 +2,8 @@
 
 ## Build project for gitlab.registry.com
 
-`docker buildx build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/yroomio/grms:latest --push .`
+`docker buildx build --platform linux/amd64,linux/arm64
+-t registry.gitlab.com/yroomio/grms:latest --push .`
 
 ## if you don't want to --push change this to --load for locally build
 

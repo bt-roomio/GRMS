@@ -103,3 +103,6 @@ prometheus_client==0.22.0
 openpyxl==3.1.5
 deep-translator==1.11.4
 num2words==0.5.14
+pytest==8.4.0
+pytest-asyncio==1.1.0
+pytest-django==4.11.1
