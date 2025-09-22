@@ -119,7 +119,8 @@ class Room(BaseModel, UpdateByModel):
     OFF = "OFF"
     STATUS = ((ON, "on"), (OFF, "off"))
 
-    number = models.IntegerField()
+    number = models.CharField(max_length=100)
+    label = models.CharField(max_length=255, null=True, blank=True)
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
@@ -139,7 +140,7 @@ class Room(BaseModel, UpdateByModel):
     objects = RoomQuerySet.as_manager()
 
     def __str__(self):
-        return str(self.number)
+        return self.number
 
     def clean(self):
         super().clean()
@@ -234,7 +235,7 @@ class Room(BaseModel, UpdateByModel):
 
 
 class RoomHistory(BaseModel, UpdateByModel):
-    number = models.IntegerField()
+    number = models.CharField(max_length=100)
     floor = models.CharField(max_length=255)
     block = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
