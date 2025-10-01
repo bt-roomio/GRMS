@@ -2,6 +2,7 @@ import datetime
 import re
 
 from dateutil.relativedelta import relativedelta
+from django.utils import timezone
 
 
 def parse_interval(interval_str):
@@ -20,53 +21,33 @@ def parse_interval(interval_str):
     return (unit in ("month", "year")), {unit + "s": qty}
 
 
-def fill_missing_intervals(data, interval_str, start_ts, limit, key_name, end_ts=None):
+def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
     if not interval_str or not start_ts or not limit:
         return []
 
-    # parse start_ts
     if isinstance(start_ts, str):
-        start_ts = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
-
-    if end_ts and isinstance(end_ts, str):
-        end_ts = datetime.datetime.strptime(end_ts, "%Y-%m-%d %H:%M:%S")
-
-    # detect tzinfo from first data record (if any)
-    tz = None
-
-    if data:
-        tz = getattr(data[0]["ts"], "tzinfo", None)
-
-    if tz and start_ts.tzinfo is None:
-        start_ts = start_ts.replace(tzinfo=tz)
-
-    if end_ts:
-        if tz and end_ts.tzinfo is None:
-            end_ts = end_ts.replace(tzinfo=tz)
-        elif not tz and end_ts.tzinfo is not None:
-            end_ts = end_ts.replace(tzinfo=None)
+        dt = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
+        start_ts = timezone.make_aware(dt, timezone.get_current_timezone())
 
     use_rd, delta_kwargs = parse_interval(interval_str)
     result = []
 
     def make_key(dt):
-        # ensure dt is timezone-aware if tz is set
-        if tz and dt.tzinfo is None:
-            dt = dt.replace(tzinfo=tz)
-        # drop tzinfo for consistent timestamp()
         return dt.timestamp()
+
+    if data and len(data) == 1 and data[0]["ts"] < start_ts:
+        data[0]["ts"] = start_ts
 
     data_by_key = {make_key(rec["ts"]): rec for rec in data}
 
     current = start_ts
     last_known = None
 
-    for _ in range(limit):
-        if end_ts and current > end_ts:
-            break
-
+    for i in range(limit):
         key = make_key(current)
         record = data_by_key.get(key)
+        if i == 0:
+            record = next(iter(data_by_key.values()))
 
         if record:
             result.append(record)
@@ -80,7 +61,6 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name, end_ts
                     "key_name": last_known["key_name"] if last_known else key_name,
                 }
             )
-
         if use_rd:
             current = current + relativedelta(**delta_kwargs)  # pyright: ignore
         else:
