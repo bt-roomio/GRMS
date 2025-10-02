@@ -26,6 +26,10 @@ def tskv_signal_handler(sender, instance, **kwargs):
             f"tskv_updates_{instance.entity_id}",
             {"type": "ts_kv_activity", "update": message},
         )
+        async_to_sync(channel_layer.group_send)(
+            f"tskv_updates_tenant_{instance.entity.tenant_id}",
+            {"type": "ts_kv_activity", "update": message},
+        )
 
 
 @receiver(post_save, sender=TsKvLatest)
