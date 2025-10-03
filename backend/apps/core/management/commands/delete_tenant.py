@@ -39,12 +39,7 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR("Invalid credentials"))
                 return
 
-            # Check if user has appropriate permissions (SYS_ADMIN role)
-            if not user.roles.filter(name="SYS_ADMIN").exists():
-                self.stderr.write(self.style.ERROR("You don't have permission to delete tenants"))
-                return
 
-            # Find the tenant
             try:
                 tenant = Tenant.objects.get(title=tenant_name)
             except Tenant.DoesNotExist:
