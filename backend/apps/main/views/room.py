@@ -64,6 +64,7 @@ class RoomListView(APIView):
                         number=n,
                         tenant_id=tenant_id,
                         type_id=data.get("type"),
+                        label=data.get("label"),
                         floor=data.get("floor"),
                         block=data.get("block"),
                     )

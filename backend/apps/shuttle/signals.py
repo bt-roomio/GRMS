@@ -92,7 +92,9 @@ def attribute_kv_signal_handler(sender, instance: AttributeKv, **kwargs):
 
         payload = {"type": "get_latest_activity", "updates": changed_messages}
         async_to_sync(channel_layer.group_send)("attribute_kv_updates", payload)
+
         if tenant_id:
             async_to_sync(channel_layer.group_send)(f"emergency_status_{tenant_id}", payload)
+            async_to_sync(channel_layer.group_send)(f"attribute_kv_updates_{tenant_id}", payload)
 
     transaction.on_commit(_publish_after_commit)

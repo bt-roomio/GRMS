@@ -20,15 +20,16 @@ def parse_interval(interval_str):
     return (unit in ("month", "year")), {unit + "s": qty}
 
 
-def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
+def fill_missing_intervals(data, interval_str, start_ts, limit, key_name, end_ts=None):
     """
     data: list of dicts with 'ts' (timezone-aware or naive), 'value', 'count', 'key_name'
     interval_str: interval string per parse_interval
     start_ts: datetime or string in '%Y-%m-%d %H:%M:%S'
     limit: number of intervals to generate
     key_name: fallback name for empty intervals
+    end_ts: optional end boundary - stops generating intervals after this time
 
-    Fills gaps by stepping from start_ts for 'limit' intervals.
+    Fills gaps by stepping from start_ts for 'limit' intervals (or until end_ts).
     Normalizes timezone awareness so lookups match.
     """
     if not interval_str or not start_ts or not limit:
@@ -38,6 +39,9 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
     if isinstance(start_ts, str):
         start_ts = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
 
+    if end_ts and isinstance(end_ts, str):
+        end_ts = datetime.datetime.strptime(end_ts, "%Y-%m-%d %H:%M:%S")
+
     # detect tzinfo from first data record (if any)
     tz = None
 
@@ -46,6 +50,12 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
 
     if tz and start_ts.tzinfo is None:
         start_ts = start_ts.replace(tzinfo=tz)
+
+    if end_ts:
+        if tz and end_ts.tzinfo is None:
+            end_ts = end_ts.replace(tzinfo=tz)
+        elif not tz and end_ts.tzinfo is not None:
+            end_ts = end_ts.replace(tzinfo=None)
 
     use_rd, delta_kwargs = parse_interval(interval_str)
     result = []
@@ -64,6 +74,9 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
     last_known = None
 
     for _ in range(limit):
+        if end_ts and current > end_ts:
+            break
+
         key = make_key(current)
         record = data_by_key.get(key)
 

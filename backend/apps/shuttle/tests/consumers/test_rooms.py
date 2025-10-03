@@ -52,7 +52,7 @@ class TestRoomConsumer:
             )
             await asyncio.sleep(1)
             await database_sync_to_async(Room.objects.create)(
-                number=999,
+                number="999",
                 floor="1",
                 block="A",
                 tenant_id="28c81921-f78e-4864-87d2-cec674f19d1c",
@@ -68,7 +68,7 @@ class TestRoomConsumer:
             assert payload["errors"] == []
             assert payload["data"]
             assert isinstance(payload["data"], dict)
-            assert payload["data"].get("number") == 999
+            assert payload["data"].get("number") == "999"
             assert payload["data"].get("floor") == "1"
             assert payload["data"].get("block") == "A"
             assert payload["data"].get("tenant") == "28c81921-f78e-4864-87d2-cec674f19d1c"
@@ -103,7 +103,7 @@ class TestRoomConsumer:
             )
             await asyncio.sleep(1)
             await database_sync_to_async(Room.objects.create)(
-                number=123,
+                number="123",
                 floor="1",
                 block="A",
                 tenant_id="28c81921-f78e-4864-87d2-cec674f19d1c",
@@ -142,7 +142,7 @@ class TestRoomConsumer:
 
             await asyncio.sleep(1)
             await database_sync_to_async(Room.objects.create)(
-                number=9999,
+                number="9999",
                 floor="1",
                 block="A",
                 tenant_id="28c81921-f78e-4864-87d2-cec674f19d1c",
@@ -158,7 +158,7 @@ class TestRoomConsumer:
             assert len(payload["data"]["results"]) == 6
             results = payload["data"].get("results")
             just_added_room = results[-1]
-            assert just_added_room["number"] == 9999
+            assert just_added_room["number"] == "9999"
             assert just_added_room["floor"] == "1"
             assert just_added_room["block"] == "A"
             assert just_added_room["type"] is None
@@ -205,7 +205,7 @@ class TestRoomConsumer:
             )
             await asyncio.sleep(1)
             await database_sync_to_async(Room.objects.create)(
-                number=1234,
+                number="1234",
                 floor="1",
                 block="A",
                 tenant_id="28c81921-f78e-4864-87d2-cec674f19d1c",

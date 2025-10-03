@@ -14,8 +14,8 @@ class RoomTest(BaseTestCase):
         response = self.client.get(reverse("main:room-list"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["results"]), 3)
-        self.assertEqual(response.data["results"][0]["number"], 101)
-        self.assertEqual(response.data["results"][1]["number"], 102)
+        self.assertEqual(response.data["results"][0]["number"], '101')
+        self.assertEqual(response.data["results"][1]["number"], '102')
 
     def test_create(self):
         response = self.client.post(reverse("main:room-list"), {"number": 94, "floor": "3", "block": 3})
