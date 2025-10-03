@@ -49,7 +49,6 @@ class TsKvTenantHistoryConsumer(BaseGenericAsyncAPIConsumer):
     @action()
     async def list_subscribe(self, request_id, query_params, action):
         res = await self.send_list_paginated(action, query_params, request_id)
-        print("self.tenant_id", self.tenant_id)
         await self.add_group(f"tskv_updates_tenant_{self.tenant_id}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}
 

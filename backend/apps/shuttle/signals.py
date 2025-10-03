@@ -83,5 +83,8 @@ def attribute_kv_signal_handler(sender, instance, **kwargs):
             "attribute_kv_updates", {"type": "get_latest_activity", "update": message}
         )
         async_to_sync(channel_layer.group_send)(
+            f"attribute_kv_updates_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
+        )
+        async_to_sync(channel_layer.group_send)(
             f"emergency_status_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
         )
