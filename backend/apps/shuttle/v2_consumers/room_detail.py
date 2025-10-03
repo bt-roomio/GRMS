@@ -17,14 +17,14 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
     serializer_class = RoomDetailWsSerializer
     lookup_field = "pk"
 
-    def get_device_id(self, request_id):
+    def get_device_id(self, request_id) -> str | None:
         data = self.subscribers.get(request_id)
         if not data:
             raise ValidationError("Incorrect request_id!")
 
         devices = data.get("response", {}).get("devices", []) or []
         if not devices:
-            raise ValidationError("There is no device in the room!")
+            return None
 
         return devices[0].get("id")
 
@@ -40,7 +40,8 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         self.subscribers[request_id] = body
         await self.send_data(request_id=request_id, pk=body.get("pk"), keys=body.get("keys"))
         device_id = self.get_device_id(request_id)
-        await self.add_group(f"tskv_latest_updates_{device_id}")
+        if device_id:
+            await self.add_group(f"tskv_latest_updates_{device_id}")
         await self.room_activity.subscribe(request_id=request_id, **kwargs)
 
     @action()
@@ -49,7 +50,8 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         if not data:
             return await self.reply(data={"message": "Room not found!"}, action="unsubscribe", request_id=request_id)
         device_id = self.get_device_id(request_id)
-        await self.remove_group(f"tskv_latest_updates_{device_id}")
+        if device_id:
+            await self.remove_group(f"tskv_latest_updates_{device_id}")
         del self.subscribers[request_id]
 
     async def send_data(self, request_id, pk, keys):
@@ -65,7 +67,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         query = query.prefetch_related(
             Prefetch(
                 "guests",
-                queryset=Guest.objects.order_by("-created_at")[:1],
+                queryset=Guest.objects.filter(tenant_id=self.tenant_id, is_active=True).order_by("-created_at")[:1],
                 to_attr="last_guests",
             )
         )

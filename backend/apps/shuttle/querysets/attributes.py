@@ -48,7 +48,9 @@ class AttributeKvQuerySet(BaseQuerySet):
                 entity__tenant_id=tenant_id,
                 attribute_type=AttributeKv.SERVER_SCOPE,
                 attribute_key="active",
-                bool_v=False,
+            )
+            .filter(
+                Q(bool_v=False) | Q(long_v=0)
             )
             .filter(Q(entity__room__isnull=False) | Q(entity__device_public_spaces__isnull=False))
             .select_related("entity", "entity__room", "entity__device_profile", "entity__tenant")

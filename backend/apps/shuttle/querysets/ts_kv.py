@@ -18,6 +18,7 @@ from django.db.models import (
     Window,
 )
 from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
+from django.utils import timezone
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
@@ -55,28 +56,31 @@ class TsKvQuerySet(BaseQuerySet):
         qs = qs.filter(ts__lte=end_ts) if end_ts else qs
         qs = qs.filter(key__key__in=keys) if not all_tags else qs
         qs = qs.annotate(
-            # Create window functions for each value field.
             prev_dbl_v=Window(
                 expression=Lag("dbl_v"),
+                partition_by=F("key__key"),
                 order_by=F("ts").asc(),
             ),
             prev_json_v=Window(
                 expression=Lag("json_v"),
+                partition_by=F("key__key"),
                 order_by=F("ts").asc(),
             ),
             prev_long_v=Window(
                 expression=Lag("long_v"),
+                partition_by=F("key__key"),
                 order_by=F("ts").asc(),
             ),
             prev_str_v=Window(
                 expression=Lag("str_v"),
+                partition_by=F("key__key"),
                 order_by=F("ts").asc(),
             ),
             prev_bool_v=Window(
                 expression=Lag("bool_v"),
+                partition_by=F("key__key"),
                 order_by=F("ts").asc(),
             ),
-            # Annotate key name and a merged value across possible types.
             key_name=F("key__key"),
             value=Coalesce(
                 Cast(F("dbl_v"), output_field=CharField()),
@@ -180,6 +184,7 @@ class TsKvQuerySet(BaseQuerySet):
 
             if "-interval_ts" in sort_by:
                 data = sorted(data, key=lambda d: d["ts"], reverse=True)
+            data = [item for item in data if item["ts"] <= timezone.now()]
 
             result[key] = data
         return result

@@ -39,8 +39,7 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMi
 
             if device == payload.get("entity") and action == "list_subscribe" and scope == payload.get("scope"):
                 data = await sync_to_async(self.get_data)(query_params=params.get("query_params"))
-                if any([payload.get("key_name") == i["key_name"] for i in data]):
-                    await self.reply(data=data, action="list_subscribe", request_id=request_id)
+                await self.reply(data=data, action="list_subscribe", request_id=request_id)
 
             elif device == payload.get("entity") and action == "subscribe" and scope == payload.get("scope"):
                 payload = {

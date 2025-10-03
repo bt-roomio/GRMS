@@ -1,3 +1,5 @@
+import json
+
 from channelsmultiplexer import AsyncJsonWebsocketDemultiplexer
 
 from shuttle.v2_consumers.attributes import AttributeConsumer
@@ -38,10 +40,41 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "need_sync": NeedSyncConsumer.as_asgi(),
     }
 
+    async def websocket_receive(self, message):
+        try:
+            if "text" in message:
+                content = json.loads(message["text"])
+                await self.receive_json(content)
+            else:
+                raise ValueError("Non-JSON message received")
+        except json.JSONDecodeError as e:
+            await self.send_json(
+                {
+                    "stream": None,
+                    "payload": {
+                        "errors": [{"json": f"Invalid JSON: {str(e)}"}],
+                        "data": None,
+                        "action": None,
+                        "response_status": 400,
+                        "request_id": None,
+                    },
+                }
+            )
+        except Exception as e:
+            await self.send_json(
+                {
+                    "stream": None,
+                    "payload": {
+                        "errors": [{"general": str(e)}],
+                        "data": None,
+                        "action": None,
+                        "response_status": 400,
+                        "request_id": None,
+                    },
+                }
+            )
+
     async def receive_json(self, content, **kwargs):
-        """
-        Override receive_json method to handle invalid stream
-        """
         try:
             await super().receive_json(content, **kwargs)
         except ValueError as e:
