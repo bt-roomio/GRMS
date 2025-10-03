@@ -1,10 +1,9 @@
-from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
-from djangochannelsrestframework.mixins import ListModelMixin
-
-from asgiref.sync import sync_to_async
-
 from access_manager.models import Card
-from shuttle.serializers.cards import CardSerializer, CardFilterParams
+from asgiref.sync import sync_to_async
+from djangochannelsrestframework.mixins import ListModelMixin
+from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
+
+from shuttle.serializers.cards import CardFilterParams, CardSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -30,7 +29,7 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
             sort_by=params.get("sort_by", []),
             search_field="number",
             search_value=params.get("search_value", None),
-            filters=params.get("filters", {})
+            filters=params.get("filters", {}),
         )
         return query
 
@@ -47,4 +46,4 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
-        await self.get_list_activity.unsubscribe(request_id=request_id, **kwargs)
+        await self.remove_group("cards")

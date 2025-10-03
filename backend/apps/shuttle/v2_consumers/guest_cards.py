@@ -1,9 +1,9 @@
+from access_manager.models import GuestCard
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import ListModelMixin
 from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
 
-from access_manager.models import GuestCard
-from shuttle.serializers.guest_cards import GuestCardSerializer, GuestCardFilterParams
+from shuttle.serializers.guest_cards import GuestCardFilterParams, GuestCardSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -25,7 +25,8 @@ class GuestCardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericA
         user = self.scope["user"]
         params = GuestCardFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", []))
+            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
+        )
         return query
 
     async def get_list_activity(self, action, **kwargs):
@@ -40,5 +41,5 @@ class GuestCardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericA
         self.subscribers[kwargs.get("request_id")] = kwargs.get("query_params")
 
     @action()
-    async def list_unsubscribe(self, request_id, **kwargs):
-        await self.get_list_activity.unsubscribe(request_id=request_id, **kwargs)
+    async def list_unsubscribe(self, **kwargs):
+        await self.remove_group("guest_cards")
