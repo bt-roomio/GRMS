@@ -29,12 +29,6 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
         dt = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
         start_ts = timezone.make_aware(dt, timezone.get_current_timezone())
 
-    if end_ts:
-        if tz and end_ts.tzinfo is None:
-            end_ts = end_ts.replace(tzinfo=tz)
-        elif not tz and end_ts.tzinfo is not None:
-            end_ts = end_ts.replace(tzinfo=None)
-
     use_rd, delta_kwargs = parse_interval(interval_str)
     result = []
 
