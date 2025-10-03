@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
+from shuttle.utils.datetime_aware import to_datetime_aware
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
 
 
@@ -123,11 +124,12 @@ class TsKvQuerySet(BaseQuerySet):
                 and limit == 720
                 and interval == "2 minute"
             ):
-                has_value = self.filter(key__key=key, ts=start_ts)
+                st = to_datetime_aware(start_ts)
+                has_value = self.filter(key__key=key, ts__gte=st)
                 if not has_value:
                     last_known = self.filter(key__key=key, ts__lt=start_ts).order_by("-ts").first()
                     if last_known:
-                        query = self.filter(key__key=key, ts__gte=last_known.ts)
+                        query = self.filter(key__key=key, ts=last_known.ts)
                         origin_dt = Value(last_known.ts, output_field=DateTimeField())
 
             if interval in ["month", "year"]:
@@ -177,7 +179,7 @@ class TsKvQuerySet(BaseQuerySet):
                 data = fill_missing_intervals(
                     data,
                     interval,
-                    last_known and last_known.ts or start_ts,
+                    start_ts,
                     limit,
                     key_name=key,
                 )
