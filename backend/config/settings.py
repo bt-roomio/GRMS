@@ -122,6 +122,7 @@ DATABASES = {
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
         "CONN_MAX_AGE": 60,
+        "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
 
