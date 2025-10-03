@@ -1,3 +1,5 @@
+import json
+
 from channelsmultiplexer import AsyncJsonWebsocketDemultiplexer
 
 from shuttle.v2_consumers.attributes import AttributeConsumer
@@ -7,8 +9,10 @@ from shuttle.v2_consumers.emergency_status import EmergencyStatus
 from shuttle.v2_consumers.gateway_logs import GatewayLogsConsumer
 from shuttle.v2_consumers.guest_cards import GuestCardConsumer
 from shuttle.v2_consumers.guests import GuestConsumer
+from shuttle.v2_consumers.inactive_attributes import InactiveDeviceAttributeConsumer
 from shuttle.v2_consumers.need_sync import NeedSyncConsumer
 from shuttle.v2_consumers.room_detail import RoomDetailConsumer
+from shuttle.v2_consumers.room_dynamics import TsKvTenantHistoryConsumer
 from shuttle.v2_consumers.room_status import RoomStatusConsumer
 from shuttle.v2_consumers.rooms import RoomConsumer
 from shuttle.v2_consumers.tag_logs import TagLogsConsumer
@@ -26,18 +30,51 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "cards": CardConsumer.as_asgi(),
         "card_logs": CardLogConsumer.as_asgi(),
         "attributes": AttributeConsumer.as_asgi(),
+        "current_alarms":  InactiveDeviceAttributeConsumer.as_asgi(),
         "gateway_logs": GatewayLogsConsumer.as_asgi(),
         "tag_logs": TagLogsConsumer.as_asgi(),
+        "tskv_tenant_history": TsKvTenantHistoryConsumer.as_asgi(),
         "ts_kv_history": TsKvHistoryConsumer.as_asgi(),
         "ts_kv_latest": TsKvLatestConsumer.as_asgi(),
         "emergency_status": EmergencyStatus.as_asgi(),
         "need_sync": NeedSyncConsumer.as_asgi(),
     }
 
+    async def websocket_receive(self, message):
+        try:
+            if "text" in message:
+                content = json.loads(message["text"])
+                await self.receive_json(content)
+            else:
+                raise ValueError("Non-JSON message received")
+        except json.JSONDecodeError as e:
+            await self.send_json(
+                {
+                    "stream": None,
+                    "payload": {
+                        "errors": [{"json": f"Invalid JSON: {str(e)}"}],
+                        "data": None,
+                        "action": None,
+                        "response_status": 400,
+                        "request_id": None,
+                    },
+                }
+            )
+        except Exception as e:
+            await self.send_json(
+                {
+                    "stream": None,
+                    "payload": {
+                        "errors": [{"general": str(e)}],
+                        "data": None,
+                        "action": None,
+                        "response_status": 400,
+                        "request_id": None,
+                    },
+                }
+            )
+
     async def receive_json(self, content, **kwargs):
-        """
-        Override receive_json method to handle invalid stream
-        """
         try:
             await super().receive_json(content, **kwargs)
         except ValueError as e:

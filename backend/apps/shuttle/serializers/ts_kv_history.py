@@ -31,3 +31,11 @@ class TsKvHistoryFilterParams(ValidatorSerializer):
     agg = serializers.ChoiceField(choices=AGG, default="Avg")
     limit = serializers.IntegerField(default=100, max_value=1000)
     auto_fill = serializers.BooleanField(default=True)
+
+
+class TenantRoomAvgParams(ValidatorSerializer):
+    keys = serializers.ListField(child=serializers.CharField())
+    start_ts = serializers.DateTimeField(allow_null=True, required=False)
+    end_ts = serializers.DateTimeField(allow_null=True, required=False)
+    interval = serializers.CharField(allow_null=True, required=False)
+    limit = serializers.IntegerField(default=100, max_value=1000)

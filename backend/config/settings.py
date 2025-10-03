@@ -20,6 +20,9 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "ABCD")
 # TESTING mode
 TESTING = "test" in sys.argv
 
+# For pytest
+TEST_RUNNER = "config.pytest_runner.PytestTestRunner"
+
 DEBUG = os.getenv("DJANGO_DEBUG")
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
@@ -119,6 +122,7 @@ DATABASES = {
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
         "CONN_MAX_AGE": 60,
+        "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
 

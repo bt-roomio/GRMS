@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 from access_manager.models import GuestCard, StaffCard
 
 

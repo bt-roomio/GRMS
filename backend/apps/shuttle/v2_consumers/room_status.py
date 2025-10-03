@@ -8,6 +8,7 @@ from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 DND_RELAY = "DND Relay"
 MUR_RELAY = "MUR Relay"
 OCCUPANCY_STATE = "Occupancy State"
+AC_ON_OFF = "AC ON OFF"
 
 
 class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
@@ -15,6 +16,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         dnd_count = await self.get_room_count_by_key(DND_RELAY, self.tenant_id)
         mur_count = await self.get_room_count_by_key(MUR_RELAY, self.tenant_id)
         occupancy_count = await self.get_room_count_by_key(OCCUPANCY_STATE, self.tenant_id)
+        ac_on_off = await self.get_room_count_by_key(AC_ON_OFF, self.tenant_id)
         raw_stats = await controller_status({}, self.tenant_id)
         flat_data = await self.flatten_controller_status(raw_stats)
         flat_data.update(
@@ -22,6 +24,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
                 "dnd": dnd_count,
                 "mur": mur_count,
                 "occupied": occupancy_count,
+                "ac-on-off": ac_on_off,
             }
         )
 

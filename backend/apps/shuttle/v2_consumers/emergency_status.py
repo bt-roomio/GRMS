@@ -24,9 +24,9 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
     @action()
     async def list(self, **kwargs):
         params = kwargs.get("query_params")
-        data_type = params.get("data_type")
-        keys = params.get("keys", [])
-        scope = params.get("attribute_scope")
+        data_type = params.get("data_type")  # pyright: ignore
+        keys = params.get("keys", [])  # pyright: ignore
+        scope = params.get("attribute_scope")  # pyright: ignore
         if not keys:
             return None
 
@@ -129,7 +129,12 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
         try:
             device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
-        except Device.DoesNotExist:
+        except Device.DoesNotExist:  # pyright: ignore
+            return
+
+        # avoid duplicates
+        last_data = sub.get("response").get(key, {}).get("data")
+        if last_data and last_data[-1].get("value") == value:
             return
 
         result = {
@@ -139,6 +144,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
             "data": [{"key_name": key, "ts": message.get("ts"), "value": value}],
         }
         await self.reply(data=result, action=sub.get("action"), request_id=request_id)
+        self.subscribers[request_id]["response"][key] = result
 
     async def handle_attribute_update(self, message, keys, scope, entity_id, request_id, sub):
         key = message.get("key_name")
@@ -150,7 +156,11 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
         try:
             device = await sync_to_async(Device.objects.select_related("room").get)(id=entity_id)
-        except Device.DoesNotExist:
+        except Device.DoesNotExist:  # pyright: ignore
+            return
+
+        last_data = sub.get("response").get(key, {}).get("data")
+        if last_data and last_data[-1].get("value") == value:
             return
 
         result = {
@@ -160,6 +170,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
             "data": [{"key_name": key, "ts": message.get("last_update_ts"), "value": value}],
         }
         await self.reply(data=result, action=sub.get("action"), request_id=request_id)
+        self.subscribers[request_id]["response"][key] = result
 
     @action()
     async def subscribe(self, request_id, action, **kwargs):
@@ -167,6 +178,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
         self.subscribers[request_id] = {
             "action": action,
             "query_params": kwargs.get("query_params", {}),
+            "response": {},
         }
 
     @action()

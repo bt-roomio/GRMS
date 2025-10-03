@@ -3,7 +3,9 @@ from rest_framework import serializers
 from core.serializers.dynamic import DynamicField
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device
+from main.serializers.device import SimpleDeviceSerializer
 from shuttle.models import AttributeKv
+from shuttle.utils.get_non_null_field import get_non_null_field
 
 
 class SimpleAttributeSerializer(serializers.ModelSerializer):
@@ -61,3 +63,33 @@ class AttributeFilterParams(ValidatorSerializer):
         choices=[AttributeKv.SHARED_SCOPE, AttributeKv.SERVER_SCOPE, AttributeKv.CLIENT_SCOPE]
     )
     device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all())
+
+
+class InactiveAttributesFilterParams(ValidatorSerializer):
+    SORT_FIELDS = ("last_update_ts", "-last_update_ts")
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=25, max_value=500)
+    sort_by = serializers.ChoiceField(choices=SORT_FIELDS, default="-last_update_ts")
+
+
+class InactiveDeviceAttributeSerializer(serializers.ModelSerializer):
+    device = serializers.SerializerMethodField()
+    ip_address = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AttributeKv
+        fields = ("last_update_ts", "ip_address", "device")
+
+    def get_device(self, obj):
+        return SimpleDeviceSerializer(
+            obj.entity,
+            context={**self.context, "exclude_room_obj": False},  # force include room_obj
+        ).data
+
+    def get_ip_address(self, obj):
+        attrs = getattr(getattr(obj, "entity", None), "prefetched_ip_attrs", None) or []
+        if not attrs:
+            return None
+        latest = attrs[0]
+        _field, value = get_non_null_field(latest)
+        return value
