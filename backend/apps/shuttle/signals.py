@@ -31,6 +31,7 @@ def tskv_signal_handler(sender, instance, **kwargs):
 
 @receiver(post_save, sender=TsKvLatest)
 def tskv_latest_signal_handler(sender, instance, **kwargs):
+    tenant_id = instance.entity.tenant_id
     channel_layer = get_channel_layer()
     if channel_layer is not None:
         fields = ["bool_v", "str_v", "dbl_v", "long_v", "json_v"]
@@ -53,9 +54,9 @@ def tskv_latest_signal_handler(sender, instance, **kwargs):
             f"tskv_latest_updates_{instance.entity_id}",
             {"type": "ts_kv_latest_activity", "update": message},
         )
-        async_to_sync(channel_layer.group_send)("room_status", {"type": "get_latest_activity", **message})
+        async_to_sync(channel_layer.group_send)(f"room_status_{tenant_id}", {"type": "get_latest_activity", **message})
         async_to_sync(channel_layer.group_send)(
-            f"emergency_status_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
+            f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "update": message}
         )
 
 

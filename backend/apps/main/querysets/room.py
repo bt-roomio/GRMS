@@ -104,6 +104,17 @@ class RoomQuerySet(BaseQuerySet):
             room.save(update_fields=["state"])
         return guests.count(), deactivate_result
 
+    def total_rooms_count(self, tenant_id):
+        return self.filter(active=True, tenant_id=tenant_id).count()
+
+    def checked_in_count(self, tenant_id):
+        from main.models import Room
+        return self.filter(active=True, tenant_id=tenant_id, state__contains=[Room.CheckedIn]).count()
+
+    def available_count(self, tenant_id):
+        from main.models import Room
+        return self.filter(active=True, tenant_id=tenant_id, state__contains=[Room.Available]).count()
+
 
 def get_dnd_rooms(tenant):
     key_dict = TsKvDictionary.objects.filter(key="DND Relay").first()
