@@ -87,8 +87,13 @@ class DeviceQuerySet(BaseQuerySet):
             )
         ).distinct()
 
-
         if need_sync is not None:
             qs = qs.filter(need_sync=need_sync)
 
         return qs
+
+    def offline_count(self, tenant_id):
+        offline_rooms = self.filter(tenant_id=tenant_id, is_active=True, room__isnull=False, status=False).values_list(
+            "id", flat=True).distinct().count()
+
+        return offline_rooms
