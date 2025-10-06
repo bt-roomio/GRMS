@@ -45,6 +45,8 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
             await self.handle_ts_kv_activity(message.get("update"))
 
     async def handle_ts_kv_activity(self, payload):
+        if not payload or isinstance(payload, dict) or "entity" not in payload:
+            return
         entity = payload.pop("entity")
         key = payload.pop("key")
 
