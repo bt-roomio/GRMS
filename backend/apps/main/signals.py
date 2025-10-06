@@ -34,7 +34,7 @@ def check_for_duplicate_state(instance, **kwargs):
             "room_num": instance.number,
             "tenant": str(instance.tenant),
         }
-        async_to_sync(channel_layer.group_send)("room_status", {"type": "get_latest_activity", **message})
+        async_to_sync(channel_layer.group_send)(f"room_status_{instance.tenant_id}", {"type": "get_latest_activity", **message})
 
     if settings.TESTING or settings.DEBUG or "state" not in update_fields:
         return
