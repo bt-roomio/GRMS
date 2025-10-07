@@ -1,3 +1,4 @@
+import json
 import time
 
 from django.core.management.base import BaseCommand
@@ -11,12 +12,15 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--value",
-            type=str,
-            help="Queue name",
-            default="v1/devices/me/attributes/request",
+            type=int,
+            help="value",
+            default=1,
         )
 
     def handle(self, *args, **kwargs):
+        value = kwargs["value"]
+        self.bulk_publish()
+        return
         msg = {
             "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
             "data": {
@@ -34,3 +38,15 @@ class Command(BaseCommand):
         }
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, "toGRMS")
+
+    @staticmethod
+    def bulk_publish():
+        with open("output_500.json", "r") as f:
+            data = json.load(f)
+
+        ch = connect_to_rabbitmq()
+        for msg in data:
+            topic = msg.get("topic")
+            if "telemetry" in topic:
+                print(msg)
+                send_to_rabbitmq(ch, msg, "toGRMS")
