@@ -18,6 +18,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
             tenant_id=self.tenant_id,
             room_types=params.get("room_types"),
             delisting_devices=params.get("delisting_devices"),
+            devices=params.get("devices"),
         )
         return query
 
@@ -110,9 +111,10 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
             data_type = params.get("data_type", "telemetry")
             keys = params.get("keys", [])
             delisting_devices = params.get("delisting_devices", [])
+            devices = params.get("devices", [])
             scope = params.get("attribute_scope")
 
-            if entity_id in delisting_devices:
+            if entity_id in delisting_devices or (devices and entity_id not in devices):
                 continue
 
             if data_type == "telemetry":
