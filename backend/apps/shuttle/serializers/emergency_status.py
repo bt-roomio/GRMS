@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 class EmergencyStatusFilterParams(ValidatorSerializer):
     delisting_devices = serializers.ListField(child=serializers.CharField(), required=False)
+    devices = serializers.ListField(child=serializers.CharField(), required=False)
     keys = serializers.ListField(child=serializers.CharField())
     room_types = serializers.ListField(child=serializers.CharField(), required=False)
     data_type = serializers.ChoiceField(choices=['telemetry', 'attribute'], required=True)
