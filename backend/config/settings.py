@@ -118,7 +118,7 @@ IS_CELERY = os.getenv("IS_CELERY", 0)
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django_prometheus.db.backends.postgresql",
         "NAME": os.getenv("POSTGRES_DB", "postgres"),
         "USER": os.getenv("POSTGRES_USER", "postgres"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
@@ -250,6 +250,10 @@ CELERY_BEAT_SCHEDULE = {
     "clean_logs": {
         "task": "shuttle.tasks.delete_old_logs",
         "schedule": crontab(hour="0", minute="0"),
+    },
+    "update_db_metrics": {
+        "task": "core.tasks.update_db_metrics",
+        "schedule": 60.0,
     },
 }
 

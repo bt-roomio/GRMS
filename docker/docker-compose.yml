@@ -61,7 +61,7 @@ services:
       timeout: 10s
 
   django:
-    image: registry.gitlab.com/yroomio/grms:latest
+    image: registry.gitlab.com/yroomio/grms:dev
     container_name: django
     hostname: django
     ports:
@@ -75,6 +75,7 @@ services:
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/
+      - prom_mp:/prom_mp
     depends_on:
       - postgres
       - redis
@@ -220,6 +221,7 @@ volumes:
   vhost:
   html:
   nodered:
+  prom_mp:
 
 networks:
   roomio_net:
