@@ -69,8 +69,11 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
 class DeviceSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
     credentials = serializers.PrimaryKeyRelatedField(queryset=DeviceCredentials.objects.all(), required=False)
+    public_spaces = serializers.SerializerMethodField(read_only=True)
 
     def to_representation(self, instance):
+        from main.serializers.room import SimpleRoomSerializer
+
         data = super().to_representation(instance)
         data["credentials"] = (
             DeviceCredentialsSerializer(instance=instance.credentials).data
@@ -78,7 +81,17 @@ class DeviceSerializer(serializers.ModelSerializer):
             else None
         )
         data["device_profile"] = SimpleDeviceProfileSerializer(instance.device_profile).data
+        data["room"] = SimpleRoomSerializer(instance.room).data if instance.room_id else None
         return data
+
+    def get_public_spaces(self, instance):
+        from main.serializers.public_space import SimplePublicSpaceSerializer
+
+        rel_mgr = getattr(instance, "device_public_spaces", None)
+        if rel_mgr is None:
+            return []
+        qs = rel_mgr.select_related("public_space")
+        return [SimplePublicSpaceSerializer(space.public_space).data for space in qs]
 
     def create(self, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
@@ -139,6 +152,7 @@ class DeviceSerializer(serializers.ModelSerializer):
             "tenant",
             "customer",
             "room",
+            "public_spaces",
             "device_profile",
             "label",
             "additional_info",
@@ -155,5 +169,6 @@ class DeviceFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     search_field = serializers.ChoiceField(choices=("name", "device_profile__name"), required=False)
     search_value = serializers.CharField(required=False)
+    name = serializers.CharField(required=False)
     status = serializers.BooleanField(allow_null=True, required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
