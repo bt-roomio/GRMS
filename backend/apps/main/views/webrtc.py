@@ -7,21 +7,24 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 
 from main.serializers.webrtc import WebrtcBrokerSerializer
+from main.swagger.webrtc import swagger_webrtc_broker
 
 BROKER_BASE_URL = getattr(settings, "WEBRTC_BROKER_URL", os.getenv("WEBRTC_BROKER_URL", "http://localhost:8080"))
 
 class WebrtcBroker(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_webrtc_broker()
     def post(self, request):
         ser = WebrtcBrokerSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         v = ser.validated_data
 
+        payload = {"agent_id": v["gateway_id"], "ip": v["ip"]}
         try:
             r = requests.post(
                 f"{BROKER_BASE_URL.rstrip('/')}/api/open",
-                json={"agent_id": v["agent_id"], "ip": v["ip"]},
+                json=payload,
                 timeout=7,
             )
         except requests.RequestException as e:
@@ -38,7 +41,7 @@ class WebrtcBroker(APIView):
         return Response(
             {
                 "success": False,
-                "error": payload.get("error") or "Agent offline or invalid input",
+                "error": payload.get("message") or "Agent offline or invalid input",
                 "details": payload,
             },
             status=500,
