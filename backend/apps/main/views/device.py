@@ -23,6 +23,7 @@ class DeviceListView(APIView):
             search_value=params.get("search_value"),  # pyright: ignore
             status=params.get("status"),  # pyright: ignore
             sort_by=params.get("sort_by"),  # pyright: ignore
+            name=params.get("name")
         )
         serializer = DeviceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore

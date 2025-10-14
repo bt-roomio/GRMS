@@ -41,7 +41,7 @@ class DeviceTest(BaseTestCase):
         first_device = response.data["results"][2]
         self.assertEqual(first_device["name"], "DHT11 Demo Device")
         self.assertEqual(first_device["type"], "default")
-        self.assertEqual(str(first_device["room"]), self.room_id)
+        self.assertEqual(str(first_device["room"]["id"]), self.room_id)
         self.assertEqual(str(first_device["customer"]), self.customer_id)
         self.assertEqual(str(first_device["tenant"]), self.tenant_id)
         self.assertEqual(str(first_device["device_profile"]["id"]), self.device_profile_id)
