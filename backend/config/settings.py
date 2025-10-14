@@ -216,6 +216,8 @@ RABBIT_PORT = os.getenv("RABBIT_PORT", 5672)
 RABBIT_LOGIN = os.getenv("RABBIT_LOGIN", "guest")
 RABBIT_PASSWORD = os.getenv("RABBIT_PASSWORD", "guest")
 
+WEBRTC_BROKER_URL = os.getenv("WEBRTC_BROKER_URL", "https://webrtc.leto.tais.su")
+
 WS_INTERVAL = os.getenv("WS_INTERVAL", 5)
 
 CACHES = {

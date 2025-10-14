@@ -18,6 +18,7 @@ from main.views.room_from_conf import RoomFromConfListView
 from main.views.room_status import RoomHistoryStatusView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.tenant import TenantListView
+from main.views.webrtc import WebrtcBroker
 from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
 
 urlpatterns = [
@@ -52,4 +53,5 @@ urlpatterns = [
     path("public-space/<uuid:pk>/", PublicSpaceDetailView.as_view(), name="public-space-detail"),
     # For SuperUser
     path("tenant/", TenantListView.as_view(), name="tenant-list"),
+    path("connector-url/", WebrtcBroker.as_view(), name="webrtc-open")
 ]
