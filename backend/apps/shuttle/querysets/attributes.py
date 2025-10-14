@@ -1,5 +1,4 @@
-from django.db.models import F
-from django.db.models import Prefetch, Q
+from django.db.models import F, Prefetch, Q
 
 from core.querysets.base_queryset import BaseQuerySet
 
@@ -35,22 +34,18 @@ class AttributeKvQuerySet(BaseQuerySet):
             entity_id__in=devices
         ).update(long_v=None)
 
-
     def inactive_devices_in_spaces(self, tenant_id, sort_by="-last_update_ts"):
         from main.models import DevicePublicSpaces
         from shuttle.models import AttributeKv
 
         order = (sort_by,) if isinstance(sort_by, str) else tuple(sort_by or ("-last_update_ts",))
 
-
         qs = (
             self.filter(
                 entity__tenant_id=tenant_id,
                 attribute_type=AttributeKv.SERVER_SCOPE,
                 attribute_key="active",
-            )
-            .filter(
-                Q(bool_v=False) | Q(long_v=0)
+                bool_v=False,
             )
             .filter(Q(entity__room__isnull=False) | Q(entity__device_public_spaces__isnull=False))
             .select_related("entity", "entity__room", "entity__device_profile", "entity__tenant")
@@ -62,9 +57,7 @@ class AttributeKvQuerySet(BaseQuerySet):
                 ),
                 Prefetch(
                     "entity__attribute_kvs",
-                    queryset=AttributeKv.objects.filter(
-                        attribute_key="ipAddress"
-                    ).order_by("-last_update_ts"),
+                    queryset=AttributeKv.objects.filter(attribute_key="ipAddress").order_by("-last_update_ts"),
                     to_attr="prefetched_ip_attrs",
                 ),
             )

@@ -110,18 +110,21 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+
+IS_CELERY = os.getenv("IS_CELERY", 0)
+
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django_prometheus.db.backends.postgresql",
         "NAME": os.getenv("POSTGRES_DB", "postgres"),
         "USER": os.getenv("POSTGRES_USER", "postgres"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
-        "CONN_MAX_AGE": 60,
+        "CONN_MAX_AGE": 0 if IS_CELERY else 60,
         "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
@@ -247,6 +250,10 @@ CELERY_BEAT_SCHEDULE = {
     "clean_logs": {
         "task": "shuttle.tasks.delete_old_logs",
         "schedule": crontab(hour="0", minute="0"),
+    },
+    "update_db_metrics": {
+        "task": "core.tasks.update_db_metrics",
+        "schedule": 60.0,
     },
 }
 

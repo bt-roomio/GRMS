@@ -1,4 +1,3 @@
-# prometheus.yml - Updated configuration
 global:
   scrape_interval: 30s
   evaluation_interval: 30s
@@ -27,7 +26,7 @@ scrape_configs:
 
   - job_name: "django"
     static_configs:
-      - targets: ["host.docker.internal:8000"] # host.docker.internal:8000
+      - targets: ["django:8000"] # host.docker.internal:8000
     scrape_interval: 30s
     scrape_timeout: 5s
     sample_limit: 50000
@@ -35,6 +34,22 @@ scrape_configs:
       - source_labels: [__name__]
         regex: "(offline_gateway_.*|django_.*|python_.*|up)"
         action: keep
+
+  - job_name: "blackbox-login"
+    metrics_path: /probe
+    scrape_interval: 60s
+    params:
+      module: [login_post]
+    static_configs:
+      - targets:
+          - http://django:8000/api/v1/users/access-token/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
 
   - job_name: "blackbox-https"
     metrics_path: /probe
