@@ -1,6 +1,5 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -69,7 +68,6 @@ def attribute_kv_signal_handler(sender, instance: AttributeKv, **kwargs):
         return
 
     device_id = str(instance.entity_id)
-    tenant_id = getattr(getattr(instance, "entity", None), "tenant_id", None)
     scope = instance.attribute_type
     key_name = instance.attribute_key
     ts_ms = instance.last_update_ts
@@ -82,21 +80,18 @@ def attribute_kv_signal_handler(sender, instance: AttributeKv, **kwargs):
         "value": value,
     }
 
-    def _publish_after_commit():
-        channel_layer = get_channel_layer()
-        if channel_layer is None:
-            return
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
 
-        changed_messages = has_changed_attrs(device_id, [message])
-        if not changed_messages:
-            return
+    changed_messages = has_changed_attrs(device_id, [message])
+    if not changed_messages:
+        return
 
-        async_to_sync(channel_layer.group_send)(
-            "attribute_kv_updates", {"type": "get_latest_activity", "update": message}
-        )
-        async_to_sync(channel_layer.group_send)(
-            f"attribute_kv_updates_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
-        )
-        async_to_sync(channel_layer.group_send)(
-            f"emergency_status_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
-        )
+    async_to_sync(channel_layer.group_send)("attribute_kv_updates", {"type": "get_latest_activity", "update": message})
+    async_to_sync(channel_layer.group_send)(
+        f"attribute_kv_updates_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
+    )
+    async_to_sync(channel_layer.group_send)(
+        f"emergency_status_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
+    )
