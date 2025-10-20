@@ -1,5 +1,6 @@
 from django.urls import path
 
+from users.views.auth import callback_provider
 from users.views.jwt_token import CustomTokenObtainPairView, CustomTokenRefreshView
 from users.views.permissions import PermissionsListView
 from users.views.reset_password import ActivationLinkView, ResetPasswordView
@@ -17,7 +18,7 @@ urlpatterns = [
     # JWT-related views
     path("access-token/", CustomTokenObtainPairView.as_view(), name="access-token"),
     path("refresh-token/", CustomTokenRefreshView.as_view(), name="refresh-token"),  # Reset password views
-    # Reset password views
+    path("callback/", callback_provider, name="callback"),
     path("activation-link/<uuid:user_id>/", ActivationLinkView.as_view(), name="activation-link"),
     path("send-link/", SendLinkView.as_view(), name="send-link"),
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),

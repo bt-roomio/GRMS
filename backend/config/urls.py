@@ -1,9 +1,19 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import include, path
 
 from .yasg import urlpatterns as doc_path
+
+
+def to_front_login(request):
+    return redirect(f"{settings.FRONTEND_DOMAIN}/auth/login")
+
+
+def to_front_signup(request):
+    return redirect(f"{settings.FRONTEND_DOMAIN}/auth/login")
+
 
 urlpatterns = [
     path(
@@ -21,6 +31,11 @@ urlpatterns = [
     ),
     path("", include(("hoteza.urls", "hoteza"), namespace="hoteza-integration")),
     path("", include("django_prometheus.urls")),
+    path("login/", to_front_login),
+    path("signup/", to_front_signup),
+    path("accounts/login/", to_front_login, name="account_login"),
+    path("accounts/signup/", to_front_signup, name="account_signup"),
+    path("accounts/", include("allauth.urls")),
 ]
 
 if settings.DEBUG:
