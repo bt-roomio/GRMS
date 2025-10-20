@@ -15,7 +15,7 @@ KC_BASE = settings.KC_BASE_URL
 KC_REALM = settings.KC_REALM
 KC_CLIENT_ID = settings.KC_CLIENT_ID
 KC_CLIENT_SECRET = settings.KC_CLIENT_SECRET or None
-REDIRECT_URI = f"{settings.FRONTEND_DOMAIN}auth/login"
+REDIRECT_URI = f"{settings.FRONTEND_DOMAIN}/auth/login"
 
 
 def _b64url(b: bytes) -> str:
