@@ -21,4 +21,7 @@ def callback_provider(request):
     refresh = RefreshToken.for_user(user)
     access_token = str(refresh.access_token)  # pyright: ignore
     refresh_token = str(refresh)
-    return redirect(f"{FRONTEND_DOMAIN}/auth/login/?access={access_token}&refresh={refresh_token}")
+    response = redirect(f"{FRONTEND_DOMAIN}/auth/login/?access={access_token}&refresh={refresh_token}")
+    response.delete_cookie("sessionid", path="/")
+    response.delete_cookie("messages", path="/")
+    return response
