@@ -42,7 +42,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     # Libraries
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.microsoft",
     "celery",
     "rest_framework",
     "django_filters",
@@ -67,13 +73,15 @@ MIDDLEWARE = [
     # Should be start of middleware
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "core.utils.middleware.CheckForTenantMiddleware",
+    # allauth
+    "allauth.account.middleware.AccountMiddleware",
     # Should be end of middleware
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
@@ -90,6 +98,44 @@ CORS_ORIGIN_WHITELIST = list(filter(None, [*os.getenv("DJANGO_CORS_ORIGIN_WHITEL
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost:\d+$",
 ]
+
+FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:5173")
+FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
+
+SITE_ID = 2
+ACCOUNT_ADAPTER = "users.auth.adapters.NoSignupAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "users.auth.adapters.NoNewSocialSignupAdapter"
+SOCIALACCOUNT_AUTO_SIGNUP = False
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_STORE_TOKENS = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+
+LOGIN_REDIRECT_URL = FRONTEND_DOMAIN
+LOGOUT_REDIRECT_URL = "/admin"
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"prompt": "select_account"},
+        "FETCH_USERINFO": True,
+    },
+    "microsoft": {
+        "SCOPE": ["openid", "email", "profile", "offline_access", "User.Read"],
+        "AUTH_PARAMS": {"prompt": "select_account"},
+        "FETCH_USERINFO": True,
+    },
+}
+
+# allauth account configuration for email-only user model (no username field)
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+
+SESSION_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 
 TEMPLATES = [
     {
@@ -141,7 +187,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = "users.User"
 
-AUTHENTICATION_BACKENDS = ["core.utils.backends.CustomBackend"]
+AUTHENTICATION_BACKENDS = [
+    "core.utils.backends.CustomBackend",
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -197,8 +247,6 @@ SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {"Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"}},
 }
 
-FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:3000")
-FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
