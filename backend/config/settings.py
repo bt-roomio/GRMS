@@ -113,6 +113,11 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 LOGIN_REDIRECT_URL = FRONTEND_DOMAIN
 LOGOUT_REDIRECT_URL = "/admin"
 
+KC_BASE_URL = os.getenv("KEYCLOAK_BASE_URL", "http://localhost:8080")
+KC_REALM = os.getenv("KEYCLOAK_REALM", "highload")
+KC_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "highload")
+KC_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "highload")
+
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": ["profile", "email"],
@@ -123,6 +128,23 @@ SOCIALACCOUNT_PROVIDERS = {
         "SCOPE": ["openid", "email", "profile", "offline_access", "User.Read"],
         "AUTH_PARAMS": {"prompt": "select_account"},
         "FETCH_USERINFO": True,
+    },
+    "openid_connect": {
+        "OAUTH_PKCE_ENABLED": True,
+        "APPS": [
+            {
+                "provider_id": "keycloak",
+                "name": "Login via SSO",
+                "client_id": KC_CLIENT_ID,
+                "secret": KC_CLIENT_SECRET,
+                "settings": {
+                    "server_url": f"{KC_BASE_URL}/realms/{KC_REALM}/.well-known/openid-configuration",
+                    "issuer": f"{KC_BASE_URL}/realms/{KC_REALM}",
+                    "claims_standard": ["email", "preferred_username"],
+                    "scopes": ["openid", "email", "profile"],
+                },
+            },
+        ],
     },
 }
 
