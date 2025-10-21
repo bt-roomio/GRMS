@@ -79,7 +79,7 @@ class Room:
     public_area_id: Incomplete
     pan_id: Incomplete
     building: Incomplete
-    door_lock_id: Incomplete
+    door_lock_device: Device
     type: Incomplete
     suite: Incomplete
     tenant: Incomplete
@@ -104,7 +104,7 @@ class RoomHistory(BaseModel, UpdateByModel):
     public_area_id: Incomplete
     pan_id: Incomplete
     building: Incomplete
-    door_lock_id: Incomplete
+    door_lock_device: Device
     room_type: Incomplete
     suite: Incomplete
     tenant: Incomplete

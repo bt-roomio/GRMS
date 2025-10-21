@@ -166,7 +166,7 @@ class TestRoomConsumer:
             assert just_added_room["public_area_id"] is None
             assert just_added_room["pan_id"] is None
             assert just_added_room["building"] is None
-            assert just_added_room["door_lock_id"] is None
+            assert just_added_room["door_lock_device"] is None
             assert just_added_room["suite"] is None
             assert just_added_room["tenant"] == "28c81921-f78e-4864-87d2-cec674f19d1c"
             assert just_added_room["status"] == "OFF"

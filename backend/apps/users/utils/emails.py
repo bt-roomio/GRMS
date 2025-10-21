@@ -38,6 +38,7 @@ def send_reset_link_email(user, send_activation_mail=True):
         fail_silently=True,
     )
 
+    print(settings.TESTING)
     if settings.TESTING:
         return b"Activation link sent."
 
