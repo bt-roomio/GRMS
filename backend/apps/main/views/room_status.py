@@ -18,7 +18,7 @@ class RoomHistoryStatusView(APIView):
     )
     @check_perms(["main.view_roomstatus"])
     def get(self, request):
-        rooms = Room.objects.room_status(tenant=request.user.tenant)
+        rooms = Room.objects.statuses(tenant=request.user.tenant)
         data = [room for room in rooms]
         serializer = RoomHistoryStatusSerializer(data=data, many=True)
         serializer.is_valid(raise_exception=True)

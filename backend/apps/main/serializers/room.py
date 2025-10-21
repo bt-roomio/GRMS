@@ -14,12 +14,18 @@ class RoomSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
     type = serializers.PrimaryKeyRelatedField(queryset=RoomType.objects.all(), required=False)
     devices = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), many=True, required=False)
+    door_lock_device_id = serializers.PrimaryKeyRelatedField(
+        queryset=Device.objects.all(), required=False, source="door_lock_device", allow_null=True
+    )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
         data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
+        data["door_lock_device"] = (
+            SimpleDeviceSerializer(instance.door_lock_device).data if instance.door_lock_device else None
+        )
         if hasattr(instance, "count_online_devices"):
             data["status"] = (
                 "ON"
@@ -61,7 +67,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "public_area_id",
             "pan_id",
             "building",
-            "door_lock_id",
+            "door_lock_device_id",
             "suite",
             "tenant",
             "status",
@@ -90,7 +96,7 @@ class SimpleRoomSerializer(serializers.ModelSerializer):
             "state",
             "pan_id",
             "building",
-            "door_lock_id",
+            "door_lock_device",
             "suite",
             "tenant",
             "status",

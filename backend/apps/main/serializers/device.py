@@ -1,14 +1,14 @@
 import logging
 
+from access_manager.models import NeedSyncDevice
+
 from rest_framework import serializers
 
-from access_manager.models import NeedSyncDevice
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DeviceCredentials, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
 from main.serializers.device_profile import SimpleDeviceProfileSerializer
-
 from main.utils.has_roomio_node import has_roomio_node
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
 
     def get_room_obj(self, obj):
         from main.serializers.room import SimpleRoomSerializer
+
         if self.context.get("exclude_room_obj", True):
             return None
         if obj.room:
@@ -39,7 +40,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
         return None
 
     def get_need_sync(self, obj):
-        if hasattr(obj, 'need_sync'):
+        if hasattr(obj, "need_sync"):
             return obj.need_sync
         if self.context.get("need_sync", False):
             return NeedSyncDevice.objects.filter(device=obj, need_sync=True).exists()
@@ -62,7 +63,7 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
             "device_data",
             "public_spaces",
             "external_id",
-            "need_sync"
+            "need_sync",
         )
 
 
@@ -70,6 +71,7 @@ class DeviceSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
     credentials = serializers.PrimaryKeyRelatedField(queryset=DeviceCredentials.objects.all(), required=False)
     public_spaces = serializers.SerializerMethodField(read_only=True)
+    as_door_lock_room = serializers.UUIDField(read_only=True)
 
     def to_representation(self, instance):
         from main.serializers.room import SimpleRoomSerializer
@@ -95,7 +97,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
-                validated_data.get("tenant_id")
+            validated_data.get("tenant_id")
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
@@ -109,7 +111,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
-                validated_data.get("tenant_id"), instance.id
+            validated_data.get("tenant_id"), instance.id
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
@@ -152,6 +154,7 @@ class DeviceSerializer(serializers.ModelSerializer):
             "tenant",
             "customer",
             "room",
+            "as_door_lock_room",
             "public_spaces",
             "device_profile",
             "label",

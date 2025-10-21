@@ -128,7 +128,9 @@ class Room(BaseModel, UpdateByModel):
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
-    door_lock_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    door_lock_device = models.OneToOneField(
+        "main.Device", SET_NULL, null=True, blank=True, related_name="as_door_lock_room"
+    )
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
@@ -171,7 +173,7 @@ class Room(BaseModel, UpdateByModel):
                     public_area_id=self.public_area_id,
                     pan_id=self.pan_id,
                     building=self.building,
-                    door_lock_id=self.door_lock_id,
+                    door_lock_device=self.door_lock_device,
                     room_type=self.type,
                     suite=self.suite,
                     updated_at=self.updated_at,
@@ -190,7 +192,7 @@ class Room(BaseModel, UpdateByModel):
                 public_area_id=self.public_area_id,
                 pan_id=self.pan_id,
                 building=self.building,
-                door_lock_id=self.door_lock_id,
+                door_lock_device=self.door_lock_device,
                 room_type=self.type,
                 suite=self.suite,
                 updated_at=self.updated_at,
@@ -243,7 +245,9 @@ class RoomHistory(BaseModel, UpdateByModel):
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
-    door_lock_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    door_lock_device = models.OneToOneField(
+        "main.Device", SET_NULL, null=True, blank=True, related_name="as_door_lock_device_history"
+    )
     room_type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
