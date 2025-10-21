@@ -112,7 +112,7 @@ FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:5173")
 FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 
 # allauth account configuration for email-only user model (no username field)
-SITE_ID = 2
+SITE_ID = 1
 ACCOUNT_ADAPTER = "users.auth.adapters.NoSignupAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "users.auth.adapters.NoNewSocialSignupAdapter"
 SOCIALACCOUNT_AUTO_SIGNUP = False
@@ -133,7 +133,15 @@ KC_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "")
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
-        "SCOPE": ["profile", "email"],
+        "APPS": [
+            {
+                "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+                "secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+                "key": "",
+                "sites": [SITE_ID],
+            }
+        ],
+        "SCOPE": ["openid", "email", "profile"],
         "AUTH_PARAMS": {"prompt": "select_account"},
         "FETCH_USERINFO": True,
     },
@@ -141,6 +149,15 @@ SOCIALACCOUNT_PROVIDERS = {
         "SCOPE": ["openid", "email", "profile", "offline_access", "User.Read"],
         "AUTH_PARAMS": {"prompt": "select_account"},
         "FETCH_USERINFO": True,
+        "APPS": [
+            {
+                "provider_id": "microsoft",
+                "name": "Microsoft",
+                "client_id": os.getenv("MS_CLIENT_ID", ""),
+                "secret": os.getenv("MS_CLIENT_SECRET", ""),
+                "sites": [SITE_ID],
+            }
+        ],
     },
     "openid_connect": {
         "OAUTH_PKCE_ENABLED": True,
