@@ -106,3 +106,4 @@ num2words==0.5.14
 pytest==8.4.0
 pytest-asyncio==1.1.0
 pytest-django==4.11.1
+django-allauth==65.12.1
