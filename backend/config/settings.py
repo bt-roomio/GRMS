@@ -98,10 +98,20 @@ CORS_ORIGIN_WHITELIST = list(filter(None, [*os.getenv("DJANGO_CORS_ORIGIN_WHITEL
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost:\d+$",
 ]
+CSRF_TRUSTED_ORIGINS = list(filter(None, [*os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(" ")]))
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 
 FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:5173")
 FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 
+# allauth account configuration for email-only user model (no username field)
 SITE_ID = 2
 ACCOUNT_ADAPTER = "users.auth.adapters.NoSignupAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "users.auth.adapters.NoNewSocialSignupAdapter"
@@ -109,14 +119,17 @@ SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 LOGIN_REDIRECT_URL = FRONTEND_DOMAIN
 LOGOUT_REDIRECT_URL = "/admin"
 
 KC_BASE_URL = os.getenv("KEYCLOAK_BASE_URL", "http://localhost:8080")
-KC_REALM = os.getenv("KEYCLOAK_REALM", "highload")
-KC_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "highload")
-KC_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "highload")
+KC_REALM = os.getenv("KEYCLOAK_REALM", "realm_name")
+KC_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "client_id")
+KC_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "")
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -147,17 +160,6 @@ SOCIALACCOUNT_PROVIDERS = {
         ],
     },
 }
-
-# allauth account configuration for email-only user model (no username field)
-ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-
-SESSION_COOKIE_SAMESITE = "None"
-CSRF_COOKIE_SAMESITE = "None"
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-
 
 TEMPLATES = [
     {
