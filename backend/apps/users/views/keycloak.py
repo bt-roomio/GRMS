@@ -45,15 +45,15 @@ def kc_begin(request):
             }
         )
     )
-    resp.set_cookie("kc_state", state, samesite="Lax")
-    resp.set_cookie("kc_nonce", nonce, samesite="Lax")
-    resp.set_cookie("kc_cv", code_verifier, samesite="Lax")
+    resp.set_cookie("kc_state", state, httponly=True, samesite="Lax")
+    resp.set_cookie("kc_nonce", nonce, httponly=True, samesite="Lax")
+    resp.set_cookie("kc_cv", code_verifier, httponly=True, samesite="Lax")
     return resp
 
 
 def kc_callback(request):
-    state_cookie = request.GET.get("kc_state")
-    code_verifier = request.GET.get("kc_cv")
+    state_cookie = request.COOKIES.get("kc_state")
+    code_verifier = request.COOKIES.get("kc_cv")
     state_q = request.GET.get("state")
     code = request.GET.get("code")
 
