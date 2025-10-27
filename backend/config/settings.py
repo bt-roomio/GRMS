@@ -98,6 +98,8 @@ CORS_ORIGIN_WHITELIST = list(filter(None, [*os.getenv("DJANGO_CORS_ORIGIN_WHITEL
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost:\d+$",
 ]
+CORS_ALLOW_CREDENTIALS = True
+
 CSRF_TRUSTED_ORIGINS = list(filter(None, [*os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(" ")]))
 
 USE_X_FORWARDED_HOST = True

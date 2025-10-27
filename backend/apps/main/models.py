@@ -329,7 +329,7 @@ class Device(BaseModel):
             if qs.exists():
                 raise ValidationError({"name": "A device with this name, tenant, and active status already exists."})
 
-        if self.room and self.device_public_spaces.exists():
+        if self.room and self.device_public_spaces.exists():  # pyright: ignore
             raise ValidationError({"room": "Device cannot be connected to a room and a public space at the same time."})
 
     def save(self, *args, **kwargs):
