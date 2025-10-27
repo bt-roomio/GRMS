@@ -250,25 +250,32 @@ class DeviceTest(BaseTestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 404)
 
-    @patch("main.models.PublicSpace.objects.filter")
+    @patch("main.models.DevicePublicSpaces.objects.filter")
     @patch("access_manager.models.NeedSyncDevice.objects.filter")
-    def test_remove_need_sync_function(self, mock_need_sync_filter, mock_public_space_filter):
+    def test_remove_need_sync_function(self, mock_need_sync_filter, mock_device_public_spaces_filter):
         from main.views.device import remove_need_sync
 
         mock_need_sync_qs = MagicMock()
         mock_need_sync_filter.return_value = mock_need_sync_qs
 
-        mock_public_space_qs = MagicMock()
-        mock_public_space_filter.return_value = mock_public_space_qs
+        mock_device_public_spaces_qs = MagicMock()
+        mock_device_public_spaces_filter.return_value = mock_device_public_spaces_qs
 
         device = Device.objects.get(pk=self.device_id)
+        initial_room = device.room
+
         remove_need_sync(device)
 
         mock_need_sync_filter.assert_called_with(device=device, need_sync=True)
         mock_need_sync_qs.update.assert_called_with(need_sync=False)
 
-        mock_public_space_filter.assert_called_with(device=device)
-        mock_public_space_qs.update.assert_called_with(device=None)
+        mock_device_public_spaces_filter.assert_called_with(device=device)
+        mock_device_public_spaces_qs.delete.assert_called_once()
+
+        # Verify room is set to None if device had a room
+        if initial_room:
+            device.refresh_from_db()
+            self.assertIsNone(device.room)
 
     def test_tenant_isolation(self):
         other_tenant_device_id = "9829490d-f742-400e-8f38-aae5155e0b27"  # From different tenant
