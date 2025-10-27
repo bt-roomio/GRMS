@@ -23,8 +23,8 @@ offline_gateway_devices_simple = Gauge(
 )
 
 
-GATEWAYS_LIST = settings.DJANGO_GATEWAYS_MONITORING
-ALL_GATEWAYS = settings.DJANGO_ALL_GATEWAYS_MONITORING
+IS_MONITORINT_GATEWAYS = settings.DJANGO_IS_MONITORING_GATEWAYS
+MONITOR_DISABLED_GATEWAYS = settings.DJANGO_MONITOR_DISABLED_GATEWAYS
 
 
 def update_device_metrics() -> None:
@@ -34,16 +34,17 @@ def update_device_metrics() -> None:
     Reads device status from database and updates Prometheus gauges.
     """
     try:
+        if not IS_MONITORINT_GATEWAYS:
+            return
         # Получаем список оффлайн шлюзов
-        offline_gateways_query = Device.objects.filter(
+        offline_gateways = Device.objects.filter(
             status=False,
             additional_info__gateway=True,
             is_active=True,
         ).select_related("tenant")
-        if not ALL_GATEWAYS:
-            offline_gateways = offline_gateways_query.filter(id__in=GATEWAYS_LIST)
-        else:
-            offline_gateways = offline_gateways_query
+
+        if MONITOR_DISABLED_GATEWAYS:
+            offline_gateways = offline_gateways.exclude(id__in=MONITOR_DISABLED_GATEWAYS)
 
         # Подсчитываем общее количество
         total_count = offline_gateways.count()

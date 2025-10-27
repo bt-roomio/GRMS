@@ -82,14 +82,15 @@ MIDDLEWARE = [
     "core.utils.middleware.CheckForTenantMiddleware",
     # allauth
     "allauth.account.middleware.AccountMiddleware",
+    "main.middlewares.update_device.UpdateDeviceMetricsMiddleware",
     # Should be end of middleware
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
-DJANGO_ALL_GATEWAYS_MONITORING = os.getenv("DJANGO_ALL_GATEWAYS_MONITORING")
-DJANGO_GATEWAYS_MONITORING = list(filter(None, re.split(r"[,\s]+", os.getenv("DJANGO_GATEWAYS_MONITORING", ""))))
-if (isinstance(DJANGO_GATEWAYS_MONITORING, list) and DJANGO_GATEWAYS_MONITORING) or DJANGO_ALL_GATEWAYS_MONITORING:
-    MIDDLEWARE.insert(-1, "main.middlewares.update_device.UpdateDeviceMetricsMiddleware")
+DJANGO_IS_MONITORING_GATEWAYS = os.getenv("DJANGO_IS_MONITORING_GATEWAYS", False)
+DJANGO_MONITOR_DISABLED_GATEWAYS = list(
+    filter(None, re.split(r"[,\s]+", os.getenv("DJANGO_MONITOR_DISABLED_GATEWAYS", "")))
+)
 
 ROOT_URLCONF = "config.urls"
 
