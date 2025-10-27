@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
+DJANGO_ALL_GATEWAYS_MONITORING = os.getenv("DJANGO_ALL_GATEWAYS_MONITORING")
 DJANGO_GATEWAYS_MONITORING = list(filter(None, re.split(r"[,\s]+", os.getenv("DJANGO_GATEWAYS_MONITORING", ""))))
 if isinstance(DJANGO_GATEWAYS_MONITORING, list) and DJANGO_GATEWAYS_MONITORING:
     MIDDLEWARE.insert(-1, "main.middlewares.update_device.UpdateDeviceMetricsMiddleware")
