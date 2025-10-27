@@ -8,6 +8,7 @@ import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import redirect
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -59,7 +60,6 @@ def kc_callback(request):
 
     if not state_cookie or state_q != state_cookie or not code or not code_verifier:
         return JsonResponse({"detail": "Invalid state or code"}, status=400)
-
     token_url = f"{KC_BASE}/realms/{KC_REALM}/protocol/openid-connect/token"
     data = {
         "grant_type": "authorization_code",
@@ -76,7 +76,7 @@ def kc_callback(request):
         return JsonResponse({"detail": "Token exchange failed", "body": r.text}, status=400)
 
     tokens = r.json()
-    tokens.get("id_token")
+    id_token = tokens.get("id_token")
     access_token = tokens.get("access_token")
 
     ui = requests.get(
@@ -90,11 +90,30 @@ def kc_callback(request):
 
     User = get_user_model()
     try:
-        user = User.objects.get(email=email)
+        user = User.objects.get(email=email, is_active=True)
     except User.DoesNotExist:
         return JsonResponse({"detail": "User not allowed"}, status=403)
 
     refresh = RefreshToken.for_user(user)
-    payload = {"access": str(refresh.access_token), "refresh": str(refresh)}  # pyright: ignore
-
+    payload = {"access": str(refresh.access_token), "refresh": str(refresh), "id_token": id_token}  # pyright: ignore
     return JsonResponse(payload, status=200)
+
+
+def kc_logout(request):
+    id_token = request.COOKIES.get("kc_id_token")
+    # чистим свои JWT-куки
+    resp = redirect(REDIRECT_URI)
+    resp.delete_cookie("access")
+    resp.delete_cookie("refresh")
+    resp.delete_cookie("kc_id_token")
+
+    if not id_token:
+        return resp
+
+    logout_url = (
+        f"{KC_BASE}/realms/{KC_REALM}/protocol/openid-connect/logout"
+        f"?id_token_hint={id_token}"
+        f"&post_logout_redirect_uri={REDIRECT_URI}"
+        f"&client_id={KC_CLIENT_ID}"
+    )
+    return redirect(logout_url)

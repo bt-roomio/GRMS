@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
-from main.models import Device, PublicSpace
+from main.models import Device, DevicePublicSpaces
 from main.serializers.device import DeviceFilterParams, DeviceSerializer
 from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 
@@ -23,7 +23,7 @@ class DeviceListView(APIView):
             search_value=params.get("search_value"),  # pyright: ignore
             status=params.get("status"),  # pyright: ignore
             sort_by=params.get("sort_by"),  # pyright: ignore
-            name=params.get("name")
+            name=params.get("name"),
         )
         serializer = DeviceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
@@ -70,7 +70,7 @@ class DeviceDetailView(APIView):
 
 def remove_need_sync(device: Device):
     NeedSyncDevice.objects.filter(device=device, need_sync=True).update(need_sync=False)
-    PublicSpace.objects.filter(device=device).update(device=None)
+    DevicePublicSpaces.objects.filter(device=device).delete()
 
     if device.room:
         device.room = None

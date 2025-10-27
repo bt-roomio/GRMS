@@ -2,7 +2,7 @@ from django.urls import path
 
 from users.views.auth import callback_provider
 from users.views.jwt_token import CustomTokenObtainPairView, CustomTokenRefreshView
-from users.views.keycloak import kc_begin, kc_callback
+from users.views.keycloak import kc_begin, kc_callback, kc_logout
 from users.views.permissions import PermissionsListView
 from users.views.reset_password import ActivationLinkView, ResetPasswordView
 from users.views.roles import RoleDetailView, RolesListView
@@ -13,6 +13,7 @@ urlpatterns = [
     # Keycloak
     path("auth/keycloak/begin/", kc_begin, name="kc_begin"),
     path("auth/keycloak/callback/", kc_callback, name="kc_callback"),
+    path("auth/keycloak/logout/", kc_logout, name="kc_logout"),
     # User-related views
     path("users/", UserListView.as_view(), name="users-list"),
     path("user/<uuid:pk>/", UserDetailView.as_view(), name="users-detail"),
