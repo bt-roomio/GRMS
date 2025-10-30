@@ -1,7 +1,6 @@
 import logging
 
 from django.conf import settings
-from django.db import DatabaseError
 from prometheus_client import Gauge
 
 from main.models import Device
@@ -23,7 +22,7 @@ offline_gateway_devices_count = Gauge(
 
 
 IS_MONITORINT_GATEWAYS = settings.DJANGO_IS_MONITORING_GATEWAYS
-MONITOR_DISABLED_GATEWAYS = settings.DJANGO_MONITOR_DISABLED_GATEWAYS
+MONITOR_DISABLED_GATEWAYS = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
 
 
 def update_device_metrics() -> None:
@@ -32,7 +31,7 @@ def update_device_metrics() -> None:
     Вызывается автоматически при каждом запросе к /metrics
     """
     # Проверяем, включен ли мониторинг gateway устройств
-    if not settings.DJANGO_IS_MONITORING_GATEWAYS:
+    if not IS_MONITORINT_GATEWAYS:
         logger.debug("Мониторинг gateway устройств отключен (DJANGO_IS_MONITORING_GATEWAYS=False)")
         return
 
@@ -55,7 +54,7 @@ def _clear_metrics():
     Note: .clear() не работает в multiprocess mode, поэтому мы явно обнуляем метрики
     """
     # Получаем список исключенных gateway устройств
-    excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
+    excluded_gateways = MONITOR_DISABLED_GATEWAYS
 
     if excluded_gateways:
         logger.info(f"Исключено gateway устройств из мониторинга: {len(excluded_gateways)} ({excluded_gateways})")
@@ -85,7 +84,7 @@ def _update_device_status_metrics():
     """Обновление метрик статуса устройств"""
 
     # Получаем список исключенных gateway устройств
-    excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
+    excluded_gateways = MONITOR_DISABLED_GATEWAYS
 
     # Получаем все offline gateway устройства
     query = Device.objects.filter(is_active=True, additional_info__gateway=True, status=False)
