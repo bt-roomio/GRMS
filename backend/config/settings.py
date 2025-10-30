@@ -29,6 +29,12 @@ DEBUG = os.getenv("DJANGO_DEBUG")
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = list(filter(None, [*os.getenv("DJANGO_ALLOWED_HOSTS", "").split(" ")]))
 
+# Silence system checks
+# auth.W004: Email is unique per is_active=True via UniqueConstraint
+SILENCED_SYSTEM_CHECKS = [
+    "auth.W004",
+]
+
 # Append module dir
 sys.path.append(os.path.join(BASE_DIR, "apps"))
 

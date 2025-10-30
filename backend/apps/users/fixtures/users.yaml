@@ -5,6 +5,7 @@
     first_name: Admin
     last_name: Adminov
     is_superuser: true
+    is_active: true
     date_joined: 2025-01-01T00:00:00+00:00
     password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
     tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c
@@ -16,6 +17,7 @@
     first_name: Admin
     last_name: Adminov
     is_superuser: false
+    is_active: true
     date_joined: 2025-01-01T00:00:00+00:00
     password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
     tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c
@@ -28,6 +30,7 @@
     last_name: Jolie
     phone: "+999987654321"
     roles: [bb436b2a-2ff5-4835-a264-fe27e30710e6] # TENANT_ADMIN
+    is_active: true
     date_joined: 2025-01-01T00:00:00+00:00
     password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
     tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
@@ -38,6 +41,7 @@
     email: romeo@gmail.com
     first_name: Romeo
     last_name: Romeo
+    is_active: true
     date_joined: 2025-01-01T00:00:00+00:00
     password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
     tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
@@ -50,6 +54,7 @@
     last_name: Karina
     phone: "+999987654322"
     roles: [bb436b2a-2ff5-4835-a264-fe27e30710e6] # TENANT_ADMIN
+    is_active: true
     date_joined: 2025-01-01T00:00:00+00:00
     password: pbkdf2_sha256$120000$Q3ICPM6omVjp$liGZrVdJWPLpkne0vjBLnJr4S+v49AoVABreMeAwNBU= # password
     tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c

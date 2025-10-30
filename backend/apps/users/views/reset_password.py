@@ -23,7 +23,7 @@ class ActivationLinkView(APIView):
     )
     def get(self, request, user_id):
         params = cast(ActivationLinkParamsDict, ActivationLinkParams.check(request.GET))
-        user = get_object_or_404(User, pk=user_id)
+        user = get_object_or_404(User, pk=user_id, is_active=True)
         return HttpResponse(send_reset_link_email(user, params.get("send_activation_mail")))
 
 

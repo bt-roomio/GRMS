@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
 from users.models import User
 
 
@@ -10,6 +9,9 @@ class SendLinkParams(serializers.Serializer):
         email = attrs.get("email")
         if email:
             attrs["email"] = email.lower()
-        user = get_object_or_404(User, email=attrs["email"])
-        attrs["user"] = user
+        try:
+            user = User.objects.get(email=attrs["email"], is_active=True)
+            attrs["user"] = user
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User with this email not found or is inactive."})
         return attrs

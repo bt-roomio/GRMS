@@ -38,10 +38,10 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
         return self.scope["user"].tenant_id
 
     def get_user_object(self):
-        return User.objects.filter(pk=self.scope["user"].id).first()
+        return User.objects.filter(pk=self.scope["user"].id, is_active=True).first()
 
     def get_user(self):
-        return User.objects.filter(pk=self.scope["user"].id).values().first()
+        return User.objects.filter(pk=self.scope["user"].id, is_active=True).values().first()
 
     def get_data_paginated(self, query_params, **kwargs):
         queryset = self.get_queryset(query_params=query_params)
