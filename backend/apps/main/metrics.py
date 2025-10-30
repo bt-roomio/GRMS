@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.db import DatabaseError
 from prometheus_client import Gauge
 
 from main.models import Device
@@ -21,7 +22,11 @@ offline_gateway_devices_count = Gauge(
 )
 
 
-def update_device_metrics():
+IS_MONITORINT_GATEWAYS = settings.DJANGO_IS_MONITORING_GATEWAYS
+MONITOR_DISABLED_GATEWAYS = settings.DJANGO_MONITOR_DISABLED_GATEWAYS
+
+
+def update_device_metrics() -> None:
     """
     Основная функция обновления всех метрик устройств
     Вызывается автоматически при каждом запросе к /metrics
