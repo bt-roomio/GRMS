@@ -41,7 +41,6 @@ def refresh_db_connection_metrics() -> None:
         cur.execute("SELECT setting::int FROM pg_settings WHERE name = 'max_connections'")
         (max_conn,) = cur.fetchone()
         DB_MAX_CONN.set(max_conn)
-        print(f"{max_conn=}")
 
     # 2) по состояниям
     with connection.cursor() as cur:
@@ -59,13 +58,11 @@ def refresh_db_connection_metrics() -> None:
     # чтобы при исчезновении какого-то состояния метрика не "зависала".
     for st in ("active", "idle", "idle in transaction", "unknown"):
         DB_CONN_GAUGE.labels(state=st).set(0)
-        print(f"{DB_CONN_GAUGE=}")
 
     total = 0
     for state, cnt in rows:
         DB_CONN_GAUGE.labels(state=state).set(cnt)
         total += cnt
-    print("Total: ", total)
 
     DB_CONN_TOTAL.set(total)
 
