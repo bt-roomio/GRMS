@@ -2,6 +2,8 @@ import uuid
 
 from django.contrib.auth.models import AbstractUser, Permission
 from django.db import models
+from django.db.models import Q, UniqueConstraint
+from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
 from core.models import BaseModel
@@ -14,7 +16,7 @@ from users.utils.fields import expires_hour
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     additional_info = models.JSONField(blank=True, null=True)
     phone = models.CharField(max_length=255, blank=True, null=True)
     tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE, null=True, blank=True)
@@ -43,6 +45,13 @@ class User(AbstractUser):
     class Meta:
         db_table = "users_users"
         default_related_name = "users"
+        constraints = [
+            UniqueConstraint(
+                Lower("email"),
+                condition=Q(is_active=True),
+                name="unique_user_email_is_active",
+            ),
+        ]
 
 
 class ResetPassword(BaseModel):

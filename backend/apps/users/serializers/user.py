@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         normalized_email = value.lower()
 
-        user = User.objects.filter(email__iexact=normalized_email)
+        user = User.objects.filter(email__iexact=normalized_email, is_active=True)
         if self.instance:
             if user.exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError("User with this email already exists!")

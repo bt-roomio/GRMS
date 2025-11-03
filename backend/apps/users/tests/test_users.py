@@ -114,14 +114,20 @@ class UserTest(BaseTestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_delete(self):
-        # Case - successful deletion
+        # Case - successful soft deletion (deactivation)
         user_id = "b1491621-9e9c-4dba-a743-119bac358781"
         response = self.delete(reverse("users:users-detail", kwargs={"pk": user_id}))
-        self.assertEqual(response.status_code, 204)
+        assert response.data is not None
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["message"], "User deactivated")
 
-        # Verify user is actually deleted
-        response = self.get(reverse("users:users-detail", kwargs={"pk": user_id}))
-        self.assertEqual(response.status_code, 404)
+        # Verify user is marked as inactive and not visible in list
+        response = self.get(reverse("users:users-list"))
+        assert response.data is not None
+        self.assertEqual(response.status_code, 200)
+        # The deactivated user should not appear in the list (filters by is_active=True)
+        user_ids = [user["id"] for user in response.data["results"]]
+        self.assertNotIn(user_id, user_ids)
 
         # Case - non-existent user
         non_existent_id = "11111111-1111-1111-1111-111111111111"

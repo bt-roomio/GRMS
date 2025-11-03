@@ -1,11 +1,20 @@
 import os
 import re
 import sys
+import warnings
 from datetime import timedelta
 from pathlib import Path
 
 from celery.schedules import crontab
 from dotenv import load_dotenv
+
+# Suppress django-prometheus database initialization warnings
+warnings.filterwarnings(
+    "ignore",
+    message="Accessing the database during app initialization is discouraged",
+    category=RuntimeWarning,
+    module="django.db.backends.utils",
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,6 +38,12 @@ DEBUG = os.getenv("DJANGO_DEBUG")
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
 ALLOWED_HOSTS = list(filter(None, [*os.getenv("DJANGO_ALLOWED_HOSTS", "").split(" ")]))
 
+# Silence system checks
+# auth.W004: Email is unique per is_active=True via UniqueConstraint
+SILENCED_SYSTEM_CHECKS = [
+    "auth.W004",
+]
+
 # Append module dir
 sys.path.append(os.path.join(BASE_DIR, "apps"))
 
@@ -36,6 +51,7 @@ sys.path.append(os.path.join(BASE_DIR, "apps"))
 
 INSTALLED_APPS = [
     "daphne",
+    "django_prometheus",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -58,7 +74,6 @@ INSTALLED_APPS = [
     "drf_yasg",
     "channels",
     "channels_demultiplexer",
-    "django_prometheus",
     # APPS
     "core",
     "users",
@@ -82,14 +97,19 @@ MIDDLEWARE = [
     "core.utils.middleware.CheckForTenantMiddleware",
     # allauth
     "allauth.account.middleware.AccountMiddleware",
-    "main.middlewares.update_device.UpdateDeviceMetricsMiddleware",
+    "main.middlewares.device.DeviceMetricsMiddleware",
     # Should be end of middleware
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
-DJANGO_IS_MONITORING_GATEWAYS = os.getenv("DJANGO_IS_MONITORING_GATEWAYS", False)
-DJANGO_MONITOR_DISABLED_GATEWAYS = list(
-    filter(None, re.split(r"[,\s]+", os.getenv("DJANGO_MONITOR_DISABLED_GATEWAYS", "")))
+PROMETHEUS_MULTIPROC_DIR = os.environ.get("PROMETHEUS_MULTIPROC_DIR", "/tmp/prometheus_multiproc")
+os.makedirs(PROMETHEUS_MULTIPROC_DIR, exist_ok=True)
+os.environ["PROMETHEUS_MULTIPROC_DIR"] = PROMETHEUS_MULTIPROC_DIR
+
+# Gateway monitoring settings
+DJANGO_IS_MONITORING_GATEWAYS = os.getenv("DJANGO_IS_MONITORING_GATEWAYS", "True").lower() in ("true", "1", "yes")
+DJANGO_MONITORING_EXCLUDED_GATEWAYS = list(
+    filter(None, re.split(r"[,\s]+", os.getenv("DJANGO_MONITORING_EXCLUDED_GATEWAYS", "")))
 )
 
 ROOT_URLCONF = "config.urls"

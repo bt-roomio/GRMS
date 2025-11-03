@@ -38,14 +38,14 @@ class UserDetailView(APIView):
     @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger)
     def get(self, request, pk):
         queryset = User.objects.prefetch_related("roles", "roles__permissions")
-        instance = get_object_or_404(queryset, id=pk, tenant=request.user.tenant_id)
+        instance = get_object_or_404(queryset, id=pk, tenant=request.user.tenant_id, is_active=True)
         serializer = UserDetailSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger, request_body=UserSerializer)
     @check_perms(["users.change_user"])
     def put(self, request, pk):
-        instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
+        instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         serializer = UserSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -54,6 +54,7 @@ class UserDetailView(APIView):
     @swagger_auto_schema(tags=["Users, User"], responses={})
     @check_perms(["users.delete_user"])
     def delete(self, request, pk):
-        instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id)
-        instance.delete()
-        return Response({"message": "User deleted"}, 204)
+        instance = get_object_or_404(User, id=pk, tenant_id=request.user.tenant_id, is_active=True)
+        instance.is_active = False
+        instance.save()
+        return Response({"message": "User deactivated"}, 200)
