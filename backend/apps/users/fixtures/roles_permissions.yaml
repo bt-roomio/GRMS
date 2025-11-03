@@ -412,3 +412,109 @@
       - - delete_carddeviceslot
         - access_manager
         - carddeviceslot
+
+      - - view_attributekv
+        - shuttle
+        - attributekv
+      - - add_attributekv
+        - shuttle
+        - attributekv
+      - - change_attributekv
+        - shuttle
+        - attributekv
+      - - delete_attributekv
+        - shuttle
+        - attributekv
+
+      - - view_attributelist
+        - shuttle
+        - attributekv
+      - - add_attributelist
+        - shuttle
+        - attributekv
+      - - add_attributerpc
+        - shuttle
+        - attributekv
+
+
+      - - view_tskv
+        - shuttle
+        - tskv
+      - - add_tskv
+        - shuttle
+        - tskv
+      - - change_tskv
+        - shuttle
+        - tskv
+      - - delete_tskv
+        - shuttle
+        - tskv
+
+      - - view_tskvlatest
+        - shuttle
+        - tskvlatest
+      - - add_tskvlatest
+        - shuttle
+        - tskvlatest
+      - - change_tskvlatest
+        - shuttle
+        - tskvlatest
+      - - delete_tskvlatest
+        - shuttle
+        - tskvlatest
+
+      - - view_tskvdictionary
+        - shuttle
+        - tskvdictionary
+      - - add_tskvdictionary
+        - shuttle
+        - tskvdictionary
+      - - change_tskvdictionary
+        - shuttle
+        - tskvdictionary
+      - - delete_tskvdictionary
+        - shuttle
+        - tskvdictionary
+
+      - - view_relation
+        - shuttle
+        - relation
+      - - add_relation
+        - shuttle
+        - relation
+      - - change_relation
+        - shuttle
+        - relation
+      - - delete_relation
+        - shuttle
+        - relation
+
+      - - view_rpcmessage
+        - shuttle
+        - rpcmessage
+      - - add_rpcmessage
+        - shuttle
+        - rpcmessage
+      - - change_rpcmessage
+        - shuttle
+        - rpcmessage
+      - - delete_rpcmessage
+        - shuttle
+        - rpcmessage
+
+      - - send_jsonrpc
+        - shuttle
+        - rpcmessage
+
+      - - view_controllerfile
+        - shuttle
+        - controllerfile
+      - - add_controllerfile
+        - shuttle
+        - controllerfile
+      - - change_controllerfile
+        - shuttle
+        - controllerfile
+      - - delete_controllerfile
+        - shuttle
+        - controllerfile
