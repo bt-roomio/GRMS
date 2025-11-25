@@ -18,24 +18,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        # value = kwargs["value"]
-        # self.bulk_publish()
-        # return
-        # msg = {"sourceDeviceUUID": "e00ea2b8-d11a-489c-adcb-8ed31938fd25",
-        #        "data": {
-        #            "00:e4:b2:da:d3:e4": [
-        #                {
-        #                    "ts": 1763550823323,
-        #                    "values": {
-        #                        "rfid_card_event": {
-        #                            "access_group": "GUEST",
-        #                            "card_uid": "8B 02 46 80",
-        #                            "event_ts": 1748980860,
-        #                        }
-        #                    }
-        #                }
-        #            ]
-        #        }, "topic": "v1/gateway/telemetry"}
         msg = {"sourceDeviceUUID": "e00ea2b8-d11a-489c-adcb-8ed31938fd25",
             "data": {
                 "00:e4:b2:da:d3:e4": [
@@ -43,11 +25,12 @@ class Command(BaseCommand):
                         "values": {
                             "rfid_card_event": {
                                     "fanvil_access_log_id": "1992095148185051139",
-                                    "card_uid": "",
-                                    "open_type": "Remote",
-                                    "openResult": True,
+                                    "card_uid": "8B 02 46 80",
+                                    "access_group": "GUEST",
+                                    # "open_type": "Remote",
+                                    # "openResult": True,
                                     "event_ts": 1763281405,
-                                    "displayName": "Amarande Barrier Exit"
+                                    # "displayName": "Amarande Barrier Exit"
                                 }
                             }
                         }]}, "topic": "v1/gateway/telemetry"
