@@ -20,9 +20,8 @@ from core.utils.date import datetime_to_unix
 from main.models import Guest, Room, Tenant
 from main.observables.guest import publish_guest_changes
 from main.observables.room_detail import publish_room_detail_changes
-from main.signals import room_updated
 from main.utils.change_room_state import make_checkedin, make_checkedout
-from shuttle.utils.disconnect_cards import access_cards
+from shuttle.utils.access_cards import access_cards
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +199,6 @@ class Command(BaseCommand):
 
                 publish_guest_changes(guest)
                 make_checkedin(guest.room)
-                room_updated.send(sender=Room, instance=guest.room)
                 publish_room_detail_changes(guest.room)
             else:
                 logger.warning("⚠ Check-in skipped - guest needs to be moved to another room")
@@ -236,7 +234,6 @@ class Command(BaseCommand):
                     )
                     publish_guest_changes(guest)
                     make_checkedout(guest.room)
-                    room_updated.send(sender=Room, instance=guest.room)
                     access_cards([guest], guest.room, 0)
                     publish_room_detail_changes(guest.room)
                 except Guest.DoesNotExist:
@@ -294,7 +291,6 @@ class Command(BaseCommand):
             access_cards([guest], new_room, 1)
             make_checkedin(guest.room)
             publish_room_detail_changes(guest.room)
-            room_updated.send(sender=Room, instance=new_room)
         except Exception as e:
             logger.error(f"✗ Failed to move guest: {str(e)}")
             self.stdout.write(self.style.ERROR(f"✗ Failed to move guest: {str(e)}"))
