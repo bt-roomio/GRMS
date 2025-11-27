@@ -23,7 +23,7 @@ def update_fanvil_last_log_id(tenant_id, fanvil_access_log_id):
         with transaction.atomic():
             AttributeKv.objects.update_or_create(
                 entity=device, entity_type="DEVICE",
-                attribute_type=AttributeKv.SERVER_SCOPE,
+                attribute_type=AttributeKv.SHARED_SCOPE,
                 attribute_key="fanvilLastLogId",
                 defaults={"str_v": str(fanvil_access_log_id), "bool_v": None,
                           "long_v": None, "dbl_v": None, "json_v": None}
