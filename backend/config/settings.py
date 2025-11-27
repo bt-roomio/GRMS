@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "shuttle",
     "access_manager",
     "services",
+    "mews",
 ]
 
 MIDDLEWARE = [
@@ -381,7 +382,7 @@ LOGGING = {
             "style": "{",
         },
         "simple": {
-            "format": "{levelname} {message}",
+            "format": "{levelname} {asctime} {message}",
             "style": "{",
         },
         "verbose_with_location": {
@@ -396,8 +397,9 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "INFO",
+            "level": "WARNING",
             "class": "logging.StreamHandler",
+            "formatter": "simple",
         },
         "file": {
             "level": "DEBUG",
@@ -419,7 +421,27 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "WARNING",
+        },
+        "main": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "mews": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "services": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "shuttle": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],

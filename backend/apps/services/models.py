@@ -19,10 +19,13 @@ class BaseModel(models.Model):
 
 
 class Integration(BaseModel):
-    TYPES = (("FIAS", "FIAS"), ("hoteza", "hoteza"))
+    class TypeChoice(models.TextChoices):
+        FIAS = "fias", "Fias"
+        HOTEZA = "hoteza", "Hoteza"
+        MEWS = "mews", "Mews"
 
     name = models.CharField(max_length=100)
-    type = models.CharField(max_length=100, choices=TYPES, default="FIAS")
+    type = models.CharField(max_length=20, choices=TypeChoice.choices)
     description = models.TextField()
     additional_info = models.JSONField(null=True, blank=True)
     enable = models.BooleanField("enable", default=False, help_text="Designates whether this integration is enable.")

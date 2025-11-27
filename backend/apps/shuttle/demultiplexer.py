@@ -30,7 +30,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "cards": CardConsumer.as_asgi(),
         "card_logs": CardLogConsumer.as_asgi(),
         "attributes": AttributeConsumer.as_asgi(),
-        "current_alarms":  InactiveDeviceAttributeConsumer.as_asgi(),
+        "current_alarms": InactiveDeviceAttributeConsumer.as_asgi(),
         "gateway_logs": GatewayLogsConsumer.as_asgi(),
         "tag_logs": TagLogsConsumer.as_asgi(),
         "tskv_tenant_history": TsKvTenantHistoryConsumer.as_asgi(),
@@ -42,7 +42,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
 
     async def websocket_receive(self, message):
         try:
-            if "text" in message:
+            if "text" in message and message["text"]:
                 content = json.loads(message["text"])
                 await self.receive_json(content)
             else:

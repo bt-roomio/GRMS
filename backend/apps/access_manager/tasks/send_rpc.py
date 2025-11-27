@@ -9,10 +9,9 @@ from celery import shared_task
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
-
 from shuttle.models import RPCMessage
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 TIMEOUT = 10
 
 
@@ -32,7 +31,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     if not cards:
         return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
 
-    if not device.status:
+    if device and not device.status:
         need_sync(cards, device, access, user=user)
         fail_response.update({"success": False, "message": "Device is not connected !"})
         return fail_response

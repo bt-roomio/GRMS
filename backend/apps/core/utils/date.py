@@ -45,6 +45,32 @@ def datetime_unix(date_time: datetime):
     return time.mktime(date_time.timetuple())
 
 
+def datetime_to_unix(date_time):
+    """
+    Convert a datetime object or ISO format string to a Unix timestamp (seconds since epoch).
+
+    Args:
+        date_time (datetime or str): A datetime object (can be timezone-aware or naive)
+                                     or an ISO format datetime string.
+
+    Returns:
+        int: Unix timestamp in seconds.
+    """
+    # If input is a string, parse it first
+    if isinstance(date_time, str):
+        date_time = datetime.fromisoformat(date_time.replace('Z', '+00:00'))
+
+    # Handle datetime objects
+    if isinstance(date_time, datetime):
+        if date_time.tzinfo is None:
+            # If naive datetime, assume UTC
+            date_time = date_time.replace(tzinfo=tz.utc)
+
+        return int(date_time.timestamp())
+
+    raise ValueError(f"Input must be a datetime object or ISO format string, got {type(date_time)}")
+
+
 def unix_to_datetime(timestamp):
     """
     Convert a Unix timestamp (seconds or milliseconds) to a timezone-aware datetime object in UTC.

@@ -77,7 +77,7 @@ class GuestSerializer(serializers.ModelSerializer):
             new_room.state.append(Room.CheckedIn)
             new_room.save(update_fields=["state"])
 
-        if validated_data.get("is_active") == False:
+        if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
             room = Room.objects.filter(id=instance.room_id).first()
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)

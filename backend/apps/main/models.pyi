@@ -71,6 +71,7 @@ class Room:
     ON: str
     OFF: str
     STATUS: Incomplete
+    id: UUID
     number: Incomplete
     floor: Incomplete
     block: Incomplete
@@ -82,7 +83,8 @@ class Room:
     door_lock_device: Device
     type: Incomplete
     suite: Incomplete
-    tenant: Incomplete
+    tenant: Tenant
+    tenant_id: UUID
     status: Incomplete
     devices: List[Device]
     objects: RoomQuerySet
@@ -264,7 +266,8 @@ class Guest(BaseModel):
     check_out: Incomplete
     auto_check_out: Incomplete
     reservation_number: Incomplete
-    room: Incomplete
+    room: Room
+    room_id: UUID
     tenant: Incomplete
     additional_info: Incomplete
     objects: Incomplete
