@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from main.models import Device, DeviceProfile
-from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
+from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest, Relation
 from shuttle.utils.camel_to_snake import to_snake_case_data
 
 
@@ -22,8 +22,26 @@ class AddressMapsSerializer(serializers.Serializer):
 
 
 class DeviceFromConfSerializer(serializers.Serializer):
+    gateway_id = serializers.UUIDField(required=True)
     devices = DeviceMacAddressSerializer(many=True)
     address_maps = AddressMapsSerializer(many=True)
+
+    def validate(self, attrs):
+        tenant = self.context["tenant"]
+        gateway_id = attrs.get("gateway_id")
+        gateway = Device.objects.filter(
+            id=gateway_id,
+            tenant=tenant,
+            is_active=True,
+            additional_info__gateway=True,
+        ).first()
+
+        if not gateway:
+            raise serializers.ValidationError(
+                {"gateway_id": "Gateway not found or not an active gateway for this tenant."})
+
+        attrs["gateway_obj"] = gateway
+        return attrs
 
     def to_internal_value(self, data):
         devices = [i for i in data.get("devices", []) if "macAddress" in i and "addressMapId" in i]
@@ -34,6 +52,9 @@ class DeviceFromConfSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         tenant = self.context["tenant"]
+
+        gateway: Device = validated_data.pop("gateway_obj")  # from validate()
+        gateway_id = validated_data.pop("gateway_id")
         devices_in = validated_data.pop("devices")
         maps_in = validated_data.pop("address_maps")
 
@@ -47,7 +68,7 @@ class DeviceFromConfSerializer(serializers.Serializer):
         macs = [d["mac_address"] for d in devices_in]
         unique_macs = list(dict.fromkeys(macs))
 
-        # # 4) Bulk-create any new Devices
+        # 4) Bulk-create any new Devices
         existing = Device.objects.filter(tenant=tenant, name__in=unique_macs, is_active=True)
         to_create = []
         existing_names = {d.name for d in existing}
@@ -111,7 +132,7 @@ class DeviceFromConfSerializer(serializers.Serializer):
                 update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
             )
 
-        # # 8) Build deduped list of AttributeKv
+        # 8) Build deduped list of AttributeKv
         attr_objs = []
         seen_attrs = set()
         for dev_in in devices_in:
@@ -119,6 +140,7 @@ class DeviceFromConfSerializer(serializers.Serializer):
             amap = maps_by_id.get(dev_in["address_map_id"])
             if not amap:
                 continue
+
             for tag in amap.get("attribute_updates", []):
                 key = ("DEVICE", "SHARED_SCOPE", dev.id, tag["tag"])
                 if key not in seen_attrs:
@@ -154,19 +176,31 @@ class DeviceFromConfSerializer(serializers.Serializer):
                 update_fields=["long_v"],
             )
 
-        result_devices = []
+        # 9) Create Relations
+        relation_objs = []
         for dev_in in devices_in:
-            mac = dev_in["mac_address"]
-            amap_id = dev_in["address_map_id"]
-            result_devices.append(
-                {
-                    "mac_address": mac,
-                    "address_map_id": amap_id,
-                }
+            dev = dev_map[dev_in["mac_address"]]
+            if dev.id == gateway.id:
+                continue
+            relation_objs.append(
+                Relation(
+                    from_id=gateway,
+                    from_type="DEVICE",
+                    relation_type_group="COMMON",
+                    relation_type="Created",
+                    to_id=dev,
+                    to_type="DEVICE",
+                )
             )
+        if relation_objs:
+            Relation.objects.bulk_create(relation_objs, ignore_conflicts=True)
 
-        # 10) Возвращаем именно те поля, что описаны в сериализаторе
+        # 10) Build response payload (include gateway_id back)
+        result_devices = [
+            {"mac_address": d["mac_address"], "address_map_id": d["address_map_id"]} for d in devices_in
+        ]
         return {
+            "gateway_id": gateway_id,
             "devices": result_devices,
-            "address_maps": maps_in,  # здесь отдаём оригинальные данные address_maps
+            "address_maps": maps_in,
         }

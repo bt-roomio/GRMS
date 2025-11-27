@@ -18,24 +18,23 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        value = kwargs["value"]
-        self.bulk_publish()
-        return
-        msg = {
-            "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
+        msg = {"sourceDeviceUUID": "e00ea2b8-d11a-489c-adcb-8ed31938fd25",
             "data": {
-                "38:0c:6e:41:02:80": {
-                    # "bc:e3:5c:0e:d3:e4": {
-                    # "macAddress": "04:60:e8:78:d3:e4",
-                    # If telemetry
-                    "ts": time.time(),
-                    "values": {
-                        "Window": 0,
-                    },
-                }
-            },
-            "topic": "v1/gateway/telemetry",
-        }
+                "00:e4:b2:da:d3:e4": [
+                    {"ts": 1763550823323,
+                        "values": {
+                            "rfid_card_event": {
+                                    "fanvil_access_log_id": "1992095148185051139",
+                                    "card_uid": "8B 02 46 80",
+                                    "access_group": "GUEST",
+                                    # "open_type": "Remote",
+                                    # "openResult": True,
+                                    "event_ts": 1763281405,
+                                    # "displayName": "Amarande Barrier Exit"
+                                }
+                            }
+                        }]}, "topic": "v1/gateway/telemetry"
+            }
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, "toGRMS")
 
