@@ -20,23 +20,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Run Mews WebSocket listener for real-time reservation sync"
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--log-level", type=str, help="Log level to use (optional, defaults to INFO)", default="WARNING"
-        )
-
     def handle(self, *args, **options):
-        if options.get("log_level"):
-            log_level_str = options["log_level"].upper()
-            try:
-                log_level = getattr(logging, log_level_str)
-                logging.getLogger().setLevel(log_level)
-            except AttributeError:
-                self.stdout.write(
-                    self.style.ERROR(f"Invalid log level: {log_level_str}. Use: DEBUG, INFO, WARNING, ERROR, CRITICAL")
-                )
-                return
-
         self.stdout.write(self.style.SUCCESS("Starting Mews WebSocket Listener..."))
 
         configs = MewsConfiguration.objects.filter(is_active=True, auto_sync=True)

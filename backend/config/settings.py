@@ -26,8 +26,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "ABCD")
 
-# TESTING mode
-TESTING = "test" in sys.argv
+# TESTING mode - check both sys.argv and environment variable
+TESTING = "test" in sys.argv or os.getenv("DJANGO_TESTING", "").lower() in ("1", "true", "yes")
 
 # For pytest
 TEST_RUNNER = "config.pytest_runner.PytestTestRunner"
@@ -236,7 +236,7 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
-        "CONN_MAX_AGE": 0 if IS_CELERY else 60,
+        "CONN_MAX_AGE": 0 if (IS_CELERY or TESTING) else 60,
         "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
@@ -430,12 +430,12 @@ LOGGING = {
         },
         "mews": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "INFO",
             "propagate": False,
         },
         "services": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "INFO",
             "propagate": False,
         },
         "shuttle": {
