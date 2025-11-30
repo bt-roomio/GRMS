@@ -171,8 +171,7 @@ class MewsAPIClient:
         params = {}
 
         if start_utc and end_utc:
-            params["StartUtc"] = start_utc
-            params["EndUtc"] = end_utc
+            params["CollidingUtc"] = {"StartUtc": start_utc, "EndUtc": end_utc}
 
         if updated_utc:
             params["UpdatedUtc"] = updated_utc
@@ -186,7 +185,10 @@ class MewsAPIClient:
                 "Customers": True,
             }
 
-        return self._make_request("reservations/getAll", params)
+        params = {
+            "Limitation": {"Cursor": None, "Count": 100},
+        }
+        return self._make_request("reservations/getAll/2023-06-06", params)
 
     def get_configuration(self) -> Dict[str, Any]:
         """Get enterprise configuration"""

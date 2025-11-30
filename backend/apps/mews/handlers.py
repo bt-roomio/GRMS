@@ -5,6 +5,7 @@ from mews.client import MewsAPIClient
 from mews.models import MewsConfiguration
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
+from main.models import Guest
 
 logger = logging.getLogger(__name__)
 
@@ -274,3 +275,221 @@ class ReservationEventHandler:
 
         except Exception as e:
             logger.error(f"Error processing reservation: {e}", exc_info=True)
+
+    def sync_reservations(self, start_utc: str, end_utc: str) -> Dict[str, Any]:
+        """
+        Sync reservations from Mews for a specific time period
+        Handles check-in, check-out, and guest move scenarios
+
+        Args:
+            start_utc: Start date in ISO 8601 format (e.g., "2024-01-01T00:00:00Z")
+            end_utc: End date in ISO 8601 format (e.g., "2024-01-02T00:00:00Z")
+
+        Returns:
+            Dictionary with sync statistics:
+            {
+                "total": int,
+                "checked_in": int,
+                "checked_out": int,
+                "skipped": int,
+                "errors": int
+            }
+        """
+        stats = {
+            "total": 0,
+            "checked_in": 0,
+            "checked_out": 0,
+            "skipped": 0,
+            "errors": 0,
+        }
+
+        try:
+            logger.info(f"Starting reservation sync for period {start_utc} to {end_utc}")
+
+            # Fetch all reservations for the time period
+            response = self.api_client.get_all_reservations(
+                start_utc=start_utc,
+                end_utc=end_utc,
+                extent={
+                    "Reservations": True,
+                    "ReservationGroups": True,
+                    "Customers": True,
+                },
+            )
+
+            reservations = response.get("Reservations", [])
+
+            stats["total"] = len(reservations)
+            logger.info(f"Found {stats['total']} reservations to process")
+
+            # Process each reservation
+            for reservation in reservations:
+                try:
+                    self._process_reservation_sync(reservation, stats)
+                except Exception as e:
+                    logger.error(f"Error processing reservation {reservation.get('Id')}: {e}", exc_info=True)
+                    stats["errors"] += 1
+
+            logger.info(
+                f"Sync completed: {stats['checked_in']} checked in, "
+                f"{stats['checked_out']} checked out, "
+                f"{stats['skipped']} skipped, "
+                f"{stats['errors']} errors"
+            )
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"Sync failed: {e}", exc_info=True)
+            return {"error": str(e), **stats}
+
+    def _check_for_guest_move(
+        self,
+        customer_id: str,
+        room_number: str,
+    ) -> Optional[Guest]:
+        """
+        Check if guest already exists with different room (guest move scenario)
+
+        Args:
+            customer_id: Mews customer ID (pms_id)
+            room_number: New room number
+
+        Returns:
+            Guest instance if it's a room move, None otherwise
+        """
+        try:
+            guest = Guest.objects.get(
+                pms_id=customer_id,
+                is_active=True,
+            )
+
+            # Guest exists - check if room is different
+            if guest.room and guest.room.number != room_number:
+                logger.info(
+                    f"→ Detected guest move: {guest.name} {guest.lastname} "
+                    f"from room {guest.room.number} to {room_number}"
+                )
+                return guest
+
+            # Guest exists in same room - skip
+            logger.debug(f"Guest {guest.name} {guest.lastname} already in room {room_number}")
+            return None
+
+        except Guest.DoesNotExist:
+            # New guest - proceed with check-in
+            return None
+
+    def _process_reservation_sync(self, reservation: Dict[str, Any], stats: Dict[str, Any]) -> None:
+        """
+        Process a single reservation during sync
+        Handles check-in, check-out, and guest move scenarios
+
+        Args:
+            reservation: Reservation data from Mews API
+            customers_dict: Dictionary of customer ID -> customer data
+            stats: Statistics dictionary to update
+        """
+        reservation_id = reservation.get("Id")
+        state = reservation.get("State")
+        resource_id = reservation.get("AssignedResourceId")
+        customer_id = reservation.get("AccountId")
+
+        if not all([reservation_id, state, resource_id, customer_id]):
+            logger.warning(
+                f"Skipping reservation {reservation_id}: missing required fields "
+                f"(state={state}, resource={resource_id}, customer={customer_id})"
+            )
+            stats["skipped"] += 1
+            return
+
+        # Determine event type based on state
+        # Started = checked in, Processed = checked out
+        if state == "Started":
+            event_type = "checkin"
+        elif state == "Processed":
+            event_type = "checkout"
+        elif state == "Confirmed":
+            # Confirmed but not started yet - skip during sync
+            logger.debug(f"Skipping confirmed (not started) reservation {reservation_id}")
+            stats["skipped"] += 1
+            return
+        else:
+            # Other states (Canceled, Optional, Requested, Inquired) - skip
+            logger.debug(f"Skipping reservation {reservation_id} with state {state}")
+            stats["skipped"] += 1
+            return
+
+        if not customer_id:
+            logger.warning(f"No customer ID found for reservation {reservation_id}")
+            stats["errors"] += 1
+            return
+
+        # Get customer data
+        response = self.api_client.get_customer_by_ids([customer_id])
+        customer = response.get("Customers", []) and response.get("Customers", [])[0]
+
+        if not customer:
+            logger.warning(f"Customer {customer_id} not found for reservation {reservation_id}")
+            stats["errors"] += 1
+            return
+
+        if not resource_id:
+            logger.warning(f"No resource ID found for reservation {reservation_id}")
+            stats["errors"] += 1
+            return
+
+        # Fetch resource (room) details
+        resource = self._fetch_resource(resource_id)
+        if not resource:
+            logger.warning(f"Resource {resource_id} not found for reservation {reservation_id}")
+            stats["errors"] += 1
+            return
+
+        room_number = resource.get("Name", "")
+
+        # Check for guest move (only for check-in events)
+        if event_type == "checkin":
+            existing_guest = self._check_for_guest_move(customer_id, room_number)
+            if existing_guest:
+                # This is a guest move, not a new check-in
+                # The pms_handler will handle the move when it receives the message
+                logger.info(
+                    f"Detected guest move for {customer.get('FirstName')} {customer.get('LastName')}: "
+                    f"room {existing_guest.room.number if existing_guest.room else 'N/A'} → {room_number}"
+                )
+                # Still publish as check-in - pms_handler will detect it's a move
+
+        # Build standardized data
+        event_data = {
+            "Id": reservation_id,
+            "AssignedResourceId": resource_id,
+            "StartUtc": reservation.get("StartUtc"),
+            "EndUtc": reservation.get("EndUtc"),
+            "State": state,
+            "Type": reservation.get("Type"),
+            "event_type": event_type,
+        }
+
+        print(f"{event_data =}")
+        standardized_data = self._build_standardized_data(
+            event=event_data,
+            customer=customer,
+            room_number=room_number,
+            reservation_id=reservation_id,  # pyright: ignore
+            resource_id=resource_id,
+        )
+
+        # Publish to RabbitMQ
+        self._publish_to_rabbitmq(standardized_data)
+
+        # Update stats
+        if event_type == "checkin":
+            stats["checked_in"] += 1
+        elif event_type == "checkout":
+            stats["checked_out"] += 1
+
+        logger.info(
+            f"Processed {event_type} for reservation {reservation_id}: "
+            f"{customer.get('FirstName')} {customer.get('LastName')} in room {room_number}"
+        )
