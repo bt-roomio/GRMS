@@ -495,12 +495,12 @@ class WidgetType(BaseModel):
 
 class Guest(BaseModel):
     name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
     lastname = models.CharField(max_length=255, null=True, blank=True)
     gender = models.CharField(max_length=255, null=True, blank=True)
     nationality = models.CharField(max_length=255, null=True, blank=True)  # Make standart nationality
     language = models.CharField(max_length=255, null=True, blank=True)  # Make standart language
     title = models.CharField(max_length=255, null=True, blank=True)
-    is_active = models.BooleanField(default=True)
     birthday = UnixTimeStampField(null=True, blank=True)
     check_in = UnixTimeStampField(null=True, blank=True)
     check_out = UnixTimeStampField(null=True, blank=True)

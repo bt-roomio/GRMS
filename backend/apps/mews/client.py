@@ -113,6 +113,7 @@ class MewsAPIClient:
         self,
         reservation_ids: List[str],
         extent: Optional[Dict[str, bool]] = None,
+        include_companions: bool = False,
     ) -> Dict[str, Any]:
         """
         Get specific reservations by IDs (used after WebSocket events)
@@ -120,6 +121,7 @@ class MewsAPIClient:
         Args:
             reservation_ids: List of reservation UUIDs
             extent: Optional extent configuration
+            include_companions: If True, uses old API endpoint that returns CompanionIds field
 
         Returns:
             Response with Reservations, Customers, etc.
@@ -139,7 +141,12 @@ class MewsAPIClient:
                 "Customers": True,
             }
 
-        return self._make_request("reservations/getAll/2023-06-06", params)
+        # Use old API endpoint if we need CompanionIds field
+        # New API (2023-06-06) doesn't return CompanionIds, CustomerId, OwnerId
+        # Old API returns CompanionIds which includes all guests (owner + companions)
+        endpoint = "reservations/getAll" if include_companions else "reservations/getAll/2023-06-06"
+
+        return self._make_request(endpoint, params)
 
     def get_all_customers(self, params={}):
         return self._make_request("customers/getAll", params)

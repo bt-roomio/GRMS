@@ -88,6 +88,7 @@ class ReservationEventHandler:
     def _fetch_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
         """
         Fetch reservation details from Mews API
+        Uses old API endpoint to get CompanionIds field
 
         Args:
             reservation_id: Mews reservation ID
@@ -95,7 +96,9 @@ class ReservationEventHandler:
         Returns:
             Reservation details or None if not found
         """
-        response = self.api_client.get_reservations_by_ids([reservation_id])
+        response = self.api_client.get_reservations_by_ids(
+            [reservation_id], include_companions=True  # Use old API to get CompanionIds
+        )
         reservations = response.get("Reservations", [])
 
         if not reservations:
@@ -140,7 +143,47 @@ class ReservationEventHandler:
             logger.error(f"No customer found for ID: {customer_id}")
             return None
 
+        logger.info(f"Found customer: {customers[0].get('Id')}")
         return customers[0]
+
+    def _fetch_customers(self, customer_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Fetch multiple customers details from Mews API
+
+        Args:
+            customer_ids: List of Mews customer/account IDs
+
+        Returns:
+            List of customer details (may be empty if none found)
+        """
+        if not customer_ids:
+            return []
+
+        response = self.api_client.get_customer_by_ids(customer_ids)
+        customers = response.get("Customers", [])
+
+        logger.info(f"Found {len(customers)} customers out of {len(customer_ids)} requested")
+        return customers
+
+    def _fetch_customers_by_resource(self, resource_id: str) -> List[Dict[str, Any]]:
+        """
+        Fetch all customers for a specific resource (room) from Mews API
+        Uses customers/search endpoint to get currently assigned customers
+
+        Args:
+            resource_id: Mews resource ID (room UUID)
+
+        Returns:
+            List of customer details (may be empty if none found)
+        """
+        response = self.api_client.search_customers(resource_id=resource_id)
+
+        # customers/search returns a different structure with nested Customer objects
+        search_results = response.get("Customers", [])
+        customers = [result.get("Customer") for result in search_results if result.get("Customer")]
+
+        logger.info(f"Found {len(customers)} customers for resource {resource_id}")
+        return customers
 
     def _build_standardized_data(
         self,
@@ -165,8 +208,8 @@ class ReservationEventHandler:
         """
         standardized_data = {
             "hotel_id": str(self.mews_config.company_id),
-            "first_name": customer.get("FirstName", ""),
-            "last_name": customer.get("LastName", ""),
+            "first_name": customer.get("FirstName") or customer.get("LastName"),
+            "last_name": customer.get("LastName", "") if customer.get("FirstName") else "",
             "room_number": room_number,
             "check_in_date": event.get("StartUtc"),
             "check_out_date": event.get("EndUtc"),
@@ -228,6 +271,7 @@ class ReservationEventHandler:
     def _process_reservation(self, event: Dict[str, Any]) -> None:
         """
         Process reservation event - fetch data from Mews and publish to RabbitMQ
+        Processes all companions (guests) in the reservation
 
         Args:
             event: Event dictionary with event_type already set
@@ -253,25 +297,46 @@ class ReservationEventHandler:
             if not resource:
                 return
 
-            customer_id = reservation.get("AccountId")
-            if not customer_id:
-                logger.error(f"No AccountId found in reservation {reservation_id}")
-                return
-
-            customer = self._fetch_customer(customer_id)
-            if not customer:
-                return
-
             room_number = resource.get("Name", "")
-            standardized_data = self._build_standardized_data(
-                event=event,
-                customer=customer,
-                room_number=room_number,
-                reservation_id=reservation_id,
-                resource_id=resource_id,
-            )
 
-            self._publish_to_rabbitmq(standardized_data)
+            # Get all companion IDs from the reservation
+            # CompanionIds includes all guests (owner + companions)
+            companion_ids = reservation.get("CompanionIds", [])
+
+            # Fallback to AccountId/CustomerId if CompanionIds is empty
+            if not companion_ids:
+                account_id = reservation.get("AccountId") or reservation.get("CustomerId")
+                if not account_id:
+                    logger.error(f"No CompanionIds or AccountId found in reservation {reservation_id}")
+                    return
+                companion_ids = [account_id]
+
+            logger.info(f"Found {len(companion_ids)} companion(s) for reservation {reservation_id}")
+
+            # Fetch all customers at once
+            customers = self._fetch_customers(companion_ids)
+            if not customers:
+                logger.error(f"No customers found for reservation {reservation_id}")
+                return
+
+            # Process each customer (companion)
+            for customer in customers:
+                try:
+                    standardized_data = self._build_standardized_data(
+                        event=event,
+                        customer=customer,
+                        room_number=room_number,
+                        reservation_id=reservation_id,
+                        resource_id=resource_id,
+                    )
+
+                    self._publish_to_rabbitmq(standardized_data)
+
+                except Exception as e:
+                    logger.error(
+                        f"Error processing customer {customer.get('Id')} " f"for reservation {reservation_id}: {e}",
+                        exc_info=True,
+                    )
 
         except Exception as e:
             logger.error(f"Error processing reservation: {e}", exc_info=True)
@@ -384,21 +449,20 @@ class ReservationEventHandler:
         """
         Process a single reservation during sync
         Handles check-in, check-out, and guest move scenarios
+        Processes all companions (guests) in the reservation
 
         Args:
             reservation: Reservation data from Mews API
-            customers_dict: Dictionary of customer ID -> customer data
             stats: Statistics dictionary to update
         """
         reservation_id = reservation.get("Id")
         state = reservation.get("State")
         resource_id = reservation.get("AssignedResourceId")
-        customer_id = reservation.get("AccountId")
 
-        if not all([reservation_id, state, resource_id, customer_id]):
+        if not all([reservation_id, state, resource_id]):
             logger.warning(
                 f"Skipping reservation {reservation_id}: missing required fields "
-                f"(state={state}, resource={resource_id}, customer={customer_id})"
+                f"(state={state}, resource={resource_id})"
             )
             stats["skipped"] += 1
             return
@@ -420,27 +484,29 @@ class ReservationEventHandler:
             stats["skipped"] += 1
             return
 
-        if not customer_id:
-            logger.warning(f"No customer ID found for reservation {reservation_id}")
-            stats["errors"] += 1
-            return
+        # Get all companion IDs from the reservation
+        companion_ids = reservation.get("CompanionIds", [])
 
-        # Get customer data
-        response = self.api_client.get_customer_by_ids([customer_id])
-        customer = response.get("Customers", []) and response.get("Customers", [])[0]
+        # Fallback to AccountId/CustomerId if CompanionIds is empty
+        if not companion_ids:
+            customer_id = reservation.get("AccountId") or reservation.get("CustomerId")
+            if not customer_id:
+                logger.warning(f"No CompanionIds or AccountId found for reservation {reservation_id}")
+                stats["errors"] += 1
+                return
+            companion_ids = [customer_id]
 
-        if not customer:
-            logger.warning(f"Customer {customer_id} not found for reservation {reservation_id}")
-            stats["errors"] += 1
-            return
+        logger.info(f"Found {len(companion_ids)} companion(s) for reservation {reservation_id}")
 
-        if not resource_id:
-            logger.warning(f"No resource ID found for reservation {reservation_id}")
+        # Fetch all customers at once
+        customers = self._fetch_customers(companion_ids)
+        if not customers:
+            logger.warning(f"No customers found for reservation {reservation_id}")
             stats["errors"] += 1
             return
 
         # Fetch resource (room) details
-        resource = self._fetch_resource(resource_id)
+        resource = self._fetch_resource(resource_id)  # pyright: ignore
         if not resource:
             logger.warning(f"Resource {resource_id} not found for reservation {reservation_id}")
             stats["errors"] += 1
@@ -448,19 +514,7 @@ class ReservationEventHandler:
 
         room_number = resource.get("Name", "")
 
-        # Check for guest move (only for check-in events)
-        if event_type == "checkin":
-            existing_guest = self._check_for_guest_move(customer_id, room_number)
-            if existing_guest:
-                # This is a guest move, not a new check-in
-                # The pms_handler will handle the move when it receives the message
-                logger.info(
-                    f"Detected guest move for {customer.get('FirstName')} {customer.get('LastName')}: "
-                    f"room {existing_guest.room.number if existing_guest.room else 'N/A'} → {room_number}"
-                )
-                # Still publish as check-in - pms_handler will detect it's a move
-
-        # Build standardized data
+        # Build event data
         event_data = {
             "Id": reservation_id,
             "AssignedResourceId": resource_id,
@@ -471,25 +525,54 @@ class ReservationEventHandler:
             "event_type": event_type,
         }
 
-        print(f"{event_data =}")
-        standardized_data = self._build_standardized_data(
-            event=event_data,
-            customer=customer,
-            room_number=room_number,
-            reservation_id=reservation_id,  # pyright: ignore
-            resource_id=resource_id,
-        )
+        # Process each customer (companion)
+        processed_count = 0
+        for customer in customers:
+            try:
+                customer_id = customer.get("Id")
 
-        # Publish to RabbitMQ
-        self._publish_to_rabbitmq(standardized_data)
+                # Check for guest move (only for check-in events)
+                if event_type == "checkin":
+                    existing_guest = self._check_for_guest_move(customer_id, room_number)  # pyright: ignore
+                    if existing_guest:
+                        # This is a guest move, not a new check-in
+                        # The pms_handler will handle the move when it receives the message
+                        logger.info(
+                            f"Detected guest move for {customer.get('FirstName')} {customer.get('LastName')}: "
+                            f"room {existing_guest.room.number if existing_guest.room else 'N/A'} → {room_number}"
+                        )
+                        # Still publish as check-in - pms_handler will detect it's a move
 
-        # Update stats
-        if event_type == "checkin":
-            stats["checked_in"] += 1
-        elif event_type == "checkout":
-            stats["checked_out"] += 1
+                # Build standardized data
+                standardized_data = self._build_standardized_data(
+                    event=event_data,
+                    customer=customer,
+                    room_number=room_number,
+                    reservation_id=reservation_id,  # pyright: ignore
+                    resource_id=resource_id,  # pyright: ignore
+                )
 
-        logger.info(
-            f"Processed {event_type} for reservation {reservation_id}: "
-            f"{customer.get('FirstName')} {customer.get('LastName')} in room {room_number}"
-        )
+                logger.info(f"Standardized data for customer {customer_id}: {standardized_data}")
+
+                # Publish to RabbitMQ
+                self._publish_to_rabbitmq(standardized_data)
+                processed_count += 1
+
+                logger.info(
+                    f"Processed {event_type} for reservation {reservation_id}: "
+                    f"{customer.get('FirstName')} {customer.get('LastName')} in room {room_number}"
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Error processing customer {customer.get('Id')} " f"for reservation {reservation_id}: {e}",
+                    exc_info=True,
+                )
+                stats["errors"] += 1
+
+        # Update stats (count reservation once, not per customer)
+        if processed_count > 0:
+            if event_type == "checkin":
+                stats["checked_in"] += 1
+            elif event_type == "checkout":
+                stats["checked_out"] += 1

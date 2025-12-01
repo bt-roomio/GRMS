@@ -139,14 +139,13 @@ class Command(BaseCommand):
             raise ValidationError("Tenant not found!")
 
         # # WARN: Remove this line after tests
-        # room, _ = Room.objects.get_or_create(tenant=tenant, number=data.get("room_number"), floor="1", block="A")
+        room, _ = Room.objects.get_or_create(tenant=tenant, number=data.get("room_number"), floor="1", block="A")
 
-        room = Room.objects.filter(tenant=tenant, number=data.get("room_number")).first()
+        # room = Room.objects.filter(tenant=tenant, number=data.get("room_number")).first()
         if not room:
             logger.error(f"✗ Room not found: {data.get('room_number')} for tenant: {tenant.title}")
             raise ValidationError("Room not found!")
 
-        logger.info("✓ Validation successful")
         data["room"] = room
         data["tenant"] = tenant
         return data
@@ -291,6 +290,9 @@ class Command(BaseCommand):
             access_cards([guest], old_room, 0)
             access_cards([guest], new_room, 1)
             make_checkedin(guest.room)
+            old_room_has_guests = Guest.objects.filter(room_id=old_room.id, is_active=True).exists()
+            if not old_room_has_guests:
+                make_checkedout(old_room)
             publish_room_detail_changes(guest.room)
         except Exception as e:
             logger.error(f"✗ Failed to move guest: {str(e)}")
