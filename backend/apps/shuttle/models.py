@@ -64,6 +64,17 @@ class TsKvLatest(BaseModelTs):
 
     objects = TsKvLatestQuerySet.as_manager()
 
+    @property
+    def get_value(self):
+        """
+        Get the first non-None value from bool_v, str_v, dbl_v, long_v, json_v fields.
+
+        Returns:
+            The first non-None value found, or None if all fields are None.
+        """
+        fields = ("bool_v", "str_v", "dbl_v", "long_v", "json_v")
+        return next((getattr(self, field) for field in fields if getattr(self, field) is not None), None)
+
     class Meta(BaseModelTs.Meta):
         db_table = "shuttle_ts_kv_latest"
         unique_together = ("entity", "key")

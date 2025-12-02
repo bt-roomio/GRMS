@@ -27,12 +27,12 @@ class AttributeKvQuerySet(BaseQuerySet):
                 entity_id=device.id,
                 attribute_type=AttributeKv.SHARED_SCOPE,
                 attribute_key="roomNumber",
-                defaults={"long_v": room.number},
+                defaults={"str_v": room.number},
             )
 
         self.filter(entity__room=room, attribute_type=AttributeKv.SHARED_SCOPE, attribute_key="roomNumber").exclude(
             entity_id__in=devices
-        ).update(long_v=None)
+        ).update(str_v=None)
 
     def inactive_devices_in_spaces(self, tenant_id, sort_by="-last_update_ts"):
         from main.models import DevicePublicSpaces
