@@ -47,3 +47,10 @@ class NoNewSocialSignupAdapter(DefaultSocialAccountAdapter):
             return
 
         sociallogin.connect(request, user)
+
+    def authentication_error(self, request, provider, error=None, exception=None, **kwargs):
+        raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=authentication_error"))
+
+    def pre_social_token(self, request, socialtoken):
+        if not socialtoken or not socialtoken.token:
+            raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/error?error=token_error"))
