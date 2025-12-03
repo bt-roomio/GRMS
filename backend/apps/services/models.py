@@ -26,7 +26,7 @@ class Integration(BaseModel):
 
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=20, choices=TypeChoice.choices)
-    description = models.TextField()
+    description = models.TextField(default="", blank=True)
     additional_info = models.JSONField(null=True, blank=True)
     enable = models.BooleanField("enable", default=False, help_text="Designates whether this integration is enable.")
     is_active = models.BooleanField(

@@ -8,8 +8,15 @@ class HotezaSerializer(serializers.Serializer):
     enable = serializers.BooleanField(default=False)
 
 
+class MewsSerializer(serializers.Serializer):
+    hotel_id = serializers.CharField(required=False, default="")
+    enable = serializers.BooleanField(default=False)
+    send_tasks = serializers.BooleanField(default=False)
+
+
 class IntegrationSettingsSerializer(serializers.Serializer):
     hoteza = HotezaSerializer(required=False, default={"hotel_id": "", "enable": False})
+    mews = MewsSerializer(required=False, default={"hotel_id": "", "enable": False, "send_tasks": False})
     PMS_type = serializers.ChoiceField(choices=("FIAS",), default=None, allow_null=True)
     integration_device = serializers.PrimaryKeyRelatedField(
         queryset=Device.objects.all(), default=None, allow_null=True
