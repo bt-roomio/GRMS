@@ -446,6 +446,38 @@ class ReservationEventHandler:
             # New guest - proceed with check-in
             return None
 
+    def _checked_out_from_roomio(self, customer_id: str, reservation_id: str) -> bool:
+        """
+        Check if guest was checked out from ROOMIO side
+
+        Args:
+            customer_id: Mews customer ID (pms_id)
+            reservation_id: Mews reservation ID (for logging)
+
+        Returns:
+            True if guest was checked out from ROOMIO, False otherwise
+        """
+        try:
+            # Look for inactive guest with this pms_id who was checked out from ROOMIO
+            guest = Guest.objects.filter(
+                pms_id=customer_id,
+                is_active=False,
+                checkout_by=Guest.CHECKOUT_BY.ROOMIO,
+            ).first()
+
+            if guest:
+                logger.info(
+                    f"Guest {guest.name} {guest.lastname} (pms_id={customer_id}) "
+                    f"was checked out from ROOMIO - skipping check-in for reservation {reservation_id}"
+                )
+                return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking checkout source for customer {customer_id}: {e}", exc_info=True)
+            return False
+
     def _process_reservation_sync(self, reservation: Dict[str, Any], stats: Dict[str, Any]) -> None:
         """
         Process a single reservation during sync
@@ -531,6 +563,15 @@ class ReservationEventHandler:
 
                 # Check for guest move (only for check-in events)
                 if event_type == "checkin":
+                    # Skip check-in if guest was checked out from ROOMIO
+                    if self._checked_out_from_roomio(customer_id, reservation_id):  # pyright: ignore
+                        logger.info(
+                            f"Skipping check-in for {customer.get('FirstName')} {customer.get('LastName')} - "
+                            f"guest was checked out from ROOMIO"
+                        )
+                        stats["skipped"] += 1
+                        continue
+
                     existing_guest = self._check_for_guest_move(customer_id, room_number)  # pyright: ignore
                     if existing_guest:
                         # This is a guest move, not a new check-in

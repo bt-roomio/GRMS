@@ -2,6 +2,7 @@ from typing import Any, Iterable, List
 from uuid import UUID
 
 from _typeshed import Incomplete
+from django.db import models
 
 from core.models import BaseModel, UpdateByModel
 from main.querysets.device import DeviceQuerySet
@@ -254,6 +255,10 @@ class WidgetType(BaseModel):
         unique_together: Incomplete
 
 class Guest(BaseModel):
+    class CHECKOUT_BY(models.TextChoices):
+        ROOMIO = "roomio", "Roomio"
+        PMS = "pms", "PMS"
+
     name: Incomplete
     lastname: Incomplete
     gender: Incomplete
@@ -271,6 +276,7 @@ class Guest(BaseModel):
     tenant: Incomplete
     additional_info: Incomplete
     objects: Incomplete
+    checkout_by: CHECKOUT_BY
     def get_name(self): ...
 
     class Meta(BaseModel.Meta):

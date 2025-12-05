@@ -180,7 +180,7 @@ class Command(BaseCommand):
                         "name": validated_data.get("first_name"),
                         "check_in": datetime_to_unix(validated_data.get("check_in_date")),
                         "check_out": datetime_to_unix(validated_data.get("check_out_date")),
-                        "auto_check_out": True,
+                        "auto_check_out": False,
                         "room": validated_data.get("room"),
                         "gender": validated_data.get("gender"),
                         "language": validated_data.get("language"),

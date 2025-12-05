@@ -494,6 +494,10 @@ class WidgetType(BaseModel):
 
 
 class Guest(BaseModel):
+    class CHECKOUT_BY(models.TextChoices):
+        ROOMIO = "roomio", "Roomio"
+        PMS = "pms", "PMS"
+
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     lastname = models.CharField(max_length=255, null=True, blank=True)
@@ -510,6 +514,7 @@ class Guest(BaseModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     pms_id = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(blank=True, null=True)
+    checkout_by = models.CharField(choices=CHECKOUT_BY.choices, max_length=50, null=True, blank=True)
 
     objects = GuestQuerySet.as_manager()
 

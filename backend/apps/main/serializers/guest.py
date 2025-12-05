@@ -64,7 +64,7 @@ class GuestSerializer(serializers.ModelSerializer):
             room.save(update_fields=["state"])
         return instance
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Guest, validated_data):
         deactivate_result = {"success": True}
         old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
         if old_room and len(old_room.guests.all()) == 1:  # pyright: ignore
@@ -103,6 +103,8 @@ class GuestSerializer(serializers.ModelSerializer):
                 self.context["deactivate_results"] = deactivate_result
 
             self._deactivate_result = deactivate_result
+
+            instance.checkout_by = instance.CHECKOUT_BY.ROOMIO
         return super().update(instance, validated_data)
 
     class Meta:
