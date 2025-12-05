@@ -9,8 +9,6 @@
 
 ### Usefull commands and snippets
 
-`
-
 - docker ps
 - docker ps -a
 - docker images
@@ -21,5 +19,3 @@
 - docker exec -it django bash
 - docker compose up --build -d
 - docker compose down
-
-`

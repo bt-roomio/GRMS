@@ -137,7 +137,7 @@ class MewsAPIClient:
             # Default extent - get all related data
             params["Extent"] = {  # pyright: ignore
                 "Reservations": True,
-                "ReservationGroups": True,
+                "ReservationGroups": False,
                 "Customers": True,
             }
 
@@ -171,11 +171,14 @@ class MewsAPIClient:
             end_utc: End date (ISO 8601)
             updated_utc: Filter by update time {"StartUtc": "...", "EndUtc": "..."}
             extent: Optional extent configuration
+            include_companions: If True, uses old API endpoint that returns CompanionIds field
 
         Returns:
             Response with reservations
         """
-        params = {}
+        params: dict[str, Any] = {
+            "Limitation": {"Cursor": None, "Count": 100},
+        }
 
         if start_utc and end_utc:
             params["CollidingUtc"] = {"StartUtc": start_utc, "EndUtc": end_utc}
@@ -188,13 +191,10 @@ class MewsAPIClient:
         else:
             params["Extent"] = {
                 "Reservations": True,
-                "ReservationGroups": True,
+                "ReservationGroups": False,
                 "Customers": True,
             }
 
-        params = {
-            "Limitation": {"Cursor": None, "Count": 100},
-        }
         return self._make_request("reservations/getAll/2023-06-06", params)
 
     def get_configuration(self) -> Dict[str, Any]:
@@ -292,7 +292,7 @@ class MewsAPIClient:
             "Extent": {
                 "Reservations": True,
                 "Customers": True,
-                "ReservationGroups": True,
+                "ReservationGroups": False,
             },
         }
 

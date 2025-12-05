@@ -369,6 +369,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.update_db_metrics",
         "schedule": 60.0,
     },
+    "mews-sync": {
+        "task": "mews.tasks.sync_reservations",
+        "schedule": 60.0,  # Every minute
+    },
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))

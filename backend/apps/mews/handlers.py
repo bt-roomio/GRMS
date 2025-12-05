@@ -372,12 +372,13 @@ class ReservationEventHandler:
             logger.info(f"Starting reservation sync for period {start_utc} to {end_utc}")
 
             # Fetch all reservations for the time period
+            # Use old API to get CompanionIds field
             response = self.api_client.get_all_reservations(
                 start_utc=start_utc,
                 end_utc=end_utc,
                 extent={
                     "Reservations": True,
-                    "ReservationGroups": True,
+                    "ReservationGroups": False,
                     "Customers": True,
                 },
             )
@@ -474,10 +475,7 @@ class ReservationEventHandler:
         elif state == "Processed":
             event_type = "checkout"
         elif state == "Confirmed":
-            # Confirmed but not started yet - skip during sync
-            logger.debug(f"Skipping confirmed (not started) reservation {reservation_id}")
-            stats["skipped"] += 1
-            return
+            event_type = "checkout"
         else:
             # Other states (Canceled, Optional, Requested, Inquired) - skip
             logger.debug(f"Skipping reservation {reservation_id} with state {state}")
