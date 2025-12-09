@@ -1,5 +1,4 @@
 import json
-import time
 
 from django.core.management.base import BaseCommand
 
@@ -18,25 +17,16 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        msg = {"sourceDeviceUUID": "e00ea2b8-d11a-489c-adcb-8ed31938fd25",
+        msg = {
+            "sourceDeviceUUID": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
             "data": {
-                "00:e4:b2:da:d3:e4": [
-                    {"ts": 1763550823323,
-                        "values": {
-                            "rfid_card_event": {
-                                    "fanvil_access_log_id": "1992095148185051139",
-                                    "card_uid": "8B 02 46 80",
-                                    "access_group": "GUEST",
-                                    # "open_type": "Remote",
-                                    # "openResult": True,
-                                    "event_ts": 1763281405,
-                                    # "displayName": "Amarande Barrier Exit"
-                                }
-                            }
-                        }]}, "topic": "v1/gateway/telemetry"
-            }
+                "device": "6c:7f:b2:da:d3:e4",
+            },
+            "topic": "v1/gateway/connect",
+        }
         ch = connect_to_rabbitmq()
-        send_to_rabbitmq(ch, msg, "toGRMS")
+        for _ in range(10):
+            send_to_rabbitmq(ch, msg, "toGRMS")
 
     @staticmethod
     def bulk_publish():
@@ -49,3 +39,29 @@ class Command(BaseCommand):
             if "telemetry" in topic:
                 print(msg)
                 send_to_rabbitmq(ch, msg, "toGRMS")
+
+    def generate_messages(self, tenant_id):
+        import random
+
+        from main.models import Device
+
+        devices = Device.objects.filter(tenant_id=tenant_id)
+        count = 0
+        for d in devices:
+            gateway = d.get_gateway
+            if not gateway:
+                continue
+
+            msg = {"sourceDeviceUUID": str(gateway.id), "data": {"device": d.name}}
+            rr = random.choice(["v1/gateway/connect", "v1/gateway/disconnect"])
+            msg["topic"] = rr
+            if rr == "v1/gateway/connect":
+                msg["data"]["type"] = "default"
+            count += 1
+            yield msg
+        print(f"Total devices: {count}")
+
+    def send_messages_connect_disconnect(self, tenant_id):
+        for msg in self.generate_messages(tenant_id):
+            ch = connect_to_rabbitmq()
+            send_to_rabbitmq(ch, msg, "toGRMS")

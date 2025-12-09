@@ -10,7 +10,7 @@ from pika.adapters.blocking_connection import BlockingChannel
 from core.management.mq.process_messages import process_messages
 
 QUEUE_CONFIG = {
-    "toGRMS": 1,
+    "toGRMS": 8,
     "v1/devices/me/attributes/request": 1,
     "v1/gateway/rpc": 1,
     "v1/gateway/attributes/request": 1,
@@ -19,7 +19,6 @@ QUEUE_CONFIG = {
 }
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 
 
 class Command(BaseCommand):

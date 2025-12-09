@@ -2,7 +2,8 @@ import time
 
 import requests
 
-RABBITMQ_API_URL = "http://localhost:15672/api/queues/%2F/%2Fattributes"
+my_queue = "toGRMS"  # "%2Fattributes"
+RABBITMQ_API_URL = f"http://localhost:15672/api/queues/%2F/{my_queue}"
 AUTH = ("guest", "guest")
 INTERVAL = 1
 
