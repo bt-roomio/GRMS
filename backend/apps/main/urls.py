@@ -7,7 +7,6 @@ from main.views.device import DeviceDetailView, DeviceListView
 from main.views.device_credentials import DeviceCredentialsDetailView
 from main.views.device_from_conf import DeviceFromConfListView
 from main.views.device_profile import DeviceProfileDetailView, DeviceProfileListView
-from main.views.email_config import EmailConfigDetailView
 from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
@@ -22,7 +21,6 @@ from main.views.webrtc import WebrtcBroker, WebrtcAgentStatus
 from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
 
 urlpatterns = [
-    path("email-config/", EmailConfigDetailView.as_view(), name="email-config-detail"),
     path("general-settings/", GeneralSettingsDetailView.as_view(), name="general-settings-detail"),
     path("integration-settings/", IntegrationSettingsDetailView.as_view(), name="integration-settings-detail"),
     path("alarm-settings/", AlarmSettingsDetailView.as_view(), name="alarm-settings"),

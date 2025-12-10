@@ -142,18 +142,6 @@
       - - delete_roomtype
         - main
         - roomtype
-      - - view_emailconfiguration
-        - main
-        - emailconfiguration
-      - - add_emailconfiguration
-        - main
-        - emailconfiguration
-      - - change_emailconfiguration
-        - main
-        - emailconfiguration
-      - - delete_emailconfiguration
-        - main
-        - emailconfiguration
 
       - - view_device
         - main

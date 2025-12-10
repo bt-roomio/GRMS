@@ -46,21 +46,6 @@ class AdminSettings(BaseModel):
     class Meta(BaseModel.Meta):
         db_table: str
 
-class EmailConfiguration(BaseModel, UpdateByModel):
-    email: Incomplete
-    host: Incomplete
-    port: Incomplete
-    username: Incomplete
-    password: Incomplete
-    use_tls: Incomplete
-    frontend_host: Incomplete
-    frontend_port: Incomplete
-    tenant: Incomplete
-
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
-        db_table: str
-        default_related_name: str
-
 class Room:
     Available: int
     CheckedIn: int

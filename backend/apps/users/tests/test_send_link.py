@@ -9,7 +9,6 @@ class SendLinkTests(BaseTestCase):
         "tenant.yaml",
         "roles_permissions.yaml",
         "users.yaml",
-        "email_configuration.yaml",
     )
 
     def test_activation_link(self):

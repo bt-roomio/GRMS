@@ -79,23 +79,6 @@ class AdminSettings(ServiceBaseModel):
         db_table = "main_admin_settings"
 
 
-class EmailConfiguration(ServiceBaseModel):
-    email = models.EmailField()
-    host = models.CharField(max_length=255)
-    port = models.CharField(max_length=255)
-    username = models.CharField(max_length=255)
-    password = models.CharField(max_length=255)
-    use_tls = models.BooleanField(default=True)
-    frontend_host = models.CharField(max_length=255, null=True, blank=True)
-    frontend_port = models.CharField(max_length=100, null=True, blank=True)
-
-    tenant = models.OneToOneField("main.Tenant", CASCADE)
-
-    class Meta(ServiceBaseModel.Meta):
-        db_table = "main_email_configuration"
-        default_related_name = "email_configurations"
-
-
 class Room(BaseModel, UpdateByModel):
     """
     If change Room model, don't forget about RoomHistory model.
