@@ -27,7 +27,7 @@ def active_attribute_server_scope():
 def check_activity_time(attribute_kv):
     for attr_active in attribute_kv:
         attr = AttributeKv.objects.get(entity_id=attr_active.entity, attribute_key="lastActivityTime")
-        if attr.long_v < get_mil_sec() - 60000:
+        if attr.long_v < get_mil_sec() - 60000 and attr_active.bool_v:
             attr_active.bool_v = False
             attr_active.save()
             attr_active.entity.status = False
