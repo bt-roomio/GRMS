@@ -9,12 +9,9 @@ class SendLinkTests(BaseTestCase):
         "tenant.yaml",
         "roles_permissions.yaml",
         "users.yaml",
-        "email_configuration.yaml",
     )
 
     def test_activation_link(self):
-        # Case
-        # Note: This test has a pre-existing issue with settings.TESTING not being True in pytest
         response = self.post(reverse("users:send-link"), data={"email": "admin@gmail.com"}, format="json")
         assert response is not None
         self.assertEqual(response.status_code, 200)
