@@ -27,7 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "ABCD")
 
 # TESTING mode - check both sys.argv and environment variable
-TESTING = "test" in sys.argv or os.getenv("DJANGO_TESTING", "").lower() in ("1", "true", "yes")
+_test_arg_check = any(arg in sys.argv for arg in ["test"]) or any("pytest" in arg for arg in sys.argv)
+_env_check = os.getenv("DJANGO_TESTING", "").lower() in ("1", "true", "yes")
+
+TESTING = _test_arg_check or _env_check
 
 # For pytest
 TEST_RUNNER = "config.pytest_runner.PytestTestRunner"

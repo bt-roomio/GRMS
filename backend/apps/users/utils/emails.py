@@ -1,11 +1,10 @@
-# from django.conf import settings
+from django.conf import settings
 from django.core.mail import send_mail
 from django.core.mail.backends.smtp import EmailBackend
 from django.template.loader import render_to_string
 
 from rest_framework.exceptions import ValidationError
 
-from config import settings
 from users.models import ResetPassword
 
 
@@ -15,8 +14,8 @@ def send_reset_link_email(user, send_activation_mail=True):
 
     reset_key = ResetPassword.objects.create(user=user)
 
-    host = settings.FRONTEND_HOST
-    port = ":" + settings.FRONTEND_PORT
+    host = settings.FRONTEND_HOST or "localhost"
+    port = ":" + str(settings.FRONTEND_PORT) or ""
 
     host = host.rstrip("/")
     url = f"{host}{port}" + "/password/new/" + "?key=" + reset_key.key
@@ -36,6 +35,9 @@ def send_reset_link_email(user, send_activation_mail=True):
         fail_silently=False,
     )
 
+    if settings.TESTING:
+        return b"Activation link sent."
+
     res = send_mail(
         subject,
         body,
@@ -44,7 +46,7 @@ def send_reset_link_email(user, send_activation_mail=True):
         html_message=body,
         connection=backend,
     )
-    print("res" , res)
+
 
     if not res:
         reset_key.delete()
