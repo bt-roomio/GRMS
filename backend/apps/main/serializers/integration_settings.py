@@ -12,6 +12,8 @@ class MewsSerializer(serializers.Serializer):
     hotel_id = serializers.CharField(required=False, default="")
     enable = serializers.BooleanField(default=False)
     send_tasks = serializers.BooleanField(default=False)
+    client_token = serializers.CharField(required=False, default="")
+    access_token = serializers.CharField(required=False, default="")
 
 
 class IntegrationSettingsSerializer(serializers.Serializer):

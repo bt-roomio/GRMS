@@ -11,10 +11,41 @@ import time
 
 from django.core.management.base import BaseCommand
 from mews.handlers import ReservationEventHandler
-from mews.models import MewsConfiguration
 from mews.websocket_client import MewsWebSocketClient
 
+from main.models import Tenant
+
 logger = logging.getLogger(__name__)
+
+
+class MewsConfigAdapter:
+    """
+    Adapter to provide MewsConfiguration interface using Tenant.additional_info data
+    """
+
+    def __init__(self, tenant: Tenant, mews_settings: dict):
+        self.tenant = tenant
+        self._mews_settings = mews_settings
+        self.client_token = mews_settings.get("client_token", "")
+        self.access_token = mews_settings.get("access_token", "")
+        self.company_id = mews_settings.get("hotel_id", "")
+        self.environment = mews_settings.get("environment", "demo")
+
+    @property
+    def api_base_url(self):
+        """Get API base URL based on environment"""
+        return {
+            "demo": "https://api.mews-demo.com/api/connector/v1",
+            "production": "https://api.mews.com/api/connector/v1",
+        }.get(self.environment, "https://api.mews.com/api/connector/v1")
+
+    @property
+    def ws_url(self):
+        """Get WebSocket URL based on environment"""
+        return {
+            "demo": "wss://ws.mews-demo.com/ws/connector",
+            "production": "wss://ws.mews.com/ws/connector",
+        }.get(self.environment, "wss://ws.mews.com/ws/connector")
 
 
 class Command(BaseCommand):
@@ -23,8 +54,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("Starting Mews WebSocket Listener..."))
 
-        configs = MewsConfiguration.objects.filter(is_active=True, auto_sync=True)
-        if not configs.exists():
+        # Get all tenants with active Mews integration
+        tenants = Tenant.objects.filter(additional_info__integration_settings__mews__enable=True)
+        active_tenants = []
+
+        for tenant in tenants:
+            if not tenant.additional_info:
+                continue
+
+            integration_settings = tenant.additional_info.get("integration_settings", {})
+            mews_settings = integration_settings.get("mews", {})
+            if mews_settings.get("client_token", False) and mews_settings.get("access_token", False):
+                active_tenants.append(tenant)
+
+        if not active_tenants:
             self.stdout.write(
                 self.style.ERROR("No active Mews configurations found. Please configure Mews integration first.")
             )
@@ -33,29 +76,46 @@ class Command(BaseCommand):
         clients = []
         handlers = []
 
-        for config in configs:
+        for tenant in active_tenants:
             try:
-                self.stdout.write(self.style.SUCCESS(f"Initializing listener for tenant: {config.tenant.title}"))
+                mews_settings = tenant.additional_info["integration_settings"]["mews"]
 
-                # Create event handler
-                handler = ReservationEventHandler(config)
+                self.stdout.write(self.style.SUCCESS(f"Initializing listener for tenant: {tenant.title}"))
+
+                # Create config adapter
+                config_adapter = MewsConfigAdapter(tenant, mews_settings)
+
+                # Debug logging (mask sensitive data)
+                logger.info(f"Mews config for {tenant.title}:")
+                logger.info(
+                    f"  - client_token: {'*' * 10}{config_adapter.client_token[-4:] if len(config_adapter.client_token) > 4 else '****'}"
+                )
+                logger.info(
+                    f"  - access_token: {'*' * 10}{config_adapter.access_token[-4:] if len(config_adapter.access_token) > 4 else '****'}"
+                )
+                logger.info(f"  - company_id: {config_adapter.company_id}")
+                logger.info(f"  - environment: {config_adapter.environment}")
+                logger.info(f"  - ws_url: {config_adapter.ws_url}")
+
+                # Create event handler with adapter
+                handler = ReservationEventHandler(config_adapter)
                 handlers.append(handler)
 
                 # Create WebSocket client
                 client = MewsWebSocketClient(
-                    client_token=config.client_token,
-                    access_token=config.access_token,
-                    ws_url=config.ws_url,  # pyright: ignore
+                    client_token=config_adapter.client_token,
+                    access_token=config_adapter.access_token,
+                    ws_url=config_adapter.ws_url,
                     on_event=handler.handle_event,
-                    on_connected=lambda t=config.tenant.title: self._on_connected(t),
-                    on_disconnected=lambda reason, t=config.tenant.title: self._on_disconnected(reason, t),
+                    on_connected=lambda t=tenant.title: self._on_connected(t),
+                    on_disconnected=lambda reason, t=tenant.title: self._on_disconnected(reason, t),
                     auto_reconnect=True,
                 )
 
                 clients.append(client)
 
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Failed to initialize for {config.tenant.title}: {e}"))
+                self.stdout.write(self.style.ERROR(f"Failed to initialize for {tenant.title}: {e}"))
 
         if not clients:
             self.stdout.write(self.style.ERROR("No WebSocket clients initialized"))

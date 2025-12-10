@@ -2,7 +2,6 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from mews.client import MewsAPIClient
-from mews.models import MewsConfiguration
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Guest
@@ -20,7 +19,7 @@ class ReservationEventHandler:
         "Confirmed": "checkout",
     }
 
-    def __init__(self, mews_config: MewsConfiguration):
+    def __init__(self, mews_config):
         """
         Initialize handler
 
