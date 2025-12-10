@@ -61,7 +61,7 @@ class CheckInSerializer(serializers.Serializer):
             additional_info__pms_reg_num=attrs.get("pms_reg_num"),
             is_active=True,
         )
-        if guest:
+        if guest.exists():
             raise JsonValidationError({"result": 9, "message": "This guest already exists!"})
 
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()

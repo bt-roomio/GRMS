@@ -11,11 +11,23 @@ class AttributeKvQuerySet(BaseQuerySet):
             .values("last_update_ts", "str_v", "bool_v", "json_v", "long_v", "dbl_v", "key_name")
             .order_by(*sort_by)
         )
-        cleaned_data = [{k: v for k, v in record.items() if v is not None} for record in query]
-        cleaned_data = [
-            {(k if k in ["last_update_ts", "key_name"] else "value"): v for k, v in record.items()}
-            for record in cleaned_data
-        ]
+        cleaned_data = []
+        for record in query:
+            # First rename fields, then filter out None values except for value field
+            renamed = {}
+            value_field = None
+            for k, v in record.items():
+                if k in ["last_update_ts", "key_name"]:
+                    if v is not None:
+                        renamed[k] = v
+                else:
+                    # This is one of the value fields (str_v, bool_v, etc.)
+                    if v is not None:
+                        value_field = v
+
+            # Always include 'value' field, even if None
+            renamed["value"] = value_field
+            cleaned_data.append(renamed)
 
         return cleaned_data
 
@@ -27,12 +39,12 @@ class AttributeKvQuerySet(BaseQuerySet):
                 entity_id=device.id,
                 attribute_type=AttributeKv.SHARED_SCOPE,
                 attribute_key="roomNumber",
-                defaults={"long_v": room.number},
+                defaults={"str_v": room.number},
             )
 
         self.filter(entity__room=room, attribute_type=AttributeKv.SHARED_SCOPE, attribute_key="roomNumber").exclude(
             entity_id__in=devices
-        ).update(long_v=None)
+        ).update(str_v=None)
 
     def inactive_devices_in_spaces(self, tenant_id, sort_by="-last_update_ts"):
         from main.models import DevicePublicSpaces

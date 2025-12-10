@@ -8,8 +8,15 @@ class HotezaSerializer(serializers.Serializer):
     enable = serializers.BooleanField(default=False)
 
 
+class MewsSerializer(serializers.Serializer):
+    hotel_id = serializers.CharField(required=False, default="")
+    enable = serializers.BooleanField(default=False)
+    send_tasks = serializers.BooleanField(default=False)
+
+
 class IntegrationSettingsSerializer(serializers.Serializer):
     hoteza = HotezaSerializer(required=False, default={"hotel_id": "", "enable": False})
+    mews = MewsSerializer(required=False, default={"hotel_id": "", "enable": False, "send_tasks": False})
     PMS_type = serializers.ChoiceField(choices=("FIAS",), default=None, allow_null=True)
     integration_device = serializers.PrimaryKeyRelatedField(
         queryset=Device.objects.all(), default=None, allow_null=True
@@ -31,15 +38,27 @@ class IntegrationSettingsSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         i_settings = instance.additional_info.get("integration_settings", {}) if instance.additional_info else {}
-        for field_name, field in self.fields.items():
-            if field_name == "main_dashboard":
-                i_settings[field_name] = i_settings.get(field_name, None)
-            elif field_name == "public_space_dashboard":
-                i_settings[field_name] = i_settings.get(field_name, None)
-            elif field_name == "door_lock":
-                i_settings[field_name] = i_settings.get(field_name, field.to_representation(field.get_default()))
-            else:
-                i_settings[field_name] = i_settings.get(field_name, field.default)
 
-        merged = {**i_settings}
-        return {"tenant_id": instance.id, **merged}
+        result = {}
+        for field_name, field in self.fields.items():
+            stored_value = i_settings.get(field_name)
+            if isinstance(field, serializers.Serializer):
+                default_data = field.to_representation(field.get_default())
+                if isinstance(stored_value, dict):
+                    merged_data = {**default_data, **stored_value}
+                else:
+                    merged_data = default_data
+
+                result[field_name] = merged_data
+            elif field_name == "main_dashboard":
+                result[field_name] = stored_value if stored_value is not None else None
+            elif field_name == "public_space_dashboard":
+                result[field_name] = stored_value if stored_value is not None else None
+            elif field_name == "door_lock":
+                result[field_name] = (
+                    stored_value if stored_value is not None else field.to_representation(field.get_default())
+                )
+            else:
+                result[field_name] = stored_value if stored_value is not None else field.default
+
+        return {"tenant_id": instance.id, **result}

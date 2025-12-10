@@ -1,9 +1,9 @@
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
 
-from shuttle.models import TsKvLatest
-from main.models import Room, Device
+from main.models import Device, Room
 from main.serializers.room_status import RoomLiveStatusSerializer
+from shuttle.models import TsKvLatest
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -13,7 +13,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
 
     async def response(self):
         tenant_id = self.tenant_id
-        flag_counts = await sync_to_async(self.queryset.room_flag_counts)(tenant_id)
+        flag_counts = await sync_to_async(self.queryset.room_flag_counts)(tenant_id)  # pyright: ignore
         offline = await sync_to_async(Device.objects.offline_count)(tenant_id)
         checked_in = await sync_to_async(Room.objects.checked_in_count)(tenant_id)
         available = await sync_to_async(Room.objects.available_count)(tenant_id)

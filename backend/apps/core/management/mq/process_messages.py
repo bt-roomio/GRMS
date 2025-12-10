@@ -16,7 +16,6 @@ from core.management.mq.telemetry import sync_telemetry
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 
 logger_pika = logging.getLogger("pika")
 logger_pika.setLevel(logging.WARNING)

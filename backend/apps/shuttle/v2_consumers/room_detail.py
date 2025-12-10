@@ -1,7 +1,6 @@
 from asgiref.sync import sync_to_async
 from django.db.models import Prefetch
 from djangochannelsrestframework.mixins import action
-from djangochannelsrestframework.observer import model_observer
 
 from rest_framework.fields import ValidationError
 
@@ -28,8 +27,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
 
         return devices[0].get("id")
 
-    @model_observer(Room, serializer_class=RoomDetailWsSerializer)  # pyright: ignore
-    async def room_activity(self, message, **kwargs):
+    async def get_activity(self, message, **kwargs):
         for request_id, value in self.subscribers.items():
             pk, keys = value.get("pk"), value.get("keys")
             await self.send_data(request_id=request_id, pk=pk, keys=keys)
@@ -37,12 +35,12 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
     @action()
     async def subscribe(self, request_id, **kwargs):
         body = RoomDetailWsFilterBodySerializer.check(data=kwargs)
-        self.subscribers[request_id] = body
+        self.subscribers[request_id] = {**body, "action": kwargs.get("action")}
         await self.send_data(request_id=request_id, pk=body.get("pk"), keys=body.get("keys"))
         device_id = self.get_device_id(request_id)
         if device_id:
             await self.add_group(f"tskv_latest_updates_{device_id}")
-        await self.room_activity.subscribe(request_id=request_id, **kwargs)
+        await self.add_group(f"room_detail_{body.get('pk')}")
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):

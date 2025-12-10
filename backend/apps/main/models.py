@@ -24,7 +24,7 @@ from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
 from services.models import BaseModel as ServiceBaseModel
-from shuttle.models import TsKvDictionary, TsKvLatest
+from shuttle.models import Relation, TsKvDictionary, TsKvLatest
 
 
 class Tenant(ServiceBaseModel):
@@ -319,6 +319,15 @@ class Device(BaseModel):
         self.full_clean()  # This will raise ValidationError if clean() fails.
         super().save(*args, **kwargs)
 
+    @property
+    def get_gateway(self):
+        """
+        Get the gateway device for this device from Relation.
+        Returns the from_id (gateway) where to_id is this device.
+        """
+        relation = Relation.objects.filter(to_id=self).select_related("from_id").first()
+        return relation.from_id if relation else None
+
     class Meta(BaseModel.Meta):
         db_table = "main_device"
         constraints = [
@@ -477,13 +486,17 @@ class WidgetType(BaseModel):
 
 
 class Guest(BaseModel):
+    class CHECKOUT_BY(models.TextChoices):
+        ROOMIO = "roomio", "Roomio"
+        PMS = "pms", "PMS"
+
     name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
     lastname = models.CharField(max_length=255, null=True, blank=True)
     gender = models.CharField(max_length=255, null=True, blank=True)
-    nationality = models.CharField(max_length=255, null=True, blank=True)
-    language = models.CharField(max_length=255, null=True, blank=True)
+    nationality = models.CharField(max_length=255, null=True, blank=True)  # Make standart nationality
+    language = models.CharField(max_length=255, null=True, blank=True)  # Make standart language
     title = models.CharField(max_length=255, null=True, blank=True)
-    is_active = models.BooleanField(default=True)
     birthday = UnixTimeStampField(null=True, blank=True)
     check_in = UnixTimeStampField(null=True, blank=True)
     check_out = UnixTimeStampField(null=True, blank=True)
@@ -491,7 +504,9 @@ class Guest(BaseModel):
     reservation_number = models.CharField(max_length=255, null=True, blank=True)
     room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
+    pms_id = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(blank=True, null=True)
+    checkout_by = models.CharField(choices=CHECKOUT_BY.choices, max_length=50, null=True, blank=True)
 
     objects = GuestQuerySet.as_manager()
 

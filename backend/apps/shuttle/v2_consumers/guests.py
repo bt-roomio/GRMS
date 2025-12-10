@@ -1,20 +1,14 @@
 from asgiref.sync import sync_to_async
-from djangochannelsrestframework.mixins import ListModelMixin
-from djangochannelsrestframework.observer import model_observer
-from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
+from djangochannelsrestframework.observer.generics import action
 
 from main.models import Guest
 from main.serializers.guest import GuestFilterParams, GuestSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
-class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncAPIConsumer):
+class GuestConsumer(BaseGenericAsyncAPIConsumer):
     queryset = Guest.objects.all()
     serializer_class = GuestSerializer
-
-    async def accept(self, *args, **kwargs):
-        self.request_ids = {}
-        await super().accept(*args, **kwargs)
 
     @action()
     def list(self, **kwargs):  # pyright: ignore
@@ -23,43 +17,41 @@ class GuestConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsync
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
-        user = self.scope["user"]
         params = GuestFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
+            tenant_id=self.tenant_id, room=params.get("room"), sort_by=params.get("sort_by", [])
         )
         return query
 
-    @model_observer(Guest, serializer_class=GuestSerializer)
-    async def get_latest_activity(self, message, action, **kwargs):
-        for request_id, params in self.request_ids.items():
-            room = params.get("room")
-            if room == message.get("room"):
-                await self.reply(data=message, action=action, request_id=request_id)
+    async def get_activity(self, message, **kwargs):
+        update = message.get("update")
+        for request_id, params in self.subscribers.items():
+            room = str(params.get("room"))
+            action = params.get("action")
+            if room == update.get("room"):
+                if action == "list_subscribe":
+                    data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
+                    await self.reply(data=data, action="list_subscribe", request_id=request_id)
+                elif action == "subscribe":
+                    await self.reply(data=update, action="subscribe", request_id=request_id)
 
     @action()
     async def subscribe(self, request_id, query_params, **kwargs):
-        await self.get_latest_activity.subscribe(request_id=request_id, **kwargs)
-        self.request_ids[request_id] = query_params
+        await self.add_group(f"guests_{query_params.get('room')}")
+        self.subscribers[request_id] = {**query_params, "action": "subscribe"}
 
     @action()
     async def unsubscribe(self, request_id, **kwargs):
-        await self.get_latest_activity.unsubscribe(request_id=request_id, **kwargs)
-
-    @model_observer(Guest, serializer_class=GuestSerializer)
-    async def get_list_activity(self, message, action, **kwargs):
-        for request_id, params in self.request_ids.items():
-            room = params.get("room")
-            if room == message.get("room"):
-                data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
-                await self.reply(data=data, action="list_subscribe", request_id=request_id)
+        await self.remove_group(f"guests_{self.subscribers[request_id].get('room')}")
+        self.subscribers.pop(request_id, None)
 
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
         await self.send_list_paginated(action, query_params, request_id, **kwargs)
-        await self.get_list_activity.subscribe(request_id=request_id, **kwargs)
-        self.request_ids[request_id] = query_params
+        await self.add_group(f"guests_{query_params.get('room')}")
+        self.subscribers[request_id] = {**query_params, "action": action}
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
-        await self.get_list_activity.unsubscribe(request_id=request_id, **kwargs)
+        await self.remove_group(f"guests_{self.subscribers[request_id].get('room')}")
+        self.subscribers.pop(request_id, None)

@@ -26,8 +26,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "ABCD")
 
-# TESTING mode
-TESTING = "test" in sys.argv
+# TESTING mode - check both sys.argv and environment variable
+TESTING = "test" in sys.argv or os.getenv("DJANGO_TESTING", "").lower() in ("1", "true", "yes")
 
 # For pytest
 TEST_RUNNER = "config.pytest_runner.PytestTestRunner"
@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "shuttle",
     "access_manager",
     "services",
+    "mews",
 ]
 
 MIDDLEWARE = [
@@ -235,7 +236,7 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
-        "CONN_MAX_AGE": 0 if IS_CELERY else 60,
+        "CONN_MAX_AGE": 0 if (IS_CELERY or TESTING) else 60,
         "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
@@ -370,6 +371,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.update_db_metrics",
         "schedule": 60.0,
     },
+    "mews-sync": {
+        "task": "mews.tasks.sync_reservations",
+        "schedule": 60.0,  # Every minute
+    },
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
@@ -383,7 +388,7 @@ LOGGING = {
             "style": "{",
         },
         "simple": {
-            "format": "{levelname} {message}",
+            "format": "{levelname} {asctime} {message}",
             "style": "{",
         },
         "verbose_with_location": {
@@ -400,6 +405,7 @@ LOGGING = {
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
+            "formatter": "simple",
         },
         "file": {
             "level": "DEBUG",
@@ -421,7 +427,27 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
+            "level": "WARNING",
+        },
+        "main": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "mews": {
+            "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "services": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "shuttle": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
@@ -431,7 +457,7 @@ LOGGING = {
         "core": {
             "handlers": ["console"],
             "propagate": False,
-            "level": "WARNING",
+            "level": "DEBUG",
         },
         "django.request": {
             "handlers": ["console"],

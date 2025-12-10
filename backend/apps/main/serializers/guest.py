@@ -64,7 +64,7 @@ class GuestSerializer(serializers.ModelSerializer):
             room.save(update_fields=["state"])
         return instance
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Guest, validated_data):
         deactivate_result = {"success": True}
         old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
         if old_room and len(old_room.guests.all()) == 1:  # pyright: ignore
@@ -77,7 +77,7 @@ class GuestSerializer(serializers.ModelSerializer):
             new_room.state.append(Room.CheckedIn)
             new_room.save(update_fields=["state"])
 
-        if validated_data.get("is_active") == False:
+        if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
             room = Room.objects.filter(id=instance.room_id).first()
             guests = [instance]
             cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
@@ -103,6 +103,8 @@ class GuestSerializer(serializers.ModelSerializer):
                 self.context["deactivate_results"] = deactivate_result
 
             self._deactivate_result = deactivate_result
+
+            instance.checkout_by = instance.CHECKOUT_BY.ROOMIO
         return super().update(instance, validated_data)
 
     class Meta:

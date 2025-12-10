@@ -2,7 +2,7 @@ from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
-from main.models import Guest, Room, Tenant, Device
+from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
 
 

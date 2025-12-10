@@ -9,8 +9,7 @@ def default_state():
 
 
 class StateEnum(str, Enum):
-    CHECK_IN_OUT = "CHECK IN/OUT"
-    OCCUPANCY_STATUS = "OCCUPANCY STATUS"
+    CHECK_IN_OUT = "Room reservation status"
 
 
 def attribute_room_state(room, state: StateEnum, value=True):
