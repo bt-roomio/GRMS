@@ -39,11 +39,7 @@ def update_fanvil_last_log_id(tenant_id, fanvil_access_log_id):
             if created:
                 return
 
-            try:
-                old_id = int(attr.str_v)
-            except (TypeError, ValueError):
-                old_id = None
-
+            old_id = int(attr.str_v)
             if old_id is None or log_id > old_id:
                 attr.str_v = str(log_id)
                 attr.save(update_fields=["str_v"])

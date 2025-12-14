@@ -5,4 +5,4 @@ class Command(BaseCommand):
     help = "Playground"
 
     def handle(self, *args, **options):
-        pass
+        ...
