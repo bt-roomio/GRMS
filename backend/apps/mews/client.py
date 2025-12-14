@@ -342,3 +342,56 @@ class MewsAPIClient:
             params["ResourceId"] = resource_id  # pyright: ignore
 
         return self._make_request("customers/search", params)
+
+    def get_resource_access_tokens(
+        self,
+        colliding_utc: Optional[Dict[str, str]] = None,
+        updated_utc: Optional[Dict[str, str]] = None,
+        resource_access_token_ids: Optional[List[str]] = None,
+        service_order_ids: Optional[List[str]] = None,
+        activity_states: Optional[List[str]] = None,
+        cursor: Optional[str] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        """
+        Get all resource access tokens (key cards) from Mews
+
+        Args:
+            colliding_utc: Time interval for token validity {"StartUtc": "...", "EndUtc": "..."}
+            updated_utc: Time interval for modification dates {"StartUtc": "...", "EndUtc": "..."}
+            resource_access_token_ids: List of specific token IDs (up to 1000)
+            service_order_ids: List of reservation IDs (up to 1000)
+            activity_states: Filter by Active/Deleted status (e.g., ["Active"])
+            cursor: Pagination cursor from previous response (optional)
+            limit: Maximum number of results per request (default 100)
+
+        Returns:
+            Response with ResourceAccessTokens list and pagination cursor
+
+        Note:
+            At least one filter parameter (colliding_utc, updated_utc, resource_access_token_ids,
+            or service_order_ids) must be provided.
+        """
+        params: Dict[str, Any] = {
+            "Limitation": {
+                "Cursor": cursor,
+                "Count": limit,
+            },
+        }
+
+        if colliding_utc:
+            params["CollidingUtc"] = colliding_utc
+
+        if updated_utc:
+            params["UpdatedUtc"] = updated_utc
+
+        if resource_access_token_ids:
+            params["ResourceAccessTokenIds"] = resource_access_token_ids
+
+        if service_order_ids:
+            params["ServiceOrderIds"] = service_order_ids
+
+        if activity_states:
+            params["ActivityStates"] = activity_states
+
+        return self._make_request("resourceAccessTokens/getAll", params)

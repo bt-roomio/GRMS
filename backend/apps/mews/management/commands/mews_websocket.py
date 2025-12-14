@@ -85,18 +85,6 @@ class Command(BaseCommand):
                 # Create config adapter
                 config_adapter = MewsConfigAdapter(tenant, mews_settings)
 
-                # Debug logging (mask sensitive data)
-                logger.info(f"Mews config for {tenant.title}:")
-                logger.info(
-                    f"  - client_token: {'*' * 10}{config_adapter.client_token[-4:] if len(config_adapter.client_token) > 4 else '****'}"
-                )
-                logger.info(
-                    f"  - access_token: {'*' * 10}{config_adapter.access_token[-4:] if len(config_adapter.access_token) > 4 else '****'}"
-                )
-                logger.info(f"  - company_id: {config_adapter.company_id}")
-                logger.info(f"  - environment: {config_adapter.environment}")
-                logger.info(f"  - ws_url: {config_adapter.ws_url}")
-
                 # Create event handler with adapter
                 handler = ReservationEventHandler(config_adapter)
                 handlers.append(handler)

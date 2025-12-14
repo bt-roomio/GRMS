@@ -18,15 +18,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         msg = {
-            "sourceDeviceUUID": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
-            "data": {
-                "device": "6c:7f:b2:da:d3:e4",
-            },
-            "topic": "v1/gateway/connect",
+            "sourceDeviceUUID": "99dc4d17-e874-4a1f-9029-7e2710872c1b",
+            "data": {"c8:f8:07:1d:18:78": [{"online": True}]},
+            "topic": "v1/gateway/attributes",
         }
         ch = connect_to_rabbitmq()
-        for _ in range(10):
-            send_to_rabbitmq(ch, msg, "toGRMS")
+        send_to_rabbitmq(ch, msg, "/attributes")
 
     @staticmethod
     def bulk_publish():

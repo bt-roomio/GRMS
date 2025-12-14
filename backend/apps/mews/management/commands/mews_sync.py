@@ -50,9 +50,28 @@ class MewsConfigAdapter:
 class Command(BaseCommand):
     help = "Sync reservations from Mews for all active configurations"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--start-date",
+            type=str,
+            help="Start date for sync in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS). Overrides last_sync.",
+        )
+        parser.add_argument(
+            "--tenant",
+            type=str,
+            help="Specific tenant title to sync (optional, syncs all if not provided)",
+        )
+
     def handle(self, *args, **options):
+        start_date_override = options.get("start_date")
+        tenant_filter = options.get("tenant")
+
         # Get all tenants with active Mews integration
         tenants = Tenant.objects.filter(additional_info__integration_settings__mews__enable=True)
+
+        if tenant_filter:
+            tenants = tenants.filter(title__icontains=tenant_filter)
+
         active_tenants = []
 
         for tenant in tenants:
@@ -83,16 +102,35 @@ class Command(BaseCommand):
                 config_adapter = MewsConfigAdapter(tenant, mews_settings)
 
                 # Determine sync period
-                # Get last_sync from tenant's additional_info if stored there
-                last_sync_str = mews_settings.get("last_sync")
-                if last_sync_str:
-                    # Parse ISO format datetime
-                    start_date = datetime.datetime.fromisoformat(last_sync_str.replace("Z", "+00:00"))
-                    self.stdout.write(f"Last sync: {start_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                if start_date_override:
+                    # Use provided start date
+                    try:
+                        # Try parsing with time first
+                        if "T" in start_date_override or " " in start_date_override:
+                            start_date = datetime.datetime.fromisoformat(start_date_override.replace("Z", "+00:00"))
+                        else:
+                            # Parse date only, set to start of day
+                            start_date = datetime.datetime.strptime(start_date_override, "%Y-%m-%d")
+                            start_date = timezone.make_aware(start_date)
+                        self.stdout.write(f"Using custom start date: {start_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                    except ValueError as e:
+                        self.stdout.write(
+                            self.style.ERROR(
+                                f"Invalid start date format: {start_date_override}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"
+                            )
+                        )
+                        continue
                 else:
-                    # First sync: today 00:00:00 to tomorrow 00:00:00
-                    start_date = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                    self.stdout.write("First sync - using today's date")
+                    # Get last_sync from tenant's additional_info if stored there
+                    last_sync_str = mews_settings.get("last_sync")
+                    if last_sync_str:
+                        # Parse ISO format datetime
+                        start_date = datetime.datetime.fromisoformat(last_sync_str.replace("Z", "+00:00"))
+                        self.stdout.write(f"Last sync: {start_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                    else:
+                        # First sync: today 00:00:00 to tomorrow 00:00:00
+                        start_date = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                        self.stdout.write("First sync - using today's date")
                 # End date is now
                 end_date = timezone.now()
 
