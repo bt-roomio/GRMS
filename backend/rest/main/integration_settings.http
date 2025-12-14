@@ -1,0 +1,25 @@
+### 
+
+GET {{BASE_URL}}/main/integration-settings/ HTTP/1.1
+Authorization: Bearer {{access_token}}
+
+
+### 
+
+PUT {{BASE_URL}}/main/integration-settings/ HTTP/1.1
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "hoteza": {
+    "enable": true,
+    "hotel_id": "123"
+  },
+  "mews": {
+    "access_token": "1AEFA58C55E74D65BDC7AD2001564C12-66633E0B736F523379B9E5966165A55",
+    "client_token": "E916C341431C4D28A866AD200152DBD3-A046EB5583FFBE94DE1172237763712",
+    "enable": 1,
+    "hotel_id": "dc77d041-b7be-4992-b432-fbd60a1a19b0",
+    "send_tasks": true
+  }
+}

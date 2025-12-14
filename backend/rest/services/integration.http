@@ -1,0 +1,17 @@
+### 
+
+GET {{API_URL}}/services/integrations/ HTTP/1.1
+Authorization: Bearer {{access_token}}
+
+
+### 
+
+PUT {{API_URL}}/services/integration/da52aa14-0008-4380-9b48-9f1863c14b33/ HTTP/1.1
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "enable": false,
+  "name": "Mews",
+  "type": "mews"
+}
