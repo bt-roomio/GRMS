@@ -40,6 +40,7 @@ class MewsConfigAdapter:
         self.access_token = mews_settings.get("access_token", "")
         self.company_id = mews_settings.get("hotel_id", "")
         self.environment = mews_settings.get("environment", "demo")
+        self.roomio_access_control = mews_settings.get("roomio_access_control", "")
 
     @property
     def api_base_url(self):
@@ -92,7 +93,12 @@ class Command(BaseCommand):
 
             integration_settings = tenant.additional_info.get("integration_settings", {})
             mews_settings = integration_settings.get("mews", {})
-            if mews_settings.get("client_token") and mews_settings.get("access_token"):
+            if (
+                mews_settings.get("client_token")
+                and mews_settings.get("access_token")
+                and mews_settings.get("enable")
+                and mews_settings.get("roomio_access_control")
+            ):
                 active_tenants.append(tenant)
 
         if not active_tenants:
