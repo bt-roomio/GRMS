@@ -356,11 +356,47 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = True
 
+
+# Control which Celery tasks are enabled/disabled
+# Tasks can be controlled via environment variables or overridden in settings_dev.py
+CELERY_TASKS_ENABLED = {
+    # Access Manager tasks
+    "access_manager.tasks.public_space_card.manage_cards_for_public_space_task": os.getenv(
+        "CELERY_TASK_MANAGE_PUBLIC_SPACE_CARDS", "True"
+    ).lower()
+    in ("true", "1", "yes"),
+    "access_manager.tasks.room_card.manage_cards_for_room_task": os.getenv(
+        "CELERY_TASK_MANAGE_ROOM_CARDS", "True"
+    ).lower()
+    in ("true", "1", "yes"),
+    "access_manager.tasks.send_rpc.send_rpc_request": os.getenv("CELERY_TASK_SEND_RPC", "True").lower()
+    in ("true", "1", "yes"),
+    "access_manager.tasks.sync_device.sync_devices_task": os.getenv("CELERY_TASK_SYNC_DEVICES", "True").lower()
+    in ("true", "1", "yes"),
+    # Core tasks
+    "core.tasks.update_db_metrics": os.getenv("CELERY_TASK_UPDATE_DB_METRICS", "True").lower() in ("true", "1", "yes"),
+    # Main tasks
+    "main.tasks.auto_check_out": os.getenv("CELERY_TASK_AUTO_CHECK_OUT", "True").lower() in ("true", "1", "yes"),
+    # Mews tasks
+    "mews.tasks.sync_access_tokens": os.getenv("CELERY_TASK_MEWS_SYNC_ACCESS_TOKENS", "True").lower()
+    in ("true", "1", "yes"),
+    "mews.tasks.sync_reservations": os.getenv("CELERY_TASK_MEWS_SYNC_RESERVATIONS", "True").lower()
+    in ("true", "1", "yes"),
+    # Shuttle tasks
+    "shuttle.tasks.aggregate_table_ts_kv": os.getenv("CELERY_TASK_AGGREGATE_TABLE", "True").lower()
+    in ("true", "1", "yes"),
+    "shuttle.tasks.delete_old_logs": os.getenv("CELERY_TASK_DELETE_OLD_LOGS", "True").lower() in ("true", "1", "yes"),
+    "shuttle.tasks.publish_updates_batch_task": os.getenv("CELERY_TASK_PUBLISH_UPDATES", "True").lower()
+    in ("true", "1", "yes"),
+    "shuttle.tasks.update_activity_device_task": os.getenv("CELERY_TASK_UPDATE_ACTIVITY", "True").lower()
+    in ("true", "1", "yes"),
+}
+
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BEAT_SCHEDULE = {
     "auto-checkout": {
         "task": "main.tasks.auto_check_out",
-        "schedule": 30.0,
+        "schedule": crontab(hour=12, minute=0),
     },
     "sync_device": {
         "task": "access_manager.tasks.sync_device.sync_devices_task",
@@ -434,7 +470,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "INFO",
         },
         "celery": {
             "handlers": ["console"],
@@ -458,7 +494,7 @@ LOGGING = {
         },
         "shuttle": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "DEBUG",
             "propagate": False,
         },
         "hoteza": {
@@ -478,3 +514,9 @@ LOGGING = {
         },
     },
 }
+
+
+try:
+    from .settings_dev import *  # noqa: F403, F401
+except ImportError:
+    pass
