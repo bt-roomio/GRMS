@@ -1,0 +1,85 @@
+### 
+
+@HOST = http://localhost:8000
+
+
+### Checkin API
+
+POST {{HOST}}/checkin HTTP/1.1
+
+{
+  "additional": {},
+  "arrivalDate": "2025-12-15 08:07:00",
+  "arrivalDateTS": 1765786020,
+  "birthDate": "1992-07-29",
+  "departureDate": "2025-12-17 10:00:00",
+  "departureDateTS": 1766052000,
+  "email": "",
+  "guestFirstName": "Ianis",
+  "guestLanguage": "ru",
+  "guestName": "Muzenitov",
+  "guestTitle": "mr",
+  "hotelId": "219",
+  "nopost": 0,
+  "phone": "",
+  "pin": "8051",
+  "pmsRegNum": "202246274",
+  "profileNum": "16845026",
+  "roomNumber": "106",
+  "roomShare": 0,
+  "swapFlag": 0
+}
+
+
+### Checkout API
+
+POST {{HOST}}/checkout HTTP/1.1
+
+{
+  "hotelId": "219",
+  "pmsRegNum": "htz6atp2ab1743767499",
+  "roomNumber": "103",
+  "roomShare": "1",
+  "swapFlag": "0"
+}
+
+
+### Guest Change API
+
+POST {{HOST}}/guestchange HTTP/1.1
+
+{
+  "additional": {},
+  "arrivalDate": "2025-03-07 10:13:59",
+  "arrivalDateTS": 1741342439,
+  "birthDate": "2000-01-01",
+  "departureDate": "2025-03-13 08:00:00",
+  "departureDateTS": 1741852800,
+  "email": "amigo@gmail.com",
+  "guestFirstName": "Nik123",
+  "guestLanguage": "en",
+  "guestName": "12",
+  "guestTitle": "",
+  "hotelId": "219",
+  "nopost": 0,
+  "oldRoom": "111",
+  "phone": "31234561234",
+  "pin": "0232",
+  "pmsRegNum": "htz6atp2ab1741342439",
+  "profileNum": "",
+  "roomNumber": "106",
+  "roomShare": 0,
+  "swapFlag": 0
+}
+
+
+### Room state DND
+
+POST {{HOST}}/dnd HTTP/1.1
+
+{
+  "dnd": "1",
+  "hotelId": "asd123",
+  "pmsRegNum": "1234567890",
+  "roomNumber": "101"
+}
