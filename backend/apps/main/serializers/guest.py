@@ -1,12 +1,11 @@
-from access_manager.models import GuestCard
 from access_manager.tasks.send_rpc import send_rpc_request
-from django.db.models import Q
 
 from rest_framework import serializers
 
 from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
-from main.models import Device, Guest, Room
+from main.models import Guest, Room
+from main.utils.guest_relations import get_guest_relations
 
 
 class SimpleGuestSerializer(serializers.ModelSerializer):
@@ -77,23 +76,18 @@ class GuestSerializer(serializers.ModelSerializer):
             new_room.state.append(Room.CheckedIn)
             new_room.save(update_fields=["state"])
 
+        new_checkout = validated_data.get("check_out")
+        if new_checkout > instance.check_out:
+            _, devices, _, _, blocked_guest_cards, blocked_cards = get_guest_relations(instance)
+            if blocked_guest_cards:
+                for device in devices:
+                    _ = send_rpc_request(str(device.id), blocked_cards, 1, guest_id=str(instance.id))
+                blocked_guest_cards.update(is_blocked=False)
+
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
-            room = Room.objects.filter(id=instance.room_id).first()
-            guests = [instance]
-            cards = GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True)
-            devices = (
-                Device.objects.filter(
-                    Q(room__id=room.id)  # pyright: ignore
-                    | Q(
-                        device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests
-                    ),
-                    is_active=True,
-                )
-                .select_related("tenant")
-                .distinct()
-            )
+            room, devices, _, cards, _, _ = get_guest_relations(instance)
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 0)
+                result = send_rpc_request(str(device.id), cards, 0, guest_id=str(instance.id))
                 not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
             if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore

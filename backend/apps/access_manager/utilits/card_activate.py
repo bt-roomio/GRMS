@@ -1,4 +1,5 @@
 from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
+from access_manager.utilits.need_sync import need_sync
 
 
 def activate_guest_card(cards, device, guest):
@@ -19,6 +20,7 @@ def activate_guest_card(cards, device, guest):
             GuestCard.objects.create(guest=guest, card=card, is_active=True)
             NeedSyncDevice.objects.filter(card=card, device=device).update(need_sync=False)
         except Exception as e:
+            need_sync(cards, device, 1)
             error_cards.append({"card_number": card_number, "error": str(e)})
     message = "Some cards are not activated."
     return {

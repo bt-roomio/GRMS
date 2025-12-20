@@ -362,6 +362,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "main.tasks.auto_check_out",
         "schedule": 30.0,
     },
+    "auto-block–guest": {
+        "task": "main.tasks.auto_block",
+        "schedule": 60.0,
+    },
     "sync_device": {
         "task": "access_manager.tasks.sync_device.sync_devices_task",
         "schedule": 300.0,
@@ -376,11 +380,11 @@ CELERY_BEAT_SCHEDULE = {
     },
     "mews-sync": {
         "task": "mews.tasks.sync_reservations",
-        "schedule": 60.0,  # Every minute
+        "schedule": 60.0,
     },
     "mews-access-tokens": {
         "task": "mews.tasks.sync_access_tokens",
-        "schedule": 60.0,  # Every minute
+        "schedule": 60.0,
     },
 }
 
