@@ -20,7 +20,7 @@ class MewsAPIClient:
         client_token: str,
         access_token: str,
         base_url: str,
-        client_name: str = "GRMS 1.0.0",
+        client_name: str = "Roomio 1.0",
     ):
         """
         Initialize Mews API Client
