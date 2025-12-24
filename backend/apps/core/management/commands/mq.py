@@ -10,11 +10,11 @@ from pika.adapters.blocking_connection import BlockingChannel
 from core.management.mq.process_messages import process_messages
 
 QUEUE_CONFIG = {
-    "toGRMS": 8,
+    "toGRMS": 16,  # Increased from 8 to handle backlog
     "v1/devices/me/attributes/request": 1,
     "v1/gateway/rpc": 1,
     "v1/gateway/attributes/request": 1,
-    "/attributes": 8,
+    "/attributes": 16,  # Increased from 8 to handle backlog
     "/telemetry": 8,
 }
 
@@ -62,6 +62,10 @@ class Command(BaseCommand):
                 channel = connection.channel()
 
                 channel.queue_declare(queue=queue_name, durable=True, passive=True)
+
+                # Set prefetch_count to allow workers to fetch multiple messages at once
+                # This significantly improves throughput by reducing idle time
+                channel.basic_qos(prefetch_count=10)
 
                 def callback(
                     ch: BlockingChannel,

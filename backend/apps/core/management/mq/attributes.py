@@ -5,10 +5,9 @@ import redis
 from django.conf import settings
 
 from core.management.mq.get_device import get_sub_device
-from core.management.mq.state_device import update_activity_device
 from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv
-from shuttle.services.attribute_kv import publish_updates_attribute_batch
+from shuttle.tasks import publish_updates_attribute_batch_task, update_activity_device_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -16,7 +15,8 @@ redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, d
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
-EXPIRY_TIME = 3600
+# Increased cache TTL from 3600s (1h) to 7200s (2h) for consistency with telemetry.py
+EXPIRY_TIME = 7200
 
 
 def sync_attributes(device, topic, payload):
@@ -44,7 +44,7 @@ def _update_attribute_store(device, data):
             updates.append((key, field, value))
     if not updates:
         logger.debug("No attribute entries to save for device %s", device_id)
-        update_activity_device(device)
+        update_activity_device_task.delay(device_id)
         return
 
     # Determine unique keys
@@ -106,11 +106,12 @@ def _update_attribute_store(device, data):
             }
         )
 
-    # Send updates to WebSocket clients
+    # Send updates to WebSocket clients asynchronously via Celery
+    # This prevents blocking the RabbitMQ worker on WebSocket operations
     if updates_by_device:
-        publish_updates_attribute_batch(updates_by_device)
+        publish_updates_attribute_batch_task.delay(updates_by_device)
 
     logger.debug(
         "Bulk attributes processed for device %s: created=%d updated=%d", device_id, len(to_create), len(to_update)
     )
-    update_activity_device(device_id)
+    update_activity_device_task.delay(device_id)

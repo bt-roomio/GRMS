@@ -20,9 +20,10 @@ from shuttle.utils.find_compatible_field import find_compatible_field
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 
-EXPIRY_TIME = 3600
+# TsKvDictionary entries are created once and rarely change
+# Increased TTL from 3600s (1h) to 7200s (2h) to reduce DB queries
+EXPIRY_TIME = 7200
 
 
 class TsKvDictionaryType(DefaultDict):

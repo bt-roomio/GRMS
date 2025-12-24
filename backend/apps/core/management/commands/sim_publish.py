@@ -20,8 +20,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         value = options["value"]
-        telemetry("Balcony Door", value)
-        # attributes(value)
+        # telemetry("Balcony Door", value)
+        attributes(value)
 
 
 def telemetry(tag="Window", value=1):
