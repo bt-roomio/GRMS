@@ -26,8 +26,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, **kwargs):
-        ch = connect_to_rabbitmq()
-        tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
+        # ch = connect_to_rabbitmq()
+        # tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
         # redis_client.set("temp_test", json.dumps({"a": 1}), ex=5)
         # redis_client.delete("temp_test")
 
@@ -68,14 +68,36 @@ class Command(BaseCommand):
 
     def device_connectivity_simulation(self):
         ch = connect_to_rabbitmq()
+        gateway = "5aab4f30-3e46-4ae5-9200-0ec6f51aa344"
+        sub_dev = "4c:71:43:10:02:80"
         msg = {
             "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
-            "data": {"gateway_online": True},
-            "topic": "v1/devices/me/attributes",
-            # "data": {"device": "4c:71:43:10:02:80", "type": "default"},
-            # "topic": "v1/gateway/connect",
+            # "data": {"gateway_online": True},
+            # "topic": "v1/devices/me/attributes",
+            "data": {"device": "4c:71:43:10:02:80", "type": "default"},
+            "topic": "v1/gateway/connect",
         }
-        send_to_rabbitmq(ch, msg, "/attributes")
+        msg = {
+            "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
+            "data": {
+                "keys": "roomNumber,Check-out date,online,mur",
+                "device": "4c:71:43:10:02:80",
+                "client": False,
+                "id": 50860,
+            },
+            "topic": "v1/gateway/attributes/request",
+        }
+        msg = {
+            "sourceDeviceUUID": gateway,
+            "data": {
+                "ts": 1766582336110,
+                "values": {
+                    "Fanvil_LOGS": "2025-12-24 18:18:56,110 - |INFO|<Fanvil access logs thread> [FDMCSClient.py] - FDMCSClient get_egs_logs - 72 - FDMCS egsLog fetched: current=1 size=100 total=3256 pages=33 records=100"
+                },
+            },
+            "topic": "v1/devices/me/telemetry",
+        }
+        send_to_rabbitmq(ch, msg, "/telemetry")
 
     @staticmethod
     def bulk_publish():
