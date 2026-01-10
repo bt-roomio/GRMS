@@ -1,10 +1,15 @@
 import json
 import logging
-from typing import TypedDict
 
 import redis
 from django.conf import settings
 
+from core.management.mq.device_cache import (
+    DeviceType,
+    _DEVICE_MEMORY_CACHE,
+    _MEMORY_CACHE_TTL,
+    _update_memory_cache,
+)
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
 from core.utils.slugify import slugify_key
@@ -18,32 +23,6 @@ logger.setLevel(logging.WARNING)
 
 # Increased from 60s to 600s (10 minutes) - devices rarely change
 EXPIRY_TIME = 600
-
-# Process-local in-memory cache (2-tier: memory → Redis → DB)
-# Eliminates Redis roundtrip overhead for hot devices (1-2ms savings per lookup)
-_DEVICE_MEMORY_CACHE = {}
-_MEMORY_CACHE_MAX_SIZE = 10000  # Prevent unlimited memory growth
-_MEMORY_CACHE_TTL = 300  # 5 minutes
-
-
-class DeviceType(TypedDict):
-    id: str
-    name: str
-    tenant_id: str
-    device_profile_id: str
-
-
-def _update_memory_cache(device_id: str, data: DeviceType):
-    """Update in-memory cache with size limit and eviction"""
-    if len(_DEVICE_MEMORY_CACHE) >= _MEMORY_CACHE_MAX_SIZE:
-        # Evict oldest 10% of entries to prevent memory bloat
-        sorted_entries = sorted(_DEVICE_MEMORY_CACHE.items(), key=lambda x: x[1]["cached_at"])
-        evict_count = _MEMORY_CACHE_MAX_SIZE // 10
-        for key, _ in sorted_entries[:evict_count]:
-            del _DEVICE_MEMORY_CACHE[key]
-        logger.debug(f"Evicted {evict_count} old entries from memory cache")
-
-    _DEVICE_MEMORY_CACHE[device_id] = {"data": data, "cached_at": get_mil_sec() // 1000}
 
 
 def get_device(device_id: str, tenant_id=None) -> DeviceType | None:

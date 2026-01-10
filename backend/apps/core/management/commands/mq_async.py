@@ -5,7 +5,6 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import TypedDict
 
 import django
 
@@ -23,6 +22,12 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 
 from core.management.mq.attributes import sync_attributes_batch
+from core.management.mq.device_cache import (
+    _DEVICE_MEMORY_CACHE,
+    _MEMORY_CACHE_TTL,
+    DeviceType,
+    _update_memory_cache,
+)
 from core.management.mq.get_device import get_sub_device
 from core.management.mq.rpc_message import handle_rpc
 from core.management.mq.state_device import handle_connect_disconnect
@@ -33,14 +38,32 @@ from main.models import Device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
 
+# Queue Names
+QUEUE_TO_GRMS = "toGRMS"
+QUEUE_FROM_GRMS = "fromGRMS"
+QUEUE_DEVICE_ATTRS_REQUEST = "v1/devices/me/attributes/request"
+QUEUE_GATEWAY_RPC = "v1/gateway/rpc"
+QUEUE_GATEWAY_ATTRS_REQUEST = "v1/gateway/attributes/request"
+QUEUE_ATTRIBUTES = "/attributes"
+QUEUE_TELEMETRY = "/telemetry"
+
 QUEUE_CONFIG = [
-    "toGRMS",
-    "v1/devices/me/attributes/request",
-    "v1/gateway/rpc",
-    "v1/gateway/attributes/request",
-    "/attributes",
-    "/telemetry",
+    QUEUE_TO_GRMS,
+    QUEUE_DEVICE_ATTRS_REQUEST,
+    QUEUE_GATEWAY_RPC,
+    QUEUE_GATEWAY_ATTRS_REQUEST,
+    QUEUE_ATTRIBUTES,
+    QUEUE_TELEMETRY,
 ]
+
+# Message Topics
+TOPIC_TELEMETRY = "/telemetry"
+TOPIC_ATTRIBUTES = "/attributes"
+TOPIC_GATEWAY_CONNECT = "v1/gateway/connect"
+TOPIC_GATEWAY_DISCONNECT = "v1/gateway/disconnect"
+TOPIC_GATEWAY_ATTRIBUTES_REQUEST = "v1/gateway/attributes/request"
+TOPIC_DEVICES_ATTRIBUTES_REQUEST = "v1/devices/me/attributes/request"
+TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
 BATCH_SIZE = 1000
@@ -59,31 +82,6 @@ redis_client = aioredis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT
 
 # Cache configuration
 EXPIRY_TIME = 600  # 10 minutes
-
-# Process-local in-memory cache (2-tier: memory → Redis → DB)
-_DEVICE_MEMORY_CACHE = {}
-_MEMORY_CACHE_MAX_SIZE = 10000
-_MEMORY_CACHE_TTL = 300  # 5 minutes
-
-
-class DeviceType(TypedDict):
-    id: str
-    name: str
-    tenant_id: str
-    device_profile_id: str
-
-
-def _update_memory_cache(device_id: str, data: DeviceType):
-    """Update in-memory cache with size limit and eviction"""
-    if len(_DEVICE_MEMORY_CACHE) >= _MEMORY_CACHE_MAX_SIZE:
-        # Evict oldest 10% of entries to prevent memory bloat
-        sorted_entries = sorted(_DEVICE_MEMORY_CACHE.items(), key=lambda x: x[1]["cached_at"])
-        evict_count = _MEMORY_CACHE_MAX_SIZE // 10
-        for key, _ in sorted_entries[:evict_count]:
-            del _DEVICE_MEMORY_CACHE[key]
-        logger.debug(f"Evicted {evict_count} old entries from memory cache")
-
-    _DEVICE_MEMORY_CACHE[device_id] = {"data": data, "cached_at": get_mil_sec() // 1000}
 
 
 async def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
@@ -202,7 +200,7 @@ async def handle_attribute_request_async(topic: str, device: DeviceType, data: d
             channel = await connection.channel()
             await channel.default_exchange.publish(
                 aio_pika.Message(body=json.dumps(response).encode()),
-                routing_key="fromGRMS",
+                routing_key=QUEUE_FROM_GRMS,
             )
         logger.debug(f"Attribute response sent for device {device.get('id')}")
     except Exception as exc:
@@ -277,11 +275,11 @@ class BatchAccumulator:
                 topic = msg.get("topic", "")
                 data = msg.get("data")
 
-                if topic.endswith("/telemetry"):
+                if topic.endswith(TOPIC_TELEMETRY):
                     telemetry_batch.append((device, topic, data, message))
-                elif topic.endswith("/attributes"):
+                elif topic.endswith(TOPIC_ATTRIBUTES):
                     attributes_batch.append((device, topic, data, message))
-                elif topic in ("v1/gateway/connect", "v1/gateway/disconnect"):
+                elif topic in (TOPIC_GATEWAY_CONNECT, TOPIC_GATEWAY_DISCONNECT):
                     device_connect_batch.append((device, topic, data, message))
                 else:
                     other_messages.append((device, topic, data, message))
@@ -336,11 +334,11 @@ class BatchAccumulator:
         # Step 5: Process other messages individually
         for device, topic, data, message in other_messages:
             try:
-                if topic.startswith("v1/gateway/attributes/request") or topic.startswith(
-                    "v1/devices/me/attributes/request"
+                if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(
+                    TOPIC_DEVICES_ATTRIBUTES_REQUEST
                 ):
                     await handle_attribute_request_async(topic, device, data)
-                elif topic == "v1/gateway/rpc":
+                elif topic == TOPIC_GATEWAY_RPC:
                     await handle_rpc_async(data)
                 else:
                     logger.warning(f"[{self.queue_name}] Unhandled topic: {topic}")
@@ -386,7 +384,7 @@ class AsyncMQConsumer:
             channel = await connection.channel()
             for queue_name in QUEUE_CONFIG:
                 await channel.declare_queue(queue_name, durable=True)
-            await channel.declare_queue("fromGRMS", durable=True)
+            await channel.declare_queue(QUEUE_FROM_GRMS, durable=True)
             logger.info("Queues declared successfully")
 
             # Start consumer task for each queue

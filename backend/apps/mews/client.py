@@ -144,9 +144,8 @@ class MewsAPIClient:
         # Use old API endpoint if we need CompanionIds field
         # New API (2023-06-06) doesn't return CompanionIds, CustomerId, OwnerId
         # Old API returns CompanionIds which includes all guests (owner + companions)
-        endpoint = "reservations/getAll" if include_companions else "reservations/getAll/2023-06-06"
 
-        return self._make_request(endpoint, params)
+        return self._make_request("reservations/getAll/2023-06-06", params)
 
     def get_all_customers(self, params={}):
         return self._make_request("customers/getAll", params)

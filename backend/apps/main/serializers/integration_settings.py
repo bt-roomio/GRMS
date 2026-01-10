@@ -15,6 +15,7 @@ class MewsSerializer(serializers.Serializer):
     client_token = serializers.CharField(required=False, default="", allow_blank=True)
     access_token = serializers.CharField(required=False, default="", allow_blank=True)
     roomio_access_control = serializers.BooleanField(default=False)
+    environment = serializers.ChoiceField(choices=("demo", "production"), default="demo")
 
 
 class IntegrationSettingsSerializer(serializers.Serializer):
