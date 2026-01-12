@@ -77,7 +77,7 @@ class GuestSerializer(serializers.ModelSerializer):
             new_room.save(update_fields=["state"])
 
         new_checkout = validated_data.get("check_out")
-        if new_checkout > instance.check_out:
+        if new_checkout and new_checkout > instance.check_out:
             _, devices, _, _, blocked_guest_cards, blocked_cards = get_guest_relations(instance)
             if blocked_guest_cards:
                 for device in devices:

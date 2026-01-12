@@ -8,16 +8,16 @@ from shuttle.models import AttributeKv
 logger = logging.getLogger(__name__)
 
 
-def update_fanvil_last_log_id(tenant_id, fanvil_access_log_id):
+def update_lock_last_log_id(tenant_id, access_log_id, lock_type):
     try:
-        log_id = int(fanvil_access_log_id)
+        log_id = int(access_log_id)
     except (TypeError, ValueError):
         return
 
     try:
         device = (
             Device.objects
-            .filter(tenant_id=tenant_id, name__startswith="HRC350_FANVIL", is_active=True)
+            .filter(tenant_id=tenant_id, name__startswith="HRC350_LOCK", is_active=True)
             .order_by("id")
             .first()
         )
@@ -31,7 +31,7 @@ def update_fanvil_last_log_id(tenant_id, fanvil_access_log_id):
                     entity=device,
                     entity_type="DEVICE",
                     attribute_type=AttributeKv.SHARED_SCOPE,
-                    attribute_key="fanvilLastLogId",
+                    attribute_key=f"{lock_type}LastLogId",
                     defaults={"str_v": str(log_id)},
                 )
             )
@@ -45,4 +45,4 @@ def update_fanvil_last_log_id(tenant_id, fanvil_access_log_id):
                 attr.save(update_fields=["str_v"])
 
     except Exception as e:
-        logger.error("Error updating fanvilLastLogId for tenant %s: %s", tenant_id, e)
+        logger.error("Error updating %s LastLogId for tenant %s: %s", lock_type, tenant_id, e)
