@@ -91,7 +91,7 @@ def handle_card_event(device, value, ts_dt):
         else:
             open_result = value.get("openResult")
             open_type = value.get("open_type")
-            update_lock_last_log_id(tenant_id, access_log_id, lock_type)
+            update_lock_last_log_id(tenant_id, access_log_id, lock_type, device)
 
             if open_result is None:
                 logger.warning(f"Missing openResult in Fanvil RFID event: {value}")
