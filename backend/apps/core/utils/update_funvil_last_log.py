@@ -9,7 +9,7 @@ from shuttle.models import AttributeKv
 logger = logging.getLogger(__name__)
 
 
-def trigger_last_record_ts_update(tenant_id: str, access_log_id, lock_type: str,
+def update_lock_last_log_id(tenant_id: str, access_log_id, lock_type: str,
                                   device: Optional[Device] = None) -> None:
 
     lock_type = (lock_type or "").strip().lower()
