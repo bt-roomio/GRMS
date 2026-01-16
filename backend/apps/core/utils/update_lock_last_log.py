@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def update_lock_last_log_id(tenant_id: str, access_log_id, lock_type: str,
-                                  device: Optional[Device] = None) -> None:
+                                  device_id: Optional[str] = None) -> None:
 
     lock_type = (lock_type or "").strip().lower()
     try:
@@ -19,17 +19,18 @@ def update_lock_last_log_id(tenant_id: str, access_log_id, lock_type: str,
         return
 
     try:
-        if lock_type == "fanvil":
+        if lock_type == "ttlock":
+            device = Device.objects.get(id=device_id)
+        else:
             device = (
                 Device.objects
                 .filter(tenant_id=tenant_id, name__startswith="HRC350_LOCK", is_active=True)
                 .order_by("id")
-                .only("id", "name")
                 .first()
             )
 
-            if not device:
-                return
+        if not device:
+            return
 
         update_device_shared_int_if_bigger(
             device=device,
