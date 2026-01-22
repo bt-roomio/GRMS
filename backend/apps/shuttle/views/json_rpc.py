@@ -13,6 +13,7 @@ from core.utils.permission import check_perms
 from main.models import Device
 from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
+from shuttle.utils.parse_json import parse_json
 from shuttle.utils.permissions import WhiteListOrIsAuthenticated
 
 logger = logging.getLogger("main")
@@ -89,7 +90,8 @@ def prepare_mqtt_request(device, method, params, timeout):
         has_message = RPCMessage.objects.filter(id=request_id, received=True)
         has_message = has_message.first()
         if has_message:
-            return has_message.additional_info
+            payload = has_message.additional_info
+            return parse_json(payload)
         time.sleep(0.3)
         start_time += 1
 
