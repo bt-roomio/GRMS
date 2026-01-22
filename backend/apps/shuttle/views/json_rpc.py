@@ -90,7 +90,8 @@ def prepare_mqtt_request(device, method, params, timeout):
         has_message = RPCMessage.objects.filter(id=request_id, received=True)
         has_message = has_message.first()
         if has_message:
-            return parse_json(has_message)
+            payload = has_message.additional_info
+            return parse_json(payload)
         time.sleep(0.3)
         start_time += 1
 
