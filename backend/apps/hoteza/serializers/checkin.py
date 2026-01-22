@@ -57,35 +57,94 @@ class CheckInSerializer(serializers.Serializer):
         if not tenant:
             raise JsonValidationError({"result": 9, "message": "Tenant not found!"})
 
-        guest = Guest.objects.filter(
-            additional_info__pms_reg_num=attrs.get("pms_reg_num"),
-            is_active=True,
-        )
-        if guest.exists():
-            raise JsonValidationError({"result": 9, "message": "This guest already exists!"})
-
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()
         if not room:
             raise JsonValidationError({"result": 9, "message": "Room not found!"})
+
+        guest = Guest.objects.filter(
+            additional_info__pms_reg_num=attrs.get("pms_reg_num"),
+            is_active=True,
+        ).first()
+
+        if guest:
+            # Check if any changes are needed, we need update existing guest
+            has_changes = False
+
+            # Compare basic fields
+            if guest.name != attrs.get("name"):
+                has_changes = True
+            if guest.lastname != attrs.get("lastname"):
+                has_changes = True
+            if guest.room_id != room.id:
+                has_changes = True
+            if str(guest.check_in) != str(attrs.get("check_in")):
+                has_changes = True
+            if str(guest.check_out) != str(attrs.get("check_out")):
+                has_changes = True
+            if guest.language != attrs.get("language"):
+                has_changes = True
+            if guest.title != attrs.get("title"):
+                has_changes = True
+
+            # Compare additional_info fields
+            guest_additional_info = guest.additional_info or {}
+            if guest_additional_info.get("room_share") != attrs.get("room_share"):
+                has_changes = True
+            if guest_additional_info.get("swap_flag") != attrs.get("swap_flag"):
+                has_changes = True
+            if guest_additional_info.get("no_post") != attrs.get("no_post"):
+                has_changes = True
+            if guest_additional_info.get("profile_num") != attrs.get("profile_num"):
+                has_changes = True
+
+            if has_changes:
+                attrs["existing_guest"] = guest
+            else:
+                raise JsonValidationError(
+                    {"result": 0, "message": "Guest already exists with same data, no update needed."}
+                )
 
         attrs["tenant"] = tenant
         attrs["room"] = room
         return attrs
 
     def create(self, validated_data):
+        existing_guest = validated_data.pop("existing_guest", None)
         guest_serializer = GuestSerializer()
-        instance = guest_serializer.create(
-            {
-                "lastname": validated_data.pop("lastname"),
-                "name": validated_data.pop("name"),
-                "check_in": validated_data.pop("check_in"),
-                "check_out": validated_data.pop("check_out"),
-                "auto_check_out": True,
-                "room": validated_data.pop("room"),
-                "language": validated_data.pop("language"),
-                "title": validated_data.pop("title"),
-                "tenant": validated_data.pop("tenant"),
-                "additional_info": validated_data,
-            }
-        )
+
+        if existing_guest:
+            existing_additional_info = existing_guest.additional_info or {}
+            del validated_data["tenant"]
+            room = validated_data.pop("room")
+            existing_additional_info.update(validated_data)
+
+            instance = guest_serializer.update(
+                existing_guest,
+                {
+                    "lastname": validated_data.pop("lastname"),
+                    "name": validated_data.pop("name"),
+                    "check_in": validated_data.pop("check_in"),
+                    "check_out": validated_data.pop("check_out"),
+                    "room": room,
+                    "language": validated_data.pop("language"),
+                    "title": validated_data.pop("title"),
+                    "additional_info": existing_additional_info,
+                },
+            )
+        else:
+            # Create new guest
+            instance = guest_serializer.create(
+                {
+                    "lastname": validated_data.pop("lastname"),
+                    "name": validated_data.pop("name"),
+                    "check_in": validated_data.pop("check_in"),
+                    "check_out": validated_data.pop("check_out"),
+                    "auto_check_out": True,
+                    "room": validated_data.pop("room"),
+                    "language": validated_data.pop("language"),
+                    "title": validated_data.pop("title"),
+                    "tenant": validated_data.pop("tenant"),
+                    "additional_info": validated_data,
+                }
+            )
         return instance

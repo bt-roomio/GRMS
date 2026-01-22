@@ -4,17 +4,17 @@ from main.models import Device
 
 
 class HotezaSerializer(serializers.Serializer):
-    hotel_id = serializers.CharField(required=False, default="")
+    hotel_id = serializers.CharField(required=False, default="", allow_blank=True)
     enable = serializers.BooleanField(default=False)
 
 
 class MewsSerializer(serializers.Serializer):
-    hotel_id = serializers.CharField(required=False, default="")
+    hotel_id = serializers.CharField(required=False, default="", allow_blank=True)
     enable = serializers.BooleanField(default=False)
     send_tasks = serializers.BooleanField(default=False)
-    client_token = serializers.CharField(required=False, default="")
-    access_token = serializers.CharField(required=False, default="")
-    roomio_access_control = serializers.BooleanField(required=False, default=False)
+    client_token = serializers.CharField(required=False, default="", allow_blank=True)
+    access_token = serializers.CharField(required=False, default="", allow_blank=True)
+    roomio_access_control = serializers.BooleanField(default=False)
 
 
 class IntegrationSettingsSerializer(serializers.Serializer):

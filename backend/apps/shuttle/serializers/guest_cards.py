@@ -16,7 +16,7 @@ class GuestCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GuestCard
-        fields = ["card_id", "card_number", "guest_name", "guest_check_in", "guest_id", "need_to_sync", "created_at"]
+        fields = ["card_id", "card_number", "guest_name", "guest_check_in", "guest_id", "need_to_sync", "is_blocked", "created_at"]
 
     def get_guest_name(self, obj):
         guest = obj.guest

@@ -17,13 +17,17 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-        msg = {
-            "sourceDeviceUUID": "99dc4d17-e874-4a1f-9029-7e2710872c1b",
-            "data": {"c8:f8:07:1d:18:78": [{"online": True}]},
-            "topic": "v1/gateway/attributes",
-        }
-        ch = connect_to_rabbitmq()
-        send_to_rabbitmq(ch, msg, "/attributes")
+        # tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
+        for _ in range(100):
+            self.send_messages_connect_disconnect("28c81921-f78e-4864-87d2-cec674f19d1c")
+
+        # msg = {
+        #     "sourceDeviceUUID": "99dc4d17-e874-4a1f-9029-7e2710872c1b",
+        #     "data": {"c8:f8:07:1d:18:78": [{"online": True}]},
+        #     "topic": "v1/gateway/attributes",
+        # }
+        # ch = connect_to_rabbitmq()
+        # send_to_rabbitmq(ch, msg, "/attributes")
 
     @staticmethod
     def bulk_publish():
@@ -59,6 +63,6 @@ class Command(BaseCommand):
         print(f"Total devices: {count}")
 
     def send_messages_connect_disconnect(self, tenant_id):
+        ch = connect_to_rabbitmq()
         for msg in self.generate_messages(tenant_id):
-            ch = connect_to_rabbitmq()
             send_to_rabbitmq(ch, msg, "toGRMS")

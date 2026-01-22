@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from core.management.mq.state_device import update_activity_device
 from shuttle.models import TsKv, TsKvDictionary
+from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
 
 logger = logging.getLogger(__name__)
@@ -60,3 +61,12 @@ def update_activity_device_task(device_id, connected=True):
 @shared_task
 def publish_updates_batch_task(updates_by_device: dict[str, list[dict]]):
     publish_updates_batch(updates_by_device)
+
+
+@shared_task
+def publish_updates_attribute_batch_task(updates_by_device: dict[str, list[dict]]):
+    """
+    Асинхронная отправка обновлений атрибутов через WebSocket.
+    Уменьшает блокировку RabbitMQ воркеров.
+    """
+    publish_updates_attribute_batch(updates_by_device)

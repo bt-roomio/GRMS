@@ -190,6 +190,7 @@ class GuestCard(BaseModel):
     guest = models.ForeignKey("main.Guest", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
+    is_blocked = models.BooleanField(default=False)
 
     objects = GuestCardQuerySet.as_manager()
 

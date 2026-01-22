@@ -4,7 +4,7 @@ from access_manager.models import AccessGroupChoices, Card, CardLog
 from django.utils import timezone
 
 from core.utils.date import unix_to_datetime
-from core.utils.update_funvil_last_log import update_fanvil_last_log_id
+from core.utils.update_lock_last_log import update_lock_last_log_id
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +59,10 @@ def handle_card_event(device, value, ts_dt):
     try:
         card_uid = value.get("card_uid", "")
         event_ts_unix = value.get("event_ts")
-        fanvil_access_log_id = value.get("fanvil_access_log_id")
-        is_fanvil = bool(fanvil_access_log_id)
+        access_log_id = value.get("access_log_id")
+        lock_type = value.get("lock_type")
+        is_access_log_id = bool(access_log_id)
+        device_id = device.get("id")
 
         if not event_ts_unix:
             logger.warning(f"Missing event_ts in RFID event: {value}")
@@ -74,7 +76,7 @@ def handle_card_event(device, value, ts_dt):
 
         event_datetime = unix_to_datetime(event_ts_unix)
 
-        if not is_fanvil:
+        if not is_access_log_id:
             access_group_str = value.get("access_group", "").upper().replace(" ", "_")
 
             if not all([access_group_str, card_uid]):
@@ -90,7 +92,7 @@ def handle_card_event(device, value, ts_dt):
         else:
             open_result = value.get("openResult")
             open_type = value.get("open_type")
-            update_fanvil_last_log_id(tenant_id, fanvil_access_log_id)
+            update_lock_last_log_id(tenant_id, access_log_id, lock_type, device_id)
 
             if open_result is None:
                 logger.warning(f"Missing openResult in Fanvil RFID event: {value}")
@@ -115,10 +117,10 @@ def handle_card_event(device, value, ts_dt):
             "processed_at": timezone.now().isoformat(),
         }
 
-        if is_fanvil:
+        if is_access_log_id:
             additional_info.update(
                 {
-                    "fanvil_access_log_id": fanvil_access_log_id,
+                    f"{lock_type}_access_log_id": access_log_id,
                     "open_type": value.get("open_type"),
                     "open_result": value.get("openResult"),
                     "display_name": value.get("displayName"),

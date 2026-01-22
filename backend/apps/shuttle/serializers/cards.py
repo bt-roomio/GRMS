@@ -5,6 +5,7 @@ from access_manager.models import Card, StaffCard, GuestCard, Group
 from access_manager.serializers.staff import StaffSerializer
 from core.utils.serializers import ValidatorSerializer
 from main.serializers.guest import GuestSerializer
+from main.serializers.room import SimpleRoomSerializer
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -49,8 +50,9 @@ class CardSerializer(serializers.Serializer):
             guest_card = GuestCard.objects.filter(card=obj, is_active=True).first()
             if guest_card:
                 guest = guest_card.guest
-                serializer = GuestSerializer(guest)
-                return {"type": "guest", "data": serializer.data}
+                guest_serializer = GuestSerializer(guest)
+                room_serializer = SimpleRoomSerializer(guest.room)
+                return {"type": "guest", "data": guest_serializer.data, "room": room_serializer.data}
             return None
         except Exception:
             return None

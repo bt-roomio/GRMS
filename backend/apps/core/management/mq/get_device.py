@@ -16,7 +16,9 @@ redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, d
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
-EXPIRY_TIME = 60
+# Increased TTL from 60s to 600s (10 minutes) to reduce DB queries
+# Devices rarely change, so longer cache is beneficial for performance
+EXPIRY_TIME = 600
 
 
 class DeviceType(TypedDict):
