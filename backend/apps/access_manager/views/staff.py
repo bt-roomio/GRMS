@@ -1,4 +1,4 @@
-from access_manager.models import GroupPublicSpace, GroupRoom, Staff, StaffCard
+from access_manager.models import Staff
 from access_manager.serializers.staff import StaffFilterParams, StaffSerializer
 from access_manager.swagger.staff import staff_swagger
 from access_manager.tasks.send_rpc import send_rpc_request
@@ -9,7 +9,7 @@ from rest_framework.views import APIView, Response
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms
-from main.models import Device
+from main.utils.access_context import get_staff_access_context
 
 
 class StaffListView(APIView):
@@ -63,15 +63,9 @@ class StaffDetailView(APIView):
         instance = get_object_or_404(Staff, id=pk, tenant_id=request.user.tenant_id, is_active=True)
         user = str(request.user.id)
 
-        group_rooms_devices = GroupRoom.objects.filter(group=instance.group, room__devices__is_active=True).values_list(
-            "room__devices", flat=True
-        )
-        group_pub_spaces_devices = GroupPublicSpace.objects.filter(
-            group=instance.group, public_space__device__is_active=True
-        ).values_list("public_space__device", flat=True)
-
-        devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices], is_active=True)
-        cards = StaffCard.objects.filter(staff=instance).values_list("card__number", flat=True)
+        access_context = get_staff_access_context(instance)
+        devices = access_context.get("devices" ,[])
+        cards = access_context.get("cards" ,[])
 
         results = []
         for device in devices:

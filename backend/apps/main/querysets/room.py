@@ -1,4 +1,3 @@
-from access_manager.models import GuestCard
 from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
@@ -83,17 +82,16 @@ class RoomQuerySet(BaseQuerySet):
         return result
 
     def guest_checkout(self, room_id, user=None):
-        from main.models import Device, Guest, Room
+        from main.models import Guest, Room
+        from main.utils.access_context import get_guest_access_context
 
         deactivate_result = {"success": True}
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
-        cards = list(GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True))
-        devices = Device.objects.filter(
-            Q(room__id=room_id)
-            | Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
-            is_active=True,
-        ).distinct()
+        access_context = get_guest_access_context(guests)
+        devices = access_context.get("devices", [])
+        cards = access_context.get("cards", [])
+
         for device in devices:
             result = send_rpc_request(str(device.id), cards, 0, user=user)
             not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore

@@ -1,3 +1,5 @@
+from django.db.models import F
+
 from access_manager.models import Group
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -10,14 +12,23 @@ logger = get_task_logger(__name__)
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
 def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_num=None):
-    """Connect or disconnect cards to/from room devices."""
     try:
         cards, group = Group.objects.get_staff_cards(group_id)
         cards = [card_num] if card_num else cards
         if not cards or not group:
             return {"success": False, "message": f"No cards found for group {group_id}"}
 
-        devices = Device.objects.filter(room_id=room_id, tenant=group.tenant, is_active=True)
+        door_lock_devices = Device.objects.filter(
+            room_id=room_id,
+            tenant=group.tenant,
+            is_active=True,
+            id=F('room__door_lock_device_id')
+        ).distinct()
+
+        if door_lock_devices.exists():
+            devices = door_lock_devices
+        else:
+            devices = Device.objects.filter(room_id=room_id, tenant=group.tenant, is_active=True)
 
         if not devices.exists():
             return {"success": False, "message": f"No active devices found for room {room_id} in tenant {group.tenant}"}
