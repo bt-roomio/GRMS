@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from access_manager.tasks.send_rpc import send_rpc_request
 from access_manager.utilits.check_card_assignment import get_card_assignments
 from main.models import Device
+from main.utils.access_context import get_staff_access_context
 
 logger = logging.getLogger("main")
 
@@ -27,8 +28,6 @@ class StaffCardView(APIView):
             cards = validated_data["cards"]
             user = str(request.user.id)
             tenant_id = request.user.tenant_id
-            group = staff.group
-
             errors = []
             success = []
 
@@ -38,21 +37,15 @@ class StaffCardView(APIView):
                 return Response({"success": False, "message": f"Card is already assigned .",
                                  "assigned_cards": assigned_cards}, 403)
 
-            group_rooms_devices = GroupRoom.objects.filter(group=group, room__devices__is_active=True).values_list(
-                "room__devices", flat=True
-            )
-            group_pub_spaces_devices = GroupPublicSpace.objects.filter(
-                group=group,
-                public_space__device_public_spaces__device__is_active=True
-            ).values_list("public_space__device_public_spaces__device", flat=True)
-
-            devices = Device.objects.filter(id__in=[*group_rooms_devices, *group_pub_spaces_devices], is_active=True)
+            access_context = get_staff_access_context(staff)
+            devices = access_context.get("devices", [])
 
             if not devices:
                 return Response({"detail": "Not found device."}, 404)
 
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, True, staff_id=str(staff.id), user=user)
+                success.append(result) if result.get("success") else errors.append(result)
                 if not result.get("success", False):
                     errors.append(result)
                 else:
