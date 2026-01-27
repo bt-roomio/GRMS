@@ -70,7 +70,10 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
         device_profile, _ = DeviceProfile.objects.get_or_create(
             name__iexact="TTLock",
             tenant_id=device.get("tenant_id"),
-            defaults={"type": "DEFAULT"},
+            defaults={
+                "name": "TTLock",  # явно указываем значение для создания
+                "type": "DEFAULT",
+            },
         )
         device["device_profile_id"] = device_profile.id
 
