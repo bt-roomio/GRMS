@@ -8,7 +8,7 @@ from django.conf import settings
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
 from core.utils.slugify import slugify_key
-from main.models import Device, DeviceCredentials
+from main.models import Device, DeviceCredentials, DeviceProfile
 from shuttle.models import Relation
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -61,9 +61,18 @@ def _device_cache(cache_key, device):
     return data
 
 
-def get_sub_device(device: DeviceType, name: str):
-    sub_cache_key = slugify_key(device.get("id") + "&" + name)
+def get_sub_device(device: DeviceType, name: str, device_type: str | None = None):
+    sub_cache_key = slugify_key(device.get("id") + "&" + name)  # "UUID_DEVICE & SUB_DEVICE"
     sub_device = get_device(sub_cache_key, device.get("tenant_id"))
+
+    # Assign TTLock device profile if applicable
+    if device_type and device_type.lower() == "ttlock":
+        device_profile, _ = DeviceProfile.objects.get_or_create(
+            name__iexact="TTLock",
+            tenant_id=device.get("tenant_id"),
+            defaults={"type": "DEFAULT"},
+        )
+        device["device_profile_id"] = device_profile.id
 
     if not sub_device:
         sub_device = get_or_create_device(name, device)
