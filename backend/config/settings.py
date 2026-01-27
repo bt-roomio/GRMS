@@ -450,12 +450,12 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "INFO",
+            "level": "WARNING",
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
         "file": {
-            "level": "DEBUG",
+            "level": "WARNING",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "fail_request.log",
             "formatter": "verbose",
@@ -463,7 +463,7 @@ LOGGING = {
             "backupCount": 3,
         },
         "file_hoteza_app": {
-            "level": "DEBUG",
+            "level": "WARNING",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "fail_request_hoteza.log",
             "formatter": "verbose",
@@ -474,7 +474,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "WARNING",
         },
         "celery": {
             "handlers": ["console"],
@@ -488,28 +488,33 @@ LOGGING = {
         },
         "mews": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "WARNING",
             "propagate": False,
         },
         "services": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "WARNING",
             "propagate": False,
         },
         "shuttle": {
             "handlers": ["console"],
-            "level": "DEBUG",
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "access_manager": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
-            "level": "DEBUG",
+            "level": "WARNING",
             "propagate": False,
         },
         "core": {
             "handlers": ["console"],
             "propagate": False,
-            "level": "DEBUG",
+            "level": "WARNING",
         },
         "django.request": {
             "handlers": ["console"],
@@ -518,9 +523,3 @@ LOGGING = {
         },
     },
 }
-
-
-try:
-    from .settings_dev import *  # noqa: F403, F401
-except ImportError:
-    pass
