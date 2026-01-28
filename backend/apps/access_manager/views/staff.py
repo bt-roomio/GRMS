@@ -64,8 +64,8 @@ class StaffDetailView(APIView):
         user = str(request.user.id)
 
         access_context = get_staff_access_context(instance)
-        devices = access_context.get("devices" ,[])
-        cards = access_context.get("cards" ,[])
+        devices = access_context.get("devices", [])
+        cards = access_context.get("cards", [])
 
         results = []
         for device in devices:
