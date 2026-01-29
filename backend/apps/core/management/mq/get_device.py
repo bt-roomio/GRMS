@@ -65,15 +65,19 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
     sub_cache_key = slugify_key(device.get("id") + "&" + name)  # "UUID_DEVICE & SUB_DEVICE"
     sub_device = get_device(sub_cache_key, device.get("tenant_id"))
 
-    # Assign TTLock device profile if applicable
-    if device_type and device_type.lower() == "ttlock":
+    if device_type:
+        name_map = {
+            "ttlock": "TTLock",
+            "fanvil_intercom": "Fanvil Intercom",
+            "default": "Default"
+        }
+        dt = device_type.strip().lower().replace("-", "_")
+        profile_name = name_map.get(dt) or " ".join(w.capitalize() for w in dt.split("_") if w)
+
         device_profile, _ = DeviceProfile.objects.get_or_create(
-            name__iexact="TTLock",
+            name__iexact=profile_name,
             tenant_id=device.get("tenant_id"),
-            defaults={
-                "name": "TTLock",  # явно указываем значение для создания
-                "type": "DEFAULT",
-            },
+            defaults={"name": profile_name, "type": "DEFAULT"},
         )
         device["device_profile_id"] = device_profile.id
 
@@ -83,7 +87,6 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
         sub_device = _device_cache(cache_key, sub_device)
 
     return sub_device
-
 
 def get_or_create_device(name, from_device):
     tenant_id = from_device.get("tenant_id")
