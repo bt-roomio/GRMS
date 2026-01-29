@@ -354,9 +354,9 @@ class DeviceCredentials(BaseModel):
 
 class DeviceProfile(BaseModel):
     name = models.CharField(max_length=255)
-    active = models.BooleanField(default=True)
-    tenant = models.ForeignKey("main.Tenant", CASCADE)
     type = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    active = models.BooleanField(default=True)
     state = models.BooleanField(default=True)
     image = models.CharField(max_length=1000000, blank=True, null=True)
     transport_type = models.CharField(max_length=255, blank=True, null=True)
