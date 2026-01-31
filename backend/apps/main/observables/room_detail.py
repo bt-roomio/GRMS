@@ -1,8 +1,12 @@
+import logging
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 from main.models import Room
 from main.serializers.room import RoomDetailWsSerializer
+
+logger = logging.getLogger(__name__)
 
 
 def publish_room_detail_changes(instance: Room):
@@ -18,3 +22,4 @@ def publish_room_detail_changes(instance: Room):
             "update": RoomDetailWsSerializer(instance).data,
         },
     )
+    logger.debug(f"✓ Published room detail changes for room {instance.number}")

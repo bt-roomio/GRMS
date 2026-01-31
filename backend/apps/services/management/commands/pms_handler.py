@@ -138,10 +138,11 @@ class Command(BaseCommand):
             logger.error(f"✗ Tenant not found for hotel_id: {data.get('hotel_id')}")
             raise ValidationError("Tenant not found!")
 
-        # # WARN: Remove this line after tests
-        room, _ = Room.objects.get_or_create(tenant=tenant, number=data.get("room_number"), floor="1", block="A")
+        # WARN: Only debug purpose - in production all rooms should exist beforehand
+        # room, _ = Room.objects.get_or_create(tenant=tenant, number=data.get("room_number"), floor="1", block="A")
 
-        # room = Room.objects.filter(tenant=tenant, number=data.get("room_number")).first()
+        room = Room.objects.filter(tenant=tenant, number=data.get("room_number")).first()
+
         if not room:
             logger.error(f"✗ Room not found: {data.get('room_number')} for tenant: {tenant.title}")
             raise ValidationError("Room not found!")

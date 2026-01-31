@@ -4,10 +4,11 @@ from django.core.exceptions import ValidationError
 from hoteza.serializers.checkin import CheckInSerializer
 from hoteza.serializers.checkout import CheckOutSerializer
 
-logger = logging.getLogger("django")
+logger = logging.getLogger(__name__)
 
 
 def handle_fias(data, device):
+    logger.debug("Handling FIAS data: %s", data)
     tenant_id = device.get("tenant_id")
     data = {
         "command": data.get("command"),
@@ -37,7 +38,7 @@ def handle_fias(data, device):
         serializer.is_valid(raise_exception=True)
     except ValidationError as e:
         logger.error(e)
-    except Exception:
-        logger.error("Request data: %s", data)
+    except Exception as e:
+        logger.error("Request data: %s", e)
         raise
     serializer.save()
