@@ -350,7 +350,7 @@ CACHES = {
     },
     "security": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/2",  # Используем database 2 для security
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {
@@ -360,8 +360,8 @@ CACHES = {
             "SOCKET_CONNECT_TIMEOUT": 5,
             "SOCKET_TIMEOUT": 5,
         },
-        "KEY_PREFIX": "",  # Пустой префикс, middleware сам добавляет "bf:"
-        "TIMEOUT": 900,  # 15 минут по умолчанию (lockout_duration)
+        "KEY_PREFIX": "grms_security",
+        "TIMEOUT": 900,
     },
 }
 
