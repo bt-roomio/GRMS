@@ -11,6 +11,8 @@ BRUTE_FORCE_CONFIG = {
     # Endpoints для защиты (можно добавлять свои)
     "protected_endpoints": [
         "/api/v1/users/access-token/",
+        "/api/v1/users/refresh-token/",
+        "/api/v1/users/send-link/",
     ],
     # Основной лимит попыток
     "max_attempts": 5,  # Максимум попыток

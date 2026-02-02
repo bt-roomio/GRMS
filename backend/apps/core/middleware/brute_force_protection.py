@@ -1,6 +1,5 @@
 """
 Redis-based brute force protection для REST API
-Автоматически защищает все endpoints без декораторов
 """
 
 import hashlib
@@ -75,28 +74,27 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         # Получить идентификаторы
         ip = self._get_client_ip(request)
-        username = self._extract_username(request)
+        email = self._extract_email(request)
 
         # Проверить блокировку
-        is_blocked, block_reason = self._check_lockout(ip, username)
+        is_blocked, block_reason = self._check_lockout(ip, email)
 
         if is_blocked:
             logger.warning(
-                f"Blocked request: {request.method} {request.path} "
-                f"from {ip} (username: {username}) - {block_reason}"
+                f"Blocked request: {request.method} {request.path} " f"from {ip} (email: {email}) - {block_reason}"
             )
 
             return self._blocked_response(block_reason)
 
         # Применить progressive delay
         if self.enable_progressive_delays:
-            delay = self._get_progressive_delay(ip, username)
+            delay = self._get_progressive_delay(ip, email)
             if delay > 0:
                 time.sleep(delay)
 
         # Сохранить данные в request для использования в response
         request._bf_ip = ip
-        request._bf_username = username
+        request._bf_email = email
         request._bf_start_time = time.time()
 
         return None
@@ -110,9 +108,9 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         # Получить сохраненные данные
         ip = getattr(request, "_bf_ip", None)
-        username = getattr(request, "_bf_username", None)
+        email = getattr(request, "_bf_email", None)
 
-        if not ip:
+        if not ip or not email:
             return response
 
         # Определить успех/неудачу по статус коду
@@ -121,10 +119,10 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         if is_failure:
             # Записать неудачную попытку
-            self._record_failed_attempt(ip, username, request)
+            self._record_failed_attempt(ip, email, request)
 
             # Добавить информацию об оставшихся попытках
-            attempts_left = self._get_attempts_left(ip, username)
+            attempts_left = self._get_attempts_left(ip, email)
 
             # Если response - JSON, добавить информацию
             if response.get("Content-Type", "").startswith("application/json"):
@@ -140,7 +138,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         elif is_success:
             # Сбросить счетчики при успехе
-            self._reset_attempts(ip, username)
+            self._reset_attempts(ip, email)
 
         return response
 
@@ -187,34 +185,34 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         # Обычный REMOTE_ADDR
         return request.META.get("REMOTE_ADDR", "unknown")
 
-    def _extract_username(self, request) -> str:
-        """Извлечь username из запроса"""
+    def _extract_email(self, request) -> str:
+        """Извлечь email из запроса"""
         try:
             # Попытка 1: JSON body
             if hasattr(request, "data"):
-                username = request.data.get("username") or request.data.get("email")
-                if username:
-                    return username
+                email = request.data.get("email")
+                if email:
+                    return email
 
             # Попытка 2: POST данные
-            username = request.POST.get("username") or request.POST.get("email")
-            if username:
-                return username
+            email = request.POST.get("email")
+            if email:
+                return email
 
             # Попытка 3: Parse JSON manually
             if request.body:
                 import json
 
                 data = json.loads(request.body)
-                username = data.get("username") or data.get("email")
-                if username:
-                    return username
+                email = data.get("email")
+                if email:
+                    return email
         except Exception:
             pass
 
         return "anonymous"
 
-    def _check_lockout(self, ip: str, username: str) -> Tuple[bool, str]:
+    def _check_lockout(self, ip: str, email: str) -> Tuple[bool, str]:
         """
         Проверить блокировку на разных уровнях
         Returns: (is_blocked, reason)
@@ -226,7 +224,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             return True, "IP permanently blocked"
 
         # Уровень 2: Временная блокировка (после превышения лимита)
-        lockout_key = f"bf:lockout:{self._hash(f'{username}:{ip}')}"
+        lockout_key = f"bf:lockout:{self._hash(f'{email}:{ip}')}"
         lockout_until = security_cache.get(lockout_key)
 
         if lockout_until:
@@ -236,15 +234,15 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         # Уровень 3: Проверка расширенных временных окон
         for window_name, window_config in self.time_windows.items():
-            if self._check_extended_window(ip, username, window_name, window_config):
+            if self._check_extended_window(ip, email, window_name, window_config):
                 return True, f"Too many attempts in {window_name} period"
 
         return False, ""
 
-    def _check_extended_window(self, ip: str, username: str, window_name: str, window_config: Dict) -> bool:
+    def _check_extended_window(self, ip: str, email: str, window_name: str, window_config: Dict) -> bool:
         """Проверить расширенное временное окно"""
 
-        key = f"bf:window:{window_name}:{self._hash(f'{username}:{ip}')}"
+        key = f"bf:window:{window_name}:{self._hash(f'{email}:{ip}')}"
         attempts = security_cache.get(key, [])
 
         # Очистить старые записи
@@ -258,50 +256,46 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         if len(failed_attempts) >= window_config["max_attempts"]:
             logger.critical(
                 f"Extended window limit exceeded: {len(failed_attempts)} attempts "
-                f"in {window_name} for {username} from {ip}"
+                f"in {window_name} for {email} from {ip}"
             )
             return True
 
         return False
 
-    def _record_failed_attempt(self, ip: str, username: str, request):
+    def _record_failed_attempt(self, ip: str, email: str, request):
         """Записать неудачную попытку"""
 
         timestamp = time.time()
 
-        # Основной ключ для подсчета попыток
-        attempt_key = f"bf:attempts:{self._hash(f'{username}:{ip}')}"
-        attempts = security_cache.get(attempt_key, [])
+        # Основной ключ для подсчета попыток (используем простой счетчик)
+        attempt_key = f"bf:attempts:{self._hash(f'{email}:{ip}')}"
 
-        # Добавить новую попытку
-        attempts.append(
-            {
-                "time": timestamp,
-                "success": False,
-                "path": request.path,
-                "user_agent": request.META.get("HTTP_USER_AGENT", "")[:100],
-            }
-        )
-
-        # Очистить старые (за пределами окна)
-        cutoff = timestamp - self.attempt_window
-        attempts = [a for a in attempts if a["time"] > cutoff]
-
-        # Сохранить
-        security_cache.set(attempt_key, attempts, self.attempt_window)
+        # Атомарный инкремент счетчика
+        try:
+            attempt_count = security_cache.incr(attempt_key)
+            # Обновить TTL при каждой попытке
+            try:
+                security_cache.touch(attempt_key, self.attempt_window)
+            except AttributeError:
+                # touch не поддерживается, пересоздаем с новым TTL
+                security_cache.set(attempt_key, attempt_count, self.attempt_window)
+        except ValueError:
+            # Ключ не существует, создаем
+            security_cache.set(attempt_key, 1, self.attempt_window)
+            attempt_count = 1
 
         # Проверить лимит для основного окна
-        if len(attempts) >= self.max_attempts:
+        if attempt_count >= self.max_attempts:
             # БЛОКИРОВКА
-            lockout_key = f"bf:lockout:{self._hash(f'{username}:{ip}')}"
+            lockout_key = f"bf:lockout:{self._hash(f'{email}:{ip}')}"
             lockout_until = int(timestamp) + self.lockout_duration
             security_cache.set(lockout_key, lockout_until, self.lockout_duration)
 
-            logger.critical(f"LOCKOUT TRIGGERED: {username} from {ip} - " f"{len(attempts)} failed attempts")
+            logger.critical(f"LOCKOUT TRIGGERED: {email} from {ip} - {attempt_count} failed attempts")
 
         # Записать в расширенные окна
         for window_name, window_config in self.time_windows.items():
-            window_key = f"bf:window:{window_name}:{self._hash(f'{username}:{ip}')}"
+            window_key = f"bf:window:{window_name}:{self._hash(f'{email}:{ip}')}"
             window_attempts = security_cache.get(window_key, [])
 
             window_attempts.append({"time": timestamp, "success": False})
@@ -313,37 +307,43 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             security_cache.set(window_key, window_attempts, window_config["duration"])
 
         # Логирование
-        logger.warning(f"Failed login attempt #{len(attempts)}: {username} from {ip} " f"(path: {request.path})")
+        logger.warning(f"Failed login attempt #{attempt_count}: {email} from {ip} (path: {request.path})")
 
-    def _reset_attempts(self, ip: str, username: str):
+        # Инкрементировать счетчик для progressive delay
+        if self.enable_progressive_delays:
+            delay_key = f"bf:delay:{self._hash(f'{email}:{ip}')}"
+            current_count = security_cache.get(delay_key, 0)
+            security_cache.set(delay_key, current_count + 1, self.attempt_window)
+
+    def _reset_attempts(self, ip: str, email: str):
         """Сбросить счетчики при успешном входе"""
 
         # Основной ключ
-        attempt_key = f"bf:attempts:{self._hash(f'{username}:{ip}')}"
+        attempt_key = f"bf:attempts:{self._hash(f'{email}:{ip}')}"
         security_cache.delete(attempt_key)
 
         # Lockout ключ
-        lockout_key = f"bf:lockout:{self._hash(f'{username}:{ip}')}"
+        lockout_key = f"bf:lockout:{self._hash(f'{email}:{ip}')}"
         security_cache.delete(lockout_key)
 
         # Progressive delay ключ
-        delay_key = f"bf:delay:{self._hash(f'{username}:{ip}')}"
+        delay_key = f"bf:delay:{self._hash(f'{email}:{ip}')}"
         security_cache.delete(delay_key)
 
-        logger.info(f"Successful login: {username} from {ip} - counters reset")
+        logger.info(f"Successful login: {email} from {ip} - counters reset")
 
-    def _get_attempts_left(self, ip: str, username: str) -> int:
+    def _get_attempts_left(self, ip: str, email: str) -> int:
         """Получить количество оставшихся попыток"""
 
-        attempt_key = f"bf:attempts:{self._hash(f'{username}:{ip}')}"
-        attempts = security_cache.get(attempt_key, [])
+        attempt_key = f"bf:attempts:{self._hash(f'{email}:{ip}')}"
+        attempt_count = security_cache.get(attempt_key, 0)
 
-        return max(0, self.max_attempts - len(attempts))
+        return max(0, self.max_attempts - attempt_count)
 
-    def _get_progressive_delay(self, ip: str, username: str) -> float:
+    def _get_progressive_delay(self, ip: str, email: str) -> float:
         """Получить задержку (exponential backoff)"""
 
-        delay_key = f"bf:delay:{self._hash(f'{username}:{ip}')}"
+        delay_key = f"bf:delay:{self._hash(f'{email}:{ip}')}"
         failure_count = security_cache.get(delay_key, 0)
 
         if failure_count == 0:
