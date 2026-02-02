@@ -46,7 +46,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         user = self.scope["user"]
         params = RoomFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant=user.get("tenant_id"),
+            tenant=user.get("tenant_id"),  # pyright: ignore
             state=params.get("state"),
             status=params.get("status"),
             search_field=params.get("search_field"),

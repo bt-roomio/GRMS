@@ -1,11 +1,34 @@
 from rest_framework import serializers
 
 from main.models import Dashboard
+from shuttle.models import AttributeKv
 
 
 class DoorLockSerializer(serializers.Serializer):
     ving_card = serializers.BooleanField(default=False)
     kaba = serializers.BooleanField(default=False)
+
+
+class TagSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    tag_type = serializers.ChoiceField(
+        choices=("attribute", "telemetry"),
+        default="telemetry",
+        error_messages={"invalid_choice": "Type of the tag, e.g., ['attribute', 'telemetry']"},
+    )
+    attribute_scope = serializers.ChoiceField(
+        choices=AttributeKv.ENTITY_TYPE,
+        default="",
+        allow_blank=True,
+        error_messages={"invalid_choice": f"Scope of the attribute, e.g., {[k[0] for k in AttributeKv.ENTITY_TYPE]}"},
+    )
+
+    def validate(self, attrs):
+        if attrs["tag_type"] == "attribute" and not attrs.get("attribute_scope"):
+            raise serializers.ValidationError(
+                {"attribute_scope": "This field is required when tag_type is 'attribute'."}
+            )
+        return attrs
 
 
 class GeneralSettingsSerializer(serializers.Serializer):
@@ -21,10 +44,11 @@ class GeneralSettingsSerializer(serializers.Serializer):
     opera_integration = serializers.BooleanField(default=False)
     visionline_card_system = serializers.BooleanField(default=False)
     aperio_locks = serializers.BooleanField(default=False)
-    door_lock = DoorLockSerializer(default=dict)
+    door_lock = DoorLockSerializer(default={})
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
     main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
+    room_fields = TagSerializer(many=True, default=[])
 
     def validate_main_dashboard(self, value):
         dashboard = Dashboard.objects.filter(id=value.id).first()
