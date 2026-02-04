@@ -28,7 +28,6 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     async def accept(self, *args, **kwargs):
         self.query_params = {}
-        self.scope["user"] = await sync_to_async(self.get_user)()
         self.responses = {}
         await super().accept(*args, **kwargs)
 
@@ -43,16 +42,15 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
-        user = self.scope["user"]
         params = RoomFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant=user.get("tenant_id"),  # pyright: ignore
+            tenant=self.tenant_id,
             state=params.get("state"),
             status=params.get("status"),
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),
             sort_by=params.get("sort_by"),
-        ).rooms_ts_kvs(tenant=user.get("tenant_id"), keys=[*STATIC_KEYS, *params.get("keys", [])])
+        ).get_tags(tenant=self.tenant_id, tags=params.get("tags", []))
         return query
 
     async def ts_kv_latest_activity(self, message, **kwargs):
@@ -75,8 +73,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     @model_observer(Room, serializer_class=RoomSerializer)  # pyright: ignore
     async def get_latest_room_activity(self, message, action, **kwargs):
         for request_id, _ in self.query_params.items():
-            tenant_id = self.scope["user"].get("tenant_id")
-            if str(tenant_id) == message.get("tenant"):
+            if str(self.tenant_id) == message.get("tenant"):
                 await self.reply(data=message, action=action, request_id=request_id)
 
     @action()
@@ -91,8 +88,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     @model_observer(Room, serializer_class=RoomSerializer)  # pyright: ignore
     async def get_list_activity(self, message, action, **kwargs):
         for request_id, params in self.query_params.items():
-            tenant_id = self.scope["user"].get("tenant_id")
-            if str(tenant_id) == message.get("tenant"):
+            if str(self.tenant_id) == message.get("tenant"):
                 data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
                 if any([message.get("id") == i["id"] for i in data.get("results", [])]):
                     await self.reply(data=data, action=action, request_id=request_id)
