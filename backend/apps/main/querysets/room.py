@@ -90,7 +90,7 @@ class RoomQuerySet(BaseQuerySet):
         from main.models import Device
 
         if not tags or (tags and not isinstance(tags, list)):
-            raise ValueError("Tags parameter is missing or not a list")
+            return self
 
         query = self.filter(active=True, tenant=tenant)
         attrs_filters = Q()
