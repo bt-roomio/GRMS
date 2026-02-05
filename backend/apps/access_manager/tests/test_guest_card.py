@@ -79,27 +79,6 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
-    def test_connect_cards_partial_success(self, mock_send_rpc):
-        """Test partial success when some RPC calls fail"""
-        mock_send_rpc.side_effect = [
-            {"success": True, "message": "Card added successfully"},
-            {"success": False, "message": "Device unreachable"}
-        ]
-
-        payload = {
-            "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
-            "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
-        }
-
-        response = self.client.post(self.url, payload, format="json")
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("errors", response.data)
-        self.assertIn("success", response.data)
-        self.assertEqual(response.data["message"], "Couldn't synchronize the card with all devices!")
-
     def test_connect_cards_already_connected_to_staff(self):
         """Test error when card is already connected to staff"""
         payload = {

@@ -12,6 +12,7 @@ class CardLogSerializer(serializers.ModelSerializer):
     public_spaces = serializers.SerializerMethodField()
     access_group = serializers.CharField(source='get_access_group_display', read_only=True)
     device_name = serializers.CharField(source='device.name', read_only=True)
+    device_id = serializers.CharField(source='device.id', read_only=True)
 
     class Meta:
         model = CardLog

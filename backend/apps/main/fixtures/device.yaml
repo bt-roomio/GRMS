@@ -53,3 +53,25 @@
     type: "TEST"
     tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
     device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
+
+- model: "main.Device"
+  pk: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  fields:
+    name: "Attribute Test Device"
+    type: "default"
+    status: true
+    room_id: "df77f910-2dcd-45cf-b6be-054c744561a7"
+    customer_id: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"
+
+- model: "main.Device"
+  pk: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+  fields:
+    name: "Attribute Test Device 2"
+    type: "default"
+    status: true
+    room_id: "df77f910-2dcd-45cf-b6be-054c744561a7"
+    customer_id: "336c07bf-5613-4dfe-a74b-c4fe09f35a1e"
+    tenant_id: "28c81921-f78e-4864-87d2-cec674f19d1c"
+    device_profile_id: "be17d30b-9785-4415-bfa5-e7fdaf19e37c"

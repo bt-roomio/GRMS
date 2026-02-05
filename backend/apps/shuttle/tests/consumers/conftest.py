@@ -5,7 +5,7 @@ import contextlib
 from typing import List, cast
 
 import pytest
-from channels.auth import database_sync_to_async
+from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import authenticate
 from django.core.management import call_command
@@ -32,9 +32,18 @@ def load_yaml_fixtures(django_db_setup, django_db_blocker):
             "loaddata",
             "tenant_profile.yaml",
             "tenant.yaml",
+            "customer.yaml",
             "roles_permissions.yaml",
             "users.yaml",
             "room.yaml",
+            "device_profile.yaml",
+            "device.yaml",
+            "attribute_kv.yaml",
+            "group.yaml",
+            "staff.yaml",
+            "guest.yaml",
+            "card.yaml",
+            "card_log.yaml",
             verbosity=0,
         )
 

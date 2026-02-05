@@ -85,7 +85,9 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
 
 class NeedSyncDeviceFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at", required=False)
+        child=serializers.ChoiceField(choices=["-created_at", "created_at"], required=False),
+        required=False,
+        default=["-created_at"]
     )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)
