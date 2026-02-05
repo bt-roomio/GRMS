@@ -15,5 +15,5 @@ class SubscribeMixin:
         self.subscribers[request_id] = {"query_params": query_params, "action": action}
 
     @action()
-    async def unsubscribe(self, request_id):
+    async def unsubscribe(self, request_id, **kwargs):
         self.subscribers.pop(request_id, None)

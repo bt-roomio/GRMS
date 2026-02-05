@@ -41,5 +41,5 @@ class GuestCardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericA
         self.subscribers[kwargs.get("request_id")] = kwargs.get("query_params")
 
     @action()
-    async def list_unsubscribe(self, **kwargs):
+    async def list_unsubscribe(self, request_id, **kwargs):
         await self.remove_group("guest_cards")

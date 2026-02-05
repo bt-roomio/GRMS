@@ -56,7 +56,7 @@ def room(instance: Room, **kwargs) -> None:
     _remove_duplicate_states(instance)
 
     # 2. Send WebSocket notification
-    _send_room_status_websocket(instance)
+    send_room_status_websocket(instance)
 
     # 3. Update devices via RabbitMQ (only if state changed)
     update_fields = kwargs.get("update_fields", []) or []
@@ -81,7 +81,7 @@ def _remove_duplicate_states(room: Room) -> None:
         logger.error(f"✗ Failed to remove duplicate states for room {room.number}: {e}")
 
 
-def _send_room_status_websocket(room: Room) -> None:
+def send_room_status_websocket(room: Room) -> None:
     """
     Send room status update to WebSocket clients.
 
@@ -104,6 +104,7 @@ def _send_room_status_websocket(room: Room) -> None:
         async_to_sync(channel_layer.group_send)(
             f"room_status_{room.tenant_id}", {"type": "get_latest_activity", **message}
         )
+        logger.debug(f"✓ Sent WebSocket notification for room {room.number}")
     except Exception as e:
         logger.error(f"✗ Failed to send WebSocket notification for room {room.number}: {e}")
 

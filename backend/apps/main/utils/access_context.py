@@ -10,6 +10,9 @@ _logger = logging.getLogger(__name__)
 
 
 def get_guest_access_context(guests: Union[Guest, List[Guest]]) -> dict:
+    """
+    Checking if door lock devices exist for guest rooms.
+    """
     if isinstance(guests, Guest):
         guests = [guests]
 
