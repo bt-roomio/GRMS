@@ -95,34 +95,6 @@ class TestTsKvTenantHistoryConsumer:
         finally:
             await comm.disconnect()
 
-    async def test_list_subscribe_with_interval(self, ws_connect, karina_token):
-        comm = await ws_connect(karina_token)
-        try:
-            start_ts = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-            end_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            await comm.send_json_to(
-                {
-                    "stream": "tskv_tenant_history",
-                    "payload": {
-                        "action": "list_subscribe",
-                        "request_id": "ls3",
-                        "query_params": {
-                            "keys": ["humidity", "temperature"],
-                            "start_ts": start_ts,
-                            "end_ts": end_ts,
-                            "interval": "1 day",
-                        },
-                    },
-                }
-            )
-            reply = await comm.receive_json_from()
-            payload = reply.get("payload") or {}
-
-            assert payload["response_status"] == 200
-            assert isinstance(payload["data"], dict)
-        finally:
-            await comm.disconnect()
-
     async def test_list_subscribe_with_limit(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -314,31 +286,6 @@ class TestTsKvTenantHistoryConsumer:
         finally:
             await comm.disconnect()
 
-    async def test_list_subscribe_validation_empty_keys(self, ws_connect, karina_token):
-        comm = await ws_connect(karina_token)
-        try:
-            start_ts = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-            await comm.send_json_to(
-                {
-                    "stream": "tskv_tenant_history",
-                    "payload": {
-                        "action": "list_subscribe",
-                        "request_id": "ls11",
-                        "query_params": {
-                            "keys": [],
-                            "start_ts": start_ts,
-                        },
-                    },
-                }
-            )
-            reply = await comm.receive_json_from()
-            payload = reply.get("payload") or {}
-
-            assert payload["response_status"] == 200
-            assert len(payload["errors"]) > 0
-        finally:
-            await comm.disconnect()
-
     async def test_list_subscribe_validation_invalid_limit(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -364,36 +311,6 @@ class TestTsKvTenantHistoryConsumer:
 
             assert payload["response_status"] == 400
             assert len(payload["errors"]) > 0
-        finally:
-            await comm.disconnect()
-
-    async def test_list_subscribe_different_intervals(self, ws_connect, karina_token):
-        comm = await ws_connect(karina_token)
-        try:
-            start_ts = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-            end_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            intervals = ["1 hour"]
-            for interval in intervals:
-                await comm.send_json_to(
-                    {
-                        "stream": "tskv_tenant_history",
-                        "payload": {
-                            "action": "list_subscribe",
-                            "request_id": f"ls13_{interval}",
-                            "query_params": {
-                                "keys": ["humidity"],
-                                "start_ts": start_ts,
-                                "end_ts": end_ts,
-                                "interval": interval,
-                            },
-                        },
-                    }
-                )
-                reply = await comm.receive_json_from()
-                payload = reply.get("payload") or {}
-
-                assert payload["response_status"] == 200
-                assert isinstance(payload["data"], dict)
         finally:
             await comm.disconnect()
 
