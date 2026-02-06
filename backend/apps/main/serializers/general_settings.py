@@ -23,6 +23,9 @@ class TagSerializer(serializers.Serializer):
         error_messages={"invalid_choice": f"Scope of the attribute, e.g., {[k[0] for k in AttributeKv.ENTITY_TYPE]}"},
     )
 
+    class Meta:
+        ref_name = "RoomFieldTag"
+
     def validate(self, attrs):
         if attrs["tag_type"] == "attribute" and not attrs.get("attribute_scope"):
             raise serializers.ValidationError(
@@ -44,11 +47,11 @@ class GeneralSettingsSerializer(serializers.Serializer):
     opera_integration = serializers.BooleanField(default=False)
     visionline_card_system = serializers.BooleanField(default=False)
     aperio_locks = serializers.BooleanField(default=False)
-    door_lock = DoorLockSerializer(default={})
+    door_lock = DoorLockSerializer(required=False)
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
     main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
-    room_fields = TagSerializer(many=True, default=[])
+    room_fields = TagSerializer(many=True, required=False)
 
     def validate_main_dashboard(self, value):
         dashboard = Dashboard.objects.filter(id=value.id).first()
@@ -75,7 +78,9 @@ class GeneralSettingsSerializer(serializers.Serializer):
             if field_name == "main_dashboard":
                 g_settings[field_name] = g_settings.get(field_name, None)
             elif field_name == "door_lock":
-                g_settings[field_name] = g_settings.get(field_name, field.to_representation(field.get_default()))
+                g_settings[field_name] = g_settings.get(field_name, {"ving_card": False, "kaba": False})
+            elif field_name == "room_fields":
+                g_settings[field_name] = g_settings.get(field_name, [])
             else:
                 g_settings[field_name] = g_settings.get(field_name, field.default)
 
