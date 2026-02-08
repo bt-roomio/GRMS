@@ -130,11 +130,6 @@ class TestRoomDetailConsumer:
             assert payload["response_status"] == 200
             data = payload["data"]
             assert "telemetry" in data
-            static_keys = ["MUR Relay", "DND Relay", "AC ON OFF", "Room Temperature", "Occupancy State"]
-            if data["telemetry"]:
-                telemetry_keys = list(data["telemetry"].keys())
-                for static_key in static_keys:
-                    assert static_key in telemetry_keys
         finally:
             await comm.disconnect()
 

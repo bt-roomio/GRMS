@@ -8,7 +8,6 @@ import pytest
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import authenticate
-from django.core.management import call_command
 from django.test import override_settings
 
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -23,29 +22,6 @@ INMEM_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 def channels_inmemory_layer():
     with override_settings(CHANNEL_LAYERS=INMEM_LAYERS):
         yield
-
-
-@pytest.fixture(scope="session", autouse=True)
-def load_yaml_fixtures(django_db_setup, django_db_blocker):
-    with django_db_blocker.unblock():
-        call_command(
-            "loaddata",
-            "tenant_profile.yaml",
-            "tenant.yaml",
-            "customer.yaml",
-            "roles_permissions.yaml",
-            "users.yaml",
-            "room.yaml",
-            "device_profile.yaml",
-            "device.yaml",
-            "attribute_kv.yaml",
-            "group.yaml",
-            "staff.yaml",
-            "guest.yaml",
-            "card.yaml",
-            "card_log.yaml",
-            verbosity=0,
-        )
 
 
 @pytest.fixture
