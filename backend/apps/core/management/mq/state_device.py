@@ -19,7 +19,7 @@ def handle_connect_disconnect(device, topic, data):
     device_id = device.get("id")
     logger.debug("Handling %s for device %s", topic, device_id)
     sub_device_name = data.get("device")
-    sub = get_sub_device(device, name=sub_device_name)
+    sub = get_sub_device(device, name=sub_device_name, device_type=data.get("type"))
     connected = not topic.endswith("disconnect")
 
     update_activity_device(sub.get("id"), connected)

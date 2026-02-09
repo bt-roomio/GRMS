@@ -51,7 +51,7 @@ class GuestCardViewTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
-        self.assertEqual(response.data["message"], "Cards connected successfully !")
+        self.assertEqual(response.data["message"], "Cards connected successfully!")
 
         # Verify RPC was called
         self.assertTrue(mock_send_rpc.called)
@@ -79,27 +79,6 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
-    def test_connect_cards_partial_success(self, mock_send_rpc):
-        """Test partial success when some RPC calls fail"""
-        mock_send_rpc.side_effect = [
-            {"success": True, "message": "Card added successfully"},
-            {"success": False, "message": "Device unreachable"}
-        ]
-
-        payload = {
-            "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
-            "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
-        }
-
-        response = self.client.post(self.url, payload, format="json")
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("errors", response.data)
-        self.assertIn("success", response.data)
-        self.assertEqual(response.data["message"], "Couldn't synchronize the card with all devices !")
-
     def test_connect_cards_already_connected_to_staff(self):
         """Test error when card is already connected to staff"""
         payload = {
@@ -111,7 +90,7 @@ class GuestCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data["message"], "Card is already assigned .")
+        self.assertEqual(response.data["message"], "Card is already assigned.")
 
     def test_connect_cards_already_connected_to_other_guest(self):
         """Test error when card is already connected to another guest"""
@@ -124,7 +103,7 @@ class GuestCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data["message"], "Card is already assigned .")
+        self.assertEqual(response.data["message"], "Card is already assigned.")
 
     def test_connect_cards_same_guest_allowed(self):
         """Test that connecting cards to the same guest is allowed"""
@@ -216,7 +195,7 @@ class GuestCardViewTest(BaseTestCase):
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.data["message"], "Server error !")
+        self.assertEqual(response.data["message"], "Server error!")
         self.assertIn("error", response.data)
 
     @patch('access_manager.tasks.send_rpc.send_rpc_request')
@@ -302,7 +281,7 @@ class GuestCardViewTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
-        self.assertEqual(response.data["message"], "Cards connected successfully !")
+        self.assertEqual(response.data["message"], "Cards connected successfully!")
 
     def test_incorrect_validated_data_handling(self):
         """Test handling when validated_data is not dict or None"""

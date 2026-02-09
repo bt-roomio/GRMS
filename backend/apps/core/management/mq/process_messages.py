@@ -46,6 +46,7 @@ def validate_body(body: bytes):
     device = get_device(msg.get("sourceDeviceUUID"))
     if not device:
         raise ValueError("Device not found: %s", msg.get("sourceDeviceUUID"))
+<<<<<<< HEAD
     return device, msg
 
 
@@ -107,3 +108,6 @@ def process_messages_batch(ch: BlockingChannel, bodies: list[bytes]):
                 logger.warning("Unhandled topic: %s", topic)
         except Exception as e:
             logger.warning("Failed to process individual message in batch: %s", e)
+=======
+    return device, msg
+>>>>>>> dev

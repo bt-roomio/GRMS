@@ -5,6 +5,7 @@ from rest_framework import serializers
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
+from main.serializers.general_settings import TagSerializer
 from main.serializers.guest import SimpleGuestSerializer
 from main.serializers.room_type import RoomTypeSerializer
 from shuttle.models import AttributeKv
@@ -20,6 +21,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        data["additional_fields"] = instance.additional_fields if hasattr(instance, "additional_fields") else None
         data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
         data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
@@ -118,6 +120,7 @@ class RoomFilterParams(ValidatorSerializer):
     search_field = serializers.ChoiceField(choices=("number", "floor", "block", "type__title"), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    tags = TagSerializer(many=True, required=False)
 
     def validate(self, attrs):
         if "search_field" not in attrs and "search_value" in attrs:
@@ -126,6 +129,25 @@ class RoomFilterParams(ValidatorSerializer):
         if "search_value" not in attrs and "search_field" in attrs:
             raise serializers.ValidationError({"search_value": "search_value is required!"})
         return attrs
+
+
+class RoomFilterParamsSwagger(serializers.Serializer):
+    """Swagger-only version of RoomFilterParams without nested TagSerializer."""
+
+    SORT_FIELDS = ("created_at", "-created_at", "number", "floor", "block", "-number", "-floor", "-block")
+
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=50, max_value=200)
+    state = serializers.ChoiceField(choices=Room.STATE, required=False)
+    status = serializers.ChoiceField(
+        choices=Room.STATUS,
+        required=False,
+        error_messages={"invalid_choice": _('"{input}" is not a valid choice. Choose next: ON or OFF')},
+    )
+    search_field = serializers.ChoiceField(choices=("number", "floor", "block", "type__title"), required=False)
+    search_value = serializers.CharField(required=False)
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    tags = serializers.JSONField(required=False, help_text="Array of tag objects with name, tag_type, attribute_scope")
 
 
 class RoomDetailWsSerializer(serializers.ModelSerializer):

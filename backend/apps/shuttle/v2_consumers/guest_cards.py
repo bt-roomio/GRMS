@@ -22,10 +22,9 @@ class GuestCardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericA
 
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
-        user = self.scope["user"]
         params = GuestCardFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.list(  # pyright: ignore
-            tenant_id=user.get("tenant_id"), room=params.get("room"), sort_by=params.get("sort_by", [])
+            tenant_id=self.tenant_id, room=params.get("room"), sort_by=params.get("sort_by", [])
         )
         return query
 
@@ -41,5 +40,5 @@ class GuestCardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericA
         self.subscribers[kwargs.get("request_id")] = kwargs.get("query_params")
 
     @action()
-    async def list_unsubscribe(self, **kwargs):
+    async def list_unsubscribe(self, request_id, **kwargs):
         await self.remove_group("guest_cards")

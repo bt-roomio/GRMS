@@ -28,12 +28,8 @@ class Command(BaseCommand):
     def handle(self, **kwargs):
         # ch = connect_to_rabbitmq()
         # tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        # redis_client.set("temp_test", json.dumps({"a": 1}), ex=5)
         # redis_client.delete("temp_test")
 
-        # # Connect Disconnect simulation
-        # for _ in range(100):
-        # self.send_messages_connect_disconnect(tenant_id)
 
         self.device_connectivity_simulation()
         # for _ in range(10):

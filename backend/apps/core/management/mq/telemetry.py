@@ -95,6 +95,7 @@ def sync_telemetry(device, topic, payload):
     elif isinstance(payload, list):
         entries.extend((d["ts"], d["values"]) for d in payload if isinstance(d, dict) and "ts" in d and "values" in d)
     if not entries:
+        logger.warning("No valid telemetry entries found for device %s", device_id)
         return
 
     ts_now = get_mil_sec()

@@ -12,14 +12,14 @@ from core.utils.pagination import pagination
 from core.utils.permission import check_perms
 from core.utils.serializers import dict_of_lists
 from main.models import Room
-from main.serializers.room import RoomFilterParams, RoomSerializer
+from main.serializers.room import RoomFilterParams, RoomFilterParamsSwagger, RoomSerializer
 from main.serializers.room_bulk_create import RoomNumberValidator
 from main.swagger.room import RoomDetailSwagger, RoomSwagger
 from main.utils.parse_room_numbers import parse_room_numbers
 
 
 class RoomListView(APIView):
-    @swagger_auto_schema(tags=["Main, Room"], responses=RoomSwagger, query_serializer=RoomFilterParams())
+    @swagger_auto_schema(tags=["Main, Room"], responses=RoomSwagger, query_serializer=RoomFilterParamsSwagger())
     @check_perms(["main.view_room"])
     def get(self, request):
         params = RoomFilterParams.check(request.query_params)
