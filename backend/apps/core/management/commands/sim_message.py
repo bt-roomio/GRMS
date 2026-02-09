@@ -1,6 +1,5 @@
 import json
 import random
-import time
 
 import redis
 from django.conf import settings
@@ -29,7 +28,6 @@ class Command(BaseCommand):
         # ch = connect_to_rabbitmq()
         # tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
         # redis_client.delete("temp_test")
-
 
         self.device_connectivity_simulation()
         # for _ in range(10):

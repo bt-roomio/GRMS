@@ -465,11 +465,6 @@ LOGGING = {
             "level": "WARNING",
             "propagate": False,
         },
-        "core": {
-            "handlers": ["console"],
-            "propagate": False,
-            "level": "WARNING",
-        },
         "main": {
             "handlers": ["console"],
             "level": "WARNING",
@@ -513,4 +508,4 @@ LOGGING = {
     },
 }
 
-from .components.brute_force_protection import BRUTE_FORCE_CONFIG
+from .components.brute_force_protection import BRUTE_FORCE_CONFIG  # noqa: E402 F401  # pyright: ignore
