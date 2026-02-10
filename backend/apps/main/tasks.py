@@ -1,10 +1,10 @@
 import time
 
+from access_manager.tasks.send_rpc import send_rpc_request
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db.models import Count, Q
 
-from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.helpers import safely_remove
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context
@@ -12,10 +12,11 @@ from main.utils.access_context import get_guest_access_context
 logger = get_task_logger(__name__)
 
 
-@shared_task
+@shared_task(name="main.tasks.auto_check_out")
 def auto_check_out():
     logger.info("Auto check out task run.")
-    guests = Guest.objects.filter(is_active=True, auto_check_out=True, check_out__lte=time.time())
+    one_day_ago = time.time() - 86400  # 24 hours in seconds
+    guests = Guest.objects.filter(is_active=True, auto_check_out=True, check_out__lte=one_day_ago)
     guests_room_ids = set(guests.values_list("room_id", flat=True))
 
     access_context = get_guest_access_context(guests)
@@ -29,7 +30,7 @@ def auto_check_out():
     rooms_with_active_guest_counts = Room.objects.annotate(
         active_guest_count=Count(
             "guests",
-            filter=Q(guests__is_active=True, guests__auto_check_out=True, guests__check_out__lte=time.time()),
+            filter=Q(guests__is_active=True, guests__auto_check_out=True, guests__check_out__lte=one_day_ago),
         )
     ).filter(Q(active_guest_count__gt=0) | Q(id__in=guests_room_ids))
 

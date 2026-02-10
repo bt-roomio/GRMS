@@ -1,10 +1,15 @@
 import json
 import logging
-from typing import TypedDict
 
 import redis
 from django.conf import settings
 
+from core.management.mq.device_cache import (
+    DeviceType,
+    _DEVICE_MEMORY_CACHE,
+    _MEMORY_CACHE_TTL,
+    _update_memory_cache,
+)
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
 from core.utils.slugify import slugify_key
@@ -16,28 +21,34 @@ redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, d
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
-# Increased TTL from 60s to 600s (10 minutes) to reduce DB queries
-# Devices rarely change, so longer cache is beneficial for performance
+# Increased from 60s to 600s (10 minutes) - devices rarely change
 EXPIRY_TIME = 600
 
 
-class DeviceType(TypedDict):
-    id: str
-    name: str
-    tenant_id: str
-    device_profile_id: str
-
-
 def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
+    """Get device with 2-tier caching: memory → Redis → database"""
     logger.debug("Getting device: %s", device_id)
+
+    # Tier 1: Check in-memory cache (fastest, no network)
+    current_time = get_mil_sec() // 1000  # seconds
+    cache_entry = _DEVICE_MEMORY_CACHE.get(device_id)
+    if cache_entry and (current_time - cache_entry["cached_at"]) < _MEMORY_CACHE_TTL:
+        logger.debug("Device found in memory cache: %s", device_id)
+        return cache_entry["data"]
+
+    # Tier 2: Check Redis cache
     cache_key = f"prs_msg:device_cache:{device_id}"
     cached_device_raw = redis_client.get(cache_key)
     cached_device = cached_device_raw.decode("utf-8") if isinstance(cached_device_raw, bytes) else None
 
     if cached_device:
-        logger.debug("Device found in cache: %s", cached_device)
-        return json.loads(cached_device)
+        logger.debug("Device found in Redis cache: %s", cached_device)
+        data = json.loads(cached_device)
+        # Populate memory cache from Redis hit
+        _update_memory_cache(device_id, data)
+        return data
 
+    # Tier 3: Database lookup
     filters = {"id": device_id}
     if "&" in device_id:
         filters = {"name": device_id.split("&")[1], "tenant_id": tenant_id, "is_active": True}
@@ -45,7 +56,10 @@ def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
 
     if not device:
         return None
+
     data = _device_cache(cache_key, device)
+    # Also cache in memory
+    _update_memory_cache(device_id, data)
     return data
 
 

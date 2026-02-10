@@ -89,7 +89,6 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
             client_token=mews_config.client_token,
             access_token=mews_config.access_token,
             base_url=mews_config.api_base_url,  # pyright: ignore
-            client_name="GRMS 1.0.0",
         )
 
         deadline_utc = (timezone.now() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
