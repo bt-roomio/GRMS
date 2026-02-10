@@ -21,7 +21,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["additional_fields"] = instance.additional_fields if hasattr(instance, "additional_fields") else None
+        data["additional_fields"] = instance.additional_fields if hasattr(instance, "additional_fields") else []
         data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
         data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data

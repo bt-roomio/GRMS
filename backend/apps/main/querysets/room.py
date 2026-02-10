@@ -1,3 +1,4 @@
+import json
 import logging
 
 from access_manager.tasks.send_rpc import send_rpc_request
@@ -24,6 +25,31 @@ from core.utils.helpers import safely_remove
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
 logger = logging.getLogger(__name__)
+
+
+def _cast_value(val):
+    """Cast a TextField string back to its native Python type."""
+    if val is None:
+        return None
+    if not isinstance(val, str):
+        return val
+    low = val.lower()
+    if low == "true":
+        return True
+    if low == "false":
+        return False
+    try:
+        return int(val)
+    except ValueError:
+        pass
+    try:
+        return float(val)
+    except ValueError:
+        pass
+    try:
+        return json.loads(val)
+    except (json.JSONDecodeError, ValueError):
+        return val
 
 
 class JSONBObjectAgg(Aggregate):
@@ -101,6 +127,9 @@ class RoomQuerySet(BaseQuerySet):
             else:
                 ts_kvs_keys.append(tag["name"])
 
+        if not attrs_filters.children:
+            attrs_filters = Q(pk__in=[])
+
         query = query.prefetch_related(
             Prefetch(
                 "devices",
@@ -154,8 +183,15 @@ class RoomQuerySet(BaseQuerySet):
             attributes = target_device.attrs if target_device else []
             ts_kvs = target_device.ts_kvs if target_device else []
 
-            attributes = [{attr.attribute_key: attr.value} for attr in attributes]
-            ts_kvs = [{ts_kv.key.key: ts_kv.value} for ts_kv in ts_kvs]
+            attributes = [
+                {
+                    attr.attribute_key: _cast_value(attr.value),
+                    "tag_type": "attribute",
+                    "attribute_scope": attr.attribute_type,
+                }
+                for attr in attributes
+            ]
+            ts_kvs = [{ts_kv.key.key: _cast_value(ts_kv.value), "tag_type": "telemetry"} for ts_kv in ts_kvs]
 
             room.additional_fields = [*attributes, *ts_kvs]
 
