@@ -71,7 +71,7 @@ class Command(BaseCommand):
             "data": {"device": "4c:71:43:10:02:80", "type": "default"},
             "topic": "v1/gateway/connect",
         }
-        msg = {
+        msg1 = {
             "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
             "data": {
                 "keys": "roomNumber,Check-out date,online,mur",
@@ -81,7 +81,7 @@ class Command(BaseCommand):
             },
             "topic": "v1/gateway/attributes/request",
         }
-        msg = {
+        msg2 = {
             "sourceDeviceUUID": gateway,
             "data": {
                 "ts": 1766582336110,

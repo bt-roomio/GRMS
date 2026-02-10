@@ -42,14 +42,13 @@ class TsKv(models.Model):
 
 
 class TsKvDictionary(models.Model):
-    key = models.CharField(max_length=255)
+    key = models.CharField(max_length=255, unique=True)
     key_id = models.AutoField(unique=True, primary_key=True)
 
     objects = TsKvDictionaryQuerySet.as_manager()
 
     class Meta:
         db_table = "shuttle_ts_kv_dictionary"
-        unique_together = ("key", "key_id")
 
 
 class TsKvLatest(BaseModelTs):
