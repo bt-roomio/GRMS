@@ -23,3 +23,6 @@ logs
 mqtt_logs
 logs
 *.log
+*.csv
+*.sqlite3
+*.db

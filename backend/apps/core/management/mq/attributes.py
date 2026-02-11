@@ -5,8 +5,10 @@ import redis
 from django.conf import settings
 
 from core.management.mq.get_device import get_sub_device
+from core.management.mq.state_device import update_activity_device
 from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv
+from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.tasks import publish_updates_attribute_batch_task, update_activity_device_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
@@ -87,7 +89,8 @@ def _update_attribute_store(device, data):
 
     # Bulk operations
     if to_create:
-        AttributeKv.objects.bulk_create(to_create)
+        # ignore_conflicts prevents errors when concurrent updates create duplicates
+        AttributeKv.objects.bulk_create(to_create, ignore_conflicts=True)
     if to_update:
         fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
         AttributeKv.objects.bulk_update(to_update, fields)
@@ -114,4 +117,139 @@ def _update_attribute_store(device, data):
     logger.debug(
         "Bulk attributes processed for device %s: created=%d updated=%d", device_id, len(to_create), len(to_update)
     )
-    update_activity_device_task.delay(device_id)
+    update_activity_device(device_id)
+
+
+def sync_attributes_batch(batch: list[tuple]):
+    """
+    Process multiple attribute messages in a single batch.
+    batch: list of (device, topic, data) tuples
+    """
+    # Collect all device updates
+    device_updates = defaultdict(list)  # {device_id: [(key, field, value), ...]}
+    device_info = {}  # {device_id: device}
+
+    for device, topic, payload in batch:
+        if topic.startswith("v1/gateway/") and isinstance(payload, dict) and not topic.endswith("request"):
+            for sub_name, attrs in payload.items():
+                sub_device = get_sub_device(device, name=sub_name)
+                sub_device_id = sub_device.get("id")
+                device_info[sub_device_id] = sub_device
+                _collect_attribute_updates(sub_device_id, attrs, device_updates)
+        else:
+            device_id = device.get("id")
+            device_info[device_id] = device
+            _collect_attribute_updates(device_id, payload, device_updates)
+
+    if not device_updates:
+        logger.debug("No attribute updates in batch")
+        return
+
+    # Process all updates in a single batch
+    _update_attribute_store_batch(device_updates, device_info)
+
+
+def _collect_attribute_updates(device_id, data, device_updates):
+    """Collect attribute updates for a device"""
+    entries = data if isinstance(data, list) else [data]
+    for entry in entries:
+        for key, (field, value) in find_compatible_field(entry).items():
+            device_updates[device_id].append((key, field, value))
+
+
+def _update_attribute_store_batch(device_updates, device_info):
+    """
+    Bulk save attributes for multiple devices using bulk_create and bulk_update.
+    device_updates: {device_id: [(key, field, value), ...]}
+    device_info: {device_id: device}
+    """
+    logger.debug("Starting batch attribute update for %d devices", len(device_updates))
+    ts_now = get_mil_sec()
+
+    # Collect all unique (device_id, key) combinations to fetch existing records
+    device_keys = []
+    for device_id, updates in device_updates.items():
+        keys = list({u[0] for u in updates})
+        device_keys.extend([(device_id, key) for key in keys])
+
+    # Fetch all existing AttributeKv rows at once
+    all_device_ids = list(device_updates.keys())
+    all_keys = list({key for _, updates in device_updates.items() for key, _, _ in updates})
+
+    existing_qs = AttributeKv.objects.filter(
+        entity_id__in=all_device_ids,
+        attribute_type=AttributeKv.CLIENT_SCOPE,
+        attribute_key__in=all_keys,
+    )
+    existing_map = {(str(obj.entity_id), obj.attribute_key): obj for obj in existing_qs}
+
+    # Prepare creates and updates
+    to_create = []
+    to_update = []
+    updates_by_device = defaultdict(list)
+
+    for device_id, updates in device_updates.items():
+        device = device_info.get(device_id)
+        if not device:
+            continue
+
+        for key, field, value in updates:
+            # Prepare default values
+            base = {
+                "bool_v": None,
+                "str_v": None,
+                "long_v": None,
+                "dbl_v": None,
+                "json_v": None,
+                "entity_type": "DEVICE",
+                "last_update_ts": ts_now,
+                field: value,
+            }
+
+            lookup_key = (device_id, key)
+            if lookup_key in existing_map:
+                inst = existing_map[lookup_key]
+                for attr_name, attr_val in base.items():
+                    setattr(inst, attr_name, attr_val)
+                to_update.append(inst)
+            else:
+                inst = AttributeKv(
+                    entity_id=device_id,
+                    attribute_type=AttributeKv.CLIENT_SCOPE,
+                    attribute_key=key,
+                    **base,
+                )
+                to_create.append(inst)
+
+            # Prepare WebSocket updates
+            updates_by_device[f"{device_id}_{device.get('tenant_id')}"].append(
+                {
+                    "entity": str(device_id),
+                    "key_name": key,
+                    "last_update_ts": ts_now,
+                    "scope": AttributeKv.CLIENT_SCOPE,
+                    "value": value,
+                }
+            )
+
+    # Bulk operations
+    if to_create:
+        AttributeKv.objects.bulk_create(to_create, ignore_conflicts=True)
+    if to_update:
+        fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
+        AttributeKv.objects.bulk_update(to_update, fields)
+
+    # Send updates to WebSocket clients
+    if updates_by_device:
+        publish_updates_attribute_batch(updates_by_device)
+
+    # Update activity for all devices
+    for device_id in device_updates.keys():
+        update_activity_device(device_id)
+
+    logger.debug(
+        "Batch attributes processed: %d devices, created=%d, updated=%d",
+        len(device_updates),
+        len(to_create),
+        len(to_update),
+    )

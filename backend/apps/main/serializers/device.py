@@ -175,3 +175,23 @@ class DeviceFilterParams(ValidatorSerializer):
     name = serializers.CharField(required=False)
     status = serializers.BooleanField(allow_null=True, required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+
+
+class GatewayListSerializer(serializers.ModelSerializer):
+    total_connectors = serializers.IntegerField(read_only=True)
+    stat = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Device
+        fields = ("id", "name", "total_connectors", "stat")
+
+    def get_stat(self, obj: Device) -> bool:
+        attr = next(iter(obj.attribute_kvs.all()), None)
+
+        if not attr:
+            return False
+        value = attr.get_value
+
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        return bool(value)

@@ -1,9 +1,9 @@
-from access_manager.models import Card, NeedSyncDevice
+from access_manager.models import Card, NeedSyncDevice, StaffCard, GuestCard
 
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from main.models import Device
+from main.models import Device, PublicSpace
 from main.serializers.device import SimpleDeviceSerializer
 
 
@@ -30,62 +30,59 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
         ]
 
     def get_failed_requests_list(self, obj):
-        failed_requests = obj.additional_info.get("failed_requests", [])
-        return failed_requests
+        return (obj.additional_info or {}).get("failed_requests", [])
 
     def get_device_name(self, obj):
-        return obj.device.name if obj.device else None
+        return getattr(obj.device, "name", None)
 
     def get_card_number(self, obj):
-        return obj.card.number if obj.card else None
+        return getattr(obj.card, "number", None)
+
+    def _get_active_staff_card(self, obj):
+        if not obj.card_id:
+            return None
+        return StaffCard.objects.select_related("staff").filter(card_id=obj.card_id, is_active=True).first()
+
+    def _get_active_guest_card(self, obj):
+        if not obj.card_id:
+            return None
+        return GuestCard.objects.select_related("guest").filter(card_id=obj.card_id, is_active=True).first()
 
     def get_user_name(self, obj):
-        staff_card = getattr(obj.card, "staffcard", None)
-        if staff_card and staff_card.is_active:
+        staff_card = self._get_active_staff_card(obj)
+        if staff_card:
             return staff_card.staff.get_name()
 
-        guest_cards = obj.card.guestcard_set.filter(is_active=True)
-        if guest_cards.exists():
-            guest_card = guest_cards.first()
-            guest_name = guest_card.guest.name
-            if guest_card.guest.lastname:
-                guest_name += f" {guest_card.guest.lastname}"
-            return guest_name
+        guest_card = self._get_active_guest_card(obj)
+        if guest_card:
+            return guest_card.guest.get_name()
 
         return None
 
     def get_user_type(self, obj):
-        staff_card = getattr(obj.card, "staffcard", None)
-        if staff_card and staff_card.is_active:
+        if self._get_active_staff_card(obj):
             return "Staff"
-
-        guest_cards = obj.card.guestcard_set.filter(is_active=True)
-        if guest_cards.exists():
+        if self._get_active_guest_card(obj):
             return "Guest"
-
         return None
 
     def get_public_space(self, obj):
-        if not obj.device:
+        if not obj.device_id:
             return None
 
-        public_spaces = obj.device.publicspace_set.all()
-        if public_spaces.exists():
-            return f"Public Space: {public_spaces.first().name}"
-        return None
+        public_space = PublicSpace.objects.filter(device_public_spaces__device_id=obj.device_id).only("name").first()
+        return f"Public Space: {public_space.name}" if public_space else None
 
     def get_room(self, obj):
-        if not obj.device:
-            return None
-
-        if obj.device.room:
-            return f"Room {obj.device.room.number}"
-        return None
+        room = getattr(obj.device, "room", None)
+        return f"Room {room.number}" if room else None
 
 
 class NeedSyncDeviceFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at", required=False)
+        child=serializers.ChoiceField(choices=["-created_at", "created_at"], required=False),
+        required=False,
+        default=["-created_at"],
     )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)

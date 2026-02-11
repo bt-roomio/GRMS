@@ -1,11 +1,38 @@
 from rest_framework import serializers
 
 from main.models import Dashboard
+from shuttle.models import AttributeKv
 
 
 class DoorLockSerializer(serializers.Serializer):
     ving_card = serializers.BooleanField(default=False)
     kaba = serializers.BooleanField(default=False)
+
+
+class TagSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    is_boolean = serializers.BooleanField(allow_null=True, required=False)
+    tag_type = serializers.ChoiceField(
+        choices=("attribute", "telemetry"),
+        default="telemetry",
+        error_messages={"invalid_choice": "Type of the tag, e.g., ['attribute', 'telemetry']"},
+    )
+    attribute_scope = serializers.ChoiceField(
+        choices=AttributeKv.ENTITY_TYPE,
+        default="",
+        allow_blank=True,
+        error_messages={"invalid_choice": f"Scope of the attribute, e.g., {[k[0] for k in AttributeKv.ENTITY_TYPE]}"},
+    )
+
+    class Meta:
+        ref_name = "RoomFieldTag"
+
+    def validate(self, attrs):
+        if attrs["tag_type"] == "attribute" and not attrs.get("attribute_scope"):
+            raise serializers.ValidationError(
+                {"attribute_scope": "This field is required when tag_type is 'attribute'."}
+            )
+        return attrs
 
 
 class GeneralSettingsSerializer(serializers.Serializer):
@@ -21,10 +48,11 @@ class GeneralSettingsSerializer(serializers.Serializer):
     opera_integration = serializers.BooleanField(default=False)
     visionline_card_system = serializers.BooleanField(default=False)
     aperio_locks = serializers.BooleanField(default=False)
-    door_lock = DoorLockSerializer(default=dict)
+    door_lock = DoorLockSerializer(required=False)
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
     main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
+    room_fields = TagSerializer(many=True, required=False)
 
     def validate_main_dashboard(self, value):
         dashboard = Dashboard.objects.filter(id=value.id).first()
@@ -51,7 +79,9 @@ class GeneralSettingsSerializer(serializers.Serializer):
             if field_name == "main_dashboard":
                 g_settings[field_name] = g_settings.get(field_name, None)
             elif field_name == "door_lock":
-                g_settings[field_name] = g_settings.get(field_name, field.to_representation(field.get_default()))
+                g_settings[field_name] = g_settings.get(field_name, {"ving_card": False, "kaba": False})
+            elif field_name == "room_fields":
+                g_settings[field_name] = g_settings.get(field_name, [])
             else:
                 g_settings[field_name] = g_settings.get(field_name, field.default)
 

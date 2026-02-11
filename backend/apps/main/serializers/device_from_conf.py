@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from main.models import Device, DeviceProfile
-from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest, Relation
+from shuttle.models import AttributeKv, Relation, TsKvDictionary, TsKvLatest
 from shuttle.utils.camel_to_snake import to_snake_case_data
 
 
@@ -12,6 +12,9 @@ class DeviceMacAddressSerializer(serializers.Serializer):
 
 class TagSerializer(serializers.Serializer):
     tag = serializers.CharField()
+
+    class Meta:
+        ref_name = "DeviceConfigTag"
 
 
 class AddressMapsSerializer(serializers.Serializer):
@@ -38,7 +41,8 @@ class DeviceFromConfSerializer(serializers.Serializer):
 
         if not gateway:
             raise serializers.ValidationError(
-                {"gateway_id": "Gateway not found or not an active gateway for this tenant."})
+                {"gateway_id": "Gateway not found or not an active gateway for this tenant."}
+            )
 
         attrs["gateway_obj"] = gateway
         return attrs
@@ -196,11 +200,10 @@ class DeviceFromConfSerializer(serializers.Serializer):
             Relation.objects.bulk_create(relation_objs, ignore_conflicts=True)
 
         # 10) Build response payload (include gateway_id back)
-        result_devices = [
-            {"mac_address": d["mac_address"], "address_map_id": d["address_map_id"]} for d in devices_in
-        ]
+        result_devices = [{"mac_address": d["mac_address"], "address_map_id": d["address_map_id"]} for d in devices_in]
         return {
             "gateway_id": gateway_id,
             "devices": result_devices,
             "address_maps": maps_in,
         }
+

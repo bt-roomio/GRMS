@@ -6,6 +6,7 @@ from shuttle.v2_consumers.attributes import AttributeConsumer
 from shuttle.v2_consumers.card_logs import CardLogConsumer
 from shuttle.v2_consumers.cards import CardConsumer
 from shuttle.v2_consumers.emergency_status import EmergencyStatus
+from shuttle.v2_consumers.gateway import GatewayConsumer
 from shuttle.v2_consumers.gateway_logs import GatewayLogsConsumer
 from shuttle.v2_consumers.guest_cards import GuestCardConsumer
 from shuttle.v2_consumers.guests import GuestConsumer
@@ -32,6 +33,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "attributes": AttributeConsumer.as_asgi(),
         "current_alarms": InactiveDeviceAttributeConsumer.as_asgi(),
         "gateway_logs": GatewayLogsConsumer.as_asgi(),
+        "gateways": GatewayConsumer.as_asgi(),
         "tag_logs": TagLogsConsumer.as_asgi(),
         "tskv_tenant_history": TsKvTenantHistoryConsumer.as_asgi(),
         "ts_kv_history": TsKvHistoryConsumer.as_asgi(),

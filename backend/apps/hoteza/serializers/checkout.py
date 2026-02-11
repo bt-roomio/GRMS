@@ -1,9 +1,13 @@
+import logging
+
 from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class CheckOutSerializer(serializers.Serializer):
@@ -27,6 +31,7 @@ class CheckOutSerializer(serializers.Serializer):
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
     def validate(self, attrs):
+        logger.debug("Validating CheckOut data: %s", attrs)
         attrs = self.convert_fields(attrs)
         tenant = None
         if attrs.get("hotel_id"):

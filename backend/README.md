@@ -19,3 +19,22 @@
 - docker exec -it django bash
 - docker compose up --build -d
 - docker compose down
+
+## Fix redis slave problem
+
+If you see this error in redis container logs:
+
+```
+docker exec -it redis redis-cli INFO replication
+...
+
+# Replication
+role:slave  !WARNING
+
+
+```
+
+```run
+docker exec -it redis redis-cli REPLICAOF NO ONE
+docker exec -it redis redis-cli INFO replication
+```

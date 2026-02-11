@@ -24,7 +24,7 @@ from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
 from services.models import BaseModel as ServiceBaseModel
-from shuttle.models import Relation, TsKvDictionary, TsKvLatest
+from shuttle.models import TsKvDictionary, TsKvLatest
 
 
 class Tenant(ServiceBaseModel):
@@ -319,15 +319,6 @@ class Device(BaseModel):
         self.full_clean()  # This will raise ValidationError if clean() fails.
         super().save(*args, **kwargs)
 
-    @property
-    def get_gateway(self):
-        """
-        Get the gateway device for this device from Relation.
-        Returns the from_id (gateway) where to_id is this device.
-        """
-        relation = Relation.objects.filter(to_id=self).select_related("from_id").first()
-        return relation.from_id if relation else None
-
     class Meta(BaseModel.Meta):
         db_table = "main_device"
         constraints = [
@@ -354,9 +345,9 @@ class DeviceCredentials(BaseModel):
 
 class DeviceProfile(BaseModel):
     name = models.CharField(max_length=255)
-    active = models.BooleanField(default=True)
-    tenant = models.ForeignKey("main.Tenant", CASCADE)
     type = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    active = models.BooleanField(default=True)
     state = models.BooleanField(default=True)
     image = models.CharField(max_length=1000000, blank=True, null=True)
     transport_type = models.CharField(max_length=255, blank=True, null=True)

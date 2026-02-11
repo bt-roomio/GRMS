@@ -1,9 +1,13 @@
+import logging
+
 from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class CheckInSerializer(serializers.Serializer):
@@ -21,6 +25,20 @@ class CheckInSerializer(serializers.Serializer):
     swapFlag = serializers.CharField()
     nopost = serializers.CharField()
     profileNum = serializers.CharField(allow_null=True, allow_blank=True)
+
+    def validate_arrivalDateTS(self, value):
+        try:
+            value = int(value)
+            return value / 1000 if value > 1e12 else value
+        except Exception:
+            raise JsonValidationError({"result": 9, "message": "Invalid arrivalDateTS format!"})
+
+    def validate_departureDateTS(self, value):
+        try:
+            value = int(value)
+            return value / 1000 if value > 1e12 else value
+        except Exception:
+            raise JsonValidationError({"result": 9, "message": "Invalid departureDateTS format!"})
 
     @staticmethod
     def convert_fields(attrs):
@@ -43,6 +61,7 @@ class CheckInSerializer(serializers.Serializer):
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
     def validate(self, attrs):
+        logger.debug(f"CheckInSerializer validate called with attrs: {attrs}")
         attrs = self.convert_fields(attrs)
         tenant = None
         if attrs.get("hotel_id"):
@@ -65,6 +84,7 @@ class CheckInSerializer(serializers.Serializer):
             additional_info__pms_reg_num=attrs.get("pms_reg_num"),
             is_active=True,
         ).first()
+        logger.debug(f"Existing guest found: {guest}")
 
         if guest:
             # Check if any changes are needed, we need update existing guest
@@ -113,38 +133,48 @@ class CheckInSerializer(serializers.Serializer):
         guest_serializer = GuestSerializer()
 
         if existing_guest:
-            existing_additional_info = existing_guest.additional_info or {}
-            del validated_data["tenant"]
-            room = validated_data.pop("room")
-            existing_additional_info.update(validated_data)
+            try:
+                existing_additional_info = existing_guest.additional_info or {}
+                del validated_data["tenant"]
+                room = validated_data.pop("room")
+                existing_additional_info.update(validated_data)
 
-            instance = guest_serializer.update(
-                existing_guest,
-                {
-                    "lastname": validated_data.pop("lastname"),
-                    "name": validated_data.pop("name"),
-                    "check_in": validated_data.pop("check_in"),
-                    "check_out": validated_data.pop("check_out"),
-                    "room": room,
-                    "language": validated_data.pop("language"),
-                    "title": validated_data.pop("title"),
-                    "additional_info": existing_additional_info,
-                },
-            )
+                instance = guest_serializer.update(
+                    existing_guest,
+                    {
+                        "lastname": validated_data.pop("lastname"),
+                        "name": validated_data.pop("name"),
+                        "check_in": validated_data.pop("check_in"),
+                        "check_out": validated_data.pop("check_out"),
+                        "room": room,
+                        "language": validated_data.pop("language"),
+                        "title": validated_data.pop("title"),
+                        "additional_info": existing_additional_info,
+                    },
+                )
+            except Exception as e:
+                logger.error(f"Error updating guest: {e}")
+                raise JsonValidationError({"result": 9, "message": "Failed to update guest."})
         else:
+            logger.debug("Creating new guest with data: %s", validated_data)
             # Create new guest
-            instance = guest_serializer.create(
-                {
-                    "lastname": validated_data.pop("lastname"),
-                    "name": validated_data.pop("name"),
-                    "check_in": validated_data.pop("check_in"),
-                    "check_out": validated_data.pop("check_out"),
-                    "auto_check_out": True,
-                    "room": validated_data.pop("room"),
-                    "language": validated_data.pop("language"),
-                    "title": validated_data.pop("title"),
-                    "tenant": validated_data.pop("tenant"),
-                    "additional_info": validated_data,
-                }
-            )
+            try:
+                instance = guest_serializer.create(
+                    {
+                        "lastname": validated_data.pop("lastname"),
+                        "name": validated_data.pop("name"),
+                        "check_in": validated_data.pop("check_in"),
+                        "check_out": validated_data.pop("check_out"),
+                        "auto_check_out": True,
+                        "room": validated_data.pop("room"),
+                        "language": validated_data.pop("language"),
+                        "title": validated_data.pop("title"),
+                        "tenant": validated_data.pop("tenant"),
+                        "additional_info": validated_data,
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Error creating guest: {e}")
+                raise JsonValidationError({"result": 9, "message": "Failed to create guest."})
+        logger.info(f"Guest check-in processed: {instance.name}")  # pyright: ignore
         return instance

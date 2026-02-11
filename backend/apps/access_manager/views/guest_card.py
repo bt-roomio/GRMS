@@ -1,12 +1,13 @@
 import logging
 
+from rest_framework.generics import get_object_or_404
 from access_manager.models import GuestPublicSpace
+from main.models import Guest
+
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.swagger.guest_card import guest_card_swagger
 from access_manager.utilits.check_card_assignment import get_card_assignments
-from django.db.models import Q
 
-from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -18,13 +19,13 @@ class GuestCardView(APIView):
     @guest_card_swagger()
     def post(self, request):
         from access_manager.tasks.send_rpc import send_rpc_request
-
-        from main.models import Device
+        from main.utils.access_context import get_guest_access_context
 
         serializer = GuestCardRequestSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, 400)
+
         try:
             validated_data = serializer.validated_data
 
@@ -36,28 +37,30 @@ class GuestCardView(APIView):
             public_spaces = validated_data["public_spaces"]
             cards = validated_data["cards"]
             user = str(request.user.id)
-            errors = []
-            success = []
 
             assigned_cards = get_card_assignments(cards=cards, tenant_id=tenant_id, exclude_guest_id=guest_id)
 
             if assigned_cards:
                 return Response(
-                    {"success": False, "message": f"Card is already assigned .", "assigned_cards": assigned_cards}, 403
+                    {"success": False, "message": "Card is already assigned.", "assigned_cards": assigned_cards}, 403
                 )
+            guest = get_object_or_404(Guest, id=guest_id)
 
             for public_space in public_spaces:
-                _, _ = GuestPublicSpace.objects.get_or_create(guest_id=guest_id, public_space_id=public_space)
+                GuestPublicSpace.objects.get_or_create(guest_id=guest_id, public_space_id=public_space)
 
-            devices = Device.objects.filter(
-                Q(room__guests=guest_id)
-                | Q(device_public_spaces__public_space__in=public_spaces)
-                | Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests=guest_id),
-                is_active=True,
-            ).distinct()
+            context = get_guest_access_context(guest)
 
-            if not devices:
+            if not context:
+                return Response({"message": "Guest not found."}, 404)
+
+            devices = context.get("devices")
+
+            if not devices.exists():
                 return Response({"message": "Not found device."}, 404)
+
+            errors = []
+            success = []
 
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id, user=user)
@@ -67,13 +70,14 @@ class GuestCardView(APIView):
                     success.append(result)
 
             if not errors:
-                return Response({"success": True, "message": "Cards connected successfully !"}, status=200)
+                return Response({"success": True, "message": "Cards connected successfully!"}, 200)
             return Response(
-                {"message": "Couldn't synchronize the card with all devices !", "errors": errors, "success": success},
-                status=400,
+                {"message": "Couldn't synchronize the card with all devices!", "errors": errors, "success": success},
+                400,
             )
 
         except Exception as e:
+            logger.exception("Error in GuestCardView")
             return Response(
-                {"message": "Server error !", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"message": "Server error!", "error": str(e)}, 500
             )

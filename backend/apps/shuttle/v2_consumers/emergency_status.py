@@ -55,7 +55,7 @@ class EmergencyStatus(BaseGenericAsyncAPIConsumer):
 
             all_data.append(
                 {
-                    "device_id": device.id,
+                    "device_id": str(device.id),
                     "device_name": device.name,
                     "room": {
                         "number": device.room.number if device and device.room else None,

@@ -1,11 +1,55 @@
-from access_manager.models import GuestCard
+import json
+import logging
+
 from access_manager.tasks.send_rpc import send_rpc_request
-from django.db.models import Aggregate, Count, F, Func, JSONField, OuterRef, Q, Subquery
-from django.db.models.functions import Coalesce
+from django.db.models import (
+    Aggregate,
+    Case,
+    Count,
+    F,
+    Func,
+    IntegerField,
+    JSONField,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    TextField,
+    Value,
+    When,
+)
+from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.helpers import safely_remove
-from shuttle.models import TsKvDictionary, TsKvLatest
+from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
+
+logger = logging.getLogger(__name__)
+
+
+def _cast_value(val):
+    """Cast a TextField string back to its native Python type."""
+    if val is None:
+        return None
+    if not isinstance(val, str):
+        return val
+    low = val.lower()
+    if low == "true":
+        return True
+    if low == "false":
+        return False
+    try:
+        return int(val)
+    except ValueError:
+        pass
+    try:
+        return float(val)
+    except ValueError:
+        pass
+    try:
+        return json.loads(val)
+    except (json.JSONDecodeError, ValueError):
+        return val
 
 
 class JSONBObjectAgg(Aggregate):
@@ -38,7 +82,13 @@ class RoomQuerySet(BaseQuerySet):
         query = query.filter(status=status) if status else query
         return query.order_by(*(sort_by or ["number"]) + ["id"])
 
-    def rooms_ts_kvs(self, tenant, keys=[]):
+    def rooms_ts_kvs(self, tenant, keys):
+        from shuttle.models import TsKvLatest
+
+        if not keys or (keys and not isinstance(keys, list)):
+            logger.warning("rooms_ts_kvs: keys parameter is missing or not a list")
+            return self
+
         query = self.filter(active=True, tenant=tenant)
 
         tskv_grouped = (
@@ -60,6 +110,90 @@ class RoomQuerySet(BaseQuerySet):
             .values("mapped")
         )
         query = query.annotate(ts_kv_values=Subquery(tskv_grouped))
+        return query
+
+    def get_tags(self, tenant, tags):
+        from main.models import Device
+
+        if not tags or (tags and not isinstance(tags, list)):
+            return self
+
+        query = self.filter(active=True, tenant=tenant)
+        attrs_filters = Q()
+        ts_kvs_keys = []
+        for tag in tags:
+            if tag.get("tag_type") == "attribute":
+                attrs_filters |= Q(attribute_key=tag["name"], attribute_type=tag["attribute_scope"])
+            else:
+                ts_kvs_keys.append(tag["name"])
+
+        if not attrs_filters.children:
+            attrs_filters = Q(pk__in=[])
+
+        query = query.prefetch_related(
+            Prefetch(
+                "devices",
+                queryset=Device.objects.annotate(
+                    priority=Case(
+                        When(additional_info__primary=True, then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
+                )
+                .order_by("priority", "created_at")
+                .prefetch_related(
+                    Prefetch(
+                        "attribute_kvs",
+                        queryset=AttributeKv.objects.filter(attrs_filters).annotate(
+                            value=Coalesce(
+                                Cast("bool_v", TextField()),
+                                Cast("str_v", TextField()),
+                                Cast("dbl_v", TextField()),
+                                Cast("long_v", TextField()),
+                                Cast("json_v", TextField()),
+                                output_field=TextField(),
+                            )
+                        ),
+                        to_attr="attrs",
+                    ),
+                    Prefetch(
+                        "attribute_kvs",
+                        queryset=TsKvLatest.objects.prefetch_related("key")
+                        .filter(key__key__in=ts_kvs_keys)
+                        .annotate(
+                            value=Coalesce(
+                                Cast("bool_v", TextField()),
+                                Cast("str_v", TextField()),
+                                Cast("dbl_v", TextField()),
+                                Cast("long_v", TextField()),
+                                Cast("json_v", TextField()),
+                                output_field=TextField(),
+                            )
+                        ),
+                        to_attr="ts_kvs",
+                    ),
+                ),
+                to_attr="room_devices",
+            )
+        )
+
+        # Берем первое устройство (с наивысшим приоритетом)
+        for room in query:
+            target_device = room.room_devices[0] if room.room_devices else None
+            attributes = target_device.attrs if target_device else []
+            ts_kvs = target_device.ts_kvs if target_device else []
+
+            attributes = [
+                {
+                    attr.attribute_key: _cast_value(attr.value),
+                    "tag_type": "attribute",
+                    "attribute_scope": attr.attribute_type,
+                }
+                for attr in attributes
+            ]
+            ts_kvs = [{ts_kv.key.key: _cast_value(ts_kv.value), "tag_type": "telemetry"} for ts_kv in ts_kvs]
+
+            room.additional_fields = [*attributes, *ts_kvs]
 
         return query
 
@@ -83,17 +217,16 @@ class RoomQuerySet(BaseQuerySet):
         return result
 
     def guest_checkout(self, room_id, user=None):
-        from main.models import Device, Guest, Room
+        from main.models import Guest, Room
+        from main.utils.access_context import get_guest_access_context
 
         deactivate_result = {"success": True}
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
-        cards = list(GuestCard.objects.filter(guest__in=guests, is_active=True).values_list("card__number", flat=True))
-        devices = Device.objects.filter(
-            Q(room__id=room_id)
-            | Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=guests),
-            is_active=True,
-        ).distinct()
+        access_context = get_guest_access_context(guests)
+        devices = access_context.get("devices", [])
+        cards = access_context.get("cards", [])
+
         for device in devices:
             result = send_rpc_request(str(device.id), cards, 0, user=user)
             not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore

@@ -61,3 +61,62 @@ def has_changed_attrs(device_id: str, updates: list[dict]) -> list[dict]:
         redis_client.set(key, json.dumps(cached), ex=3600)
 
     return changed
+
+
+def get_cached_attributes(device_id: str, attribute_keys: list[str], attribute_type: str = "SERVER_SCOPE") -> dict | None:
+    """
+    Получить атрибуты из Redis кеша.
+
+    Args:
+        device_id: UUID устройства
+        attribute_keys: Список ключей атрибутов (e.g., ["active", "lastActivityTime"])
+        attribute_type: Тип атрибута (SERVER_SCOPE, CLIENT_SCOPE, SHARED_SCOPE)
+
+    Returns:
+        dict с атрибутами или None если кеш пуст
+        Формат: {
+            "active": {"bool_v": True, "last_update_ts": 123, ...},
+            "lastActivityTime": {"long_v": 123, ...}
+        }
+    """
+    cache_key = f"device_attrs:{device_id}:{attribute_type}"
+    cached_raw = redis_client.get(cache_key)
+
+    if not cached_raw:
+        return None
+
+    try:
+        cached_data = json.loads(cached_raw)
+        # Проверить, что все запрошенные ключи есть в кеше
+        if all(key in cached_data for key in attribute_keys):
+            return cached_data
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+    return None
+
+
+def set_cached_attributes(device_id: str, attributes_data: dict, attribute_type: str = "SERVER_SCOPE", ttl: int = 5):
+    """
+    Сохранить атрибуты в Redis кеш.
+
+    Args:
+        device_id: UUID устройства
+        attributes_data: dict с атрибутами
+        attribute_type: Тип атрибута
+        ttl: Time-to-live в секундах (default: 5)
+    """
+    cache_key = f"device_attrs:{device_id}:{attribute_type}"
+    redis_client.set(cache_key, json.dumps(attributes_data, default=str), ex=ttl)
+
+
+def invalidate_attributes_cache(device_id: str, attribute_type: str = "SERVER_SCOPE"):
+    """
+    Удалить кеш атрибутов устройства.
+
+    Args:
+        device_id: UUID устройства
+        attribute_type: Тип атрибута
+    """
+    cache_key = f"device_attrs:{device_id}:{attribute_type}"
+    redis_client.delete(cache_key)

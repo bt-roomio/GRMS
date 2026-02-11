@@ -1,4 +1,3 @@
-from django.db.models import Q
 from access_manager.models import Card, Staff, StaffCard, GuestCard, NeedSyncDevice
 from access_manager.serializers.staff import SimpleStaffSerializer
 
@@ -7,7 +6,8 @@ from rest_framework.fields import ValidationError
 
 from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.serializers import ValidatorSerializer
-from main.models import Device, Guest
+from main.models import Guest
+from main.utils.access_context import get_guest_access_context
 
 
 class CardSerializer(serializers.ModelSerializer):
@@ -69,11 +69,8 @@ class DisconnectCardSerializer(serializers.Serializer):
             card = GuestCard.objects.get(card_id=validated_data["card_id"], is_active=True)
             deactivate_results = []
             guest = Guest.objects.filter(id=card.guest.id).first()
-            devices = Device.objects.filter(
-                Q(room__id=guest.room.id) |
-                Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__in=[guest]),
-                is_active=True,
-            ).distinct()
+            access_context = get_guest_access_context(guest)
+            devices = access_context.get("devices", [])
             card_number = [card.card.number]
             for device in devices:
                 deactivate_result = send_rpc_request(str(device.id), card_number, 0)

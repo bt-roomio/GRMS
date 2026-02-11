@@ -321,7 +321,7 @@ class TsKvQuerySet(BaseQuerySet):
             )
 
             if not rows:
-                filled = fill_missing_intervals([], norm_interval, start_ts, limit, key_name=key, end_ts=effective_end)
+                filled = fill_missing_intervals([], norm_interval, start_ts, limit, key_name=key)
                 out = []
                 for r in filled:
                     out.append({
@@ -342,7 +342,7 @@ class TsKvQuerySet(BaseQuerySet):
                 )
 
             filled = {
-                rid: fill_missing_intervals(series, norm_interval, start_ts, limit, key_name=key, end_ts=effective_end)
+                rid: fill_missing_intervals(series, norm_interval, start_ts, limit, key_name=key)
                 for rid, series in per_room.items()
             }
 

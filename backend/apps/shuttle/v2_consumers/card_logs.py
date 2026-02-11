@@ -18,8 +18,7 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
         query = super().get_queryset(**kwargs)
         params = CardLogFilterParams.check(data=kwargs.get("query_params", {}))
 
-        user = self.scope["user"]
-        tenant=user.get("tenant_id")
+        tenant = self.tenant_id
 
         query = query.list(
             filters=params.get("filters", {}),
@@ -30,7 +29,7 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
             public_space_id=params.get("public_space"),
             user_id=params.get("user"),
             card_num=params.get("card_num"),
-            tenant=tenant
+            tenant=tenant,
         )
 
         return query
