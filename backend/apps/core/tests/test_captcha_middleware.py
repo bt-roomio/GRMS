@@ -132,7 +132,7 @@ class CaptchaProcessRequestTests(TestCase):
 
     @patch("core.middleware.brute_force_protection.security_cache")
     def test_process_request_skips_captcha_below_threshold(self, mock_cache):
-        mock_cache.get.return_value = None
+        mock_cache.get.return_value = 0
 
         request = self.factory.post(
             "/api/v1/users/access-token/",
