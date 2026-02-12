@@ -43,14 +43,18 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = RoomFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(  # pyright: ignore
-            tenant=self.tenant_id,
-            state=params.get("state"),
-            status=params.get("status"),
-            search_field=params.get("search_field"),
-            search_value=params.get("search_value"),
-            sort_by=params.get("sort_by"),
-        ).get_tags(tenant=self.tenant_id, tags=params.get("tags", []))
+        query = (
+            query.list(  # pyright: ignore
+                tenant=self.tenant_id,
+                state=params.get("state"),
+                status=params.get("status"),
+                search_field=params.get("search_field"),
+                search_value=params.get("search_value"),
+                sort_by=params.get("sort_by"),
+            )
+            .rooms_ts_kvs(tenant=self.tenant_id, keys=[*STATIC_KEYS])
+            .get_tags(tenant=self.tenant_id, tags=params.get("tags", []))
+        )
         return query
 
     async def ts_kv_latest_activity(self, message, **kwargs):
@@ -58,6 +62,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             for update in message.get("updates"):
                 await self.ts_kv_latest_activity({"update": update}, **kwargs)
             return
+
         payload = message.get("update")
         if STATIC_KEYS.get(payload.get("key")):
             for request_id, _ in self.query_params.items():
@@ -69,6 +74,50 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
                         room["telemetry"][payload.get("key")] = value
 
                 await self.reply(data=self.responses[request_id], action="list_subscribe", request_id=request_id)
+            return
+
+        for request_id, params in self.subscribers.items():
+            tags = params.get("query_params").get("tags", [])
+            action = params.get("action")
+            response = self.responses.get(request_id, {})
+            for tag in tags:
+                if tag.get("name") == payload.get("key") and tag.get("tag_type") == "telemetry":
+                    results = response.get("results", [])
+                    for room in results:
+                        has_device = room.get("devices", [])
+                        if has_device and has_device[0].get("id") == payload.get("entity"):
+                            for field in room.get("additional_fields", []):
+                                if payload.get("key") in field:
+                                    field[payload.get("key")] = payload.get("value")
+
+                    response["results"] = results
+            await self.reply(data=response, action=action, request_id=request_id)
+
+    async def get_latest_activity(self, message, **kwargs):
+        for update in message.get("updates", []) or []:
+            await self.ts_kv_latest_activity({"update": update}, **kwargs)
+            continue
+
+        payload = message.get("update")
+        for request_id, params in self.subscribers.items():
+            tags = params.get("query_params").get("tags", [])
+            action = params.get("action")
+            response = self.responses.get(request_id, {})
+            for tag in tags:
+                if tag.get("name") == payload.get("key_name") and tag.get("attribute_scope") == payload.get("scope"):
+                    results = response.get("results", [])
+                    for room in results:
+                        has_device = room.get("devices", [])
+                        if has_device and has_device[0].get("id") == payload.get("entity"):
+                            for field in room.get("additional_fields", []):
+                                if payload.get("key_name") in field and field.get("attribute_scope") == payload.get(
+                                    "scope"
+                                ):
+                                    field[payload.get("key_name")] = payload.get("value")
+
+                    response["results"] = results
+
+            await self.reply(data=response, action=action, request_id=request_id)
 
     @model_observer(Room, serializer_class=RoomSerializer)  # pyright: ignore
     async def get_latest_room_activity(self, message, action, **kwargs):
@@ -103,6 +152,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         await self.get_list_activity.subscribe(request_id=request_id, **kwargs)
         self.responses[request_id] = data
         self.query_params[request_id] = query_params
+        self.subscribers[request_id] = {"query_params": query_params, "action": action}
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
@@ -120,5 +170,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         for device_id in devices_in_rooms:
             if remove:
                 await self.remove_group(f"tskv_latest_updates_{device_id}")
+                await self.remove_group(f"attribute_kv_updates_{self.tenant_id}")
             else:
                 await self.add_group(f"tskv_latest_updates_{device_id}")
+                await self.add_group(f"attribute_kv_updates_{self.tenant_id}")
