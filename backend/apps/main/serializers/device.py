@@ -179,13 +179,13 @@ class DeviceFilterParams(ValidatorSerializer):
 
 class GatewayListSerializer(serializers.ModelSerializer):
     total_connectors = serializers.IntegerField(read_only=True)
-    stat = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
-        fields = ("id", "name", "total_connectors", "stat")
+        fields = ("id", "name", "total_connectors", "status")
 
-    def get_stat(self, obj: Device) -> bool:
+    def get_status(self, obj: Device) -> bool:
         attr = next(iter(obj.attribute_kvs.all()), None)
 
         if not attr:
