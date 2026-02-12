@@ -36,18 +36,25 @@ class GatewayConsumer(BaseGenericAsyncAPIConsumer):
     def list(self, **kwargs):
         return self.get_data(**kwargs), 200
 
-    async def get_list_activity(self, **kwargs):
+    async def get_latest_activity(self, message):
+        update = message.get("update") or {}
+        scope = update.get("scope") in {"CLIENT_SCOPE", "SERVER_SCOPE"}
+        key_name = update.get("key_name") == "active"
+
         for request_id, params in self.subscribers.items():
-            data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
-            await self.reply(data=data, action=params.get("action"), request_id=request_id)
+            query_params = params.get("query_params", {})
+            if scope and key_name:
+                await self.send_list_paginated(
+                    action=params.get("action"), query_params=query_params, request_id=request_id
+                )
 
     @action()
     async def list_subscribe(self, **kwargs):
         await self.send_list_paginated(**kwargs)
-        await self.add_group("gateways")
-        self.subscribers[kwargs.get("request_id")] = kwargs.get("query_params", {})
+        await self.add_group(f"attribute_kv_updates_{self.tenant_id}")
+        self.subscribers[kwargs.get("request_id")] = kwargs
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
-        await self.remove_group("gateways")
+        await self.remove_group(f"attribute_kv_updates_{self.tenant_id}")
         self.subscribers.pop(request_id, None)
