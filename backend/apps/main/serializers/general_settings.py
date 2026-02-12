@@ -11,6 +11,7 @@ class DoorLockSerializer(serializers.Serializer):
 
 class TagSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
+    is_boolean = serializers.BooleanField(allow_null=True, required=False)
     tag_type = serializers.ChoiceField(
         choices=("attribute", "telemetry"),
         default="telemetry",
