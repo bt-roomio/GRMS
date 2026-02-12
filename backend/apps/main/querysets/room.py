@@ -1,4 +1,3 @@
-import json
 import logging
 
 from access_manager.tasks.send_rpc import send_rpc_request
@@ -22,34 +21,10 @@ from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.helpers import safely_remove
+from core.utils.querysets import _cast_value
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
 logger = logging.getLogger(__name__)
-
-
-def _cast_value(val):
-    """Cast a TextField string back to its native Python type."""
-    if val is None:
-        return None
-    if not isinstance(val, str):
-        return val
-    low = val.lower()
-    if low == "true":
-        return True
-    if low == "false":
-        return False
-    try:
-        return int(val)
-    except ValueError:
-        pass
-    try:
-        return float(val)
-    except ValueError:
-        pass
-    try:
-        return json.loads(val)
-    except (json.JSONDecodeError, ValueError):
-        return val
 
 
 class JSONBObjectAgg(Aggregate):
@@ -120,6 +95,7 @@ class RoomQuerySet(BaseQuerySet):
 
         query = self.filter(active=True, tenant=tenant)
         attrs_filters = Q()
+        # ts_kvs_keys = [*STATIC_KEYS.values()]
         ts_kvs_keys = []
         for tag in tags:
             if tag.get("tag_type") == "attribute":

@@ -49,11 +49,11 @@ def has_changed_attrs(device_id: str, updates: list[dict]) -> list[dict]:
 
     changed = []
     for update in updates:
-        update_key = update.get("key_name")
+        update_key = f"{update.get('scope')}:{update.get('key_name')}"
         old_value = cached.get(update_key)
         new_value = update.get("value")
 
-        if update.get("key", "").endswith("_LOGS") or old_value != new_value:
+        if update.get("key", "").endswith("_LOGS") or old_value is not new_value:
             changed.append(update)
             cached[update_key] = new_value
 
@@ -63,7 +63,9 @@ def has_changed_attrs(device_id: str, updates: list[dict]) -> list[dict]:
     return changed
 
 
-def get_cached_attributes(device_id: str, attribute_keys: list[str], attribute_type: str = "SERVER_SCOPE") -> dict | None:
+def get_cached_attributes(
+    device_id: str, attribute_keys: list[str], attribute_type: str = "SERVER_SCOPE"
+) -> dict | None:
     """
     Получить атрибуты из Redis кеша.
 
