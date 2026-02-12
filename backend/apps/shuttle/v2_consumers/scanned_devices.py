@@ -35,12 +35,7 @@ class ScannedDevicesConsumer(BaseGenericAsyncAPIConsumer):
         entity = update.get("entity")
         scope = update.get("scope")
         key_name = update.get("key_name")
-        relevant_keys = {
-            "scanned_devices",
-            "upload_status",
-            "scan_status",
-            "active",
-        }  # TODO ask Yanis which attribute must trigger this websocket
+        relevant_keys = {"scanned_devices", "upload_status", "scan_status"}
 
         for request_id, params in self.subscribers.items():
             query_params = params.get("query_params", {})
