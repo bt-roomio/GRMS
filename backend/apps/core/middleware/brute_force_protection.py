@@ -3,6 +3,7 @@ Redis-based brute force protection для REST API
 """
 
 import hashlib
+import json
 import logging
 import time
 from typing import Dict, Tuple
@@ -27,6 +28,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
     - Использует Redis (быстро)
     - Многоуровневая защита
     - Не требует декораторов
+    - CAPTCHA (Cloudflare Turnstile) после N неудачных попыток
     """
 
     def __init__(self, get_response):
@@ -65,6 +67,10 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         self.base_delay = self.config.get("base_delay", 0.5)
         self.max_delay = self.config.get("max_delay", 30)
 
+        # CAPTCHA (Cloudflare Turnstile)
+        self.captcha_enabled = self.config.get("captcha_enabled", False)
+        self.captcha_threshold = self.config.get("captcha_threshold", 3)
+
     def process_request(self, request):
         """Проверить перед обработкой запроса"""
 
@@ -74,7 +80,8 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         # Получить идентификаторы
         ip = self._get_client_ip(request)
-        email = self._extract_email(request)
+        body_data = self._parse_request_body(request)
+        email = body_data.get("email", "anonymous")
 
         # Проверить блокировку
         is_blocked, block_reason = self._check_lockout(ip, email)
@@ -85,6 +92,12 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             )
 
             return self._blocked_response(block_reason)
+
+        # Проверить CAPTCHA
+        if self.captcha_enabled:
+            captcha_response = self._check_captcha(ip, email, captcha_token=body_data.get("captcha_token"))
+            if captcha_response is not None:
+                return captcha_response
 
         # Применить progressive delay
         if self.enable_progressive_delays:
@@ -127,11 +140,17 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             # Если response - JSON, добавить информацию
             if response.get("Content-Type", "").startswith("application/json"):
                 try:
-                    import json
-
                     data = json.loads(response.content)
                     data["attempts_left"] = attempts_left
                     data["lockout_duration"] = self.lockout_duration
+
+                    # Добавить информацию о CAPTCHA
+                    if self.captcha_enabled:
+                        requires_captcha = self._requires_captcha(ip, email)
+                        data["captcha_required"] = requires_captcha
+                        if requires_captcha:
+                            data["captcha_site_key"] = getattr(settings, "TURNSTILE_SITE_KEY", "")
+
                     response.content = json.dumps(data).encode()
                 except Exception:
                     pass
@@ -185,32 +204,14 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         # Обычный REMOTE_ADDR
         return request.META.get("REMOTE_ADDR", "unknown")
 
-    def _extract_email(self, request) -> str:
-        """Извлечь email из запроса"""
+    def _parse_request_body(self, request) -> dict:
+        """Парсинг JSON body из запроса (один раз)"""
         try:
-            # Попытка 1: JSON body
-            if hasattr(request, "data"):
-                email = request.data.get("email")
-                if email:
-                    return email
-
-            # Попытка 2: POST данные
-            email = request.POST.get("email")
-            if email:
-                return email
-
-            # Попытка 3: Parse JSON manually
             if request.body:
-                import json
-
-                data = json.loads(request.body)
-                email = data.get("email")
-                if email:
-                    return email
+                return json.loads(request.body)
         except Exception:
             pass
-
-        return "anonymous"
+        return {}
 
     def _check_lockout(self, ip: str, email: str) -> Tuple[bool, str]:
         """
@@ -261,6 +262,74 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             return True
 
         return False
+
+    # ==========================================
+    # CAPTCHA (Cloudflare Turnstile)
+    # ==========================================
+
+    def _get_attempt_count(self, ip: str, email: str) -> int:
+        """Получить текущее количество попыток из Redis"""
+        attempt_key = f"bf:attempts:{self._hash(f'{email}:{ip}')}"
+        return security_cache.get(attempt_key, 0)
+
+    def _requires_captcha(self, ip: str, email: str) -> bool:
+        """Проверить, требуется ли CAPTCHA на основе количества попыток"""
+        if not self.captcha_enabled:
+            return False
+        return self._get_attempt_count(ip, email) >= self.captcha_threshold
+
+    def _check_captcha(self, ip: str, email: str, captcha_token: str | None = None):
+        """
+        Валидация CAPTCHA токена если требуется.
+
+        Returns None если CAPTCHA не требуется или токен валиден.
+        Returns JsonResponse если CAPTCHA требуется но отсутствует/невалиден.
+        """
+        if not self._requires_captcha(ip, email):
+            return None
+
+        if not captcha_token:
+            logger.warning(f"CAPTCHA required but not provided: {email} from {ip}")
+            return JsonResponse(
+                {
+                    "error": "CAPTCHA required",
+                    "detail": "Too many failed attempts. Please complete the CAPTCHA challenge.",
+                    "captcha_required": True,
+                    "captcha_site_key": getattr(settings, "TURNSTILE_SITE_KEY", ""),
+                },
+                status=403,
+            )
+
+        # Верифицировать токен через Cloudflare API
+        from core.utils.turnstile import TurnstileVerificationError, verify_turnstile_token
+
+        try:
+            is_valid = verify_turnstile_token(captcha_token, remote_ip=ip)
+        except TurnstileVerificationError:
+            # Fail open при проблемах с инфраструктурой — brute force защита всё ещё активна
+            logger.error(
+                f"Turnstile verification failed (infrastructure), allowing request: {email} from {ip}"
+            )
+            return None
+
+        if not is_valid:
+            logger.warning(f"Invalid CAPTCHA token: {email} from {ip}")
+            return JsonResponse(
+                {
+                    "error": "Invalid CAPTCHA",
+                    "detail": "CAPTCHA verification failed. Please try again.",
+                    "captcha_required": True,
+                    "captcha_site_key": getattr(settings, "TURNSTILE_SITE_KEY", ""),
+                },
+                status=403,
+            )
+
+        # CAPTCHA валидна — пропускаем запрос
+        return None
+
+    # ==========================================
+    # Attempt tracking
+    # ==========================================
 
     def _record_failed_attempt(self, ip: str, email: str, request):
         """Записать неудачную попытку"""

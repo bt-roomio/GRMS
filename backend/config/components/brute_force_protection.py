@@ -2,6 +2,18 @@
 Конфигурация защиты от brute force для REST API
 """
 
+import os
+
+# ============================================
+# CLOUDFLARE TURNSTILE CAPTCHA
+# ============================================
+
+TURNSTILE_ENABLED = os.getenv("TURNSTILE_ENABLED", "False").lower() in ("true", "1", "yes")
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
+TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+TURNSTILE_TIMEOUT = 5  # seconds
+
 # ============================================
 # BRUTE FORCE PROTECTION CONFIGURATION
 # ============================================
@@ -38,6 +50,10 @@ BRUTE_FORCE_CONFIG = {
     "enable_progressive_delays": True,
     "base_delay": 0.5,  # Базовая задержка (секунды)
     "max_delay": 30,  # Максимальная задержка (секунды)
+    # ===== CAPTCHA (Cloudflare Turnstile) =====
+    # Number of failed attempts before CAPTCHA is required
+    "captcha_threshold": 3,
+    "captcha_enabled": TURNSTILE_ENABLED,
     # ===== WHITELIST =====
     # IP адреса, которые не блокируются (для тестов)
     "whitelist_ips": [

@@ -16,6 +16,7 @@ from shuttle.v2_consumers.room_detail import RoomDetailConsumer
 from shuttle.v2_consumers.room_dynamics import TsKvTenantHistoryConsumer
 from shuttle.v2_consumers.room_status import RoomStatusConsumer
 from shuttle.v2_consumers.rooms import RoomConsumer
+from shuttle.v2_consumers.scanned_devices import ScannedDevicesConsumer
 from shuttle.v2_consumers.tag_logs import TagLogsConsumer
 from shuttle.v2_consumers.ts_kv_history import TsKvHistoryConsumer
 from shuttle.v2_consumers.ts_kv_latest import TsKvLatestConsumer
@@ -26,6 +27,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "rooms": RoomConsumer.as_asgi(),
         "room_detail": RoomDetailConsumer.as_asgi(),
         "room_status": RoomStatusConsumer.as_asgi(),
+        "scanned_devices": ScannedDevicesConsumer.as_asgi(),
         "guests": GuestConsumer.as_asgi(),
         "guest_cards": GuestCardConsumer.as_asgi(),
         "cards": CardConsumer.as_asgi(),
