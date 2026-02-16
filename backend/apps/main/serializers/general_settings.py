@@ -53,6 +53,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     aggregate_db = serializers.BooleanField(default=False)
     main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
     room_fields = TagSerializer(many=True, required=False)
+    config = serializers.JSONField(default={})
 
     def validate_main_dashboard(self, value):
         dashboard = Dashboard.objects.filter(id=value.id).first()

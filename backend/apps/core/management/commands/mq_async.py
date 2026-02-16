@@ -66,9 +66,9 @@ TOPIC_DEVICES_ATTRIBUTES_REQUEST = "v1/devices/me/attributes/request"
 TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
-BATCH_SIZE = 1000
-BATCH_TIMEOUT = 0.2  # 100ms
-PREFETCH_COUNT = 1000
+BATCH_SIZE = 50
+BATCH_TIMEOUT = 0.2  # 200ms
+PREFETCH_COUNT = 200
 
 RB_LOGIN = settings.RABBIT_LOGIN
 RB_PASSWORD = settings.RABBIT_PASSWORD
@@ -142,17 +142,17 @@ async def validate_body(body: bytes):
     return device, msg
 
 
-# Wrap sync batch functions
-sync_telemetry_batch_async = sync_to_async(sync_telemetry_batch, thread_sensitive=True)
-sync_attributes_batch_async = sync_to_async(sync_attributes_batch, thread_sensitive=True)
+# Wrap sync batch functions (thread_sensitive=False allows parallel execution in thread pool)
+sync_telemetry_batch_async = sync_to_async(sync_telemetry_batch, thread_sensitive=False)
+sync_attributes_batch_async = sync_to_async(sync_attributes_batch, thread_sensitive=False)
 # sync_state_device_batch_async is already async, imported directly
 
 # Wrap individual handlers
-handle_rpc_async = sync_to_async(handle_rpc, thread_sensitive=True)
-handle_connect_disconnect_async = sync_to_async(handle_connect_disconnect, thread_sensitive=True)
+handle_rpc_async = sync_to_async(handle_rpc, thread_sensitive=False)
+handle_connect_disconnect_async = sync_to_async(handle_connect_disconnect, thread_sensitive=False)
 
 # Wrap helper functions for attribute request
-get_sub_device_async = sync_to_async(get_sub_device, thread_sensitive=True)
+get_sub_device_async = sync_to_async(get_sub_device, thread_sensitive=False)
 
 
 async def get_attribute_response(device: DeviceType, data: dict, topic: str):
@@ -185,23 +185,20 @@ async def get_attribute_response(device: DeviceType, data: dict, topic: str):
                 "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
             }
 
-    return await sync_to_async(_get_attributes_sync, thread_sensitive=True)()
+    return await sync_to_async(_get_attributes_sync, thread_sensitive=False)()
 
 
-async def handle_attribute_request_async(topic: str, device: DeviceType, data: dict):
+async def handle_attribute_request_async(topic: str, device: DeviceType, data: dict, publish_channel):
     """Handle attribute request with async RabbitMQ response"""
     try:
         # Get attribute response
         response = await get_attribute_response(device, data, topic)
 
-        # Send response via async channel
-        connection = await aio_pika.connect_robust(f"amqp://{RB_LOGIN}:{RB_PASSWORD}@{RB_HOST}:{RB_PORT}/")
-        async with connection:
-            channel = await connection.channel()
-            await channel.default_exchange.publish(
-                aio_pika.Message(body=json.dumps(response).encode()),
-                routing_key=QUEUE_FROM_GRMS,
-            )
+        # Send response via shared channel
+        await publish_channel.default_exchange.publish(
+            aio_pika.Message(body=json.dumps(response).encode()),
+            routing_key=QUEUE_FROM_GRMS,
+        )
         logger.debug(f"Attribute response sent for device {device.get('id')}")
     except Exception as exc:
         logger.exception(f"Failed to send attribute response: {exc}")
@@ -209,10 +206,11 @@ async def handle_attribute_request_async(topic: str, device: DeviceType, data: d
 
 
 class BatchAccumulator:
-    def __init__(self, queue_name: str, batch_size=50, batch_timeout=0.1):
+    def __init__(self, queue_name: str, batch_size=50, batch_timeout=0.1, publish_channel=None):
         self.queue_name = queue_name
         self.batch_size = batch_size
         self.batch_timeout = batch_timeout
+        self.publish_channel = publish_channel
         self.message_queue = asyncio.Queue()
         self.shutdown_event = asyncio.Event()
 
@@ -270,6 +268,7 @@ class BatchAccumulator:
 
         # Step 1: Validate and group messages
         for message in batch:
+            logger.debug(f"Message: {message.body}")
             try:
                 device, msg = await validate_body(message.body)
                 topic = msg.get("topic", "")
@@ -337,7 +336,7 @@ class BatchAccumulator:
                 if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(
                     TOPIC_DEVICES_ATTRIBUTES_REQUEST
                 ):
-                    await handle_attribute_request_async(topic, device, data)
+                    await handle_attribute_request_async(topic, device, data, self.publish_channel)
                 elif topic == TOPIC_GATEWAY_RPC:
                     await handle_rpc_async(data)
                 else:
@@ -372,6 +371,7 @@ class AsyncMQConsumer:
         self.accumulators = {}  # {queue_name: BatchAccumulator}
         self.queue_tasks = []
         self.shutdown_event = asyncio.Event()
+        self.publish_channel = None
 
     async def start(self):
         """Main entry point - start all queue consumers"""
@@ -386,6 +386,9 @@ class AsyncMQConsumer:
                 await channel.declare_queue(queue_name, durable=True)
             await channel.declare_queue(QUEUE_FROM_GRMS, durable=True)
             logger.info("Queues declared successfully")
+
+            # Create shared publish channel for responses
+            self.publish_channel = await connection.channel()
 
             # Start consumer task for each queue
             for queue_name in QUEUE_CONFIG:
@@ -403,7 +406,7 @@ class AsyncMQConsumer:
     async def consume_queue(self, connection, queue_name: str):
         """Consumer for a single queue"""
         # Create BatchAccumulator for this queue
-        accumulator = BatchAccumulator(queue_name, BATCH_SIZE, BATCH_TIMEOUT)
+        accumulator = BatchAccumulator(queue_name, BATCH_SIZE, BATCH_TIMEOUT, self.publish_channel)
         self.accumulators[queue_name] = accumulator
 
         # Start batch processor

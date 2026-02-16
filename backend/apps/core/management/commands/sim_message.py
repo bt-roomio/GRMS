@@ -69,7 +69,12 @@ class Command(BaseCommand):
             # "data": {"gateway_online": True},
             # "topic": "v1/devices/me/attributes",
             "data": {"device": "4c:71:43:10:02:80", "type": "default"},
-            "topic": "v1/gateway/connect",
+            "topic": "v1/gateway/disconnect",
+        }
+        msg = {
+            "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
+            "data": {"device": "4c:71:43:10:02:80"},
+            "topic": "v1/gateway/disconnect",
         }
         msg1 = {
             "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
