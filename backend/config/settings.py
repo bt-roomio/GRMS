@@ -434,7 +434,7 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "WARNING",
+            "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
@@ -498,7 +498,7 @@ LOGGING = {
         "core": {
             "handlers": ["console"],
             "propagate": False,
-            "level": "WARNING",
+            "level": "DEBUG",
         },
         "django.request": {
             "handlers": ["console"],

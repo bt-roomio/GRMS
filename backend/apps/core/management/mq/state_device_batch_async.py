@@ -238,9 +238,12 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
         # Добавить созданные атрибуты в attr_map_by_device для WebSocket публикации
         for attr in to_create:
+            print(attr)
             if attr.entity_id not in attr_map_by_device:
+                print("if")
                 attr_map_by_device[attr.entity_id] = {}
             attr_map_by_device[attr.entity_id][attr.attribute_key] = attr
+            # TODO: convert `attr` AttributeKv to dict
 
     if devices_to_update_status:
         for device_id, connected in devices_to_update_status:
@@ -267,6 +270,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             connected = update_info["connected"]
             device_needs_update = update_info.get("device_needs_update", False)
             attr_map = attr_map_by_device.get(device_id, {})
+            print(attr_map)
 
             logger.debug(
                 f"[state_device_batch_async] Device {device_id}: to_update_attrs={len(update_info.get('to_update_attrs', []))}, "
@@ -283,7 +287,9 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             else:
                 active_attr = attr_map.get("active")
                 last_activity_attr = attr_map.get("lastActivityTime")
+                print("LOG", active_attr, type(active_attr))
                 if active_attr and hasattr(active_attr, "entity"):
+                    print("IF, active_attr.entity:")
                     tenant_id = active_attr.entity.tenant_id
                 elif last_activity_attr and hasattr(last_activity_attr, "entity"):
                     tenant_id = last_activity_attr.entity.tenant_id
