@@ -96,7 +96,13 @@ class Command(BaseCommand):
             },
             "topic": "v1/devices/me/telemetry",
         }
-        send_to_rabbitmq(ch, msg, "/telemetry")
+        msg = {
+            "sourceDeviceUUID": "47aef21b-6cc9-4ec5-8573-1a6f491940c0",
+            "data": {"device": "4c:71:43:10:02:80", "type": "fanvil_door_phone"},
+            "topic": "v1/gateway/connect",
+        }
+        print(msg)
+        send_to_rabbitmq(ch, msg, "/attributes")
 
     @staticmethod
     def bulk_publish():
