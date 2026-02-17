@@ -268,11 +268,11 @@ class BatchAccumulator:
 
         # Step 1: Validate and group messages
         for message in batch:
-            logger.debug(f"Message: {message.body}")
             try:
                 device, msg = await validate_body(message.body)
                 topic = msg.get("topic", "")
                 data = msg.get("data")
+                logger.info(f"Topic: {topic}, Message: {msg}")
 
                 if topic.endswith(TOPIC_TELEMETRY):
                     telemetry_batch.append((device, topic, data, message))

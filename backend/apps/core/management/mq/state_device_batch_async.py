@@ -50,9 +50,11 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
     # Шаг 1: Парсинг и группировка сообщений
     for device, topic, data in batch:
-        device_id = device.get("id")
         sub_device_name = data.get("device")
-        sub = await sync_to_async(get_sub_device, thread_sensitive=True)(device, name=sub_device_name)
+        device_type = data.get("type")
+        sub = await sync_to_async(get_sub_device, thread_sensitive=True)(
+            device, name=sub_device_name, device_type=device_type
+        )
         sub_device_id = sub.get("id")
         connected = not topic.endswith("disconnect")
 
@@ -114,7 +116,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                         entity_id=device_id,
                         attribute_type=AttributeKv.SERVER_SCOPE,
                         attribute_key__in=["active", "lastActivityTime"],
-                    ).select_related("entity")
+                    )
                 ),
                 thread_sensitive=True,
             )()
@@ -123,6 +125,14 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             attr_map_by_device[device_id] = attr_map
 
     logger.debug(f"[state_device_batch_async] Loaded attributes for {len(attr_map_by_device)} devices")
+
+    # === Шаг 2.5: Batched device info (tenant_id, status) ===
+    device_ids = list(device_updates.keys())
+    device_info_rows = await sync_to_async(
+        lambda: list(Device.objects.filter(id__in=device_ids).values("id", "tenant_id", "status")),
+        thread_sensitive=True,
+    )()
+    device_info_by_id = {str(r["id"]): r for r in device_info_rows}
 
     # Шаг 3: Подготовка bulk операций
     to_update = []
@@ -153,10 +163,9 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                 active_attr.entity_type = "DEVICE"
                 to_update.append(active_attr)
 
+            info = device_info_by_id.get(str(device_id))
             current_device_status = (
-                update_info["cached_device_status"]
-                if from_cache
-                else (active_attr.entity.status if hasattr(active_attr, "entity") else False)
+                update_info["cached_device_status"] if from_cache else (info["status"] if info else False)
             )
             if current_device_status != connected:
                 device_needs_update = True
@@ -277,34 +286,19 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                 logger.debug(f"[state_device_batch_async] Skipping device {device_id} - no attribute changes")
                 continue
 
-            # Get tenant_id
             if from_cache:
                 tenant_id = update_info["cached_tenant_id"]
             else:
-                active_attr = attr_map.get("active")
-                last_activity_attr = attr_map.get("lastActivityTime")
-                if active_attr and hasattr(active_attr, "entity"):
-                    tenant_id = active_attr.entity.tenant_id
-                elif last_activity_attr and hasattr(last_activity_attr, "entity"):
-                    tenant_id = last_activity_attr.entity.tenant_id
-                else:
-                    device = await Device.objects.aget(id=device_id)
-                    tenant_id = device.tenant_id
+                info = device_info_by_id.get(str(device_id))
+                tenant_id = info["tenant_id"] if info else None
 
             device_key = f"{device_id}_{tenant_id}"
 
+            info = device_info_by_id.get(str(device_id))
+            db_status = info["status"] if info else False
+
             current_status = (
-                connected
-                if device_needs_update
-                else (
-                    update_info["cached_device_status"]
-                    if from_cache
-                    else (
-                        attr_map["active"].entity.status
-                        if "active" in attr_map and hasattr(attr_map["active"], "entity")
-                        else False
-                    )
-                )
+                connected if device_needs_update else (update_info["cached_device_status"] if from_cache else db_status)
             )
 
             cache_data = {}
@@ -351,19 +345,17 @@ async def sync_state_device_batch_async(batch: list[tuple]):
         if cache_updates_by_device:
             logger.debug(f"[state_device_batch_async] Updated cache for {len(cache_updates_by_device)} devices")
 
-    # Шаг 7: Room status publication
+    # Шаг 7: Room status publication (NO attr.entity, batched fetch)
+    device_ids_for_room_status = [
+        device_id for device_id, update_info in device_updates.items() if update_info.get("device_needs_update")
+    ]
+
     devices_for_room_status = []
-    for device_id, update_info in device_updates.items():
-        if update_info.get("device_needs_update"):
-            from_cache = update_info["from_cache"]
-            if from_cache:
-                device = await Device.objects.aget(id=device_id)
-                devices_for_room_status.append(device)
-            else:
-                attr_map = attr_map_by_device.get(device_id, {})
-                active_attr = attr_map.get("active")
-                if active_attr and hasattr(active_attr, "entity"):
-                    devices_for_room_status.append(active_attr.entity)
+    if device_ids_for_room_status:
+        devices_for_room_status = await sync_to_async(
+            lambda: list(Device.objects.filter(id__in=device_ids_for_room_status)),
+            thread_sensitive=True,
+        )()
 
     for device in devices_for_room_status:
         try:
