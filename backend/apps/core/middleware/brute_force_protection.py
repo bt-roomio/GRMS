@@ -13,7 +13,7 @@ from django.core.cache import caches
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
-logger = logging.getLogger("security")
+logger = logging.getLogger(__name__)
 
 # Используем отдельный Redis cache для security
 security_cache = caches["security"]
@@ -307,9 +307,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             is_valid = verify_turnstile_token(captcha_token, remote_ip=ip)
         except TurnstileVerificationError:
             # Fail open при проблемах с инфраструктурой — brute force защита всё ещё активна
-            logger.error(
-                f"Turnstile verification failed (infrastructure), allowing request: {email} from {ip}"
-            )
+            logger.error(f"Turnstile verification failed (infrastructure), allowing request: {email} from {ip}")
             return None
 
         if not is_valid:
