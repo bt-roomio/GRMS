@@ -96,17 +96,17 @@ grms-backend:
     - apk update && apk add openssh-client
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - echo "$STROYTEKS_PRIVATE_KEY" > ~/.ssh/stroyteks && chmod 600 ~/.ssh/stroyteks
+    - echo "$LETO_PRIVATE_KEY" > ~/.ssh/leto && chmod 600 ~/.ssh/leto
     - echo "$ROOMIO_PRIVATE_KEY" > ~/.ssh/roomio && chmod 600 ~/.ssh/roomio
-    - ssh-keyscan -p $STROYTEKS_PORT $STROYTEKS_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan -p $LETO_PORT $LETO_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
     - |
       cat > ~/.ssh/config <<EOF
-      Host stroyteks
-        HostName $STROYTEKS_HOST
-        User $STROYTEKS_USER
-        Port $STROYTEKS_PORT
-        IdentityFile ~/.ssh/stroyteks
+      Host leto
+        HostName $LETO_HOST
+        User $LETO_USER
+        Port $LETO_PORT
+        IdentityFile ~/.ssh/leto
         ForwardAgent yes
         StrictHostKeyChecking yes
         
@@ -115,15 +115,15 @@ grms-backend:
         User $ROOMIO_USER
         Port $ROOMIO_PORT
         IdentityFile ~/.ssh/roomio
-        ProxyJump stroyteks
+        ProxyJump leto
         ForwardAgent yes
         StrictHostKeyChecking no
         UserKnownHostsFile /dev/null
       EOF
     - chmod 600 ~/.ssh/config
   script:
-    - ssh stroyteks "echo 'Connected to stroyteks successfully'"
-    - ssh roomio "echo 'Connected to roomio through stroyteks successfully'"
+    - ssh leto "echo 'Connected to leto successfully'"
+    - ssh roomio "echo 'Connected to roomio through leto successfully'"
     - ssh roomio "
       cd ~/GRMS;
       echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
@@ -143,17 +143,17 @@ grms-frontend:
     - apk update && apk add openssh-client
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - echo "$STROYTEKS_PRIVATE_KEY" > ~/.ssh/stroyteks && chmod 600 ~/.ssh/stroyteks
+    - echo "$LETO_PRIVATE_KEY" > ~/.ssh/leto && chmod 600 ~/.ssh/leto
     - echo "$ROOMIO_PRIVATE_KEY" > ~/.ssh/roomio && chmod 600 ~/.ssh/roomio
-    - ssh-keyscan -p $STROYTEKS_PORT $STROYTEKS_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan -p $LETO_PORT $LETO_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
     - |
       cat > ~/.ssh/config <<EOF
-      Host stroyteks
-        HostName $STROYTEKS_HOST
-        User $STROYTEKS_USER
-        Port $STROYTEKS_PORT
-        IdentityFile ~/.ssh/stroyteks
+      Host leto
+        HostName $LETO_HOST
+        User $LETO_USER
+        Port $LETO_PORT
+        IdentityFile ~/.ssh/leto
         ForwardAgent yes
         StrictHostKeyChecking yes
 
@@ -162,15 +162,15 @@ grms-frontend:
         User $ROOMIO_USER
         Port $ROOMIO_PORT
         IdentityFile ~/.ssh/roomio
-        ProxyJump stroyteks
+        ProxyJump leto
         ForwardAgent yes
         StrictHostKeyChecking no
         UserKnownHostsFile /dev/null
       EOF
     - chmod 600 ~/.ssh/config
   script:
-    - ssh stroyteks "echo 'Connected to stroyteks successfully'"
-    - ssh roomio "echo 'Connected to roomio through stroyteks successfully'"
+    - ssh leto "echo 'Connected to leto successfully'"
+    - ssh roomio "echo 'Connected to roomio through leto successfully'"
     - ssh roomio "
       cd ~/GRMS;
       echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
