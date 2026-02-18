@@ -178,20 +178,25 @@ class DeviceFilterParams(ValidatorSerializer):
 
 
 class GatewayListSerializer(serializers.ModelSerializer):
-    total_connectors = serializers.IntegerField(read_only=True)
+    total_connectors = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
 
     class Meta:
         model = Device
         fields = ("id", "name", "total_connectors", "status")
 
+    def _attrs(self, obj: Device) -> dict:
+        return {a.attribute_key: a for a in obj.attribute_kvs.all()}
+
+    def get_total_connectors(self, obj: Device) -> int:
+        m = self._attrs(obj)
+        a = (m.get("active_connectors") or {}).get_value if m.get("active_connectors") else []
+        i = (m.get("inactive_connectors") or {}).get_value if m.get("inactive_connectors") else []
+        return len(a or []) + len(i or [])
+
     def get_status(self, obj: Device) -> bool:
-        attr = next(iter(obj.attribute_kvs.all()), None)
-
-        if not attr:
-            return False
-        value = attr.get_value
-
-        if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "on"}
-        return bool(value)
+        m = self._attrs(obj)
+        v = m.get("active").get_value if m.get("active") else False
+        if isinstance(v, str):
+            return v.strip().lower() in {"1", "true", "yes", "on"}
+        return bool(v)

@@ -1,5 +1,4 @@
-from asgiref.sync import sync_to_async
-from django.db.models import Count, Prefetch
+from django.db.models import Prefetch
 from djangochannelsrestframework.observer.generics import action
 
 from main.models import Device
@@ -17,20 +16,15 @@ class GatewayConsumer(BaseGenericAsyncAPIConsumer):
         await super().accept(*args, **kwargs)
 
     def get_queryset(self, **kwargs):
-        qs = (
-            super()
-            .get_queryset(**kwargs)
-            .filter(tenant_id=self.tenant_id)
-            .annotate(total_connectors=Count("from_relations"))
-        )
+        qs = super().get_queryset(**kwargs).filter(tenant_id=self.tenant_id)
 
-        active_attr_qs = AttributeKv.objects.filter(
-            attribute_key="active",
-            attribute_type=AttributeKv.SERVER_SCOPE,
+        attrs = AttributeKv.objects.filter(
+            attribute_type__in=(AttributeKv.SERVER_SCOPE, AttributeKv.SHARED_SCOPE),
+            attribute_key__in=("active", "active_connectors", "inactive_connectors"),
             entity__in=qs,
         )
 
-        return qs.prefetch_related(Prefetch("attribute_kvs", queryset=active_attr_qs))
+        return qs.prefetch_related(Prefetch("attribute_kvs", queryset=attrs))
 
     @action()
     def list(self, **kwargs):
@@ -38,15 +32,15 @@ class GatewayConsumer(BaseGenericAsyncAPIConsumer):
 
     async def get_latest_activity(self, message):
         update = message.get("update") or {}
-        scope = update.get("scope") in {"CLIENT_SCOPE", "SERVER_SCOPE"}
-        key_name = update.get("key_name") == "active"
+        if update.get("key_name") not in {"active", "active_connectors", "inactive_connectors"}:
+            return
 
         for request_id, params in self.subscribers.items():
-            query_params = params.get("query_params", {})
-            if scope and key_name:
-                await self.send_list_paginated(
-                    action=params.get("action"), query_params=query_params, request_id=request_id
-                )
+            await self.send_list_paginated(
+                action=params.get("action"),
+                query_params=params.get("query_params", {}),
+                request_id=request_id,
+            )
 
     @action()
     async def list_subscribe(self, **kwargs):

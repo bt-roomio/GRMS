@@ -5,9 +5,9 @@ import redis
 from django.conf import settings
 
 from core.management.mq.device_cache import (
-    DeviceType,
     _DEVICE_MEMORY_CACHE,
     _MEMORY_CACHE_TTL,
+    DeviceType,
     _update_memory_cache,
 )
 from core.utils.get_time import get_mil_sec
@@ -80,17 +80,14 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
     sub_device = get_device(sub_cache_key, device.get("tenant_id"))
 
     if device_type:
-        name_map = {
-            "ttlock": "TTLock",
-            "fanvil_intercom": "Fanvil Intercom",
-            "default": "Default"
-        }
+        name_map = {"ttlock": "TTLock", "fanvil_intercom": "Fanvil Intercom", "default": "Default"}
         dt = device_type.strip().lower().replace("-", "_")
         profile_name = name_map.get(dt) or " ".join(w.capitalize() for w in dt.split("_") if w)
 
         device_profile, _ = DeviceProfile.objects.get_or_create(
             name__iexact=profile_name,
             tenant_id=device.get("tenant_id"),
+            active=True,
             defaults={"name": profile_name, "type": "DEFAULT"},
         )
         device["device_profile_id"] = device_profile.id
@@ -101,6 +98,7 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
         sub_device = _device_cache(cache_key, sub_device)
 
     return sub_device
+
 
 def get_or_create_device(name, from_device):
     tenant_id = from_device.get("tenant_id")
