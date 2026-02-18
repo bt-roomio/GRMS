@@ -268,6 +268,7 @@ class BatchAccumulator:
 
         # Step 1: Validate and group messages
         for message in batch:
+            logger.info(f"Message: {message.body}")
             try:
                 device, msg = await validate_body(message.body)
                 topic = msg.get("topic", "")

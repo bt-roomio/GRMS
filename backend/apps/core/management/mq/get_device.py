@@ -5,9 +5,9 @@ import redis
 from django.conf import settings
 
 from core.management.mq.device_cache import (
-    DeviceType,
     _DEVICE_MEMORY_CACHE,
     _MEMORY_CACHE_TTL,
+    DeviceType,
     _update_memory_cache,
 )
 from core.utils.get_time import get_mil_sec
@@ -87,6 +87,7 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
         device_profile, _ = DeviceProfile.objects.get_or_create(
             name__iexact=profile_name,
             tenant_id=device.get("tenant_id"),
+            active=True,
             defaults={"name": profile_name, "type": "DEFAULT"},
         )
         device["device_profile_id"] = device_profile.id
