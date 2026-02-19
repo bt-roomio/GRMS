@@ -125,6 +125,9 @@
       - - delete_room
         - main
         - room
+      - - view_roomstatus
+        - main
+        - room
 
       - - add_roomfromconf
         - main
