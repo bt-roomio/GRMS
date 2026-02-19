@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
-from main.models import Device, DevicePublicSpaces
+from main.models import Device, DevicePublicSpaces, Room
 from main.serializers.device import DeviceFilterParams, DeviceSerializer
 from main.swagger.device import DeviceDetailSwagger, DeviceSwagger
 
@@ -71,6 +71,7 @@ class DeviceDetailView(APIView):
 def remove_need_sync(device: Device):
     NeedSyncDevice.objects.filter(device=device, need_sync=True).update(need_sync=False)
     DevicePublicSpaces.objects.filter(device=device).delete()
+    Room.objects.filter(door_lock_device=device).update(door_lock_device=None)
 
     if device.room:
         device.room = None
