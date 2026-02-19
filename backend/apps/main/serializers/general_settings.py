@@ -23,6 +23,7 @@ class TagSerializer(serializers.Serializer):
         allow_blank=True,
         error_messages={"invalid_choice": f"Scope of the attribute, e.g., {[k[0] for k in AttributeKv.ENTITY_TYPE]}"},
     )
+    config = serializers.JSONField(default={})
 
     class Meta:
         ref_name = "RoomFieldTag"
@@ -53,7 +54,6 @@ class GeneralSettingsSerializer(serializers.Serializer):
     aggregate_db = serializers.BooleanField(default=False)
     main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
     room_fields = TagSerializer(many=True, required=False)
-    config = serializers.JSONField(default={})
 
     def validate_main_dashboard(self, value):
         dashboard = Dashboard.objects.filter(id=value.id).first()
