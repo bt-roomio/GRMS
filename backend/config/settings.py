@@ -410,6 +410,10 @@ CELERY_BEAT_SCHEDULE = {
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
 
+_LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "WARNING").upper()
+_LOG_FORMATTER = os.getenv("DJANGO_LOG_FORMATTER", "simple")
+_LOG_SQL = os.getenv("DJANGO_LOG_SQL", "false").lower() in ("1", "true", "yes")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -434,9 +438,9 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "WARNING",
+            "level": "DEBUG",
             "class": "logging.StreamHandler",
-            "formatter": "simple",
+            "formatter": _LOG_FORMATTER,
         },
         "file": {
             "level": "WARNING",
@@ -458,53 +462,69 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
         },
         "celery": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "main": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "mews": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "services": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "shuttle": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "access_manager": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "hoteza": {
             "handlers": ["file_hoteza_app"],
-            "level": "WARNING",
+            "level": _LOG_LEVEL,
             "propagate": False,
         },
         "core": {
             "handlers": ["console"],
+            "level": _LOG_LEVEL,
             "propagate": False,
-            "level": "WARNING",
+        },
+        "security": {
+            "handlers": ["console"],
+            "level": _LOG_LEVEL,
+            "propagate": False,
         },
         "django.request": {
             "handlers": ["console"],
             "level": "ERROR",
             "propagate": False,
         },
+        **(
+            {
+                "django.db.backends": {
+                    "handlers": ["console"],
+                    "level": "DEBUG",
+                    "propagate": False,
+                }
+            }
+            if _LOG_SQL
+            else {}
+        ),
     },
 }
 
