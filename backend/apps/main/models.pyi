@@ -7,6 +7,7 @@ from django.db import models
 from core.models import BaseModel, UpdateByModel
 from main.querysets.device import DeviceQuerySet
 from main.querysets.room import RoomQuerySet
+from shuttle.models import Relation as Relation
 from shuttle.models import TsKvDictionary as TsKvDictionary
 
 class Tenant(BaseModel):
@@ -142,6 +143,7 @@ class Device:
     device_data: Incomplete
     external_id: Incomplete
     card: Incomplete
+    relations: list[Relation]
     objects: DeviceQuerySet
     def clean(self) -> None: ...
     def save(self, *args, **kwargs) -> None: ...
