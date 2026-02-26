@@ -57,6 +57,17 @@ class RoomQuerySet(BaseQuerySet):
         query = query.filter(status=status) if status else query
         return query.order_by(*(sort_by or ["number"]) + ["id"])
 
+    def guest_details(self, tenant):
+        from main.models import Guest
+
+        return self.prefetch_related(
+            Prefetch(
+                "guests",
+                queryset=Guest.objects.filter(is_active=True).order_by("-created_at"),
+                to_attr="prefetched_guests",
+            )
+        )
+
     def rooms_ts_kvs(self, tenant, keys):
         from shuttle.models import TsKvLatest
 

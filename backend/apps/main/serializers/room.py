@@ -28,6 +28,8 @@ class RoomSerializer(serializers.ModelSerializer):
         data["door_lock_device"] = (
             SimpleDeviceSerializer(instance.door_lock_device).data if instance.door_lock_device else None
         )
+        if hasattr(instance, "prefetched_guests"):
+            data["guests"] = SimpleGuestSerializer(instance.prefetched_guests, many=True).data
         if hasattr(instance, "count_online_devices"):
             data["status"] = (
                 "ON"
