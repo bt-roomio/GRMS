@@ -206,6 +206,28 @@ class RoomQuerySet(BaseQuerySet):
             room.save(update_fields=["state"])
         return guests.count(), deactivate_result
 
+    def block_floors(self, tenant):
+        query = (
+            self.filter(active=True, tenant=tenant)
+            .values("block", "floor")
+            .annotate(count=Count("id"))
+            .order_by("block", "floor")
+        )
+
+        blocks: dict = {}
+        for item in query:
+            block = item["block"]
+            floor = item["floor"]
+            count = item["count"]
+
+            if block not in blocks:
+                blocks[block] = {"name": block, "count": 0, "floors": []}
+
+            blocks[block]["count"] += count
+            blocks[block]["floors"].append({"name": floor, "count": count})
+
+        return list(blocks.values())
+
     def total_rooms_count(self, tenant_id):
         return self.filter(active=True, tenant_id=tenant_id).count()
 
