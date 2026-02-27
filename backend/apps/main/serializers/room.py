@@ -2,12 +2,14 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 
+from core.utils.querysets import _cast_value
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, Room, RoomType, Tenant
 from main.serializers.device import SimpleDeviceSerializer
 from main.serializers.general_settings import TagSerializer
 from main.serializers.guest import SimpleGuestSerializer
 from main.serializers.room_type import RoomTypeSerializer
+from shuttle.constants import STATIC_KEYS
 from shuttle.models import AttributeKv
 
 
@@ -21,15 +23,37 @@ class RoomSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["additional_fields"] = instance.additional_fields if hasattr(instance, "additional_fields") else []
-        data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
+        if hasattr(instance, "room_devices"):
+            target_device = instance.room_devices[0] if instance.room_devices else None
+            attrs = target_device.attrs if target_device else []
+            ts_kvs = target_device.ts_kvs if target_device else []
+            data["additional_fields"] = [
+                *[
+                    {
+                        attr.attribute_key: _cast_value(attr.value),
+                        "tag_type": "attribute",
+                        "attribute_scope": attr.attribute_type,
+                    }
+                    for attr in attrs
+                ],
+                *[{ts_kv.key.key: _cast_value(ts_kv.value), "tag_type": "telemetry"} for ts_kv in ts_kvs],
+            ]
+        else:
+            data["additional_fields"] = []
+        defaults = {key: None for key in STATIC_KEYS}
+        data["telemetry"] = (
+            {**defaults, **(instance.ts_kv_values or {})} if hasattr(instance, "ts_kv_values") else defaults
+        )
         data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
         data["door_lock_device"] = (
             SimpleDeviceSerializer(instance.door_lock_device).data if instance.door_lock_device else None
         )
-        if hasattr(instance, "prefetched_guests"):
-            data["guests"] = SimpleGuestSerializer(instance.prefetched_guests, many=True).data
+        data["guest"] = (
+            SimpleGuestSerializer(instance.prefetched_guests[0]).data
+            if hasattr(instance, "prefetched_guests") and instance.prefetched_guests
+            else None
+        )
         if hasattr(instance, "count_online_devices"):
             data["status"] = (
                 "ON"
@@ -155,7 +179,10 @@ class RoomFilterParamsSwagger(serializers.Serializer):
 class RoomDetailWsSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["telemetry"] = instance.ts_kv_values if hasattr(instance, "ts_kv_values") else None
+        defaults = {key: None for key in STATIC_KEYS}
+        data["telemetry"] = (
+            {**defaults, **(instance.ts_kv_values or {})} if hasattr(instance, "ts_kv_values") else defaults
+        )
         data["tenant"] = str(instance.tenant_id)
         data["devices"] = SimpleDeviceSerializer(instance.devices, many=True).data
         if hasattr(instance, "count_online_devices"):

@@ -5,24 +5,9 @@ from djangochannelsrestframework.observer import model_observer
 from main.models import Room
 from main.querysets.room import RoomQuerySet
 from main.serializers.room import RoomFilterParams, RoomSerializer
+from shuttle.constants import STATIC_KEYS
 from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
-
-MUR = "MUR Relay"
-DND = "DND Relay"
-AC_ON_OFF = "AC ON OFF"
-Room_Temperature = "Room Temperature"
-Occupancy_State = "Occupancy State"
-Setpoint = "Setpoint"
-
-STATIC_KEYS = [
-    MUR,
-    DND,
-    AC_ON_OFF,
-    Room_Temperature,
-    Occupancy_State,
-    Setpoint,
-]
 
 
 class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):

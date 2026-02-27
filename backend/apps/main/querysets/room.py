@@ -21,7 +21,6 @@ from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.helpers import safely_remove
-from core.utils.querysets import _cast_value
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
 logger = logging.getLogger(__name__)
@@ -163,24 +162,6 @@ class RoomQuerySet(BaseQuerySet):
                 to_attr="room_devices",
             )
         )
-
-        # Берем первое устройство (с наивысшим приоритетом)
-        for room in query:
-            target_device = room.room_devices[0] if room.room_devices else None
-            attributes = target_device.attrs if target_device else []
-            ts_kvs = target_device.ts_kvs if target_device else []
-
-            attributes = [
-                {
-                    attr.attribute_key: _cast_value(attr.value),
-                    "tag_type": "attribute",
-                    "attribute_scope": attr.attribute_type,
-                }
-                for attr in attributes
-            ]
-            ts_kvs = [{ts_kv.key.key: _cast_value(ts_kv.value), "tag_type": "telemetry"} for ts_kv in ts_kvs]
-
-            room.additional_fields = [*attributes, *ts_kvs]
 
         return query
 
