@@ -38,7 +38,7 @@ class JSONBObjectAgg(Aggregate):
 
 
 class RoomQuerySet(BaseQuerySet):
-    def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None):
+    def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None, blocks=None):
         query = self.filter(active=True, tenant=tenant)
         query = query.prefetch_related("devices__ts_kvs_latest__key", "type")
         query = query.annotate(
@@ -49,12 +49,17 @@ class RoomQuerySet(BaseQuerySet):
         query = query.filter(id__in=get_occupied_rooms(tenant)) if state == 2 else query
         query = query.filter(id__in=get_dnd_rooms(tenant)) if state == 3 else query
         query = query.filter(id__in=get_mur_rooms(tenant)) if state == 4 else query
+        if blocks:
+            blocks_filter = Q()
+            for block, floors in blocks.items():
+                blocks_filter |= Q(block=block, floor__in=floors)
+            query = query.filter(blocks_filter)
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
         query = query.filter(status=status) if status else query
-        return query.order_by(*(sort_by or ["number"]) + ["id"])
+        return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
 
     def guest_details(self, tenant):
         from main.models import Guest

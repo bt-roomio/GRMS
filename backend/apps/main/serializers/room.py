@@ -147,6 +147,7 @@ class RoomFilterParams(ValidatorSerializer):
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     tags = TagSerializer(many=True, required=False)
+    blocks = serializers.DictField(child=serializers.ListField(child=serializers.CharField()), required=False)
 
     def validate(self, attrs):
         if "search_field" not in attrs and "search_value" in attrs:
