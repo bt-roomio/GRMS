@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "access_manager",
     "services",
     "mews",
+    "admin_panel",
 ]
 
 MIDDLEWARE = [

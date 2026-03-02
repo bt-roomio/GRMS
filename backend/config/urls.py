@@ -26,6 +26,7 @@ urlpatterns = [
                 path("shuttle/", include(("shuttle.urls", "shuttle"), namespace="shuttle")),
                 path("access-manager/", include(("access_manager.urls", "access_manager"), namespace="access_manager")),
                 path("services/", include(("services.urls", "services"), namespace="services")),
+                path("admin/", include(("admin_panel.urls", "admin_panel"), namespace="admin_panel")),
             ]
         ),
     ),
