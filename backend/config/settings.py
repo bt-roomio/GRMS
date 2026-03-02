@@ -406,6 +406,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.active_attribute_server_scope_task",
         "schedule": 10.0,  # Every 10 seconds
     },
+    "aggregate-ts-kv": {
+        "task": "shuttle.tasks.aggregate_table_ts_kv",
+        "schedule": crontab(hour=3, minute=0),  # Every day at 03:00
+    },
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))

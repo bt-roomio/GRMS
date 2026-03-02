@@ -69,17 +69,16 @@ def update_activity_device(device_id, connected=True):
     cached_tenant_id = None
     cached_device_status = None
     from_cache = False
+    attr_map = {}
 
     if cached_attrs:
         logger.debug(f"Cache hit for device {device_id}")
         from_cache = True
-        # Восстановить AttributeKv объекты из кеша без присваивания entity
         attr_map = {}
 
         if "active" in cached_attrs:
             active_data = cached_attrs["active"]
             if "id" not in active_data:
-                # Старый кэш без id — принудительно идём в БД
                 cached_attrs = None
             else:
                 active_attr = AttributeKv(
@@ -114,7 +113,6 @@ def update_activity_device(device_id, connected=True):
                 attr_map["lastActivityTime"] = last_activity_attr
 
         if not cached_attrs:
-            # Кэш невалиден (нет id) — сбрасываем и идём в БД
             from_cache = False
             attr_map = {}
 
