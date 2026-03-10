@@ -57,14 +57,13 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
 
             if devices_to_remove:
                 register_cards_for_public_space(instance.id, devices_to_remove, False)
-                DevicePublicSpaces.objects.filter(
-                    public_space=instance,
-                    device_id__in=devices_to_remove
-                ).delete()
+                DevicePublicSpaces.objects.filter(public_space=instance, device_id__in=devices_to_remove).delete()
 
             if devices_to_add:
                 device_objects_to_add = [device for device in device_objects if device.id in devices_to_add]
-                new_devices = [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add]
+                new_devices = [
+                    DevicePublicSpaces(device=device, public_space=instance) for device in device_objects_to_add
+                ]
                 for d in new_devices:
                     d.full_clean()
                 DevicePublicSpaces.objects.bulk_create(new_devices)
@@ -73,7 +72,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
         return instance
 
     def create(self, validated_data):
-        device_objects = validated_data.pop("device_objects", [])
+        device_objects = validated_data.pop("device_ids", [])
         instance = PublicSpace.objects.create(**validated_data)
 
         if device_objects:
