@@ -3,23 +3,11 @@ from djangochannelsrestframework.mixins import ListModelMixin, action
 from djangochannelsrestframework.observer import model_observer
 
 from main.models import Room
+from main.querysets.room import RoomQuerySet
 from main.serializers.room import RoomFilterParams, RoomSerializer
+from shuttle.constants import STATIC_KEYS
 from shuttle.utils.get_non_null_field import get_non_null_column
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
-
-MUR = "MUR Relay"
-DND = "DND Relay"
-AC_ON_OFF = "AC_ON_OFF"
-Room_Temperature = "Room Temperature"
-Occupancy_State = "Occupancy State"
-
-STATIC_KEYS = {
-    MUR: "MUR Relay",
-    DND: "DND Relay",
-    AC_ON_OFF: "AC_ON_OFF",
-    Room_Temperature: "Room Temperature",
-    Occupancy_State: "Occupancy State",
-}
 
 
 class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
@@ -41,17 +29,19 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         return res, 200
 
     def get_queryset(self, **kwargs):
-        query = super().get_queryset(**kwargs)
+        query: RoomQuerySet = super().get_queryset(**kwargs)  # pyright: ignore
         params = RoomFilterParams.check(data=kwargs.get("query_params", {}))
         query = (
-            query.list(  # pyright: ignore
+            query.list(
                 tenant=self.tenant_id,
                 state=params.get("state"),
                 status=params.get("status"),
                 search_field=params.get("search_field"),
                 search_value=params.get("search_value"),
                 sort_by=params.get("sort_by"),
+                blocks=params.get("blocks"),
             )
+            .guest_details(tenant=self.tenant_id)
             .rooms_ts_kvs(tenant=self.tenant_id, keys=[*STATIC_KEYS])
             .get_tags(tenant=self.tenant_id, tags=params.get("tags", []))
         )
@@ -64,7 +54,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             return
 
         payload = message.get("update")
-        if STATIC_KEYS.get(payload.get("key")):
+        if payload.get("key") in STATIC_KEYS:
             for request_id, _ in self.query_params.items():
                 incoming_entity_id = payload.get("entity")
                 for room in self.responses.get(request_id, {}).get("results", []):

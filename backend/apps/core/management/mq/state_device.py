@@ -69,41 +69,54 @@ def update_activity_device(device_id, connected=True):
     cached_tenant_id = None
     cached_device_status = None
     from_cache = False
+    attr_map = {}
 
     if cached_attrs:
         logger.debug(f"Cache hit for device {device_id}")
         from_cache = True
-        # Восстановить AttributeKv объекты из кеша без присваивания entity
         attr_map = {}
 
         if "active" in cached_attrs:
             active_data = cached_attrs["active"]
-            active_attr = AttributeKv(
-                entity_id=device_id,
-                attribute_key="active",
-                attribute_type=AttributeKv.SERVER_SCOPE,
-                bool_v=active_data["bool_v"],
-                last_update_ts=active_data["last_update_ts"],
-            )
-            # Сохранить tenant_id и status из кеша
-            cached_tenant_id = active_data["tenant_id"]
-            cached_device_status = active_data.get("status", False)
-            attr_map["active"] = active_attr
+            if "id" not in active_data:
+                cached_attrs = None
+            else:
+                active_attr = AttributeKv(
+                    id=active_data["id"],
+                    entity_id=device_id,
+                    attribute_key="active",
+                    attribute_type=AttributeKv.SERVER_SCOPE,
+                    bool_v=active_data["bool_v"],
+                    last_update_ts=active_data["last_update_ts"],
+                )
+                # Сохранить tenant_id и status из кеша
+                cached_tenant_id = active_data["tenant_id"]
+                cached_device_status = active_data.get("status", False)
+                attr_map["active"] = active_attr
 
-        if "lastActivityTime" in cached_attrs:
+        if cached_attrs and "lastActivityTime" in cached_attrs:
             last_data = cached_attrs["lastActivityTime"]
-            last_activity_attr = AttributeKv(
-                entity_id=device_id,
-                attribute_key="lastActivityTime",
-                attribute_type=AttributeKv.SERVER_SCOPE,
-                long_v=last_data["long_v"],
-                last_update_ts=last_data["last_update_ts"],
-            )
-            # Если tenant_id еще не установлен, взять из lastActivityTime
-            if not cached_tenant_id:
-                cached_tenant_id = last_data["tenant_id"]
-            attr_map["lastActivityTime"] = last_activity_attr
-    else:
+            if "id" not in last_data:
+                cached_attrs = None
+            else:
+                last_activity_attr = AttributeKv(
+                    id=last_data["id"],
+                    entity_id=device_id,
+                    attribute_key="lastActivityTime",
+                    attribute_type=AttributeKv.SERVER_SCOPE,
+                    long_v=last_data["long_v"],
+                    last_update_ts=last_data["last_update_ts"],
+                )
+                # Если tenant_id еще не установлен, взять из lastActivityTime
+                if not cached_tenant_id:
+                    cached_tenant_id = last_data["tenant_id"]
+                attr_map["lastActivityTime"] = last_activity_attr
+
+        if not cached_attrs:
+            from_cache = False
+            attr_map = {}
+
+    if not from_cache:
         logger.debug(f"Cache miss for device {device_id}, querying DB")
         # Существующий код запроса к БД
         attrs = AttributeKv.objects.filter(
@@ -174,9 +187,11 @@ def update_activity_device(device_id, connected=True):
         )
 
     if to_update:
+        logger.debug(f"Updating attributes for device {device_id}: {[attr.attribute_key for attr in to_update]}")
         AttributeKv.objects.bulk_update(to_update, fields=["bool_v", "long_v", "last_update_ts", "entity_type"])
 
     if to_create:
+        logger.debug(f"Creating attributes for device {device_id}: {[attr.attribute_key for attr in to_create]}")
         AttributeKv.objects.bulk_create(to_create, ignore_conflicts=True)
 
     if device_needs_update:
@@ -226,6 +241,7 @@ def update_activity_device(device_id, connected=True):
         # Это гарантирует, что при следующем чтении будут доступны оба атрибута
         for attr_key, attr in attr_map.items():
             cache_attr = {
+                "id": str(attr.id),
                 "entity_id": str(device_id),
                 "tenant_id": str(tenant_id),
                 "last_update_ts": attr.last_update_ts,

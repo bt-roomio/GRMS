@@ -112,6 +112,12 @@ def get_scanned_devices(temp_devices, not_temp_devices, address_maps, user):
             address_map_id = {
                 "addressMapId": i.get("addressMapId") for i in not_temp_devices if mac_address == i.get("macAddress")
             }
+            if (
+                not address_map_id
+                or (isinstance(address_map_id, dict) and "addressMapId" not in address_map_id)
+                or address_map_id.get("addressMapId") is None
+            ):
+                continue
             address_map = address_maps[address_map_id.get("addressMapId")] if address_map_id else None
             found_device = Device.objects.is_active().filter(name=mac_address, tenant=user.tenant).first()
             controller = Controller.objects.filter(mac_address=mac_address).last()

@@ -53,7 +53,6 @@ class GeneralSettingsTest(BaseTestCase):
             "aggregate_db",
             "main_dashboard",
             "room_fields",
-            "config",
         ]
         for field in expected_fields:
             self.assertIn(field, response.data, f"Missing field: {field}")
@@ -107,12 +106,16 @@ class GeneralSettingsTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["door_lock"], {"ving_card": True, "kaba": False})
 
-    def test_put_update_config(self):
-        """PUT updates config JSON field."""
-        payload = {"config": {"custom_key": "custom_value", "nested": {"a": 1}}}
+    def test_put_update_room_field_config(self):
+        """PUT updates config JSON field inside a room_fields tag."""
+        payload = {
+            "room_fields": [
+                {"name": "temperature", "tag_type": "telemetry", "config": {"custom_key": "custom_value", "nested": {"a": 1}}},
+            ]
+        }
         response = self.put(self.url, data=payload, format="json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["config"]["custom_key"], "custom_value")
+        self.assertEqual(response.data["room_fields"][0]["config"]["custom_key"], "custom_value")
 
     def test_put_persists_to_db(self):
         """PUT changes are persisted in the Tenant model's additional_info."""

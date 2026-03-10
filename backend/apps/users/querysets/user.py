@@ -7,6 +7,9 @@ class UsersManager(BaseUserManager):
     Custom user model manager that supports using email instead of username.
     """
 
+    def get_by_natural_key(self, username):
+        return self.get(**{self.model.USERNAME_FIELD: username, "is_active": True})
+
     def list(self, tenant_id, sort_by=None, search_field=None, search_value=None):
         query = self.prefetch_related("roles").filter(tenant_id=tenant_id, is_active=True)
 

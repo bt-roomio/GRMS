@@ -24,7 +24,7 @@ from main.querysets.tenant import TenantQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
 from services.models import BaseModel as ServiceBaseModel
-from shuttle.models import TsKvDictionary, TsKvLatest
+from shuttle.models import Relation, TsKvDictionary, TsKvLatest
 
 
 class Tenant(ServiceBaseModel):
@@ -119,8 +119,6 @@ class Room(BaseModel, UpdateByModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
     additional_info = models.JSONField(null=True, blank=True)
-
-    devices: Manager["Device"]
 
     objects = RoomQuerySet.as_manager()
 
@@ -290,6 +288,8 @@ class Device(BaseModel):
     device_data = models.JSONField(null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
     card = models.ForeignKey("access_manager.Card", SET_NULL, null=True, blank=True)
+
+    relations: Manager["Relation"]
 
     objects = DeviceQuerySet.as_manager()
 

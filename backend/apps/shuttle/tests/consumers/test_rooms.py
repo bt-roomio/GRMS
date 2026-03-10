@@ -172,7 +172,14 @@ class TestRoomConsumer:
             assert just_added_room["status"] == "OFF"
             assert just_added_room["devices"] == []
             assert just_added_room["additional_info"] is None
-            assert just_added_room["telemetry"] is None
+            assert just_added_room["telemetry"] == {
+                "AC ON OFF": None,
+                "AC Setpoint": None,
+                "DND Relay": None,
+                "MUR Relay": None,
+                "Room Temperature": None,
+                "Occupancy State": None,
+            }
         finally:
             with contextlib.suppress(Exception):
                 await comm.disconnect()

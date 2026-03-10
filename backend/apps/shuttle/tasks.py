@@ -13,34 +13,106 @@ from shuttle.services.ts_kv_latest import publish_updates_batch
 
 logger = logging.getLogger(__name__)
 
+DEDUP_BATCH_SIZE = 10_000
+
+
+def deduplicate_ts_kv(key: int | None = None, entity_id: str | None = None):
+    """Deduplicate shuttle_ts_kv by 30-second windows using ROW_NUMBER() (TimescaleDB chunk-aware).
+
+    Args:
+        key: Optional key filter (TsKvDictionary.key_id) for targeted deduplication.
+        entity_id: Optional entity_id filter (Device UUID) for targeted deduplication.
+    """
+    extra_filter = ""
+    if key is not None:
+        extra_filter += " AND key = %(key)s"
+    if entity_id is not None:
+        extra_filter += " AND entity_id = %(entity_id)s"
+
+    filter_params = {"key": key, "entity_id": entity_id}
+    logger.info(f"Dedup ts_kv: key={key}, entity_id={entity_id}")
+
+    with connection.cursor() as cursor:
+        cursor.execute("SET statement_timeout = 0")
+
+        cursor.execute(
+            """
+            SELECT range_start, range_end
+            FROM timescaledb_information.chunks
+            WHERE hypertable_name = 'shuttle_ts_kv'
+            ORDER BY range_start ASC
+            """
+        )
+        chunks = cursor.fetchall()
+        logger.info(f"Dedup ts_kv: total chunks={len(chunks)}")
+
+        total_deleted = 0
+
+        for chunk_idx, (chunk_start, chunk_end) in enumerate(chunks, 1):
+            chunk_deleted = 0
+
+            while True:
+                cursor.execute(
+                    f"""
+                    WITH ranked AS (
+                        SELECT ts, entity_id, key,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY
+                                       key,
+                                       entity_id,
+                                       bool_v,
+                                       str_v,
+                                       long_v,
+                                       dbl_v,
+                                       json_v,
+                                       DATE_TRUNC('minute', ts)
+                                           + INTERVAL '30 seconds' * FLOOR(EXTRACT(SECOND FROM ts) / 30)
+                                   ORDER BY ts DESC
+                               ) AS rn
+                        FROM shuttle_ts_kv
+                        WHERE ts >= %(chunk_start)s AND ts < %(chunk_end)s
+                        {extra_filter}
+                    )
+                    DELETE FROM shuttle_ts_kv
+                    WHERE (ts, entity_id, key) IN (
+                        SELECT ts, entity_id, key
+                        FROM ranked
+                        WHERE rn > 1
+                        LIMIT %(batch_size)s
+                    )
+                    AND ts >= %(chunk_start)s AND ts < %(chunk_end)s
+                    {extra_filter}
+                    """,
+                    {
+                        "chunk_start": chunk_start,
+                        "chunk_end": chunk_end,
+                        "batch_size": DEDUP_BATCH_SIZE,
+                        **filter_params,
+                    },
+                )
+
+                deleted = cursor.rowcount
+                chunk_deleted += deleted
+                total_deleted += deleted
+
+                if deleted < DEDUP_BATCH_SIZE:
+                    break
+
+            if chunk_deleted > 0:
+                logger.info(
+                    f"Dedup ts_kv [{chunk_idx}/{len(chunks)}] {chunk_start.date()} "
+                    f"| chunk_deleted={chunk_deleted} | total={total_deleted}"
+                )
+
+    logger.info(f"Dedup ts_kv done. Total deleted: {total_deleted}")
+    return total_deleted
+
 
 @shared_task
 def aggregate_table_ts_kv():
     logger.info("Task aggregating table shuttle_ts_kv")
-    diff_time = 30
-
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f"""
-                    WITH ranked_duplicates AS (
-                        SELECT entity_id,
-                               key,
-                               ts,
-                               dbl_v,
-                               ROW_NUMBER() OVER (PARTITION BY entity_id, key, FLOOR(ts / {diff_time}) ORDER BY ABS(dbl_v)) AS row_num
-                        FROM shuttle_ts_kv
-                        WHERE dbl_v IS NOT NULL
-                    )
-                    DELETE FROM shuttle_ts_kv
-                    WHERE (entity_id, key, ts) IN (
-                        SELECT entity_id, key, ts
-                        FROM ranked_duplicates
-                        WHERE row_num > 1
-                    );
-                    """
-        )
-        logger.info(cursor.rowcount, "records deleted")
-    logger.info("The aggregating table task successfully.")
+    deleted = deduplicate_ts_kv()
+    logger.info(f"The aggregating table task completed. Deleted: {deleted}")
 
 
 @shared_task

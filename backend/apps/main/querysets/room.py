@@ -21,7 +21,6 @@ from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.helpers import safely_remove
-from core.utils.querysets import _cast_value
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
 logger = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ class JSONBObjectAgg(Aggregate):
 
 
 class RoomQuerySet(BaseQuerySet):
-    def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None):
+    def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None, blocks=None):
         query = self.filter(active=True, tenant=tenant)
         query = query.prefetch_related("devices__ts_kvs_latest__key", "type")
         query = query.annotate(
@@ -50,12 +49,28 @@ class RoomQuerySet(BaseQuerySet):
         query = query.filter(id__in=get_occupied_rooms(tenant)) if state == 2 else query
         query = query.filter(id__in=get_dnd_rooms(tenant)) if state == 3 else query
         query = query.filter(id__in=get_mur_rooms(tenant)) if state == 4 else query
+        if blocks:
+            blocks_filter = Q()
+            for block, floors in blocks.items():
+                blocks_filter |= Q(block=block, floor__in=floors)
+            query = query.filter(blocks_filter)
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
         query = query.filter(status=status) if status else query
-        return query.order_by(*(sort_by or ["number"]) + ["id"])
+        return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
+
+    def guest_details(self, tenant):
+        from main.models import Guest
+
+        return self.prefetch_related(
+            Prefetch(
+                "guests",
+                queryset=Guest.objects.filter(is_active=True).order_by("-created_at"),
+                to_attr="prefetched_guests",
+            )
+        )
 
     def rooms_ts_kvs(self, tenant, keys):
         from shuttle.models import TsKvLatest
@@ -153,24 +168,6 @@ class RoomQuerySet(BaseQuerySet):
             )
         )
 
-        # Берем первое устройство (с наивысшим приоритетом)
-        for room in query:
-            target_device = room.room_devices[0] if room.room_devices else None
-            attributes = target_device.attrs if target_device else []
-            ts_kvs = target_device.ts_kvs if target_device else []
-
-            attributes = [
-                {
-                    attr.attribute_key: _cast_value(attr.value),
-                    "tag_type": "attribute",
-                    "attribute_scope": attr.attribute_type,
-                }
-                for attr in attributes
-            ]
-            ts_kvs = [{ts_kv.key.key: _cast_value(ts_kv.value), "tag_type": "telemetry"} for ts_kv in ts_kvs]
-
-            room.additional_fields = [*attributes, *ts_kvs]
-
         return query
 
     def statuses(self, tenant):
@@ -213,6 +210,28 @@ class RoomQuerySet(BaseQuerySet):
             room.state.append(Room.Available)
             room.save(update_fields=["state"])
         return guests.count(), deactivate_result
+
+    def block_floors(self, tenant):
+        query = (
+            self.filter(active=True, tenant=tenant)
+            .values("block", "floor")
+            .annotate(count=Count("id"))
+            .order_by("block", "floor")
+        )
+
+        blocks: dict = {}
+        for item in query:
+            block = item["block"]
+            floor = item["floor"]
+            count = item["count"]
+
+            if block not in blocks:
+                blocks[block] = {"name": block, "count": 0, "floors": []}
+
+            blocks[block]["count"] += count
+            blocks[block]["floors"].append({"name": floor, "count": count})
+
+        return list(blocks.values())
 
     def total_rooms_count(self, tenant_id):
         return self.filter(active=True, tenant_id=tenant_id).count()

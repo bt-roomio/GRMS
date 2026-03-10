@@ -273,7 +273,6 @@ class BatchAccumulator:
                 device, msg = await validate_body(message.body)
                 topic = msg.get("topic", "")
                 data = msg.get("data")
-                logger.info(f"Topic: {topic}, Message: {msg}")
 
                 if topic.endswith(TOPIC_TELEMETRY):
                     telemetry_batch.append((device, topic, data, message))

@@ -2,6 +2,7 @@ from django.urls import path
 
 from main.views.admin_settings import AdminSettingsView
 from main.views.alarm_settings import AlarmSettingsDetailView
+from main.views.block_floor import BlockFloorsView
 from main.views.dashboard import DashboardDetailView, DashboardListView, DashboardTypeView
 from main.views.device import DeviceDetailView, DeviceListView
 from main.views.device_credentials import DeviceCredentialsDetailView
@@ -17,7 +18,7 @@ from main.views.room_from_conf import RoomFromConfListView
 from main.views.room_status import RoomHistoryStatusView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.tenant import TenantListView
-from main.views.webrtc import WebrtcBroker, WebrtcAgentStatus
+from main.views.webrtc import WebrtcAgentStatus, WebrtcBroker
 from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
 
 urlpatterns = [
@@ -44,6 +45,7 @@ urlpatterns = [
     path("guest/move/room/", GuestMoveRoomListView.as_view(), name="guest-move-room-list"),
     path("checkout/", GuestCheckoutView.as_view(), name="guest-checkout-detail"),
     path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
+    path("blocks-floors/", BlockFloorsView.as_view(), name="block-floors-list"),
     path("devices-from-configuration/", DeviceFromConfListView.as_view(), name="device-from-conf-list"),
     path("rooms-from-configuration/", RoomFromConfListView.as_view(), name="room-from-conf-list"),
     # Public space
