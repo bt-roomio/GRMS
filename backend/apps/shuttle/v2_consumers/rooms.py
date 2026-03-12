@@ -148,6 +148,9 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
     async def list_unsubscribe(self, request_id, **kwargs):
         await self.get_list_activity.unsubscribe(request_id=request_id, **kwargs)
         await self.handle_groups(self.responses.get(request_id), remove=True)
+        self.responses.pop(request_id, None)
+        self.subscribers.pop(request_id, None)
+        self.query_params.pop(request_id, None)
 
     async def handle_groups(self, data, remove=False):
         data = data or {}
