@@ -58,7 +58,10 @@ class RoomQuerySet(BaseQuerySet):
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
 
-        query = query.filter(status=status) if status else query
+        if status == "ON":
+            query = query.filter(count_online_devices=F("count_devices"), count_devices__gt=0)
+        elif status == "OFF":
+            query = query.exclude(count_online_devices=F("count_devices"), count_devices__gt=0)
         return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
 
     def guest_details(self, tenant):
