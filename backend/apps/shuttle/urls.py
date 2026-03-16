@@ -7,9 +7,11 @@ from shuttle.views.latest_ts_kv import LatestTsKvListView
 from shuttle.views.relation import RelationDetailView, RelationListView
 from shuttle.views.remove_attribute import RemoveAttribute
 from shuttle.views.temp_change import TempAPIChangeTsKvLatest
-from shuttle.views.ts_kv import TsKvListView, ExportTsKvExcelView
+from shuttle.views.ts_kv import ExportTsKvExcelView, TsKvListView
+from shuttle.views.unique_tags import UniqueTagsView
 
 urlpatterns = [
+    path("unique-tags/", UniqueTagsView.as_view(), name="unique-tags"),
     path("attributes/<uuid:device_id>/<str:scope>/", AttributeListView.as_view(), name="attributes-list"),
     path("relation/", RelationListView.as_view(), name="relation-list"),
     path("relation/<uuid:pk>/", RelationDetailView.as_view(), name="relation-detail"),
