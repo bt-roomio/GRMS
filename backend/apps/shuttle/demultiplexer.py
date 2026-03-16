@@ -5,6 +5,7 @@ from channelsmultiplexer import AsyncJsonWebsocketDemultiplexer
 from shuttle.v2_consumers.attributes import AttributeConsumer
 from shuttle.v2_consumers.card_logs import CardLogConsumer
 from shuttle.v2_consumers.cards import CardConsumer
+from shuttle.v2_consumers.devices import DevicesListConsumer
 from shuttle.v2_consumers.emergency_status import EmergencyStatus
 from shuttle.v2_consumers.gateway import GatewayConsumer
 from shuttle.v2_consumers.gateway_logs import GatewayLogsConsumer
@@ -27,6 +28,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "rooms": RoomConsumer.as_asgi(),
         "room_detail": RoomDetailConsumer.as_asgi(),
         "room_status": RoomStatusConsumer.as_asgi(),
+        "devices": DevicesListConsumer.as_asgi(),
         "scanned_devices": ScannedDevicesConsumer.as_asgi(),
         "guests": GuestConsumer.as_asgi(),
         "guest_cards": GuestCardConsumer.as_asgi(),
