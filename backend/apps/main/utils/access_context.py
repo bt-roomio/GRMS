@@ -2,7 +2,7 @@ import logging
 from typing import List, Union
 
 from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, Staff, StaffCard
-from django.db.models import F, Q
+from django.db.models import Q
 
 from main.models import Device, Guest, PublicSpace
 
@@ -24,7 +24,7 @@ def get_guest_access_context(guests: Union[Guest, List[Guest]]) -> dict:
     guest_public_spaces = PublicSpace.objects.filter(guestpublicspace__guest__in=guests)
 
     door_lock_devices = (
-        Device.objects.filter(Q(room__in=guest_rooms), is_active=True, id=F("room__door_lock_device_id"))
+        Device.objects.filter(as_door_lock_room__in=guest_rooms, is_active=True)
         .select_related("tenant")
         .distinct()
     )
@@ -74,7 +74,7 @@ def get_staff_access_context(staff: Staff) -> dict:
     group_public_spaces = GroupPublicSpace.objects.filter(group=group).values_list("public_space", flat=True)
 
     door_lock_devices = Device.objects.filter(
-        Q(room__in=group_rooms), is_active=True, id=F("room__door_lock_device_id")
+        as_door_lock_room__in=group_rooms, is_active=True
     ).distinct()
 
     public_space_devices = Device.objects.filter(

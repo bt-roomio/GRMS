@@ -18,8 +18,6 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
         query = super().get_queryset(**kwargs)
         params = CardLogFilterParams.check(data=kwargs.get("query_params", {}))
 
-        tenant = self.tenant_id
-
         query = query.list(
             filters=params.get("filters", {}),
             sort_by=params.get("sort_by", ["-event_ts"]),
@@ -30,7 +28,7 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
             public_space_id=params.get("public_space"),
             user_id=params.get("user"),
             card_num=params.get("card_num"),
-            tenant=tenant,
+            tenant_id=self.tenant_id,
         )
 
         return query
@@ -44,7 +42,7 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
     @action()
     async def list_subscribe(self, **kwargs):
         await self.send_list_paginated(**kwargs)
-        await self.add_group("card_logs")
+        await self.add_group(f"card_logs_{self.tenant_id}")
         self.subscribers[kwargs.get("request_id")] = kwargs
 
     @action()

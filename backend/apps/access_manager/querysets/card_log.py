@@ -16,14 +16,26 @@ class CardLogQuerySet(BaseQuerySet):
     def by_card_num(self, card_number, tenant):
         return self.filter(number=card_number, tenant=tenant)
 
-    def list(self, tenant_id=None, filters={}, device_ids=None, sort_by=None, user_id=None, card_num=None, tenant=None,
-             room_id=None, public_space_id=None, room_ids=None, public_space_ids=None):
+    def list(
+        self,
+        tenant_id=None,
+        filters={},
+        device_ids=None,
+        sort_by=None,
+        user_id=None,
+        card_num=None,
+        tenant=None,
+        room_id=None,
+        public_space_id=None,
+        room_ids=None,
+        public_space_ids=None,
+    ):
         query = self
         from_date = filters.get("from_date")
         to_date = filters.get("to_date")
 
         if tenant_id:
-            query = self.filter(device__tenant_id=tenant_id)
+            query = query.filter(tenant__id=tenant_id)
         if from_date:
             query = query.filter(event_ts__gte=from_date)
         if to_date:
@@ -37,8 +49,8 @@ class CardLogQuerySet(BaseQuerySet):
 
         if room_ids or public_space_ids:
             query = query.filter(
-                Q(device__room__id__in=room_ids, device__is_active=True) |
-                Q(device__device_public_spaces__public_space__in=public_space_ids, device__is_active=True)
+                Q(device__room__id__in=room_ids, device__is_active=True)
+                | Q(device__device_public_spaces__public_space__in=public_space_ids, device__is_active=True)
             )
 
         if user_id:
