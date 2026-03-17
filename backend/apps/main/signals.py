@@ -8,6 +8,7 @@ from django.dispatch import receiver
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device, Guest, Room
+from main.observables.device import publish_device
 from main.observables.guest import publish_guest_changes
 from main.observables.room_detail import publish_room_detail_changes
 from main.observables.room_status import publish_room_status
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Device)
 def device_post_save(instance: Device, **kwargs):
     publish_room_status(instance)
+    publish_device(instance)
 
 
 @receiver(post_save, sender=AttributeKv)
