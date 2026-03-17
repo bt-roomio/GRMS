@@ -84,6 +84,9 @@ class DeviceQuerySet(BaseQuerySet):
             Q(device_public_spaces__public_space__guestpublicspace__guest__guestcard__card=card_id,
               device_public_spaces__public_space__guestpublicspace__guest__guestcard__is_active=True) |
 
+            Q(device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__guestcard__card=card_id,
+              device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__guestcard__is_active=True) |
+
             Q(needsyncdevice__card=card_id,
               needsyncdevice__need_sync=True)
         ).annotate(
