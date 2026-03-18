@@ -134,6 +134,15 @@ class SimpleRoomSerializer(serializers.ModelSerializer):
 
 class RoomFilterParams(ValidatorSerializer):
     SORT_FIELDS = ("created_at", "-created_at", "number", "floor", "block", "-number", "-floor", "-block")
+    SEARCH_FIELD_MAP = {
+        "number": "number",
+        "floor": "floor",
+        "block": "block",
+        "room_type": "type__title",
+        "device_name": "devices__name",
+        "device_label": "devices__label",
+    }
+    DEVICE_SEARCH_FIELDS = {"devices__name", "devices__label"}
 
     page = serializers.IntegerField(default=1, min_value=1)
     size = serializers.IntegerField(default=50, max_value=200)
@@ -143,7 +152,10 @@ class RoomFilterParams(ValidatorSerializer):
         required=False,
         error_messages={"invalid_choice": _('"{input}" is not a valid choice. Choose next: ON or OFF')},
     )
-    search_field = serializers.ChoiceField(choices=("number", "floor", "block", "type__title"), required=False)
+    search_field = serializers.ChoiceField(
+        choices=tuple(SEARCH_FIELD_MAP.keys()),
+        required=False,
+    )
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     tags = TagSerializer(many=True, required=False)
@@ -155,6 +167,8 @@ class RoomFilterParams(ValidatorSerializer):
 
         if "search_value" not in attrs and "search_field" in attrs:
             raise serializers.ValidationError({"search_value": "search_value is required!"})
+        if "search_field" in attrs:
+            attrs["search_field"] = self.SEARCH_FIELD_MAP[attrs["search_field"]]
         return attrs
 
 

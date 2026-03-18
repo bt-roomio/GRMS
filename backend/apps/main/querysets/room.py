@@ -56,7 +56,14 @@ class RoomQuerySet(BaseQuerySet):
             query = query.filter(blocks_filter)
 
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+            search_filter = Q(**{f"{search_field}__istartswith": search_value})
+
+            if search_field.startswith("devices__"):
+                door_lock_field = search_field.replace("devices__", "door_lock_device__")
+                search_filter = Q(**{f"{search_field}__istartswith": search_value, "devices__is_active": True}) | Q(
+                    **{f"{door_lock_field}__istartswith": search_value, "door_lock_device__is_active": True}
+                )
+            query = query.filter(search_filter)
 
         if status == "ON":
             query = query.filter(count_online_devices=F("count_devices"), count_devices__gt=0)
