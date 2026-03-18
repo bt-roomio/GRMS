@@ -55,7 +55,7 @@ class CardLogQuerySet(BaseQuerySet):
 
         if user_id:
             query = query.by_user(user_id)
-        if card_num and tenant:
-            query = query.by_card_num(card_num, tenant)
+        if card_num and tenant_id:
+            query = query.filter(number=card_num, tenant_id=tenant_id)
 
         return query.order_by(*sort_by).distinct()
