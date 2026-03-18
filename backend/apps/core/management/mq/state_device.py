@@ -3,6 +3,7 @@ import logging
 from core.management.mq.get_device import get_sub_device
 from core.utils.get_time import get_mil_sec
 from main.models import Device
+from main.observables.device import publish_device
 from main.observables.room_status import publish_room_status
 from shuttle.models import AttributeKv
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
@@ -271,5 +272,7 @@ def update_activity_device(device_id, connected=True):
             # Загрузить Device из БД, так как данные из кеша
             device = Device.objects.get(id=device_id)
             publish_room_status(device)
+            publish_device(device)
         else:
             publish_room_status(active_attr.entity)
+            publish_device(active_attr.entity)

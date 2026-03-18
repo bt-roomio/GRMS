@@ -11,6 +11,7 @@ stages:
 test:
   stage: test
   image: python:3.12-slim
+  interruptible: true
   services:
     - name: timescale/timescaledb:2.21.0-pg16
       alias: postgres
@@ -33,6 +34,7 @@ test:
 
 backend:
   stage: build
+  interruptible: true
   only:
     - dev
     - stable

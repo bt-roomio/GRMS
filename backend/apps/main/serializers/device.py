@@ -170,7 +170,7 @@ class DeviceFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search_field = serializers.ChoiceField(choices=("name", "device_profile__name"), required=False)
+    search_field = serializers.ChoiceField(choices=("name", "device_profile__name", "label"), required=False)
     search_value = serializers.CharField(required=False)
     name = serializers.CharField(required=False)
     status = serializers.BooleanField(allow_null=True, required=False)

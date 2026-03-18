@@ -43,6 +43,9 @@ class TsKvLatestQuerySet(BaseQuerySet):
         )
         return query
 
+    def unique_keys_by_tenant(self, tenant_id):
+        return self.filter(entity__tenant_id=tenant_id).values_list("key__key", flat=True).distinct().order_by("key__key")
+
     def room_flag_counts(self, tenant_id):
         alias = {"DND Relay": "dnd", "MUR Relay": "mur", "Occupancy State": "occupied", "AC ON OFF": "ac-on-off"}
         rows = (
