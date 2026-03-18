@@ -5,7 +5,10 @@ from core.querysets.base_queryset import BaseQuerySet
 
 class CardLogQuerySet(BaseQuerySet):
     def by_room(self, room_id):
-        return self.filter(device__room__id=room_id, device__is_active=True)
+        return self.filter(
+            Q(device__room__id=room_id, device__is_active=True)
+            | Q(device__as_door_lock_room__id=room_id, device__is_active=True)
+        )
 
     def by_public_space(self, public_space_id):
         return self.filter(device__device_public_spaces__public_space=public_space_id, device__is_active=True)
@@ -24,7 +27,6 @@ class CardLogQuerySet(BaseQuerySet):
         sort_by=None,
         user_id=None,
         card_num=None,
-        tenant=None,
         room_id=None,
         public_space_id=None,
         room_ids=None,
@@ -50,6 +52,7 @@ class CardLogQuerySet(BaseQuerySet):
         if room_ids or public_space_ids:
             query = query.filter(
                 Q(device__room__id__in=room_ids, device__is_active=True)
+                | Q(device__as_door_lock_room__id__in=room_ids, device__is_active=True)
                 | Q(device__device_public_spaces__public_space__in=public_space_ids, device__is_active=True)
             )
 
