@@ -1,11 +1,17 @@
-from access_manager.models import GuestCard, NeedSyncDevice, CardDeviceSlot, StaffCard
+from django.db.models import Q
+
+from access_manager.models import CardDeviceSlot, GuestCard, NeedSyncDevice, StaffCard
 
 
 def deactivate_guest_card(cards, device, sync):
     error_cards = []
     for card in cards:
         try:
-            instance = GuestCard.objects.get(guest__room=device.room, card__number=card, is_active=True)
+            instance = GuestCard.objects.get(
+                Q(guest__room__door_lock_device=device) | Q(guest__room=device.room),
+                card__number=card,
+                is_active=True,
+            )
             instance.is_active = False
             instance.is_blocked = False
             instance.save(update_fields=["is_active", "is_blocked"])
