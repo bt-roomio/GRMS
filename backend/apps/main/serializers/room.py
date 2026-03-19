@@ -185,7 +185,9 @@ class RoomFilterParamsSwagger(serializers.Serializer):
         required=False,
         error_messages={"invalid_choice": _('"{input}" is not a valid choice. Choose next: ON or OFF')},
     )
-    search_field = serializers.ChoiceField(choices=("number", "floor", "block", "type__title"), required=False)
+    search_field = serializers.ChoiceField(
+        choices=("number", "floor", "block", "room_type", "device_name", "device_label"), required=False
+    )
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     tags = serializers.JSONField(required=False, help_text="Array of tag objects with name, tag_type, attribute_scope")
