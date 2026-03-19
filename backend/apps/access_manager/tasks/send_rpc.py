@@ -32,7 +32,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
 
     if device and not device.status:
-        need_sync(cards, device, access, user=user)
+        need_sync(cards, device, access, user=user, reason="Device is not connected")
         fail_response.update({"success": False, "message": "Device is not connected !"})
         return fail_response
 
@@ -49,7 +49,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
                 result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device, sync)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
-            not sync and need_sync(cards, device, access, user=user)
+            not sync and need_sync(cards, device, access, user=user, reason="Device rejected the deactivation request")
             return fail_response
 
         elif has_message and is_success and access != 0:
@@ -63,6 +63,6 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
 
         time.sleep(1)
     else:
-        not sync and need_sync(cards, device, access, user=user)
+        not sync and need_sync(cards, device, access, user=user, reason="No response from device within timeout")
         fail_response.update({"message": "Time out error!"})
         return fail_response

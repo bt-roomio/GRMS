@@ -23,7 +23,7 @@ def manage_cards_for_public_space_task(group_id: str, public_space_id: str, acti
 
         for device in inactive_devices:
             logger.info(f"Adding device {device.name} (ID: {device.id}) to sync queue - inactive or status false")
-            need_sync(cards, device, access)
+            need_sync(cards, device, access, reason=f"Device {device.name} is inactive or offline")
 
         if not active_devices.exists():
             logger.info("No active devices found for public space '%s'", public_space_id)

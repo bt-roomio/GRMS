@@ -1,14 +1,14 @@
 from typing import List
 from celery.utils.log import get_task_logger
 
-from access_manager.utilits.batch_cards import is_same_request
 from shuttle.services.publish_updates import publish_updates
 
 logger = get_task_logger(__name__)
 
 
-def need_sync(cards: List[str], device, access, user=None):
+def need_sync(cards: List[str], device, access, user=None, reason=""):
     from access_manager.models import Card, NeedSyncDevice
+
     if not device:
         return
 
@@ -16,7 +16,7 @@ def need_sync(cards: List[str], device, access, user=None):
         try:
             card = Card.objects.get(number=card_num, tenant=device.tenant)
 
-            message_params = {"access": access}
+            message_params = {"access": access, "reason": reason}
 
             sync_obj, created = NeedSyncDevice.objects.get_or_create(
                 card=card,

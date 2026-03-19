@@ -81,21 +81,21 @@ def send_card_rpc_request(device: Device, request_params: dict, cards: List[str]
                         "message": f"Successfully {action}ed {len(cards)} cards to/from device {device.name}",
                     }
                 else:
-                    need_sync(cards, device, access)
+                    need_sync(cards, device, access, reason=f"Device {device.name} rejected card {action} request")
                     return {
                         "success": False,
                         "message": f"Device {device.name} rejected card {action} request - added to sync queue",
                     }
             time.sleep(0.5)
 
-        need_sync(cards, device, access)
+        need_sync(cards, device, access, reason=f"Timeout waiting for response from device {device.name}")
         return {
             "success": False,
             "message": f"Timeout waiting for response from device {device.name} - added to sync queue",
         }
 
     except Exception as e:
-        need_sync(cards, device, access)
+        need_sync(cards, device, access, reason=f"Error sending RPC to device {device.name}: {e}")
         return {
             "success": False,
             "message": f"Error sending RPC {action} request to device {device.name}: {str(e)} - added to sync queue",
