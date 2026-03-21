@@ -5,6 +5,7 @@ import redis
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device
@@ -26,9 +27,7 @@ class Command(BaseCommand):
 
     def handle(self, **kwargs):
         tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        for _ in range(10):
-            self.send_messages_connect_disconnect(tenant_id)
-        print("Messages sent to RabbitMQ successfully.")
+        self.generate_msg_access_door_log()
 
     def device_connectivity_simulation(self, msg):
         ch = connect_to_rabbitmq()
@@ -64,6 +63,35 @@ class Command(BaseCommand):
             }
             print(f"Generated message for device {d.name}: {str(msg)[:10]}")
             yield msg
+
+    def generate_msg_access_door_log(self):
+        d = get_object_or_404(Device, pk="cf193bcc-7801-4d76-8321-0d5c63e54293")
+        msg = {
+            "sourceDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
+            "data": {
+                d.name: [
+                    {
+                        "ts": 1774079212319,
+                        "values": {
+                            "rfid_card_event": {
+                                "access_log_id": "1774079209000",
+                                "lock_type": "ttlock",
+                                "card_uid": "Pasword unlock",
+                                "open_type": "unknown",
+                                "openResult": 1,
+                                "event_ts": 1774079212319,
+                            }
+                        },
+                    }
+                ]
+            },
+            "topic": "v1/gateway/telemetry",
+        }
+
+        ch = connect_to_rabbitmq()
+        send_to_rabbitmq(ch, msg, "/attributes")
+
+        print(f"Generated message for device {d.name}: {str(msg)[:10]}")
 
     def generate_msg_device_activity(self, tenant_id):
         devices = self.get_devices(tenant_id)

@@ -9,10 +9,10 @@ from core.utils.update_lock_last_log import update_lock_last_log_id
 logger = logging.getLogger(__name__)
 
 
-def resolve_card_holder_and_access_group(tenant_id, card_uid):
+def resolve_card_holder_and_access_group(tenant_id, card_uid, open_result=None):
     staff = None
     guest = None
-    access_group_from_holder = None
+    access_group_from_holder = open_result
 
     if not card_uid:
         return staff, guest, access_group_from_holder
@@ -24,31 +24,22 @@ def resolve_card_holder_and_access_group(tenant_id, card_uid):
 
         from access_manager.models import StaffCard, GuestCard
 
-
-
-        guest_card = (
-            GuestCard.objects.filter(card=card, is_active=True)
-            .select_related("guest")
-            .first()
-        )
+        guest_card = GuestCard.objects.filter(card=card, is_active=True).select_related("guest").first()
         if guest_card:
             guest = guest_card.guest
             access_group_from_holder = AccessGroupChoices.GUEST
         else:
-            staff_card = (
-                StaffCard.objects.filter(card=card, is_active=True)
-                .select_related("staff__group")
-                .first()
-            )
+            staff_card = StaffCard.objects.filter(card=card, is_active=True).select_related("staff__group").first()
+
+            if not staff_card:
+                return staff, guest, access_group_from_holder
+
             staff = staff_card.staff
             group = getattr(staff, "group", None)
             if group and group.group_type is not None:
-                if group.group_type:
-                    access_group_from_holder = group.group_type
-                else:
-                    access_group_from_holder = AccessGroupChoices.FAILED
+                access_group_from_holder = group.group_type
             else:
-                access_group_from_holder = AccessGroupChoices.FAILED
+                access_group_from_holder = open_result
 
     except Exception as e:
         logger.warning(f"Error resolving holder for card {card_uid}: {e}")
@@ -83,33 +74,30 @@ def handle_card_event(device, value, ts_dt):
                 logger.warning(f"Missing required fields in RFID event: {value}")
                 return None
 
-            access_group_value = getattr(
-                AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED
-            )
+            access_group_value = getattr(AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED)
             staff, guest, access_group_from_holder = resolve_card_holder_and_access_group(tenant_id, card_uid)
             number_value = card_uid
 
         else:
-            open_result = value.get("openResult")
+            raw_open_result = value.get("openResult")
             open_type = value.get("open_type")
             update_lock_last_log_id(tenant_id, access_log_id, lock_type, device_id)
 
-            if open_result is None:
+            if raw_open_result is None:
                 logger.warning(f"Missing openResult in Fanvil RFID event: {value}")
                 return None
 
-            if not card_uid:
+            open_result = AccessGroupChoices.SUCCESS if raw_open_result else AccessGroupChoices.DENIED
+
+            if card_uid:
+                number_value = card_uid
+                staff, guest, access_group_value = resolve_card_holder_and_access_group(
+                    tenant_id, card_uid, open_result=open_result
+                )
+            else:
                 number_value = open_type or ""
                 staff, guest = None, None
-                access_group_value = (AccessGroupChoices.HOUSEKEEPING if open_result else AccessGroupChoices.DENIED)
-            else:
-                number_value = card_uid
-                staff, guest, access_group_from_holder = resolve_card_holder_and_access_group(tenant_id, card_uid)
-
-                if not open_result:
-                    access_group_value = AccessGroupChoices.DENIED
-                else:
-                    access_group_value = access_group_from_holder or AccessGroupChoices.FAILED
+                access_group_value = open_result
 
         additional_info = {
             "raw_event": value,

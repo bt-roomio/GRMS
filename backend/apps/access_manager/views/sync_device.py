@@ -63,7 +63,7 @@ class SyncDeviceView(APIView):
 
         holder = get_card_user(params.get("card_id"))
         serializer = SimpleNeedSyncDeviceSerializer(
-            queryset, many=True, context={"holder": holder}
+            queryset, many=True, context={"holder": holder, "card_id": params.get("card_id")}
         )
         return Response(serializer.data, 200)
 

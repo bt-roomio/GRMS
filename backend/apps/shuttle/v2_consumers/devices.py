@@ -21,6 +21,8 @@ class DevicesListConsumer(BaseGenericAsyncAPIConsumer):
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),
             sort_by=params.get("sort_by"),
+            name=params.get("name"),
+            device_profile=params.get("device_profile"),
         )
         return query
 

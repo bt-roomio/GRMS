@@ -24,6 +24,7 @@ class DeviceListView(APIView):
             status=params.get("status"),  # pyright: ignore
             sort_by=params.get("sort_by"),  # pyright: ignore
             name=params.get("name"),
+            device_profile=params.get("device_profile"),
         )
         serializer = DeviceSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
@@ -45,7 +46,8 @@ class DeviceDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Device"], responses=DeviceDetailSwagger)
     @check_perms(["main.view_device"])
     def get(self, request, pk):
-        device = get_object_or_404(Device, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
+        queryset = Device.objects.select_related("device_profile", "credentials").filter(is_active=True)
+        device = get_object_or_404(queryset, pk=pk, tenant_id=request.user.tenant_id)
         serializer = DeviceSerializer(device)
         return Response(serializer.data)
 
