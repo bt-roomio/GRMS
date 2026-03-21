@@ -1,11 +1,14 @@
-from django.db.models import Q, Exists, OuterRef, Prefetch
+from django.db.models import Case, Q, Value, When, Exists, OuterRef, Prefetch
+from django.db.models.fields import IntegerField
 
 from access_manager.models import NeedSyncDevice
 from core.querysets.base_queryset import BaseQuerySet
 
 
 class DeviceQuerySet(BaseQuerySet):
-    def list(self, tenant, search_field=None, search_value=None, status=None, sort_by=None, name=None):
+    def list(
+        self, tenant, search_field=None, search_value=None, status=None, sort_by=None, name=None, device_profile=None
+    ):
         query = (
             self.select_related("credentials", "device_profile")
             .prefetch_related("device_public_spaces__public_space")
@@ -21,7 +24,27 @@ class DeviceQuerySet(BaseQuerySet):
             ).distinct()
 
         query = query.filter(status=status) if status is not None else query
-        query = query.order_by(*sort_by) if sort_by else query
+        if device_profile is not None:
+            query = query.filter(device_profile_id=device_profile)
+
+        if sort_by:
+            has_gateway_sort = any(f in ("gateway", "-gateway") for f in sort_by)
+            if has_gateway_sort:
+                query = query.annotate(
+                    _is_gateway=Case(
+                        When(additional_info__gateway=True, then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
+                )
+
+            sort_map = {
+                "device_profile": "device_profile__name",
+                "-device_profile": "-device_profile__name",
+                "gateway": "_is_gateway",
+                "-gateway": "-_is_gateway",
+            }
+            query = query.order_by(*(sort_map.get(f, f) for f in sort_by))
 
         return query
 

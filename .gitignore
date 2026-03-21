@@ -26,3 +26,4 @@ logs
 *.csv
 *.sqlite3
 *.db
+CLAUDE.md
