@@ -11,12 +11,10 @@ from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
 from core.models import BaseModel, UpdateByModel
 
-
 class TypeChoices(models.IntegerChoices):
     HOUSEKEEPING: int
     ENGINEERING: int
     MASTER_CARD: int
-
 
 class AccessGroupChoices(models.IntegerChoices):
     DENIED: int
@@ -25,7 +23,7 @@ class AccessGroupChoices(models.IntegerChoices):
     ENGINEERING: int
     MASTER_CARD: int
     FAILED: int
-
+    SUCCESS = int
 
 class Group(BaseModel, UpdateByModel):
     name: Incomplete
@@ -43,7 +41,6 @@ class Group(BaseModel, UpdateByModel):
         db_table: str
         constraints: Incomplete
 
-
 class Card(BaseModel, UpdateByModel):
     number: Incomplete
     tenant: Incomplete
@@ -55,7 +52,6 @@ class Card(BaseModel, UpdateByModel):
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table: str
         unique_together: Incomplete
-
 
 class CardLog(BaseModel, UpdateByModel):
     created_at: Incomplete
@@ -73,7 +69,6 @@ class CardLog(BaseModel, UpdateByModel):
         db_table: str
         ordering: Incomplete
 
-
 class NeedSyncDevice(BaseModel, UpdateByModel):
     device: Incomplete
     card: Incomplete
@@ -86,7 +81,6 @@ class NeedSyncDevice(BaseModel, UpdateByModel):
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table: str
-
 
 class Staff(BaseModel):
     first_name: Incomplete
@@ -103,7 +97,6 @@ class Staff(BaseModel):
         db_table: str
         constraints: Incomplete
 
-
 class StaffCard(BaseModel):
     staff: Incomplete
     card: Incomplete
@@ -112,7 +105,6 @@ class StaffCard(BaseModel):
     class Meta(BaseModel.Meta):
         db_table: str
         constraints: Incomplete
-
 
 class GuestCard(BaseModel):
     guest: Incomplete
@@ -125,7 +117,6 @@ class GuestCard(BaseModel):
         db_table: str
         constraints: Incomplete
 
-
 class GroupRoom(BaseModel):
     group_id: UUID
     group: Incomplete
@@ -136,7 +127,6 @@ class GroupRoom(BaseModel):
     class Meta(BaseModel.Meta):
         db_table: str
 
-
 class GroupPublicSpace(BaseModel):
     group_id: UUID
     group: Incomplete
@@ -146,7 +136,6 @@ class GroupPublicSpace(BaseModel):
     class Meta(BaseModel.Meta):
         db_table: str
 
-
 class GuestPublicSpace(BaseModel):
     guest: Incomplete
     public_space: Incomplete
@@ -154,7 +143,6 @@ class GuestPublicSpace(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table: str
-
 
 class CardDeviceSlot(BaseModel, UpdateByModel):
     card_number: Incomplete
