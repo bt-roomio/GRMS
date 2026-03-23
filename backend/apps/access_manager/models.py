@@ -28,6 +28,7 @@ class AccessGroupChoices(models.IntegerChoices):
     ENGINEERING = 3, "ENGINEERING"
     MASTER_CARD = 4, "MASTER_CARD"
     FAILED = 5, "FAILED"
+    SUCCESS = 6, "SUCCESS"
 
 
 ALL_DAYS = "all_days"

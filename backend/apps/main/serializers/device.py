@@ -166,7 +166,18 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 
 class DeviceFilterParams(ValidatorSerializer):
-    SORT_FIELDS = ("created_at", "-created_at", "name", "-name", "status", "-status")
+    SORT_FIELDS = (
+        "created_at",
+        "-created_at",
+        "name",
+        "-name",
+        "status",
+        "-status",
+        "device_profile",
+        "-device_profile",
+        "gateway",
+        "-gateway",
+    )
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
@@ -174,6 +185,7 @@ class DeviceFilterParams(ValidatorSerializer):
     search_value = serializers.CharField(required=False)
     name = serializers.CharField(required=False)
     status = serializers.BooleanField(allow_null=True, required=False)
+    device_profile = serializers.UUIDField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 

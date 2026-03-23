@@ -15,6 +15,7 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
     public_space = serializers.SerializerMethodField()
     room = serializers.SerializerMethodField()
     failed_requests_list = serializers.SerializerMethodField()
+    message_params = serializers.SerializerMethodField()
 
     class Meta:
         model = NeedSyncDevice
@@ -27,7 +28,11 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
             "public_space",
             "room",
             "failed_requests_list",
+            "message_params",
         ]
+
+    def get_message_params(self, obj):
+        return (obj.additional_info or {}).get("message_params", {})
 
     def get_failed_requests_list(self, obj):
         return (obj.additional_info or {}).get("failed_requests", [])
@@ -111,6 +116,14 @@ class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
         holder = self.context.get("holder", {})
         data["staff_name"] = holder.get("name") if holder.get("type") == "staff" else None
         data["guest_name"] = holder.get("name") if holder.get("type") == "guest" else None
+
+        card_id = self.context.get("card_id")
+        if card_id:
+            sync_obj = NeedSyncDevice.objects.filter(device=instance, card=card_id, need_sync=True).first()
+            data["message_params"] = (sync_obj.additional_info or {}).get("message_params", {}) if sync_obj else {}
+        else:
+            data["message_params"] = {}
+
         return data
 
     class Meta:

@@ -119,8 +119,8 @@ docker exec -it django python manage.py create_relation
 ### Custom Management Commands
 
 Core commands in `backend/apps/core/management/commands/`:
-- `mq.py` - RabbitMQ message handler (runs via supervisord)
-- `active_attribute_server_scope.py` - Active attribute server (runs via supervisord)
+- `mq.py` / `mq_async.py` - RabbitMQ message handler (mq_async runs via supervisord)
+- `active_attribute_server_scope.py` - Active attribute server (Celery beat task, supervisord entry commented out)
 - `create_tenant.py` - Interactive tenant creation
 - `delete_tenant.py` - Delete tenant
 - `create_relation.py` - Create relationships between entities
@@ -166,6 +166,8 @@ The Django project is organized into specialized apps under `backend/apps/`:
   - Demultiplexer for routing WebSocket messages
 - **access_manager**: Physical access control integration, device synchronization
 - **services**: External service integrations (PMS systems)
+- **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, not in INSTALLED_APPS, routes at root level)
+- **admin_panel**: Multi-tenant admin operations (tenant management, user management, user impersonation), routes under `/api/v1/admin/`
 - **mews**: Mews PMS integration
   - Real-time WebSocket client for Mews events
   - Reservation synchronization
@@ -193,10 +195,11 @@ The Django container runs multiple processes via supervisord (`backend/superviso
 1. **django** - Gunicorn with Uvicorn workers (ASGI, 4 workers, port 8000)
 2. **celery** - Background task worker (4 concurrency, max 100 tasks per child)
 3. **celery-beat** - Periodic task scheduler
-4. **mq** - RabbitMQ message handler (custom management command)
-5. **active_attribute_server_scope** - Custom service for device attributes
-6. **mews_websocket** - Mews WebSocket client for real-time events
-7. **pms_handler** - PMS message handler for external integrations
+4. **mq_async** - RabbitMQ async message handler (custom management command)
+5. **mews_websocket** - Mews WebSocket client for real-time events
+6. **pms_handler** - PMS message handler for external integrations
+
+Note: `active_attribute_server_scope` and `read_write_cpu_ram` are commented out in supervisord.conf (now handled via Celery beat).
 
 ### Database Models
 
@@ -207,13 +210,14 @@ Key model patterns defined in `backend/apps/core/models.py`:
 - `UpdateByModel`: updated_at, updated_by tracking
   - Automatically updates `updated_at` on save if object exists
 - `BaseModelTs`: Alternative base with `ts` field instead of `created_at`
+- `NewUpdateByModel`: DateTimeField variant of UpdateByModel (uses Django DateTimeField instead of millisecond timestamps)
 - Time-series models use TimescaleDB hypertables for device telemetry
 - Most models use `models.AutoField` as DEFAULT_AUTO_FIELD
 - Custom `UnixTimeStampField` stores timestamps as Unix epoch milliseconds
 
 ### API Design
 
-- RESTful API under `/api/v1/`
+- RESTful API under `/api/v1/` (users, main, shuttle, access-manager, services, admin namespaces)
 - JWT authentication required by default
 - Pagination: 15 items per page (configurable via `page_size` query param)
 - Swagger/OpenAPI docs available (drf-yasg)
@@ -222,12 +226,15 @@ Key model patterns defined in `backend/apps/core/models.py`:
 ### Celery Tasks
 
 Scheduled tasks in `config/settings.py` (`CELERY_BEAT_SCHEDULE`):
-- `auto-checkout` - 30s interval (main.tasks.auto_check_out)
+- `auto-checkout` - Daily at 12:00 (main.tasks.auto_check_out)
+- `auto-block-guest` - 60s interval (main.tasks.auto_block_guest)
 - `sync_device` - 300s interval (access_manager.tasks.sync_device.sync_devices_task)
 - `clean_logs` - Daily at midnight (shuttle.tasks.delete_old_logs)
 - `update_db_metrics` - 60s interval (core.tasks.update_db_metrics)
 - `mews-sync` - 60s interval (mews.tasks.sync_reservations)
 - `mews-access-tokens` - 60s interval (mews.tasks.sync_access_tokens)
+- `active-attribute-server-scope` - 10s interval (core.tasks.active_attribute_server_scope)
+- `aggregate-ts-kv` - Daily at 03:00 (shuttle.tasks.aggregate_ts_kv)
 
 Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` decorator.
 
@@ -284,12 +291,10 @@ Key variables (see `docker/.env.example` and `backend/.env`):
 ## CI/CD
 
 GitLab CI pipeline (`.gitlab-ci.yml`) with stages:
-1. **test** - Run Django tests with TimescaleDB and Redis
+1. **test** - Run Django tests with TimescaleDB (2.21.0) and Redis 7 (Python 3.12, pytest)
 2. **build** - Build Docker image, push to GitLab registry (dev/latest tags)
-3. **deploy** - Manual deployments to:
-   - vesna (dev environment)
-   - leto (dev environment)
-   - grms (production via jump host)
+3. **staging** - Manual deployments to leto (dev environment)
+4. **production** - Manual deployments to grms (via jump host), cloud environments
 
 Branches:
 - `dev` - Development branch, builds `dev` tag
@@ -337,7 +342,7 @@ Note: Django will automatically generate migrations. Never write migrations manu
 - Custom `UnixTimeStampField` handles millisecond timestamps
 
 ### Multi-Process Architecture
-- Single Django container runs 7 services via supervisord
+- Single Django container runs 6 services via supervisord
 - Gunicorn uses Uvicorn workers for ASGI support (WebSockets)
 - Celery workers have separate database connection pool (`CONN_MAX_AGE=0`)
 - Each process has isolated Prometheus metrics via multiprocess mode
