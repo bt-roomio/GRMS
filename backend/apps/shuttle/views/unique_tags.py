@@ -17,11 +17,10 @@ class UniqueTagsView(APIView):
         tenant_id = request.user.tenant_id
 
         if params["tag_type"] == "telemetry":
-            keys = TsKvLatest.objects.unique_keys_by_tenant(tenant_id)
+            keys = TsKvLatest.objects.unique_keys_by_tenant(tenant_id, tag_name=params.get("tag_name"))
         else:
-            keys = AttributeKv.objects.unique_keys_by_tenant(tenant_id, params["attribute_scope"])
+            keys = AttributeKv.objects.unique_keys_by_tenant(
+                tenant_id, params["attribute_scope"], tag_name=params.get("tag_name")
+            )
 
-        page = params["page"]
-        size = params["size"]
-        offset = (page - 1) * size
-        return Response({"count": keys.count(), "results": list(keys[offset : offset + size])})
+        return Response({"count": keys.count(), "results": list(keys)})

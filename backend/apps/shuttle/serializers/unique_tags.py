@@ -5,6 +5,7 @@ from shuttle.models import AttributeKv
 
 
 class UniqueTagsFilterParams(ValidatorSerializer):
+    tag_name = serializers.CharField(required=False)
     tag_type = serializers.ChoiceField(choices=["telemetry", "attributes"])
     attribute_scope = serializers.ChoiceField(
         choices=[AttributeKv.CLIENT_SCOPE, AttributeKv.SERVER_SCOPE, AttributeKv.SHARED_SCOPE],
