@@ -1,6 +1,6 @@
 from typing import List
 
-from django.db.models import CharField, F, Q, Count
+from django.db.models import CharField, Count, F, Q
 from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
@@ -43,8 +43,11 @@ class TsKvLatestQuerySet(BaseQuerySet):
         )
         return query
 
-    def unique_keys_by_tenant(self, tenant_id):
-        return self.filter(entity__tenant_id=tenant_id).values_list("key__key", flat=True).distinct().order_by("key__key")
+    def unique_keys_by_tenant(self, tenant_id, tag_name: str | None = None):
+        query = self.filter(key__key__icontains=tag_name) if tag_name else self
+        query = query.filter(entity__tenant_id=tenant_id).values_list("key__key", flat=True).distinct()
+
+        return query.order_by("key__key")
 
     def room_flag_counts(self, tenant_id):
         alias = {"DND Relay": "dnd", "MUR Relay": "mur", "Occupancy State": "occupied", "AC ON OFF": "ac-on-off"}
