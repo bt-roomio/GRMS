@@ -1,8 +1,10 @@
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 
 
 class RoleQuerySet(QuerySet):
-    def list(self, tenant, is_superuser):
+    def list(self, tenant, is_superuser, search_field=None, search_value=None):
         query = self.prefetch_related("permissions")
         query = query.filter(tenant=tenant) if not is_superuser else query
+        if search_field and search_value:
+            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
         return query

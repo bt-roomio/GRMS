@@ -162,5 +162,14 @@ class GuestFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), default=[], required=False)
 
 
+class GuestQuickFilterParams(GuestFilterParams):
+    page = None
+    size = None
+    room = None
+    sort_by = None
+    search_field = serializers.ChoiceField(choices=("name", "lastname", "gender"), required=False)
+    search_value = serializers.CharField(required=False)
+
+
 class GuestCheckoutParams(ValidatorSerializer):
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all())

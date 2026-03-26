@@ -5,8 +5,12 @@ from _typeshed import Incomplete
 from django.db import models
 
 from core.models import BaseModel, UpdateByModel
+from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
+from main.querysets.guest import GuestQuerySet
+from main.querysets.public_space import PublicSpaceQuerySet
 from main.querysets.room import RoomQuerySet
+from main.querysets.room_type import RoomTypeQuerySet
 from shuttle.models import Relation as Relation
 from shuttle.models import TsKvDictionary as TsKvDictionary
 
@@ -119,8 +123,10 @@ class RoomType(BaseModel):
     vip_status_on_value: Incomplete
     vip_status_off_value: Incomplete
     tenant: Incomplete
+    tenant_id: Incomplete
     dashboard: Incomplete
-    objects: Incomplete
+
+    objects: RoomTypeQuerySet
 
     class Meta(BaseModel.Meta):
         db_table: str
@@ -167,6 +173,7 @@ class DeviceProfile(BaseModel):
     name: Incomplete
     active: Incomplete
     tenant: Incomplete
+    tenant_id: Incomplete
     type: Incomplete
     state: Incomplete
     image: Incomplete
@@ -209,13 +216,14 @@ class Dashboard(BaseModel):
     PUBLIC_SPACE_DASHBOARD: str
     title: Incomplete
     tenant: Incomplete
+    tenant_id: Incomplete
     configuration: Incomplete
     assigned_customers: Incomplete
     mobile_hide: Incomplete
     mobile_order: Incomplete
     image: Incomplete
     external_id: Incomplete
-    objects: Incomplete
+    objects: DashboardQuerySet
     def clean(self) -> None: ...
     def save(self, *args, **kwargs) -> None: ...
 
@@ -261,8 +269,9 @@ class Guest(BaseModel):
     room: Room
     room_id: UUID
     tenant: Incomplete
+    tenant_id: Incomplete
     additional_info: Incomplete
-    objects: Incomplete
+    objects: GuestQuerySet
     checkout_by: CHECKOUT_BY
     def get_name(self): ...
 
@@ -277,9 +286,10 @@ class PublicSpace(BaseModel):
     name: Incomplete
     accessible_for_guest: Incomplete
     tenant: Incomplete
+    tenant_id: Incomplete
     dashboard: Incomplete
     additional_info: Incomplete
-    objects: Incomplete
+    objects: PublicSpaceQuerySet
     @property
     def devices(self): ...
 

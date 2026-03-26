@@ -10,16 +10,17 @@ from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms
 
+
 class GroupListView(APIView):
     @group_swagger("list")
     @check_perms(["access_manager.view_group"])
     def get(self, request):
         params = GroupFilterParams.check(request.GET)
-        queryset = Group.objects.list(  # pyright: ignore
+        queryset = Group.objects.list(
             tenant_id=request.user.tenant_id,
-            sort_by=params.get("sort_by", []),  # pyright: ignore
-            search_field=params.get("search_field"),  # pyright: ignore
-            search_value=params.get("search_value"),  # pyright: ignore
+            sort_by=params.get("sort_by", []),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
         )
         serializer = GroupSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore

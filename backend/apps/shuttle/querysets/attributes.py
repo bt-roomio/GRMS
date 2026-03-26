@@ -31,13 +31,14 @@ class AttributeKvQuerySet(BaseQuerySet):
 
         return cleaned_data
 
-    def unique_keys_by_tenant(self, tenant_id, scope):
-        return (
-            self.filter(entity__tenant_id=tenant_id, attribute_type=scope)
+    def unique_keys_by_tenant(self, tenant_id, scope, tag_name: str | None = None):
+        query = self.filter(attribute_key__icontains=tag_name) if tag_name else self
+        query = (
+            query.filter(entity__tenant_id=tenant_id, attribute_type=scope)
             .values_list("attribute_key", flat=True)
             .distinct()
-            .order_by("attribute_key")
         )
+        return query.order_by("attribute_key")
 
     def update_or_create_or_delete(self, devices, room):
         from shuttle.models import AttributeKv

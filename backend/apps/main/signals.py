@@ -3,11 +3,12 @@ import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
-from main.models import Device, Guest, Room
+from core.utils.cache import invalidate_quick_cache
+from main.models import Dashboard, Device, DeviceProfile, Guest, PublicSpace, Room, RoomType
 from main.observables.device import publish_device
 from main.observables.guest import publish_guest_changes
 from main.observables.room_detail import publish_room_detail_changes
@@ -22,6 +23,42 @@ logger = logging.getLogger(__name__)
 def device_post_save(instance: Device, **kwargs):
     publish_room_status(instance)
     publish_device(instance)
+    invalidate_quick_cache("devices", instance.tenant_id)
+
+
+@receiver(post_delete, sender=Device)
+def device_post_delete(instance: Device, **kwargs):
+    invalidate_quick_cache("devices", instance.tenant_id)
+
+
+@receiver([post_save, post_delete], sender=DeviceProfile)
+def device_profile_cache_invalidate(instance: DeviceProfile, **kwargs):
+    invalidate_quick_cache("device_profiles", instance.tenant_id)
+
+
+@receiver([post_save, post_delete], sender=Room)
+def room_cache_invalidate(instance: Room, **kwargs):
+    invalidate_quick_cache("rooms", instance.tenant_id)
+
+
+@receiver([post_save, post_delete], sender=RoomType)
+def room_type_cache_invalidate(instance: RoomType, **kwargs):
+    invalidate_quick_cache("room_types", instance.tenant_id)
+
+
+@receiver([post_save, post_delete], sender=Dashboard)
+def dashboard_cache_invalidate(instance: Dashboard, **kwargs):
+    invalidate_quick_cache("dashboards", instance.tenant_id)
+
+
+@receiver([post_save, post_delete], sender=PublicSpace)
+def public_space_cache_invalidate(instance: PublicSpace, **kwargs):
+    invalidate_quick_cache("public_spaces", instance.tenant_id)
+
+
+@receiver([post_save, post_delete], sender=Guest)
+def guest_cache_invalidate(instance: Guest, **kwargs):
+    invalidate_quick_cache("guests", instance.tenant_id)
 
 
 @receiver(post_save, sender=AttributeKv)

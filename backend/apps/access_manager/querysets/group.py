@@ -14,25 +14,24 @@ class GroupQuerySet(BaseQuerySet):
         query = query.annotate(count_staff=Count("staff"))
 
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
 
-        return query.order_by(*sort_by)
+        return query.order_by(*sort_by or ["-created_at"])
 
     def is_active(self):
         return self.filter(is_active=True)
 
     def get_staff_cards(self, group_id):
         from access_manager.models import StaffCard
+
         group = self.filter(id=group_id, is_active=True).first()
 
         if not group:
             return None, None
 
         staff_cards = StaffCard.objects.filter(
-            staff__group=group,
-            staff__is_active=True,
-            is_active=True
-        ).select_related('card', 'staff')
+            staff__group=group, staff__is_active=True, is_active=True
+        ).select_related("card", "staff")
 
         if not staff_cards.exists():
             return None, group

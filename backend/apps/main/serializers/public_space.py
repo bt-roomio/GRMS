@@ -1,8 +1,9 @@
 import logging
 
+from access_manager.utilits.cards_public_space import register_cards_for_public_space
+
 from rest_framework import serializers
 
-from access_manager.utilits.cards_public_space import register_cards_for_public_space
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DevicePublicSpaces, PublicSpace
 from main.serializers.dashboard import SimpleDashboardSerializer
@@ -111,3 +112,10 @@ class PublicSpaceFilterParams(ValidatorSerializer):
     search_value = serializers.CharField(required=False)
     accessible_for_guest = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+
+
+class PublicSpaceQuickFilterParams(PublicSpaceFilterParams):
+    page = None
+    size = None
+    accessible_for_guest = None
+    sort_by = None

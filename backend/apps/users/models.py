@@ -111,15 +111,9 @@ class ResetPassword(BaseModel):
 
 
 class Role(BaseModel):
-    name = models.CharField(
-        max_length=255,
-        help_text=_("Name of the role"),
-    )
+    name = models.CharField(max_length=255, help_text=_("Name of the role"))
     tenant = models.ForeignKey(
-        "main.Tenant",
-        models.CASCADE,
-        related_name="roles",
-        help_text=_("Tenant (hotel/property) this role belongs to"),
+        "main.Tenant", models.CASCADE, related_name="roles", help_text=_("Tenant (hotel/property) this role belongs to")
     )
     permissions = models.ManyToManyField(
         Permission,
