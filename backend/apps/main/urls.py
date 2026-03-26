@@ -15,6 +15,7 @@ from main.views.integration_settings import IntegrationSettingsDetailView
 from main.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_from_conf import RoomFromConfListView
+from main.views.room_from_file import RoomExportView, RoomFromFileListView
 from main.views.room_status import RoomHistoryStatusView
 from main.views.room_type import RoomTypeDetailView, RoomTypeListView
 from main.views.tenant import TenantListView
@@ -48,6 +49,8 @@ urlpatterns = [
     path("blocks-floors/", BlockFloorsView.as_view(), name="block-floors-list"),
     path("devices-from-configuration/", DeviceFromConfListView.as_view(), name="device-from-conf-list"),
     path("rooms-from-configuration/", RoomFromConfListView.as_view(), name="room-from-conf-list"),
+    path("rooms-from-file/", RoomFromFileListView.as_view(), name="room-from-file-list"),
+    path("rooms-export/", RoomExportView.as_view(), name="room-export"),
     # Public space
     path("public-space/", PublicSpaceListView.as_view(), name="public-space-list"),
     path("public-space/<uuid:pk>/", PublicSpaceDetailView.as_view(), name="public-space-detail"),
