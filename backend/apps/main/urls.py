@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from main.views.admin_settings import AdminSettingsView
 from main.views.alarm_settings import AlarmSettingsDetailView
@@ -53,6 +53,8 @@ urlpatterns = [
     path("public-space/<uuid:pk>/", PublicSpaceDetailView.as_view(), name="public-space-detail"),
     # For SuperUser
     path("tenant/", TenantListView.as_view(), name="tenant-list"),
+    # Quick (lightweight) endpoints
+    path("simple/", include("main.views.simple.urls")),
     path("connector-url/", WebrtcBroker.as_view(), name="webrtc-open"),
     path("webrtc-connector-status/", WebrtcAgentStatus.as_view(), name="webrtc-gateways-status"),
 ]

@@ -25,11 +25,11 @@ class RoomListView(APIView):
         params = RoomFilterParams.check(request.query_params)
         queryset = Room.objects.list(
             tenant=request.user.tenant,
-            state=params.get("state"),  # pyright: ignore
-            status=params.get("status"),  # pyright: ignore
-            search_field=params.get("search_field"),  # pyright: ignore
-            search_value=params.get("search_value"),  # pyright: ignore
-            sort_by=params.get("sort_by"),  # pyright: ignore
+            state=params.get("state"),
+            status=params.get("status"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+            sort_by=params.get("sort_by"),
         )
         serializer = RoomSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))

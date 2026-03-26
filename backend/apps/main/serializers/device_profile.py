@@ -44,3 +44,9 @@ class DeviceProfileFilterParams(ValidatorSerializer):
     state = serializers.BooleanField(allow_null=True)
     search_field = serializers.ChoiceField(choices=("name", "type"), required=False)
     search_value = serializers.CharField(required=False)
+
+
+class DeviceProfileQuickFilterParams(DeviceProfileFilterParams):
+    page = None
+    size = None
+    state = None

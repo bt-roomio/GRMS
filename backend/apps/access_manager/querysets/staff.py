@@ -10,9 +10,9 @@ class StaffQuerySet(BaseQuerySet):
         query = query.exclude(group=not_in_group) if not_in_group else query
 
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
 
-        return query.order_by(*sort_by)
+        return query.order_by(*sort_by or ["-created_at"])
 
     def is_active(self):
         return self.filter(is_active=True)

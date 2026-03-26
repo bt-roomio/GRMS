@@ -1,14 +1,12 @@
 from access_manager.models import Group, GroupPublicSpace, GroupRoom, TypeChoices
 from access_manager.serializers.group_room import SimpleGroupPublicSpaceSerializer, SimpleGroupRoomSerializer
+from access_manager.utilits.task_trigger import card_public_space, card_room
 
 from rest_framework import serializers
 
-from access_manager.utilits.task_trigger import card_room, card_public_space
 from core.utils.serializers import ValidatorSerializer
 from main.models import PublicSpace, Room
 from users.serializers.user import SimpleUserSerializer
-
-
 
 
 class TypeChoiceField(serializers.Field):
@@ -47,7 +45,7 @@ class TimeHourMinuteField(serializers.TimeField):
     def to_representation(self, value):
         if value is None:
             return value
-        return value.strftime('%H:%M')
+        return value.strftime("%H:%M")
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -88,10 +86,10 @@ class GroupSerializer(serializers.ModelSerializer):
         rooms = validated_data.pop("rooms_ids", None) if validated_data.get("rooms_ids") else []
         public_spaces = validated_data.pop("public_spaces_ids", None) if validated_data.get("public_spaces_ids") else []
 
-        current_rooms = set(instance.group_room.values_list('room_id', flat=True))
+        current_rooms = set(instance.group_room.values_list("room_id", flat=True))
         new_rooms = set(room.id for room in rooms)
 
-        current_public_spaces = set(instance.group_public_space.values_list('public_space_id', flat=True))
+        current_public_spaces = set(instance.group_public_space.values_list("public_space_id", flat=True))
         new_public_spaces = set(public_space.id for public_space in public_spaces)
 
         rooms_to_remove = current_rooms - new_rooms
@@ -106,7 +104,7 @@ class GroupSerializer(serializers.ModelSerializer):
 
         for room in rooms:
             GroupRoom.objects.get_or_create(group=instance, room=room)
-            card_room(instance.id, room.id, action='connect')
+            card_room(instance.id, room.id, action="connect")
 
         for public_space_id in public_spaces_to_remove:
             card_public_space(instance.id, public_space_id, action="disconnect")
@@ -155,6 +153,12 @@ class GroupFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search_field = serializers.ChoiceField(choices=("name", ), required=False)
+    search_field = serializers.ChoiceField(choices=("name",), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+
+
+class GroupQuickFilterParams(GroupFilterParams):
+    page = None
+    size = None
+    sort_by = None

@@ -45,3 +45,11 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = ("id", "name", "permissions", "additional_info")
+
+
+from core.utils.serializers import ValidatorSerializer
+
+
+class RoleQuickFilterParams(ValidatorSerializer):
+    search_field = serializers.ChoiceField(choices=("name",), required=False)
+    search_value = serializers.CharField(required=False)
