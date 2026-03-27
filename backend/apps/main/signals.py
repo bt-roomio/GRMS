@@ -162,14 +162,17 @@ def _update_room_devices_status(room: Room) -> None:
         channel = connect_to_rabbitmq()
 
         if Room.Available in room.state:
-            attr_device_id_device_name = attribute_room_state(room, StateEnum.CHECK_IN_OUT, False)
-            if attr_device_id_device_name:
-                send_msg_status_room(channel, *attr_device_id_device_name)
-
+            attr_device_id_device_name = attribute_room_state(
+                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_IN_TRIGGER], False
+            )
+            for attrs in attr_device_id_device_name:
+                send_msg_status_room(channel, *attrs)
         elif Room.CheckedIn in room.state:
-            attr_device_id_device_name = attribute_room_state(room, StateEnum.CHECK_IN_OUT, True)
-            if attr_device_id_device_name:
-                send_msg_status_room(channel, *attr_device_id_device_name)
+            attr_device_id_device_name = attribute_room_state(
+                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_IN_TRIGGER], True
+            )
+            for attrs in attr_device_id_device_name:
+                send_msg_status_room(channel, *attrs)
     except Exception as e:
         logger.error(f"✗ Failed to update room devices for room {room.number}: {e}")
 
