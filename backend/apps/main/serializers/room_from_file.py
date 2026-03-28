@@ -10,8 +10,8 @@ from main.models import Device, Room, RoomType
 EXPORT_FORMATS = {"json", "xlsx"}
 EXPORT_COLUMNS = ["number", "floor", "block", "type", "devices", "door_lock_device"]
 
-REQUIRED_COLUMNS = {"number", "floor", "block", "devices"}
-OPTIONAL_COLUMNS = {"type", "label", "door_lock_device"}
+REQUIRED_COLUMNS = {"number", "floor", "block", "devices", "type"}
+OPTIONAL_COLUMNS = {"label", "door_lock_device"}
 ALLOWED_COLUMNS = REQUIRED_COLUMNS | OPTIONAL_COLUMNS
 
 
@@ -137,11 +137,11 @@ class RoomFromFileSerializer(serializers.Serializer):
                 errors.append({"row": idx, "message": f"Device '{name}' not found."})
                 continue
 
-            if device.room and device.room != existing_room:
+            if device.device_public_spaces.exists():
                 errors.append(
                     {
                         "row": idx,
-                        "message": f"Device '{name}' is already assigned to room {device.room.number}/{device.room.floor}/{device.room.block}.",
+                        "message": f"Device '{name}' is assigned to a public space and cannot be used.",
                     }
                 )
                 continue
@@ -154,23 +154,11 @@ class RoomFromFileSerializer(serializers.Serializer):
                 errors.append({"row": idx, "message": f"Door lock device '{door_lock_name}' not found."})
                 return devices, None, errors
 
-            conflicting_room = (
-                Room.objects.filter(
-                    door_lock_device=door_lock,
-                    tenant=tenant,
-                )
-                .exclude(pk=existing_room.pk if existing_room else None)
-                .first()
-            )
-
-            if conflicting_room:
+            if door_lock.device_public_spaces.exists():
                 errors.append(
                     {
                         "row": idx,
-                        "message": (
-                            f"Door lock device '{door_lock_name}' is already assigned as door lock "
-                            f"to room {conflicting_room.number}/{conflicting_room.floor}/{conflicting_room.block}."
-                        ),
+                        "message": f"Door lock device '{door_lock_name}' is assigned to a public space and cannot be used.",
                     }
                 )
 
@@ -235,8 +223,9 @@ class RoomFromFileSerializer(serializers.Serializer):
             number = _cell_to_str(row.get("number"))
             floor = _cell_to_str(row.get("floor"))
             block = _cell_to_str(row.get("block"))
+            type_val = _cell_to_str(row.get("type"))
 
-            if not (number and floor and block):
+            if not (number and floor and block and type_val):
                 errors.append({"row": idx, "type": "room"})
                 continue
 
@@ -294,6 +283,12 @@ class RoomFromFileSerializer(serializers.Serializer):
                 if entry["action"] == "skip":
                     skipped_count += 1
                     continue
+
+                if entry["door_lock"]:
+                    Room.objects.filter(
+                        door_lock_device=entry["door_lock"],
+                        tenant=tenant,
+                    ).update(door_lock_device=None)
 
                 defaults = self._build_defaults(tenant, entry["row"], entry["door_lock"])
                 room, created = Room.objects.update_or_create(
