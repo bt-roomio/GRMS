@@ -67,3 +67,8 @@ class RoomTypeFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     search_field = serializers.ChoiceField(choices=("title",), required=False)
     search_value = serializers.CharField(required=False)
+
+
+class RoomTypeQuickFilterParams(RoomTypeFilterParams):
+    page = None
+    size = None

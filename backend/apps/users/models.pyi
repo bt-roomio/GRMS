@@ -2,6 +2,7 @@ from _typeshed import Incomplete
 from django.contrib.auth.models import AbstractUser
 
 from core.models import BaseModel
+from users.querysets.role import RoleQuerySet
 from users.querysets.user import UsersManager
 
 class User(AbstractUser, BaseModel):
@@ -33,7 +34,7 @@ class Role(BaseModel):
     tenant: Incomplete
     permissions: Incomplete
     additional_info: Incomplete
-    objects: Incomplete
+    objects: RoleQuerySet
 
     class Meta:
         verbose_name: str

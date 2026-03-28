@@ -64,3 +64,9 @@ class DashboardFilterParams(ValidatorSerializer):
 
 class DashboardTypeSerializer(ValidatorSerializer):
     type = serializers.ChoiceField(choices=[Dashboard.MAIN_DASHBOARD, Dashboard.PUBLIC_SPACE_DASHBOARD])
+
+
+class DashboardQuickFilterParams(DashboardFilterParams):
+    page = None
+    size = None
+    sort_by = None

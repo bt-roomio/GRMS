@@ -27,7 +27,7 @@ class UsersManager(BaseUserManager):
             query = query.order_by(*fields)
 
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
 
         return query
 

@@ -129,12 +129,14 @@ class DeviceFromConfSerializer(serializers.Serializer):
                 )
 
         if latest_objs:
-            TsKvLatest.objects.bulk_create(
-                latest_objs,
-                update_conflicts=True,
-                unique_fields=["entity_id", "key_id"],
-                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+            existing_ts = set(
+                TsKvLatest.objects.filter(
+                    entity_id__in={obj.entity_id for obj in latest_objs},
+                ).values_list("entity_id", "key_id")
             )
+            latest_objs = [obj for obj in latest_objs if (obj.entity_id, obj.key.key_id) not in existing_ts]
+            if latest_objs:
+                TsKvLatest.objects.bulk_create(latest_objs, ignore_conflicts=True)
 
         # 8) Build deduped list of AttributeKv
         attr_objs = []
@@ -173,12 +175,19 @@ class DeviceFromConfSerializer(serializers.Serializer):
                     )
 
         if attr_objs:
-            AttributeKv.objects.bulk_create(
-                attr_objs,
-                update_conflicts=True,
-                unique_fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
-                update_fields=["long_v"],
+            existing_attrs = set(
+                AttributeKv.objects.filter(
+                    entity_type="DEVICE",
+                    entity_id__in={obj.entity_id for obj in attr_objs},
+                ).values_list("entity_type", "attribute_type", "entity_id", "attribute_key")
             )
+            attr_objs = [
+                obj
+                for obj in attr_objs
+                if (obj.entity_type, obj.attribute_type, obj.entity_id, obj.attribute_key) not in existing_attrs
+            ]
+            if attr_objs:
+                AttributeKv.objects.bulk_create(attr_objs, ignore_conflicts=True)
 
         # 9) Create Relations
         relation_objs = []

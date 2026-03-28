@@ -189,6 +189,15 @@ class DeviceFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
+class DeviceQuickFilterParams(DeviceFilterParams):
+    page = None
+    size = None
+    name = None
+    status = None
+    device_profile = None
+    sort_by = None
+
+
 class GatewayListSerializer(serializers.ModelSerializer):
     total_connectors = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()

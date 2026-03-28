@@ -1,9 +1,9 @@
 from access_manager.models import Group, Staff, StaffCard
 from access_manager.serializers.group import SimpleGroupSerializer
+from access_manager.serializers.staff_card import StaffCardSerializer
 
 from rest_framework import serializers
 
-from access_manager.serializers.staff_card import StaffCardSerializer
 from core.utils.serializers import ValidatorSerializer
 
 
@@ -24,10 +24,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return data
 
     def get_cards(self, obj):
-        staff_cards = StaffCard.objects.filter(
-            staff=obj,
-            is_active=True
-        ).select_related('card')
+        staff_cards = StaffCard.objects.filter(staff=obj, is_active=True).select_related("card")
         return StaffCardSerializer(staff_cards, many=True).data
 
     class Meta:
@@ -56,3 +53,11 @@ class StaffFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     in_group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), required=False)
     not_in_group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), required=False)
+
+
+class StaffQuickFilterParams(StaffFilterParams):
+    page = None
+    size = None
+    sort_by = None
+    in_group = None
+    not_in_group = None

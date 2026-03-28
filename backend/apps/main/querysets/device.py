@@ -1,7 +1,7 @@
-from django.db.models import Case, Q, Value, When, Exists, OuterRef, Prefetch
+from access_manager.models import NeedSyncDevice
+from django.db.models import Case, Exists, OuterRef, Prefetch, Q, Value, When
 from django.db.models.fields import IntegerField
 
-from access_manager.models import NeedSyncDevice
 from core.querysets.base_queryset import BaseQuerySet
 
 
