@@ -23,7 +23,7 @@ class RoomFromFileListView(APIView):
         serializer = RoomFromFileSerializer(data=request.data, context={"tenant": request.user.tenant})
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
-        if result.get("message", "") == "Import completed successfully!":
+        if result.get("success", False):
             return Response(result, status=status.HTTP_200_OK)
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
 

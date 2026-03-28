@@ -309,9 +309,7 @@ class RoomFromFileSerializer(serializers.Serializer):
                     device.room = room
                     device.save(update_fields=["room"])
 
-        return {
-            "message": f"Import completed successfully !",
-        }
+        return {"success": True, "message": f"Import completed successfully !"}
 
 
 class RoomExportSerializer(serializers.Serializer):
