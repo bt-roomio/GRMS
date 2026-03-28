@@ -21,8 +21,8 @@ async def publish_updates_attribute_batch_async(updates_by_device: dict[str, lis
         if not changed_messages:
             continue
         payload = {"type": "get_latest_activity", "updates": changed_messages}
-        group_name = "attribute_kv_updates"
-        await channel_layer.group_send(group_name, payload)
+        await channel_layer.group_send("attribute_kv_updates", payload)
+        await channel_layer.group_send(f"attribute_kv_updates_{tenant_id}", payload)
         await channel_layer.group_send(
             f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}
         )

@@ -19,8 +19,8 @@ def publish_updates_attribute_batch(updates_by_device: dict[str, list[dict]]):
         if not changed_messages:
             continue
         payload = {"type": "get_latest_activity", "updates": changed_messages}
-        group_name = "attribute_kv_updates"
-        async_to_sync(channel_layer.group_send)(group_name, payload)
+        async_to_sync(channel_layer.group_send)("attribute_kv_updates", payload)
+        async_to_sync(channel_layer.group_send)(f"attribute_kv_updates_{tenant_id}", payload)
         async_to_sync(channel_layer.group_send)(
             f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}
         )
