@@ -77,6 +77,7 @@ class Room:
     tenant: Tenant
     tenant_id: UUID
     status: Incomplete
+    additional_info: Incomplete
     devices: List[Device]
     objects: RoomQuerySet
     def clean(self) -> None: ...

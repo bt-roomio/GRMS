@@ -163,16 +163,18 @@ def _update_room_devices_status(room: Room) -> None:
 
         if Room.Available in room.state:
             attr_device_id_device_name = attribute_room_state(
-                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_IN_TRIGGER], False
+                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_OUT_TRIGGER, StateEnum.CHECK_IN_TRIGGER], 0
             )
-            for attrs in attr_device_id_device_name:
-                send_msg_status_room(channel, *attrs)
+            if isinstance(room.additional_info, dict) and room.additional_info.get("swap_flag"):
+                for attrs in attr_device_id_device_name:
+                    send_msg_status_room(channel, *attrs)
         elif Room.CheckedIn in room.state:
             attr_device_id_device_name = attribute_room_state(
-                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_IN_TRIGGER], True
+                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_IN_TRIGGER], 2
             )
-            for attrs in attr_device_id_device_name:
-                send_msg_status_room(channel, *attrs)
+            if isinstance(room.additional_info, dict) and room.additional_info.get("swap_flag"):
+                for attrs in attr_device_id_device_name:
+                    send_msg_status_room(channel, *attrs)
     except Exception as e:
         logger.error(f"✗ Failed to update room devices for room {room.number}: {e}")
 
