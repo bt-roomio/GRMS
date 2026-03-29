@@ -2,33 +2,11 @@ image: docker:git
 services:
   - docker:dind
 
-workflow:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
-
 stages:
-  - .pre
   - test
   - build
   - staging
   - production
-
-check-duplicate-pipeline:
-  stage: .pre
-  image: alpine:latest
-  script:
-    - apk add --no-cache curl jq
-    - |
-      SUCCESSFUL=$(curl -s --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
-        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines?sha=$CI_COMMIT_SHA&status=success" \
-        | jq 'map(select(.id != ($ENV.CI_PIPELINE_ID | tonumber))) | length')
-      if [ "$SUCCESSFUL" -gt "0" ]; then
-        echo "Пайплайн для коммита $CI_COMMIT_SHA уже прошёл успешно — пропускаем."
-        curl -s --request POST --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
-          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/cancel" > /dev/null
-      else
-        echo "Новый пайплайн для $CI_COMMIT_SHA — запускаем."
-      fi
 
 test:
   stage: test
