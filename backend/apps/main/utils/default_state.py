@@ -11,9 +11,10 @@ def default_state():
 class StateEnum(str, Enum):
     CHECK_IN_OUT = "Room reservation status"
     CHECK_IN_TRIGGER = "Check-in trigger"
+    CHECK_OUT_TRIGGER = "Check-out trigger"
 
 
-def attribute_room_state(room, states: list[StateEnum], value=True):
+def attribute_room_state(room, states: list[StateEnum], value: int):
     from main.models import Device
 
     device = Device.objects.find_device_by_room(room)  # pyright: ignore
@@ -27,7 +28,7 @@ def attribute_room_state(room, states: list[StateEnum], value=True):
             attribute_key=state.value,
             entity_type="DEVICE",
             attribute_type=(AttributeKv.SHARED_SCOPE if state == StateEnum.CHECK_IN_OUT else AttributeKv.CLIENT_SCOPE),
-            defaults={"last_update_ts": time.time(), "long_v": int(value)},
+            defaults={"last_update_ts": time.time(), "long_v": 1 if StateEnum.CHECK_OUT_TRIGGER else int(value)},
         )
         device_gateway = Device.objects.get_relation_or_gateway(device.id)  # pyright: ignore
         yield ({state.value: int(value)}, str(device_gateway), device.name)

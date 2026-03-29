@@ -15,7 +15,7 @@ class CheckInSerializer(serializers.Serializer):
     tenantId = serializers.CharField(required=False)
     roomNumber = serializers.CharField()
     guestName = serializers.CharField()
-    guestFirstName = serializers.CharField()
+    guestFirstName = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     guestTitle = serializers.CharField(allow_null=True, allow_blank=True)
     pmsRegNum = serializers.CharField()
     arrivalDateTS = serializers.CharField()
@@ -123,6 +123,9 @@ class CheckInSerializer(serializers.Serializer):
                 raise JsonValidationError(
                     {"result": 0, "message": "Guest already exists with same data, no update needed."}
                 )
+
+        room.additional_info = {"swap_flag": attrs.get("swap_flag")}
+        room.save()
 
         attrs["tenant"] = tenant
         attrs["room"] = room

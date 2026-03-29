@@ -58,14 +58,17 @@ class GuestSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        instance = super().create(validated_data)
-
-        room = instance.room
-        if room:
-            room.state = safely_remove(room.state, Room.Available)
-            room.state.append(Room.CheckedIn)
-            room.save(update_fields=["state"])
-        return instance
+        try:
+            instance = super().create(validated_data)
+            room = instance.room
+            if room:
+                room.state = safely_remove(room.state, Room.Available)
+                room.state.append(Room.CheckedIn)
+                room.save(update_fields=["state"])
+            return instance
+        except Exception as e:
+            logger.warning(e)
+            raise e
 
     def update(self, instance: Guest, validated_data):
         logger.debug(f"Updating Guest {instance.id} with data: {validated_data}")

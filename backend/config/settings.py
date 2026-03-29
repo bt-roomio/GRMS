@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "services",
     "mews",
     "admin_panel",
+    "hoteza",
 ]
 
 MIDDLEWARE = [
