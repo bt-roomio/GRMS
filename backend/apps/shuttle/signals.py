@@ -1,5 +1,6 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -88,10 +89,15 @@ def attribute_kv_signal_handler(sender, instance: AttributeKv, **kwargs):
     if not changed_messages:
         return
 
-    async_to_sync(channel_layer.group_send)("attribute_kv_updates", {"type": "get_latest_activity", "update": message})
-    async_to_sync(channel_layer.group_send)(
-        f"attribute_kv_updates_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
-    )
-    async_to_sync(channel_layer.group_send)(
-        f"emergency_status_{instance.entity.tenant_id}", {"type": "get_latest_activity", "update": message}
-    )
+    tenant_id = instance.entity.tenant_id
+
+    def send_to_channel_layer():
+        async_to_sync(channel_layer.group_send)("attribute_kv_updates", {"type": "get_latest_activity", "update": message})
+        async_to_sync(channel_layer.group_send)(
+            f"attribute_kv_updates_{tenant_id}", {"type": "get_latest_activity", "update": message}
+        )
+        async_to_sync(channel_layer.group_send)(
+            f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "update": message}
+        )
+
+    transaction.on_commit(send_to_channel_layer)
