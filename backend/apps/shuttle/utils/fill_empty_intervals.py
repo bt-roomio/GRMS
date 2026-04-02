@@ -46,7 +46,7 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
     for i in range(limit):
         key = make_key(current)
         record = data_by_key.get(key)
-        if i == 0:
+        if i == 0 and data_by_key:
             record = next(iter(data_by_key.values()))
 
         if record:
