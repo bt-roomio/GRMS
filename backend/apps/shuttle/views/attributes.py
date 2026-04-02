@@ -21,7 +21,7 @@ class AttributeListView(APIView):
 
     @tag_swagger()
     @check_perms(["shuttle.view_attributelist"])
-    def get(self, request, *args, **kwargs):
+    def get(self, request, **kwargs):
         path = TagFilterPath.check(kwargs)
         params = TagFilterParams.check(request.GET)
         if path.get("scope") != "LATEST_TELEMETRY":
@@ -68,7 +68,6 @@ class AttributeListView(APIView):
 
         device_id = path_data.get("device_id")
         send_rabbit_mq_attributes(device_id and device_id.id, available_fields)
-
         return Response({}, 201)
 
 
