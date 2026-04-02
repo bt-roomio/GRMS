@@ -4,63 +4,9 @@ from django.core.exceptions import ValidationError
 from hoteza.serializers.checkin import CheckInSerializer
 from hoteza.serializers.checkout import CheckOutSerializer
 
-from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
+from core.management.mq.fias_key_handler import KEY_COMMAND_HANDLERS, KEY_COMMANDS, send_card_operation_confirmation
 
 logger = logging.getLogger(__name__)
-
-KEY_COMMANDS = {"keyrequest", "keydelete", "keydatachange", "keyread"}
-
-KEY_COMMAND_TEXTS = {
-    "keyrequest": "Key request processed successfully",
-    "keydelete": "Key deleted successfully",
-    "keydatachange": "Key data change processed successfully",
-    "keyread": "Key read processed successfully",
-}
-
-
-def _send_card_operation_confirmation(device, operation_id, status="OK", text=""):
-    """Send RPC confirmCardOperation response back to gateway via RabbitMQ."""
-    device_id = device.get("id")
-    message = {
-        "targetDeviceUUID": str(device_id),
-        "topic": "v1/gateway/rpc",
-        "data": {
-            "method": "confirmCardOperation",
-            "params": {
-                "operationId": operation_id,
-                "status": status,
-                "text": text,
-            },
-        },
-    }
-    try:
-        ch = connect_to_rabbitmq()
-        send_to_rabbitmq(ch, message, routing_key="fromGRMS")
-        ch.connection.close()
-        logger.info("Sent confirmCardOperation for operationId=%s status=%s", operation_id, status)
-    except Exception as exc:
-        logger.exception("Failed to send confirmCardOperation for operationId=%s: %s", operation_id, exc)
-        raise
-
-
-def _send_attribute(device):
-    device_id = device.get("id")
-    message = {
-        "targetDeviceUUID": str(device_id),
-        "topic": "v1/gateway/rpc",
-        "data": {
-            "method": "",
-            "params": {},
-        },
-    }
-    try:
-        ch = connect_to_rabbitmq()
-        send_to_rabbitmq(ch, message, routing_key="fromGRMS")
-        ch.connection.close()
-        logger.info("Sent attribute for device=%s", device_id)
-    except Exception as exc:
-        logger.exception("Failed to send attribute %s", exc)
-        raise
 
 
 def handle_fias(data, device):
@@ -72,8 +18,12 @@ def handle_fias(data, device):
         if not operation_id:
             logger.error("Missing operationId for command=%s", command)
             return
-        text = KEY_COMMAND_TEXTS.get(command, "Processed successfully")
-        _send_card_operation_confirmation(device, operation_id, status="OK", text=text)
+        try:
+            handler = KEY_COMMAND_HANDLERS[command]
+            handler(data, device)
+        except Exception as exc:
+            logger.exception("Error handling FIAS key command=%s operationId=%s: %s", command, operation_id, exc)
+            send_card_operation_confirmation(device, operation_id, status="UR", text=str(exc))
         return
 
     tenant_id = device.get("tenant_id")

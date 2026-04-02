@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 
+from core.management.mq.handle_fias import handle_fias
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device
 from shuttle.models import Relation
@@ -63,6 +64,43 @@ class Command(BaseCommand):
             }
             print(f"Generated message for device {d.name}: {str(msg)[:10]}")
             yield msg
+
+    def fias_message(self, *args, **options):
+        data = {
+            "command": "checkin",
+            "roomName": "153",
+            "reservationNumber": "4001",
+            "shareFlag": False,
+            "messageDate": 1773231216000,
+            "checkInDate": 1773180000000,
+            "checkOutDate": 1773266400000,
+            "guestGroupNumber": None,
+            "guestTitle": None,
+            "guestFirstName": None,
+            "guestName": " Ytest ",
+            "language": "English / American",
+            "workstationId": "THEOVASQL",
+            "swapFlag": 0,
+        }
+        data = {
+            "command": "keyread",
+            "operationId": "keyread|THEOVASQL|1|||260331|113238",
+            "requiresRpcConfirmation": True,
+            "keyCoder": "1",
+            "roomName": None,
+            "workstationId": "THEOVASQL",
+            "messageDate": 1774945958000,
+            "reservationNumber": None,
+        }
+
+        device = get_object_or_404(Device, pk="98690d14-9b98-47dc-a81d-cd6379d3e3eb")
+        device = {
+            "id": str(device.id),
+            "name": device.name,
+            "tenant_id": str(device.tenant_id),
+            "device_profile_id": str(device.device_profile_id),
+        }
+        handle_fias(data, device)
 
     def generate_msg_access_door_log(self):
         d = get_object_or_404(Device, pk="cf193bcc-7801-4d76-8321-0d5c63e54293")
