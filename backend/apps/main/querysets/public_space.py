@@ -27,7 +27,9 @@ class PublicSpaceQuerySet(BaseQuerySet):
             query = self.filter(accessible_for_guest=accessible_for_guest)
 
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
+            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+        elif search_value:
+            query = query.filter(Q(name__istartswith=search_value))
 
         return query.order_by(*sort_by)
 

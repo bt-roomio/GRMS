@@ -13,6 +13,8 @@ class RoomTypeQuerySet(BaseQuerySet):
             )
         )
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
+            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+        elif search_value:
+            query = query.filter(Q(title__istartswith=search_value))
 
         return query.order_by("created_at")

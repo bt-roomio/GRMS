@@ -225,12 +225,13 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
 
 
 class RoomQuickFilterParams(RoomFilterParams):
-    search_field = serializers.ChoiceField(choices=("number", "floor", "block"), required=False)
     search_value = serializers.CharField(required=False)
+
+    def validate(self, attrs):
+        return attrs
 
 
 class RoomQuickFilterParamsSwagger(serializers.Serializer):
     """Swagger-only version of RoomQuickFilterParams without nested TagSerializer/DictField."""
 
-    search_field = serializers.ChoiceField(choices=("number", "floor", "block"), required=False)
     search_value = serializers.CharField(required=False)

@@ -45,8 +45,8 @@ class CheckInSerializer(serializers.Serializer):
         ret = {
             "hotelId": "hotel_id",
             "tenantId": "tenant_id",
-            "guestFirstName": "name",
-            "guestName": "lastname",
+            "guestFirstName": "lastname",
+            "guestName": "name",
             "roomNumber": "room_number",
             "arrivalDateTS": "check_in",
             "departureDateTS": "check_out",

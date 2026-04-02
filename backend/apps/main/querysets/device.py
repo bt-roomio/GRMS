@@ -16,6 +16,12 @@ class DeviceQuerySet(BaseQuerySet):
         )
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+        elif search_value:
+            query = query.filter(
+                Q(name__istartswith=search_value)
+                | Q(device_profile__name__istartswith=search_value)
+                | Q(label__istartswith=search_value)
+            )
         if name:
             query = query.filter(
                 Q(name__istartswith=name)
