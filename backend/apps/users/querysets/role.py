@@ -6,5 +6,7 @@ class RoleQuerySet(QuerySet):
         query = self.prefetch_related("permissions")
         query = query.filter(tenant=tenant) if not is_superuser else query
         if search_field and search_value:
-            query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
+            query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
+        elif search_value:
+            query = query.filter(Q(name__istartswith=search_value))
         return query

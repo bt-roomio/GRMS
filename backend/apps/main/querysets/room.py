@@ -82,6 +82,10 @@ class RoomQuerySet(BaseQuerySet):
                     **{f"{door_lock_field}__istartswith": search_value, "door_lock_device__is_active": True}
                 )
             query = query.filter(search_filter)
+        elif search_value:
+            query = query.filter(
+                Q(number__istartswith=search_value) | Q(floor__istartswith=search_value) | Q(block__istartswith=search_value)
+            )
 
         return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
 

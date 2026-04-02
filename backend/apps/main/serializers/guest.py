@@ -170,7 +170,6 @@ class GuestQuickFilterParams(GuestFilterParams):
     size = None
     room = None
     sort_by = None
-    search_field = serializers.ChoiceField(choices=("name", "lastname", "gender"), required=False)
     search_value = serializers.CharField(required=False)
 
 
