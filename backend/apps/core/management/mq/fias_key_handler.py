@@ -108,6 +108,10 @@ def send_rpc_to_guest_devices(guest, card_uid, access):
     if not devices:
         return False, "No devices found for guest room"
 
+    guest_card = GuestCard.objects.filter(card__number=card_uid, guest=guest, is_active=True).exists()
+    if access == 0 and not guest_card:
+        return True, "Operation completed"
+
     errors = []
     successes = []
     for dev in devices:
