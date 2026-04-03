@@ -79,7 +79,7 @@ class RoomQuerySet(BaseQuerySet):
                 Q(number__icontains=search_value) | Q(floor__icontains=search_value) | Q(block__icontains=search_value)
             )
 
-        return query.order_by(["block", "floor", "number"])
+        return query.order_by("block", "floor", "number")
 
     def guest_details(self):
         from main.models import Guest
