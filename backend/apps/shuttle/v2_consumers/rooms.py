@@ -41,7 +41,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 sort_by=params.get("sort_by"),
                 blocks=params.get("blocks"),
             )
-            .guest_details(tenant=self.tenant_id)
+            .guest_details()
             .rooms_ts_kvs(tenant=self.tenant_id, keys=[*STATIC_KEYS])
             .get_tags(tenant=self.tenant_id, tags=params.get("tags", []))
         )
