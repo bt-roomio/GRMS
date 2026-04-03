@@ -14,3 +14,13 @@ class GuestQuerySet(BaseQuerySet):
                 Q(name__istartswith=search_value) | Q(lastname__istartswith=search_value) | Q(gender__istartswith=search_value)
             )
         return query.order_by(*sort_by)
+
+    def quick_list(self, tenant_id, search_value=None):
+        query = self.filter(tenant_id=tenant_id, is_active=True)
+        if search_value:
+            query = query.filter(
+                Q(name__icontains=search_value)
+                | Q(lastname__icontains=search_value)
+                | Q(gender__icontains=search_value)
+            )
+        return query

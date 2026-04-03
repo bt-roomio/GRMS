@@ -14,13 +14,9 @@ class DeviceQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            Device.objects.list(
+            Device.objects.quick_list(
                 tenant=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
-                status=kwargs.get("status"),
-                sort_by=kwargs.get("sort_by"),
-                name=kwargs.get("name"),
                 device_profile=kwargs.get("device_profile"),
             ).values("id", "name", "label")
         )
@@ -38,5 +34,5 @@ class DeviceQuickListView(TenantCachedMixin, APIView):
     @check_perms(["main.view_device"])
     def get(self, request):
         params = DeviceQuickFilterParams.check(request.GET)
-        data = self.get_cached_data(str(request.user.tenant_id), **params)
+        data = self.get_data(str(request.user.tenant_id), **params)
         return Response(data)

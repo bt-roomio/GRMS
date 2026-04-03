@@ -18,3 +18,9 @@ class RoomTypeQuerySet(BaseQuerySet):
             query = query.filter(Q(title__istartswith=search_value))
 
         return query.order_by("created_at")
+
+    def quick_list(self, tenant, search_value=None):
+        query = self.filter(tenant=tenant)
+        if search_value:
+            query = query.filter(Q(title__icontains=search_value))
+        return query

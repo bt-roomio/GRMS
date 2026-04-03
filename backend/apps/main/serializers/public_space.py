@@ -119,3 +119,4 @@ class PublicSpaceQuickFilterParams(PublicSpaceFilterParams):
     size = None
     accessible_for_guest = None
     sort_by = None
+    search_field = None

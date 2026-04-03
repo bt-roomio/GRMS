@@ -10,3 +10,9 @@ class RoleQuerySet(QuerySet):
         elif search_value:
             query = query.filter(Q(name__istartswith=search_value))
         return query
+
+    def quick_list(self, tenant, search_value=None):
+        query = self.filter(tenant=tenant)
+        if search_value:
+            query = query.filter(Q(name__icontains=search_value))
+        return query

@@ -13,12 +13,18 @@ class RoleQuickListView(TenantCachedMixin, APIView):
     cache_key_prefix = "roles"
 
     def get_data(self, tenant_id, **kwargs):
-        return list(Role.objects.list(tenant=tenant_id, is_superuser=False, **kwargs).values("id", "name"))
+        return list(
+            Role.objects.quick_list(tenant=tenant_id, search_value=kwargs.get("search_value")).values("id", "name")
+        )
 
     @swagger_auto_schema(
         tags=["Main, Simple, Role"],
         query_serializer=RoleQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]}
+            )
+        },
     )
     @check_perms(["users.view_role"])
     def get(self, request):

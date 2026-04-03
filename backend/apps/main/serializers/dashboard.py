@@ -70,3 +70,4 @@ class DashboardQuickFilterParams(DashboardFilterParams):
     page = None
     size = None
     sort_by = None
+    search_field = None

@@ -71,23 +71,27 @@ class RoomQuerySet(BaseQuerySet):
             query = query.exclude(count_online_devices=F("count_devices"), count_devices__gt=0)
         return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
 
-    def quick_list(self, tenant, search_field=None, search_value=None, sort_by=None):
+    def quick_list(self, tenant, search_value=None):
         query = self.filter(active=True, tenant=tenant)
-        if search_field and search_value:
-            search_filter = Q(**{f"{search_field}__istartswith": search_value})
+        # if search_value:
+        #     search_filter = Q(**{f"{search_field}__istartswith": search_value})
+        #
+        #     if search_field.startswith("devices__"):
+        #         door_lock_field = search_field.replace("devices__", "door_lock_device__")
+        #         search_filter = Q(**{f"{search_field}__istartswith": search_value, "devices__is_active": True}) | Q(
+        #             **{f"{door_lock_field}__istartswith": search_value, "door_lock_device__is_active": True}
+        #         )
+        #     query = query.filter(search_filter)
+        # elif search_value:
+        #     query = query.filter(
+        #         Q(number__istartswith=search_value) | Q(floor__istartswith=search_value) | Q(block__istartswith=search_value)
 
-            if search_field.startswith("devices__"):
-                door_lock_field = search_field.replace("devices__", "door_lock_device__")
-                search_filter = Q(**{f"{search_field}__istartswith": search_value, "devices__is_active": True}) | Q(
-                    **{f"{door_lock_field}__istartswith": search_value, "door_lock_device__is_active": True}
-                )
-            query = query.filter(search_filter)
-        elif search_value:
+        if search_value:
             query = query.filter(
-                Q(number__istartswith=search_value) | Q(floor__istartswith=search_value) | Q(block__istartswith=search_value)
+                Q(number__icontains=search_value) | Q(floor__icontains=search_value) | Q(block__icontains=search_value)
             )
 
-        return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
+        return query.order_by(["block", "floor", "number"])
 
     def guest_details(self, tenant):
         from main.models import Guest
@@ -224,7 +228,7 @@ class RoomQuerySet(BaseQuerySet):
         deactivate_result = {"success": True}
         query = self.filter(id=room_id, state__contains=[Room.CheckedIn])
         guests = Guest.objects.filter(room_id=room_id, is_active=True)
-        access_context = get_guest_access_context(guests)
+        access_context = get_guest_access_context(list(guests))
         devices = access_context.get("devices", [])
         cards = access_context.get("cards", [])
 

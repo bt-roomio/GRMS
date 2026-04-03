@@ -14,9 +14,8 @@ class GuestQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            Guest.objects.list(
+            Guest.objects.quick_list(
                 tenant_id=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
             ).values("id", "name", "lastname")
         )

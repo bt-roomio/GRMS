@@ -12,3 +12,9 @@ class DeviceProfileQuerySet(BaseQuerySet):
         elif search_value:
             query = query.filter(Q(name__istartswith=search_value) | Q(type__istartswith=search_value))
         return query.order_by("-created_at")
+
+    def quick_list(self, tenant, search_value=None):
+        query = self.filter(tenant=tenant, active=True)
+        if search_value:
+            query = query.filter(Q(name__istartswith=search_value) | Q(type__istartswith=search_value))
+        return query

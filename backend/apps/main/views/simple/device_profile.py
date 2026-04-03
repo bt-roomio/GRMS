@@ -14,10 +14,8 @@ class DeviceProfileQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            DeviceProfile.objects.list(
+            DeviceProfile.objects.quick_list(
                 tenant=tenant_id,
-                state=kwargs.get("state"),
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
             ).values("id", "name")
         )

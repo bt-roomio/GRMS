@@ -13,3 +13,9 @@ class DashboardQuerySet(BaseQuerySet):
         query = query.order_by(*sort_by) if sort_by else query
 
         return query
+
+    def quick_list(self, tenant_id, search_value=None):
+        query = self.filter(tenant_id=tenant_id)
+        if search_value:
+            query = query.filter(Q(title__icontains=search_value))
+        return query

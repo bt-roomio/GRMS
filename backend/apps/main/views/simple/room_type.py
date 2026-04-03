@@ -14,9 +14,8 @@ class RoomTypeQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            RoomType.objects.list(
+            RoomType.objects.quick_list(
                 tenant=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
             ).values("id", "title")
         )

@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
-from main.models import Device, DeviceCredentials, Tenant
+from main.models import Device, DeviceCredentials, DeviceProfile, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
 from main.serializers.device_profile import SimpleDeviceProfileSerializer
 from main.utils.has_roomio_node import has_roomio_node
@@ -194,7 +194,8 @@ class DeviceQuickFilterParams(DeviceFilterParams):
     size = None
     name = None
     status = None
-    device_profile = None
+    device_profile = serializers.CharField(required=False)
+    search_field = None
     sort_by = None
 
 

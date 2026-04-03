@@ -33,6 +33,12 @@ class PublicSpaceQuerySet(BaseQuerySet):
 
         return query.order_by(*sort_by)
 
+    def quick_list(self, tenant_id, search_value=None):
+        query = self.filter(tenant_id=tenant_id)
+        if search_value:
+            query = query.filter(Q(name__icontains=search_value))
+        return query
+
 
 class DevicePublicSpacesQuerySet(BaseQuerySet):
     pass
