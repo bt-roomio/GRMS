@@ -21,9 +21,13 @@ class PublicSpaceQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Public Space"],
+        tags=["Main, Simple"],
         query_serializer=PublicSpaceQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]}
+            )
+        },
     )
     @check_perms(["main.view_publicspace"])
     def get(self, request):

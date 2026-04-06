@@ -22,9 +22,14 @@ class StaffQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Staff"],
+        tags=["Main, Simple"],
         query_serializer=StaffQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "first_name": "string", "last_name": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success",
+                examples={"application/json": [{"id": "uuid", "first_name": "string", "last_name": "string"}]},
+            )
+        },
     )
     @check_perms(["users.view_user"])
     def get(self, request):

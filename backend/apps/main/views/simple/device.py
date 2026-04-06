@@ -22,7 +22,7 @@ class DeviceQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Device"],
+        tags=["Main, Simple"],
         query_serializer=DeviceQuickFilterParams(),
         responses={
             200: openapi.Response(
@@ -34,5 +34,5 @@ class DeviceQuickListView(TenantCachedMixin, APIView):
     @check_perms(["main.view_device"])
     def get(self, request):
         params = DeviceQuickFilterParams.check(request.GET)
-        data = self.get_data(str(request.user.tenant_id), **params)
+        data = self.get_cached_data(str(request.user.tenant_id), **params)
         return Response(data)

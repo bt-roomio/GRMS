@@ -21,7 +21,7 @@ class DeviceProfileQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Device Profile"],
+        tags=["Main, Simple"],
         query_serializer=DeviceProfileQuickFilterParams(),
         responses={
             200: openapi.Response(

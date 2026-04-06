@@ -18,7 +18,7 @@ class RoleQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Role"],
+        tags=["Main, Simple"],
         query_serializer=RoleQuickFilterParams(),
         responses={
             200: openapi.Response(

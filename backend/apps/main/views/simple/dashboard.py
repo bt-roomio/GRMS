@@ -21,9 +21,13 @@ class DashboardQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Dashboard"],
+        tags=["Main, Simple"],
         query_serializer=DashboardQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "title": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success", examples={"application/json": [{"id": "uuid", "title": "string"}]}
+            )
+        },
     )
     @check_perms(["main.view_dashboard"])
     def get(self, request):

@@ -21,9 +21,14 @@ class GuestQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Guest"],
+        tags=["Main, Simple"],
         query_serializer=GuestQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "name": "string", "lastname": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success",
+                examples={"application/json": [{"id": "uuid", "name": "string", "lastname": "string"}]},
+            )
+        },
     )
     @check_perms(["main.view_guest"])
     def get(self, request):

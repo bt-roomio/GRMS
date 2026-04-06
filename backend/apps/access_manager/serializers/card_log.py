@@ -1,7 +1,9 @@
+from access_manager.models import CardLog
+
 from rest_framework import serializers
 
-from access_manager.models import CardLog
 from core.utils.serializers import ValidatorSerializer
+from main.models import Device
 
 
 class CardLogSerializer(serializers.ModelSerializer):
@@ -66,6 +68,7 @@ class CardLogSerializer(serializers.ModelSerializer):
 class CardLogFilterParams(ValidatorSerializer):
     room = serializers.CharField(required=False)
     public_space = serializers.CharField(required=False)
+    device = serializers.PrimaryKeyRelatedField(queryset=Device.objects.all(), required=False)
     user = serializers.CharField(required=False, help_text="User ID (can be guest or staff)")
     card_num = serializers.CharField(required=False, help_text="Card number to filter by")
     sort_by = serializers.ListField(

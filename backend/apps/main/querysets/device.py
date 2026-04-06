@@ -16,7 +16,6 @@ class DeviceQuerySet(BaseQuerySet):
     def list(
         self, tenant, search_field=None, search_value=None, status=None, sort_by=None, name=None, device_profile=None
     ):
-        print(device_profile)
         query = (
             self.select_related("credentials", "device_profile")
             .prefetch_related("device_public_spaces__public_space")

@@ -21,7 +21,7 @@ class RoomQuickListView(TenantCachedMixin, APIView):
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Room"],
+        tags=["Main, Simple"],
         query_serializer=RoomQuickFilterParamsSwagger(),
         responses={
             200: openapi.Response(

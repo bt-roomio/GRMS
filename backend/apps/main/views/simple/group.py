@@ -21,7 +21,7 @@ class GroupQuickListView(TenantCachedMixin, APIView):
         return list(query)
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Group"],
+        tags=["Main, Simple"],
         query_serializer=GroupQuickFilterParams(),
         responses={
             200: openapi.Response(
