@@ -1,5 +1,4 @@
 from datetime import datetime
-from django.utils import timezone
 
 from django.db.models import (
     Avg,
@@ -268,15 +267,15 @@ class TsKvQuerySet(BaseQuerySet):
         return list(ts_kv_dict)
 
     def tenant_avg_history(
-            self,
-            tenant,
-            keys,
-            start_ts,
-            interval=None,
-            limit=100,
-            sort_by=None,
-            end_ts=None,
-            room_field="entity__room_id",
+        self,
+        tenant,
+        keys,
+        start_ts,
+        interval=None,
+        limit=100,
+        sort_by=None,
+        end_ts=None,
+        room_field="entity__room_id",
     ):
         sort_by = sort_by or ["interval_ts"]
         if isinstance(start_ts, str):
@@ -287,14 +286,13 @@ class TsKvQuerySet(BaseQuerySet):
         norm_interval = make_interval(*interval.split(" ")) if interval and len(interval.split(" ")) > 1 else interval
         tenant_filter = {"entity__tenant": tenant} if hasattr(tenant, "id") else {"entity__tenant_id": tenant}
         origin_dt = Value(start_ts, output_field=DateTimeField())
-        effective_end = timezone.now()
-
 
         def bucket(qs):
             if norm_interval in ["month", "year"]:
                 return qs.annotate(
-                    interval_ts=Func(Value(norm_interval), F("ts"), function="date_trunc",
-                                     output_field=DateTimeField()),
+                    interval_ts=Func(
+                        Value(norm_interval), F("ts"), function="date_trunc", output_field=DateTimeField()
+                    ),
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
                 )
             if norm_interval is None:
@@ -303,15 +301,18 @@ class TsKvQuerySet(BaseQuerySet):
                     avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
                 )
             return qs.annotate(
-                interval_ts=Func(Value(norm_interval), F("ts"), origin_dt, function="date_bin",
-                                 output_field=DateTimeField()),
+                interval_ts=Func(
+                    Value(norm_interval), F("ts"), origin_dt, function="date_bin", output_field=DateTimeField()
+                ),
                 avail_field=Coalesce(F("dbl_v"), F("long_v"), output_field=FloatField()),
             )
 
         def per_key_stats(key):
             base = self.filter(**tenant_filter, key__key=key)
-            if start_ts: base = base.filter(ts__gte=start_ts)
-            if end_ts:   base = base.filter(ts__lte=end_ts)
+            if start_ts:
+                base = base.filter(ts__gte=start_ts)
+            if end_ts:
+                base = base.filter(ts__lte=end_ts)
 
             rows = list(
                 bucket(base)
@@ -324,12 +325,14 @@ class TsKvQuerySet(BaseQuerySet):
                 filled = fill_missing_intervals([], norm_interval, start_ts, limit, key_name=key)
                 out = []
                 for r in filled:
-                    out.append({
-                        "ts": r["ts"],
-                        "key_name": key,
-                        "value": {"avg": r["value"], "min": r["value"], "max": r["value"]},
-                        "count": 0,
-                    })
+                    out.append(
+                        {
+                            "ts": r["ts"],
+                            "key_name": key,
+                            "value": {"avg": r["value"], "min": r["value"], "max": r["value"]},
+                            "count": 0,
+                        }
+                    )
                 if "-interval_ts" in sort_by:
                     out.reverse()
                 return out
@@ -356,12 +359,14 @@ class TsKvQuerySet(BaseQuerySet):
                 avg_v = round(sum(vals) / n_rooms, 2) if n_rooms else 0.0
                 min_v = round(min(vals), 2) if n_rooms else 0.0
                 max_v = round(max(vals), 2) if n_rooms else 0.0
-                out.append({
-                    "ts": canon[i]["ts"],
-                    "key_name": key,
-                    "value": {"avg": avg_v, "min": min_v, "max": max_v},
-                    "count": n_rooms,
-                })
+                out.append(
+                    {
+                        "ts": canon[i]["ts"],
+                        "key_name": key,
+                        "value": {"avg": avg_v, "min": min_v, "max": max_v},
+                        "count": n_rooms,
+                    }
+                )
 
             if "-interval_ts" in sort_by:
                 out.reverse()

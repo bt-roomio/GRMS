@@ -22,7 +22,7 @@ def resolve_card_holder_and_access_group(tenant_id, card_uid, open_result=None):
         if not card:
             return staff, guest, access_group_from_holder
 
-        from access_manager.models import StaffCard, GuestCard
+        from access_manager.models import GuestCard, StaffCard
 
         guest_card = GuestCard.objects.filter(card=card, is_active=True).select_related("guest").first()
         if guest_card:
@@ -75,7 +75,7 @@ def handle_card_event(device, value, ts_dt):
                 return None
 
             access_group_value = getattr(AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED)
-            staff, guest, access_group_from_holder = resolve_card_holder_and_access_group(tenant_id, card_uid)
+            staff, guest, _ = resolve_card_holder_and_access_group(tenant_id, card_uid)
             number_value = card_uid
 
         else:
