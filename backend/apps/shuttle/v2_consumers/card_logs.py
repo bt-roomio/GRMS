@@ -1,8 +1,8 @@
+from access_manager.models import CardLog
+from access_manager.serializers.card_log import CardLogFilterParams, CardLogSerializer
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
-from access_manager.models import CardLog
-from access_manager.serializers.card_log import CardLogSerializer, CardLogFilterParams
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -33,7 +33,7 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
 
         return query
 
-    async def get_list_activity(self, message, **kwargs):
+    async def get_list_activity(self, _, **kwargs):
         for request_id, params in self.subscribers.items():
             query_params = params.get("query_params")
             data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)

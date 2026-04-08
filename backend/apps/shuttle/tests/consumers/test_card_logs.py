@@ -595,12 +595,12 @@ class TestCardLogConsumer:
             results = payload["data"]["results"]
             tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
             all_card_logs = await database_sync_to_async(list)(
-                CardLog.objects.filter(device__tenant_id=tenant_id).values_list("id", flat=True)
+                CardLog.objects.filter(device__tenant_id=tenant_id).values_list("event_ts", "device_id")
             )
-            result_ids = [item.get("id") for item in results if item.get("id")]
-            for card_log_id in result_ids:
-                if card_log_id:
-                    assert card_log_id in all_card_logs
+            all_card_log_keys = {(ts.strftime("%Y-%m-%dT%H:%M:%SZ"), str(dev_id)) for ts, dev_id in all_card_logs}
+            for item in results:
+                key = (item.get("event_ts"), item.get("device_id"))
+                assert key in all_card_log_keys
         finally:
             await comm.disconnect()
 

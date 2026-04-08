@@ -123,7 +123,7 @@ def handle_card_event(device, value, ts_dt):
             device_id=device.get("id"),
             staff=staff,
             guest=guest,
-            created_at=ts_dt,
+            created_at=timezone.now(),
             additional_info=additional_info,
         )
         print(f"card : {card_log}")

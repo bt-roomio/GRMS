@@ -88,7 +88,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             await self.ts_kv_latest_activity({"update": update}, **kwargs)
             continue
 
-        payload = message.get("update")
+        payload = message.get("update", {})
         for request_id, params in self.subscribers.items():
             tags = params.get("query_params").get("tags", [])
             action = params.get("action")

@@ -208,7 +208,13 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     if card_logs:
         try:
-            CardLog.objects.bulk_create(card_logs, ignore_conflicts=True)
+            CardLog.objects.bulk_create(
+                card_logs,
+                update_conflicts=True,
+                batch_size=500,
+                update_fields=["access_group", "staff", "guest", "additional_info"],
+                unique_fields=["device_id", "number", "event_ts"],
+            )
             publish_card_log_updates_batch(card_logs)
         except Exception as e:
             logger.exception("Failed to create CardLog entries in batch: %s", e)
