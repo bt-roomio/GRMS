@@ -9,7 +9,7 @@ class CheckForTenantMiddleware:
 
         response = self.get_response(request)
         user = request.user
-        if user.is_authenticated and not user.tenant:
+        if not user.is_superuser and user.is_authenticated and not user.tenant:
             return HttpResponseForbidden("User does not have a tenant assigned.")
 
         return response
