@@ -440,7 +440,7 @@ class Dashboard(BaseModel):
             raise ValidationError({"name": "A dashboard with this title and tenant already exists."})
 
     def save(self, *args, **kwargs):
-        self.full_clean()  # This will raise ValidationError if clean() fails.
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
