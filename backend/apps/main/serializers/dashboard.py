@@ -48,7 +48,7 @@ class DashboardSerializer(serializers.ModelSerializer):
             "tenant",
         )
         extra_kwargs = {
-            "tenant": {"required": False, "allow_null": True},
+            "tenant": {"read_only": True},
         }
 
 
