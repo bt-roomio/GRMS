@@ -1,12 +1,15 @@
 from access_manager.utilits.get_device_cards import get_device_cards
 from access_manager.utilits.prepare_cards import prepare_cards
-from shuttle.models import Relation, RPCMessage
+
 from rest_framework.generics import get_object_or_404
+
+from shuttle.models import Relation, RPCMessage
 
 
 def prepare_rpc_request(device_id, cards, access, guest_id=None, staff_id=None):
-    from main.models import Device, Guest
     from access_manager.models import Staff
+
+    from main.models import Device, Guest
 
     device = Device.objects.get(id=device_id)
     cards_of_device = get_device_cards(device.id, cards, access)

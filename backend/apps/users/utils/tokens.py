@@ -1,5 +1,5 @@
-import os
 import binascii
+import os
 
 
 def generate():

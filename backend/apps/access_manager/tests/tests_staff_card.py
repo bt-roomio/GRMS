@@ -1,11 +1,10 @@
 import uuid
 from unittest.mock import patch
+
+from access_manager.models import GroupPublicSpace, GroupRoom, Staff
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from access_manager.models import (
-    Staff, GroupRoom, GroupPublicSpace
-)
 from main.models import Device
 
 

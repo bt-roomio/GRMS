@@ -1,13 +1,13 @@
 from drf_yasg.utils import swagger_auto_schema
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import WidgetType
 from main.serializers.widget_type import WidgetTypeFilterParams, WidgetTypeSerializer
 from main.swagger.widget_type import WidgetTypeDetailSwagger, WidgetTypeSwagger
-from core.utils.permission import check_perms
+
 
 class WidgetTypeListView(APIView):
     @swagger_auto_schema(

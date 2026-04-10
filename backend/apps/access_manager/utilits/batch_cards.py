@@ -22,5 +22,5 @@ def is_same_request(request1: dict, request2: dict) -> bool:
 
         return req1_no_id == req2_no_id
 
-    except Exception as e:
+    except Exception:
         return False

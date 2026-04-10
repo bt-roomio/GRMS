@@ -2,7 +2,6 @@ import pytest
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
-from core.utils.get_time import get_mil_sec
 from main.models import Device
 from shuttle.models import AttributeKv
 

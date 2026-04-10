@@ -1,8 +1,8 @@
+from access_manager.models import Card, Group, GuestCard, StaffCard
+from access_manager.serializers.staff import StaffSerializer
+
 from rest_framework import serializers
 
-from access_manager.models import Card, StaffCard, GuestCard, Group
-
-from access_manager.serializers.staff import StaffSerializer
 from core.utils.serializers import ValidatorSerializer
 from main.serializers.guest import GuestSerializer
 from main.serializers.room import SimpleRoomSerializer

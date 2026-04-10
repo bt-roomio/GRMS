@@ -1,5 +1,6 @@
-from core.utils.serializers import ValidatorSerializer
 from rest_framework import serializers
+
+from core.utils.serializers import ValidatorSerializer
 
 
 class EmergencyStatusFilterParams(ValidatorSerializer):

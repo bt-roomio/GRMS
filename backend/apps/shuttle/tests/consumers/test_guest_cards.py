@@ -1,8 +1,8 @@
 import pytest
+from access_manager.models import GuestCard
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
-from access_manager.models import GuestCard
 from main.models import Room
 
 

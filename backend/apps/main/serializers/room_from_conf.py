@@ -1,5 +1,6 @@
-from main.models import Room, RoomType, Device
 from rest_framework import serializers
+
+from main.models import Device, Room, RoomType
 
 
 class RoomConfigSerializer(serializers.Serializer):

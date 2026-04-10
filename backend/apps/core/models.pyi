@@ -1,7 +1,6 @@
 from _typeshed import Incomplete
 from django.db import models
 
-
 class BaseModel(models.Model):
     id: Incomplete
     created_at: Incomplete

@@ -1,9 +1,9 @@
-import json
-from unittest.mock import patch, Mock, MagicMock
-from django.test import TestCase
-from celery.result import AsyncResult
+from unittest.mock import Mock, patch
+
+from access_manager.models import Card, CardDeviceSlot, Group, GuestCard, NeedSyncDevice, StaffCard
 from access_manager.tasks.send_rpc import send_rpc_request
-from access_manager.models import Card, CardDeviceSlot, Group, GuestCard, StaffCard, NeedSyncDevice
+from django.test import TestCase
+
 from main.models import Device, Guest
 from shuttle.models import RPCMessage
 

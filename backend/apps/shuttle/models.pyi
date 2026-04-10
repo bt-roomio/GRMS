@@ -9,7 +9,6 @@ from shuttle.querysets.ts_kv import TsKvQuerySet
 from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
 from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
-
 class TsKv:
     ts: Incomplete
     entity: Incomplete

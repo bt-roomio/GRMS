@@ -1,10 +1,9 @@
-from django.db.models import F
-
 from access_manager.models import Group
+from access_manager.utilits.process_multi_devices_rpc import process_devices_parallel
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from django.db.models import F
 
-from access_manager.utilits.process_multi_devices_rpc import process_devices_parallel
 from main.models import Device
 
 logger = get_task_logger(__name__)

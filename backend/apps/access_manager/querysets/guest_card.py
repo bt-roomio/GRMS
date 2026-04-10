@@ -1,4 +1,3 @@
-from django.db.models import Exists, OuterRef
 
 from core.querysets.base_queryset import BaseQuerySet
 
