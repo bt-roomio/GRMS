@@ -5,7 +5,7 @@ from channels.db import database_sync_to_async
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections
-from jwt import InvalidSignatureError, ExpiredSignatureError, DecodeError
+from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
 
 User = get_user_model()
@@ -22,7 +22,7 @@ class JWTAuthMiddleware:
             data = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
             scope["user"] = await self.get_user(data["user_id"])
         except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError):
-            await send({"type": "websocket.close"})
+            await send({"type": "websocket.close", "code": 4001})
             return
         return await self.app(scope, receive, send)
 
