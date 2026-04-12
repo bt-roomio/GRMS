@@ -97,10 +97,10 @@ class Card(BaseModel, UpdateByModel):
 
 
 class CardLog(models.Model):
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(primary_key=True, default=timezone.now)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     number = models.CharField(max_length=200)
-    event_ts = models.DateTimeField(primary_key=True)
+    event_ts = models.DateTimeField()
     access_group = models.IntegerField(
         choices=AccessGroupChoices.choices,
         help_text="Must be one of: HOUSEKEEPING, ENGINEERING, MASTER_CARD",

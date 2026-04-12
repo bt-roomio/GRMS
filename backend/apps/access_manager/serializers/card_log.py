@@ -19,6 +19,7 @@ class CardLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = CardLog
         fields = [
+            "created_at",
             "event_ts",
             "number",
             "access_group",

@@ -25,14 +25,15 @@ class Migration(migrations.Migration):
                 staff_id        UUID         REFERENCES access_manager_staff(id),
                 guest_id        UUID         REFERENCES main_guest(id),
                 additional_info JSONB,
-                PRIMARY KEY (event_ts, device_id, number)
+                PRIMARY KEY (created_at, number, device_id)
             );
 
-            CREATE INDEX ON access_manager_card_logs (tenant_id, event_ts DESC);
-            CREATE INDEX ON access_manager_card_logs (device_id, event_ts DESC);
-            CREATE INDEX ON access_manager_card_logs (number, event_ts DESC);
+            CREATE INDEX ON access_manager_card_logs (tenant_id, created_at DESC);
+            CREATE INDEX ON access_manager_card_logs (device_id, created_at DESC);
+            CREATE INDEX ON access_manager_card_logs (number, created_at DESC);
+            CREATE INDEX ON access_manager_card_logs (event_ts DESC);
 
-            SELECT create_hypertable('access_manager_card_logs', 'event_ts');
+            SELECT create_hypertable('access_manager_card_logs', 'created_at');
             SELECT set_chunk_time_interval('access_manager_card_logs', INTERVAL '1 month');
 
             INSERT INTO access_manager_card_logs

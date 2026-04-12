@@ -21,7 +21,6 @@ def test_data():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestCardLogConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -594,11 +593,11 @@ class TestCardLogConsumer:
             results = payload["data"]["results"]
             tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
             all_card_logs = await database_sync_to_async(list)(
-                CardLog.objects.filter(device__tenant_id=tenant_id).values_list("event_ts", "device_id")
+                CardLog.objects.filter(device__tenant_id=tenant_id).values_list("created_at", "device_id")
             )
             all_card_log_keys = {(ts.strftime("%Y-%m-%dT%H:%M:%SZ"), str(dev_id)) for ts, dev_id in all_card_logs}
             for item in results:
-                key = (item.get("event_ts"), item.get("device_id"))
+                key = (item.get("created_at"), item.get("device_id"))
                 assert key in all_card_log_keys
         finally:
             await comm.disconnect()
