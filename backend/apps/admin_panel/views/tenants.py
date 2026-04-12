@@ -1,4 +1,4 @@
-from admin_panel.swagger.tenants import AdminTenantListSwagger
+from admin_panel.swagger.tenants import AdminTenantCreateSwagger, AdminTenantListSwagger
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from core.utils.permission import IsSuperUser
 from main.models import Tenant
-from main.serializers.tenant import TenantFilterParams, TenantSerializer
+from main.serializers.tenant import CreateTenantSerializer, TenantFilterParams, TenantSerializer
 
 
 class AdminTenantListView(APIView):
@@ -15,6 +15,7 @@ class AdminTenantListView(APIView):
     @swagger_auto_schema(
         tags=["Admin Panel"],
         responses=AdminTenantListSwagger,
+        query_serializer=TenantFilterParams,
         security=[{"Bearer": []}],
         operation_description="**Superuser only.** Returns a list of all tenants.",
     )
@@ -27,3 +28,17 @@ class AdminTenantListView(APIView):
         )
         serializer = TenantSerializer(queryset, many=True)
         return Response(serializer.data)
+
+    @swagger_auto_schema(
+        tags=["Admin Panel"],
+        request_body=CreateTenantSerializer,
+        responses=AdminTenantCreateSwagger,
+        security=[{"Bearer": []}],
+        operation_description="**Superuser only.** Creates a new tenant with an admin user and default device profiles.",
+    )
+    def post(self, request):
+        serializer = CreateTenantSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer = serializer.save()
+        data = TenantSerializer(serializer).data
+        return Response(data, 201)
