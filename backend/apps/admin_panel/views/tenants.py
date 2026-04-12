@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from core.utils.permission import IsSuperUser
 from main.models import Tenant
-from main.serializers.tenant import TenantSerializer
+from main.serializers.tenant import TenantFilterParams, TenantSerializer
 
 
 class AdminTenantListView(APIView):
@@ -19,6 +19,11 @@ class AdminTenantListView(APIView):
         operation_description="**Superuser only.** Returns a list of all tenants.",
     )
     def get(self, request):
-        tenants = Tenant.objects.all().order_by("title")
-        serializer = TenantSerializer(tenants, many=True)
+        params = TenantFilterParams.check(request.query_params)
+        queryset = Tenant.objects.list(
+            sort_by=params.get("sort_by"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+        )
+        serializer = TenantSerializer(queryset, many=True)
         return Response(serializer.data)
