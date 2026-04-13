@@ -18,7 +18,7 @@ def publish_device(instance: Device):
     async_to_sync(channel_layer.group_send)(
         f"device_{instance.tenant_id}",
         {
-            "type": "get_latest_activity",
+            "type": "device_latest_activity",
             "update": SimpleDeviceSerializer(instance).data,
         },
     )
