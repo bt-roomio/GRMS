@@ -28,7 +28,7 @@ class AdditionalInfoField(serializers.JSONField):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=False)
+    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=True)
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
 
     def to_representation(self, instance):

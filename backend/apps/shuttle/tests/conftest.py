@@ -7,7 +7,6 @@ and REST tests (Django TestCase style) to avoid conflicts when running together.
 import pytest
 from django.core.management import call_command
 
-
 # Common fixtures used by both consumer and REST tests
 COMMON_FIXTURES = [
     "tenant_profile.yaml",

@@ -1,5 +1,6 @@
 from typing import List
 
+
 def parse_room_numbers(room_string: str) -> List[str]:
     """
     Преобразует строки вида:

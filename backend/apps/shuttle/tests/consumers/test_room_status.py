@@ -149,9 +149,9 @@ class TestRoomStatusConsumer:
             assert payload["response_status"] == 200
             data = payload["data"]
             tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-            from main.models import Device, Room
             from channels.db import database_sync_to_async
-            from shuttle.models import TsKvLatest
+
+            from main.models import Device, Room
 
             total_rooms = await database_sync_to_async(Room.objects.filter(active=True, tenant_id=tenant_id).count)()
             total_devices = await database_sync_to_async(Device.objects.filter(tenant_id=tenant_id).count)()

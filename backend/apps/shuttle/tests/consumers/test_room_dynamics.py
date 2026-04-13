@@ -1,6 +1,6 @@
-import pytest
 from datetime import datetime, timedelta, timezone
-from channels.db import database_sync_to_async
+
+import pytest
 from channels.testing import WebsocketCommunicator
 
 

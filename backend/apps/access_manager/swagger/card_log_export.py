@@ -1,6 +1,7 @@
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 from access_manager.serializers.card_log import CardLogFilterParams
+
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 
 
 def swagger_export_card_logs():

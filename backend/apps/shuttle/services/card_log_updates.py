@@ -11,7 +11,6 @@ def publish_card_log_updates_batch(card_logs: list):
     for card_log in card_logs:
         card_logs_data.append(
             {
-                "id": str(card_log.id) if card_log.id else None,
                 "tenant_id": str(card_log.tenant_id),
                 "device_id": str(card_log.device_id),
                 "number": card_log.number,

@@ -1,6 +1,6 @@
 import base64
 from datetime import timedelta
-from typing import List, Any
+from typing import Any, List
 
 from django.utils import timezone
 

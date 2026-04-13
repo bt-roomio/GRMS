@@ -41,6 +41,8 @@ class Tenant(ServiceBaseModel):
     title = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=255, null=True, blank=True)
 
+    objects = TenantQuerySet.as_manager()
+
     def __str__(self) -> str:
         return self.title
 
@@ -116,7 +118,7 @@ class Room(BaseModel, UpdateByModel):
     )
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
-    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    tenant = models.ForeignKey("main.Tenant", CASCADE, "rooms")
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
     additional_info = models.JSONField(null=True, blank=True)
 

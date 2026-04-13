@@ -1,6 +1,6 @@
-from djangochannelsrestframework.mixins import action
 from asgiref.sync import sync_to_async
 from django.db.models import Q
+from djangochannelsrestframework.mixins import action
 
 from shuttle.models import AttributeKv
 from shuttle.serializers.attributes import InactiveAttributesFilterParams, InactiveDeviceAttributeSerializer

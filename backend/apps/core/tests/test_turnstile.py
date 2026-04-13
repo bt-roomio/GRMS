@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import requests
-
 from django.test import TestCase, override_settings
 
 from core.utils.turnstile import TurnstileVerificationError, verify_turnstile_token

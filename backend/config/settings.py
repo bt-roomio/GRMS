@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.microsoft",
     "celery",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "django_celery_results",
     "django_celery_beat",
@@ -313,6 +314,8 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 SWAGGER_SETTINGS = {
@@ -426,6 +429,10 @@ CELERY_BEAT_SCHEDULE = {
     "aggregate-ts-kv": {
         "task": "shuttle.tasks.aggregate_table_ts_kv",
         "schedule": crontab(hour=3, minute=0),  # Every day at 03:00
+    },
+    "flush-expired-tokens": {
+        "task": "users.tasks.flush_expired_tokens",
+        "schedule": crontab(hour=3, minute=0),  # каждую ночь в 3:00
     },
 }
 
@@ -549,4 +556,4 @@ LOGGING = {
     },
 }
 
-from .components.brute_force_protection import BRUTE_FORCE_CONFIG  # noqa: E402 F401  # pyright: ignore
+from .components.brute_force_protection import BRUTE_FORCE_CONFIG  # noqa: E402 F401  # ty: ignore

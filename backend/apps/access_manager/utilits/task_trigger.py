@@ -1,5 +1,5 @@
-from access_manager.tasks.room_card import manage_cards_for_room_task
 from access_manager.tasks.public_space_card import manage_cards_for_public_space_task
+from access_manager.tasks.room_card import manage_cards_for_room_task
 
 
 def card_room(group_id, room_id, action, card_num=None):

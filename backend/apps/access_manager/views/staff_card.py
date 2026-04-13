@@ -1,16 +1,14 @@
 import logging
 from typing import cast
 
-from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, StaffCard
 from access_manager.serializers.staff_card import StaffCardRequestData, StaffCardRequestSerializer
 from access_manager.swagger.staff_card import staff_card_swagger
+from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.check_card_assignment import get_card_assignments
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from access_manager.tasks.send_rpc import send_rpc_request
-from access_manager.utilits.check_card_assignment import get_card_assignments
-from main.models import Device
 from main.utils.access_context import get_staff_access_context
 
 logger = logging.getLogger("main")
@@ -34,7 +32,7 @@ class StaffCardView(APIView):
             assigned_cards = get_card_assignments(cards=cards, tenant_id=tenant_id, exclude_staff=staff)
 
             if assigned_cards:
-                return Response({"success": False, "message": f"Card is already assigned .",
+                return Response({"success": False, "message": "Card is already assigned .",
                                  "assigned_cards": assigned_cards}, 403)
 
             access_context = get_staff_access_context(staff)

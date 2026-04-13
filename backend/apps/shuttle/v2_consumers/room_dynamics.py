@@ -1,10 +1,10 @@
+from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
 from core.utils.date import convert_datetime
 from shuttle.models import TsKv
-from shuttle.serializers.ts_kv_history import TsKvHistorySerializer, TenantRoomAvgParams
+from shuttle.serializers.ts_kv_history import TenantRoomAvgParams, TsKvHistorySerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
-from asgiref.sync import sync_to_async
 
 
 class TsKvTenantHistoryConsumer(BaseGenericAsyncAPIConsumer):

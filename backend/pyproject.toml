@@ -1,36 +1,28 @@
-[tool.black]
-line-length = 120
-target-version = ['py37']
-include = '\.pyi?$'
-
-[tool.pyright]
-typeCheckingMode = "standard"
-executionEnvironments = [{ root = "apps" }]
-
-reportUnusedImport = "warning"
-reportUnusedVariable = "warning"
-
-[tool.isort]
-profile = "black"
-known_drf = ["rest_framework", "rest_framework_simplejwt", "drf_yasg"]
-known_apps = ["main", "shuttle", "users", "core", "services"]
-known_config = ["config"]
-sections = [
-  "FUTURE",
-  "STDLIB",
-  "THIRDPARTY",
-  "DRF",
-  "CONFIG",
-  "FIRSTPARTY",
-  "APPS",
-  "LOCALFOLDER",
-]
-line_length = 120
-
+[tool.ty.environment]
+root = ["apps"]
 
 [tool.ruff]
 line-length = 120
 extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+extend-select = ["I", "F401", "F841"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["main", "shuttle", "users", "core", "services"]
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "drf",
+  "config",
+  "first-party",
+  "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+drf = ["rest_framework", "rest_framework_simplejwt", "drf_yasg"]
+config = ["config"]
 
 [tool.pytest.ini_options]
 python_files = "tests.py test_*.py *_tests.py"

@@ -3,7 +3,8 @@ import time
 from access_manager.models import NeedSyncDevice
 from access_manager.serializers.need_sync import (
     NeedSyncDeviceHttpFilterParams,
-    SyncDeviceSerializer, SimpleNeedSyncDeviceSerializer,
+    SimpleNeedSyncDeviceSerializer,
+    SyncDeviceSerializer,
 )
 from access_manager.swagger.sync_device import (
     sync_device_delete_by_device_swagger,
@@ -11,15 +12,14 @@ from access_manager.swagger.sync_device import (
     sync_device_get_swagger,
     sync_device_swagger,
 )
+from access_manager.tasks.sync_device import sync_devices_task
+from access_manager.utilits.card_user import get_card_user
 from celery.utils.log import get_task_logger
 
 from rest_framework.fields import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from access_manager.tasks.sync_device import sync_devices_task
-from access_manager.utilits.card_user import get_card_user
 
 from main.models import Device
 

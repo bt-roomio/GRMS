@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from access_manager.models import CardDeviceSlot, StaffCard, Group, ALL_DAYS, WEEK_DAYS, GuestCard
+from access_manager.models import ALL_DAYS, WEEK_DAYS, CardDeviceSlot, Group, GuestCard, StaffCard
 
 logger = logging.getLogger("main")
 

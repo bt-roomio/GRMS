@@ -10,7 +10,11 @@ class ActivationLinkTests(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.angelina_token)
 
     def test_activation_link(self):
-        response = self.post(reverse("users:users-list"), {"email": "test@test.test"}, format="json")
+        response = self.post(
+            reverse("users:users-list"),
+            {"email": "test@test.test", "roles": ["bb436b2a-2ff5-4835-a264-fe27e30710e6"]},
+            format="json",
+        )
 
         assert response.data is not None
         response = self.get(reverse("users:activation-link", kwargs={"user_id": response.data["id"]}))

@@ -1,5 +1,5 @@
-from django.core.mail.backends.base import BaseEmailBackend
 from django.core import mail
+from django.core.mail.backends.base import BaseEmailBackend
 
 
 class TestEmailBackend(BaseEmailBackend):

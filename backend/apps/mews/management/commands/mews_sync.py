@@ -113,7 +113,7 @@ class Command(BaseCommand):
                             start_date = datetime.datetime.strptime(start_date_override, "%Y-%m-%d")
                             start_date = timezone.make_aware(start_date)
                         self.stdout.write(f"Using custom start date: {start_date.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except ValueError as e:
+                    except ValueError:
                         self.stdout.write(
                             self.style.ERROR(
                                 f"Invalid start date format: {start_date_override}. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"

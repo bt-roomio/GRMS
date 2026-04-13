@@ -1,8 +1,8 @@
-from typing import List, Set, Any
-from django.db.models import Q
+from typing import List, Set
 from uuid import UUID
 
-from access_manager.models import StaffCard, GuestCard
+from access_manager.models import GuestCard, StaffCard
+from django.db.models import Q
 
 
 def get_device_cards(device_id: UUID, cards: List = (), connect: bool = True) -> List[str]:

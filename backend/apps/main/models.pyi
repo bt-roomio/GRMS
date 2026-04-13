@@ -11,6 +11,7 @@ from main.querysets.guest import GuestQuerySet
 from main.querysets.public_space import PublicSpaceQuerySet
 from main.querysets.room import RoomQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
+from main.querysets.tenant import TenantQuerySet
 from shuttle.models import Relation as Relation
 from shuttle.models import TsKvDictionary as TsKvDictionary
 
@@ -27,7 +28,7 @@ class Tenant(BaseModel):
     state: Incomplete
     title: Incomplete
     zip: Incomplete
-    objects: Incomplete
+    objects: TenantQuerySet
 
     class Meta(BaseModel.Meta):
         db_table: str

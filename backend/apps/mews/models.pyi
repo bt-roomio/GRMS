@@ -2,7 +2,6 @@ from _typeshed import Incomplete
 
 from core.models import BaseModel, UpdateByModel
 
-
 class MewsConfiguration(BaseModel, UpdateByModel):
     tenant: Incomplete
     client_token: Incomplete
