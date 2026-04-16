@@ -1,9 +1,9 @@
 import logging
 from collections import defaultdict
-from celery import shared_task
 
 from access_manager.models import NeedSyncDevice
 from access_manager.tasks.send_rpc import send_rpc_request
+from celery import shared_task
 
 logger = logging.getLogger("main")
 

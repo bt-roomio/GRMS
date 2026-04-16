@@ -14,17 +14,20 @@ class PublicSpaceQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            PublicSpace.objects.list(
+            PublicSpace.objects.quick_list(
                 tenant_id=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
             ).values("id", "name")
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Public Space"],
+        tags=["Main, Simple"],
         query_serializer=PublicSpaceQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]}
+            )
+        },
     )
     @check_perms(["main.view_publicspace"])
     def get(self, request):

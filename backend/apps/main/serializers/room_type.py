@@ -72,3 +72,4 @@ class RoomTypeFilterParams(ValidatorSerializer):
 class RoomTypeQuickFilterParams(RoomTypeFilterParams):
     page = None
     size = None
+    search_field = None

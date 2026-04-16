@@ -16,5 +16,11 @@ class StaffQuerySet(BaseQuerySet):
 
         return query.order_by(*sort_by or ["-created_at"])
 
+    def quick_list(self, tenant_id, search_value=None):
+        query = self.filter(tenant_id=tenant_id).is_active()
+        if search_value:
+            query = query.filter(Q(first_name__icontains=search_value) | Q(last_name__icontains=search_value))
+        return query
+
     def is_active(self):
         return self.filter(is_active=True)

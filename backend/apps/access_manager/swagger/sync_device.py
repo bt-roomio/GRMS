@@ -1,4 +1,3 @@
-from access_manager.serializers.need_sync import SimpleNeedSyncDeviceSerializer
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema

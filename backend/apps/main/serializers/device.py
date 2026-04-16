@@ -194,7 +194,8 @@ class DeviceQuickFilterParams(DeviceFilterParams):
     size = None
     name = None
     status = None
-    device_profile = None
+    device_profile = serializers.CharField(required=False)
+    search_field = None
     sort_by = None
 
 

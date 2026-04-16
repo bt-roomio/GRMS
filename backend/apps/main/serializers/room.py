@@ -229,10 +229,8 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
 
 
 class RoomQuickFilterParams(RoomFilterParams):
+    search_field = None
     search_value = serializers.CharField(required=False)
-
-    def validate(self, attrs):
-        return attrs
 
 
 class RoomQuickFilterParamsSwagger(serializers.Serializer):

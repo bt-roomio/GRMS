@@ -162,3 +162,4 @@ class GroupQuickFilterParams(GroupFilterParams):
     page = None
     size = None
     sort_by = None
+    search_field = None

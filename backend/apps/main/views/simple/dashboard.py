@@ -14,17 +14,20 @@ class DashboardQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            Dashboard.objects.list(
+            Dashboard.objects.quick_list(
                 tenant_id=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
             ).values("id", "title")
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Dashboard"],
+        tags=["Main, Simple"],
         query_serializer=DashboardQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "title": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success", examples={"application/json": [{"id": "uuid", "title": "string"}]}
+            )
+        },
     )
     @check_perms(["main.view_dashboard"])
     def get(self, request):

@@ -14,19 +14,15 @@ class DeviceQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            Device.objects.list(
+            Device.objects.quick_list(
                 tenant=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
-                status=kwargs.get("status"),
-                sort_by=kwargs.get("sort_by"),
-                name=kwargs.get("name"),
                 device_profile=kwargs.get("device_profile"),
             ).values("id", "name", "label")
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Device"],
+        tags=["Main, Simple"],
         query_serializer=DeviceQuickFilterParams(),
         responses={
             200: openapi.Response(

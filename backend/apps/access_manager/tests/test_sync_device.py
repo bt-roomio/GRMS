@@ -1,10 +1,10 @@
 import uuid
 from unittest.mock import patch
 
+from access_manager.models import Card, NeedSyncDevice
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from access_manager.models import NeedSyncDevice, Card
 from main.models import Device
 
 

@@ -1,11 +1,12 @@
 import uuid
-from datetime import datetime, timezone as py_tz
+from datetime import datetime
+from datetime import timezone as py_tz
 from unittest.mock import patch
 
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from shuttle.models import TsKv, TsKvLatest, TsKvDictionary
+from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 
 
 class ShuttleTempApiChangeTsKvLatestTests(BaseTestCase):

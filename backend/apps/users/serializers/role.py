@@ -2,6 +2,7 @@ from django.contrib.auth.models import Permission
 
 from rest_framework import serializers
 
+from core.utils.serializers import ValidatorSerializer
 from users.models import Role
 
 
@@ -45,9 +46,6 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = ("id", "name", "permissions", "additional_info")
-
-
-from core.utils.serializers import ValidatorSerializer
 
 
 class RoleQuickFilterParams(ValidatorSerializer):

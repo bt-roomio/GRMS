@@ -42,13 +42,23 @@ class GatewayConsumer(BaseGenericAsyncAPIConsumer):
                 request_id=request_id,
             )
 
+    async def device_latest_activity(self, _):
+        for request_id, params in self.subscribers.items():
+            await self.send_list_paginated(
+                action=params.get("action"),
+                query_params=params.get("query_params", {}),
+                request_id=request_id,
+            )
+
     @action()
     async def list_subscribe(self, **kwargs):
         await self.send_list_paginated(**kwargs)
         await self.add_group(f"attribute_kv_updates_{self.tenant_id}")
+        await self.add_group(f"device_{self.tenant_id}")
         self.subscribers[kwargs.get("request_id")] = kwargs
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
         await self.remove_group(f"attribute_kv_updates_{self.tenant_id}")
+        await self.remove_group(f"device_{self.tenant_id}")
         self.subscribers.pop(request_id, None)

@@ -1,4 +1,4 @@
-from access_manager.models import StaffCard, GuestCard
+from access_manager.models import GuestCard, StaffCard
 
 
 def get_card_user(card_id):

@@ -26,9 +26,9 @@ class DevicesListConsumer(BaseGenericAsyncAPIConsumer):
         )
         return query
 
-    async def get_latest_activity(self, message, **kwargs):
+    async def device_latest_activity(self, message, **kwargs):
         for update in message.get("updates", []) or []:
-            await self.get_latest_activity({"update": update}, **kwargs)
+            await self.device_latest_activity({"update": update}, **kwargs)
             continue
 
         for request_id, params in self.subscribers.items():

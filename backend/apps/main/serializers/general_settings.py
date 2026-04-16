@@ -38,7 +38,7 @@ class TagSerializer(serializers.Serializer):
 
 class GeneralSettingsSerializer(serializers.Serializer):
     lang = serializers.CharField(max_length=255, default="en")
-    roomio_node_url = serializers.CharField(max_length=255, default="")
+    roomio_node_url = serializers.CharField(max_length=255, default="", allow_blank=True, allow_null=True)
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)
     check_in_out = serializers.BooleanField(default=False)
@@ -52,10 +52,15 @@ class GeneralSettingsSerializer(serializers.Serializer):
     door_lock = DoorLockSerializer(required=False)
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
-    main_dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all(), required=False, many=False)
+    main_dashboard = serializers.PrimaryKeyRelatedField(
+        queryset=Dashboard.objects.all(), required=False, many=False, allow_null=True
+    )
     room_fields = TagSerializer(many=True, required=False)
 
     def validate_main_dashboard(self, value):
+        if value is None:
+            return value
+
         dashboard = Dashboard.objects.filter(id=value.id).first()
         if not dashboard:
             raise serializers.ValidationError({"main_dashboard": [f"Object with title={value} does not exist."]})

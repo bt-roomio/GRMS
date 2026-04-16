@@ -61,3 +61,4 @@ class StaffQuickFilterParams(StaffFilterParams):
     sort_by = None
     in_group = None
     not_in_group = None
+    search_field = None

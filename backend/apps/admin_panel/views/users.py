@@ -1,4 +1,11 @@
-from admin_panel.swagger.users import AdminTenantUsersSwagger
+from admin_panel.serializers.users import AdminChangePasswordSerializer
+from admin_panel.swagger.users import (
+    AdminChangePasswordSwagger,
+    AdminCreateTenantUserSwagger,
+    AdminTenantUserDetailSwagger,
+    AdminTenantUsersSwagger,
+)
+from admin_panel.tasks import send_activation_email
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
@@ -9,6 +16,7 @@ from core.utils.permission import IsSuperUser
 from main.models import Tenant
 from users.models import User
 from users.serializers.user import UserSerializer
+from users.utils.emails import send_reset_link_email
 
 
 class AdminTenantUsersView(APIView):
@@ -25,3 +33,81 @@ class AdminTenantUsersView(APIView):
         queryset = User.objects.prefetch_related("roles").filter(tenant_id=tenant_id, is_active=True)
         serializer = UserSerializer(queryset, many=True)
         return Response(serializer.data)
+
+    @swagger_auto_schema(
+        tags=["Admin Panel"],
+        request_body=UserSerializer,
+        responses=AdminCreateTenantUserSwagger,
+        security=[{"Bearer": []}],
+        operation_description=(
+            "**Superuser only.** Creates a user for the given tenant. "
+            "Pass `?send_activation_mail=true` to send activation email, "
+            "otherwise the activation link is returned in the response."
+        ),
+    )
+    def post(self, request, tenant_id):
+        get_object_or_404(Tenant, id=tenant_id)
+        serializer = UserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save(tenant_id=tenant_id)
+
+        response_data = {"user": serializer.data}
+        if request.query_params.get("send_activation_mail", "false").lower() == "true":
+            send_activation_email.delay(str(user.id))
+            response_data["message"] = "Activation link sent."
+        else:
+            link = send_reset_link_email(user, send_activation_mail=False)
+            response_data["activation_link"] = link.decode("utf-8")
+
+        return Response(response_data, 201)
+
+
+class AdminTenantUserDetailView(APIView):
+    permission_classes = (IsSuperUser,)
+
+    @swagger_auto_schema(
+        tags=["Admin Panel"],
+        responses=AdminTenantUserDetailSwagger,
+        security=[{"Bearer": []}],
+        operation_description="**Superuser only.** Returns details of a specific user within a tenant.",
+    )
+    def get(self, request, tenant_id, user_id):
+        get_object_or_404(Tenant, id=tenant_id)
+        user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        tags=["Admin Panel"],
+        request_body=UserSerializer,
+        responses=AdminTenantUserDetailSwagger,
+        security=[{"Bearer": []}],
+        operation_description="**Superuser only.** Updates a user's data (including roles) within a tenant.",
+    )
+    def put(self, request, tenant_id, user_id):
+        get_object_or_404(Tenant, id=tenant_id)
+        user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
+        serializer = UserSerializer(user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class AdminChangePasswordView(APIView):
+    permission_classes = (IsSuperUser,)
+
+    @swagger_auto_schema(
+        tags=["Admin Panel"],
+        request_body=AdminChangePasswordSerializer,
+        responses=AdminChangePasswordSwagger,
+        security=[{"Bearer": []}],
+        operation_description="**Superuser only.** Directly sets a new password for any user within a tenant.",
+    )
+    def post(self, request, tenant_id, user_id):
+        get_object_or_404(Tenant, id=tenant_id)
+        user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
+        serializer = AdminChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user.set_password(serializer.validated_data["new_password"])
+        user.save()
+        return Response({"message": "Password changed."})

@@ -39,12 +39,15 @@ class NoNewSocialSignupAdapter(DefaultSocialAccountAdapter):
             raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=no_email"))
 
         try:
-            user = User.objects.get(email__iexact=email)
+            user = User.objects.get(email__iexact=email, is_active=True)
         except User.DoesNotExist:
             raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=no_user"))
 
         if sociallogin.is_existing:
-            return
+            if sociallogin.user and sociallogin.user.is_active:
+                return
+            # Social account is connected to an inactive user — reconnect to active one
+            sociallogin.user = user
 
         sociallogin.connect(request, user)
 

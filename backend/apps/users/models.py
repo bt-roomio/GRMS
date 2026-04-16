@@ -113,7 +113,12 @@ class ResetPassword(BaseModel):
 class Role(BaseModel):
     name = models.CharField(max_length=255, help_text=_("Name of the role"))
     tenant = models.ForeignKey(
-        "main.Tenant", models.CASCADE, related_name="roles", help_text=_("Tenant (hotel/property) this role belongs to")
+        "main.Tenant",
+        models.CASCADE,
+        related_name="roles",
+        help_text=_("Tenant (hotel/property) this role belongs to"),
+        null=True,
+        blank=True,
     )
     permissions = models.ManyToManyField(
         Permission,
@@ -133,7 +138,18 @@ class Role(BaseModel):
         verbose_name = "role"
         verbose_name_plural = "roles"
         db_table = "users_roles"
-        unique_together = (("name", "tenant"),)
+        constraints = [
+            UniqueConstraint(
+                fields=["name", "tenant"],
+                condition=Q(tenant__isnull=False),
+                name="unique_role_name_tenant",
+            ),
+            UniqueConstraint(
+                fields=["name"],
+                condition=Q(tenant__isnull=True),
+                name="unique_role_name_no_tenant",
+            ),
+        ]
         ordering = ("-created_at",)
 
     def __str__(self):

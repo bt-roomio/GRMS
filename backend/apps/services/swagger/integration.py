@@ -1,7 +1,7 @@
-from services.serializers.integration import IntegrationSerializer
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+
+from services.serializers.integration import IntegrationSerializer
 
 
 def integration_swagger_list(**kwargs):

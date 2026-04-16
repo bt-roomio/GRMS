@@ -1,10 +1,9 @@
-from re import search
 
 import pytest
+from access_manager.models import Card, NeedSyncDevice
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
-from access_manager.models import Card, NeedSyncDevice
 from main.models import Device
 
 

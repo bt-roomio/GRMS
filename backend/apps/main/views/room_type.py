@@ -1,13 +1,12 @@
 from drf_yasg.utils import swagger_auto_schema
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
+from core.utils.permission import check_perms
 from main.models import RoomType
 from main.serializers.room_type import RoomTypeFilterParams, RoomTypeSerializer
 from main.swagger.room_type import RoomTypeDetailSwagger, RoomTypeSwagger
-from core.utils.permission import check_perms
 
 
 class RoomTypeListView(APIView):

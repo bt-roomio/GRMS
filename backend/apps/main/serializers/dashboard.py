@@ -48,7 +48,7 @@ class DashboardSerializer(serializers.ModelSerializer):
             "tenant",
         )
         extra_kwargs = {
-            "tenant": {"required": False, "allow_null": True},
+            "tenant": {"read_only": True},
         }
 
 
@@ -70,3 +70,4 @@ class DashboardQuickFilterParams(DashboardFilterParams):
     page = None
     size = None
     sort_by = None
+    search_field = None

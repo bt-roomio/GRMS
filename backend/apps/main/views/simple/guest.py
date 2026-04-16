@@ -14,17 +14,22 @@ class GuestQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            Guest.objects.list(
+            Guest.objects.quick_list(
                 tenant_id=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
-            ).values("id", "name", "lastname")
+                room=kwargs.get("room"),
+            ).values("id", "name", "lastname", "room_id")
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Guest"],
+        tags=["Main, Simple"],
         query_serializer=GuestQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "name": "string", "lastname": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success",
+                examples={"application/json": [{"id": "uuid", "name": "string", "lastname": "string"}]},
+            )
+        },
     )
     @check_perms(["main.view_guest"])
     def get(self, request):

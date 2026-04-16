@@ -1,6 +1,7 @@
+from rest_framework import serializers
+
 from core.utils.serializers import ValidatorSerializer
 from main.models import WidgetType
-from rest_framework import serializers
 
 
 class WidgetTypeSerializer(serializers.ModelSerializer):

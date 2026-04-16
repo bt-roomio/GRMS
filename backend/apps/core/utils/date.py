@@ -42,6 +42,9 @@ def get_weekday(date):
 
 
 def datetime_unix(date_time: datetime):
+    """
+    Convert a datetime object to a Unix timestamp (seconds since epoch).
+    """
     return time.mktime(date_time.timetuple())
 
 
@@ -58,7 +61,7 @@ def datetime_to_unix(date_time):
     """
     # If input is a string, parse it first
     if isinstance(date_time, str):
-        date_time = datetime.fromisoformat(date_time.replace('Z', '+00:00'))
+        date_time = datetime.fromisoformat(date_time.replace("Z", "+00:00"))
 
     # Handle datetime objects
     if isinstance(date_time, datetime):

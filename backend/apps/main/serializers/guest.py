@@ -168,8 +168,8 @@ class GuestFilterParams(ValidatorSerializer):
 class GuestQuickFilterParams(GuestFilterParams):
     page = None
     size = None
-    room = None
     sort_by = None
+    search_field = None
     search_value = serializers.CharField(required=False)
 
 

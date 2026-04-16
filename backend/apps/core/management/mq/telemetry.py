@@ -118,7 +118,7 @@ def sync_telemetry(device, topic, payload):
                 TsKvLatest(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_now, **{field: value})
             )
             # пакетное сообщение в Redis
-            updates_by_device[f"{device_id}_{device.get("tenant_id")}"].append(
+            updates_by_device[f"{device_id}_{device.get('tenant_id')}"].append(
                 {
                     "entity": str(device_id),
                     "key": key,
@@ -151,7 +151,13 @@ def sync_telemetry(device, topic, payload):
 
     if card_logs:
         try:
-            CardLog.objects.bulk_create(card_logs, ignore_conflicts=True)
+            CardLog.objects.bulk_create(
+                card_logs,
+                update_conflicts=True,
+                batch_size=500,
+                update_fields=["access_group", "staff", "guest", "additional_info"],
+                unique_fields=["created_at", "number", "device_id"],
+            )
             publish_card_log_updates_batch(card_logs)
         except Exception as e:
             logger.exception("Failed to create CardLog entries: %s", e)
@@ -208,7 +214,13 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     if card_logs:
         try:
-            CardLog.objects.bulk_create(card_logs, ignore_conflicts=True)
+            CardLog.objects.bulk_create(
+                card_logs,
+                update_conflicts=True,
+                batch_size=500,
+                update_fields=["access_group", "staff", "guest", "additional_info"],
+                unique_fields=["created_at", "number", "device_id"],
+            )
             publish_card_log_updates_batch(card_logs)
         except Exception as e:
             logger.exception("Failed to create CardLog entries in batch: %s", e)

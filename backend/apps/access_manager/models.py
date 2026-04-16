@@ -96,8 +96,8 @@ class Card(BaseModel, UpdateByModel):
         unique_together = ("number", "tenant")
 
 
-class CardLog(BaseModel, UpdateByModel):
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now)
+class CardLog(models.Model):
+    created_at = models.DateTimeField(primary_key=True, default=timezone.now)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
     number = models.CharField(max_length=200)
     event_ts = models.DateTimeField()
@@ -116,7 +116,8 @@ class CardLog(BaseModel, UpdateByModel):
 
     objects = CardLogQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+    class Meta:
+        managed = False
         db_table = "access_manager_card_logs"
         ordering = ["-event_ts"]
 

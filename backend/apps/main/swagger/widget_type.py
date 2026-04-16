@@ -1,4 +1,5 @@
 from drf_yasg import openapi
+
 from main.serializers.widget_type import WidgetTypeSerializer
 
 WidgetTypeSwagger = {

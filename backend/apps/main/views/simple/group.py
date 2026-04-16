@@ -14,13 +14,20 @@ class GroupQuickListView(TenantCachedMixin, APIView):
     cache_key_prefix = "groups"
 
     def get_data(self, tenant_id, **kwargs):
-        query = Group.objects.list(tenant_id=tenant_id, **kwargs).values("id", "name")
+        query = Group.objects.quick_list(
+            tenant_id=tenant_id,
+            search_value=kwargs.get("search_value"),
+        ).values("id", "name")
         return list(query)
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Group"],
+        tags=["Main, Simple"],
         query_serializer=GroupQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success", examples={"application/json": [{"id": "uuid", "name": "string"}]}
+            )
+        },
     )
     @check_perms(["auth.view_group"])
     def get(self, request):

@@ -41,7 +41,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
                 sort_by=params.get("sort_by"),
                 blocks=params.get("blocks"),
             )
-            .guest_details(tenant=self.tenant_id)
+            .guest_details()
             .rooms_ts_kvs(tenant=self.tenant_id, keys=[*STATIC_KEYS])
             .get_tags(tenant=self.tenant_id, tags=params.get("tags", []))
         )
@@ -88,7 +88,7 @@ class RoomConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
             await self.ts_kv_latest_activity({"update": update}, **kwargs)
             continue
 
-        payload = message.get("update")
+        payload = message.get("update") or {}
         for request_id, params in self.subscribers.items():
             tags = params.get("query_params").get("tags", [])
             action = params.get("action")

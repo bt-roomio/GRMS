@@ -6,6 +6,13 @@ from core.querysets.base_queryset import BaseQuerySet
 
 
 class DeviceQuerySet(BaseQuerySet):
+    def quick_list(self, tenant, search_value=None, device_profile=None):
+        query = self.select_related("credentials", "device_profile").filter(tenant=tenant, is_active=True)
+        query = query.filter(device_profile__name=device_profile) if device_profile else query
+        if search_value:
+            query = query.filter(Q(name__istartswith=search_value) | Q(label__istartswith=search_value))
+        return query
+
     def list(
         self, tenant, search_field=None, search_value=None, status=None, sort_by=None, name=None, device_profile=None
     ):

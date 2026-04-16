@@ -1,4 +1,4 @@
-from access_manager.models import Card, NeedSyncDevice, StaffCard, GuestCard
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
 
 from rest_framework import serializers
 

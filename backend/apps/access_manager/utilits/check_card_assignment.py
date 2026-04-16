@@ -1,8 +1,7 @@
 from typing import Dict, List
 
-from django.db.models import Q
-
 from access_manager.models import GuestCard, StaffCard
+from django.db.models import Q
 
 
 def get_card_assignments(cards: List[str], tenant_id: str, exclude_guest_id=None,

@@ -15,17 +15,21 @@ class StaffQuickListView(TenantCachedMixin, APIView):
 
     def get_data(self, tenant_id, **kwargs):
         return list(
-            Staff.objects.list(
+            Staff.objects.quick_list(
                 tenant_id=tenant_id,
-                search_field=kwargs.get("search_field"),
                 search_value=kwargs.get("search_value"),
             ).values("id", "first_name", "last_name")
         )
 
     @swagger_auto_schema(
-        tags=["Main, Simple, Staff"],
+        tags=["Main, Simple"],
         query_serializer=StaffQuickFilterParams(),
-        responses={200: openapi.Response(description="Success", examples={"application/json": [{"id": "uuid", "first_name": "string", "last_name": "string"}]})},
+        responses={
+            200: openapi.Response(
+                description="Success",
+                examples={"application/json": [{"id": "uuid", "first_name": "string", "last_name": "string"}]},
+            )
+        },
     )
     @check_perms(["users.view_user"])
     def get(self, request):

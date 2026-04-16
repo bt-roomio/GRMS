@@ -1,11 +1,10 @@
 import uuid
-from unittest.mock import patch, call
+from unittest.mock import call, patch
+
+from access_manager.models import Group, GroupPublicSpace, GroupRoom
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from access_manager.models import (
-    Group, GroupRoom, GroupPublicSpace
-)
 
 
 class GroupViewTest(BaseTestCase):

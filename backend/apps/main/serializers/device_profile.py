@@ -50,3 +50,4 @@ class DeviceProfileQuickFilterParams(DeviceProfileFilterParams):
     page = None
     size = None
     state = None
+    search_field = None

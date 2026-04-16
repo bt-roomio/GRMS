@@ -9,3 +9,28 @@ AdminTenantListSwagger = {
         schema=TenantSerializer,
     ),
 }
+
+AdminTenantCreateSwagger = {
+    201: openapi.Response(
+        description="Tenant created",
+        schema=TenantSerializer,
+    ),
+    400: openapi.Response(description="Validation error"),
+}
+
+AdminTenantDetailSwagger = {
+    200: openapi.Response(
+        description="Success",
+        schema=TenantSerializer,
+    ),
+    404: openapi.Response(description="Tenant not found"),
+}
+
+AdminTenantUpdateSwagger = {
+    200: openapi.Response(
+        description="Tenant updated",
+        schema=TenantSerializer,
+    ),
+    400: openapi.Response(description="Validation error"),
+    404: openapi.Response(description="Tenant not found"),
+}

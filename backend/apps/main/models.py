@@ -28,18 +28,20 @@ from shuttle.models import Relation, TsKvDictionary, TsKvLatest
 
 
 class Tenant(ServiceBaseModel):
+    title = models.CharField(max_length=255, null=True, blank=True)
     tenant_profile = models.ForeignKey("main.TenantProfile", CASCADE)
-    additional_info = models.JSONField(null=True, blank=True)
+    phone = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(max_length=255, null=True, blank=True)
     address = models.CharField(null=True, blank=True)
     address2 = models.CharField(null=True, blank=True)
     city = models.CharField(max_length=255, null=True, blank=True)
     country = models.CharField(max_length=255, null=True, blank=True)
-    email = models.CharField(max_length=255, null=True, blank=True)
-    phone = models.CharField(max_length=255, null=True, blank=True)
     region = models.CharField(max_length=255, null=True, blank=True)
     state = models.CharField(max_length=255, null=True, blank=True)
-    title = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=255, null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
+
+    objects = TenantQuerySet.as_manager()
 
     def __str__(self) -> str:
         return self.title
@@ -116,7 +118,7 @@ class Room(BaseModel, UpdateByModel):
     )
     type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
     suite = models.ForeignKey("self", CASCADE, null=True, blank=True)
-    tenant = models.ForeignKey("main.Tenant", CASCADE)
+    tenant = models.ForeignKey("main.Tenant", CASCADE, "rooms")
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -440,7 +442,7 @@ class Dashboard(BaseModel):
             raise ValidationError({"name": "A dashboard with this title and tenant already exists."})
 
     def save(self, *args, **kwargs):
-        self.full_clean()  # This will raise ValidationError if clean() fails.
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):

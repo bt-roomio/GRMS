@@ -2,7 +2,6 @@ from io import BytesIO
 
 from django.urls import reverse
 from openpyxl import load_workbook
-from unittest.mock import patch
 
 from core.tests.base import BaseTestCase
 

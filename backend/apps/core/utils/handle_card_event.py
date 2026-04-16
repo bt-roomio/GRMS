@@ -22,7 +22,7 @@ def resolve_card_holder_and_access_group(tenant_id, card_uid, open_result=None):
         if not card:
             return staff, guest, access_group_from_holder
 
-        from access_manager.models import StaffCard, GuestCard
+        from access_manager.models import GuestCard, StaffCard
 
         guest_card = GuestCard.objects.filter(card=card, is_active=True).select_related("guest").first()
         if guest_card:
@@ -75,7 +75,7 @@ def handle_card_event(device, value, ts_dt):
                 return None
 
             access_group_value = getattr(AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED)
-            staff, guest, access_group_from_holder = resolve_card_holder_and_access_group(tenant_id, card_uid)
+            staff, guest, _ = resolve_card_holder_and_access_group(tenant_id, card_uid)
             number_value = card_uid
 
         else:
@@ -123,7 +123,7 @@ def handle_card_event(device, value, ts_dt):
             device_id=device.get("id"),
             staff=staff,
             guest=guest,
-            created_at=ts_dt,
+            created_at=timezone.now(),
             additional_info=additional_info,
         )
         print(f"card : {card_log}")
@@ -133,7 +133,6 @@ def handle_card_event(device, value, ts_dt):
     except Exception as e:
         logger.error(f"Error processing RFID card event: {e}")
         logger.error(
-            f'Device: {device.get("id") if isinstance(device, dict) else device}, '
-            f"Value: {value}, Timestamp: {ts_dt}"
+            f"Device: {device.get('id') if isinstance(device, dict) else device}, Value: {value}, Timestamp: {ts_dt}"
         )
         return None

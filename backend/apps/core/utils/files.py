@@ -3,8 +3,9 @@ import os
 import shutil
 from uuid import uuid4
 
-from PIL import Image
 from django.utils.deconstruct import deconstructible
+from PIL import Image
+
 from rest_framework.exceptions import ValidationError
 
 

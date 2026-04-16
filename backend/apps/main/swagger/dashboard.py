@@ -2,7 +2,6 @@ from drf_yasg import openapi
 
 from main.serializers.dashboard import DashboardSerializer
 
-
 DashboardSwagger = {
     200: openapi.Response(
         description="Success",

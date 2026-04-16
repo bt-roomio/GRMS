@@ -22,7 +22,7 @@ class SimpleGuestViewTest(BaseTestCase):
         self.assertIn("id", item)
         self.assertIn("name", item)
         self.assertIn("lastname", item)
-        self.assertEqual(len(item), 3)
+        self.assertEqual(len(item), 4)
 
     def test_search_by_name(self):
         response = self.get(self.url, {"search_field": "name", "search_value": "Amigo"})
