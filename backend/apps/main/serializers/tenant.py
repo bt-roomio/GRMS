@@ -63,6 +63,30 @@ class TenantSerializer(serializers.ModelSerializer):
         )
 
 
+class UpdateTenantSerializer(serializers.ModelSerializer):
+    def validate_title(self, value):
+        if Tenant.objects.filter(title__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError(f"Tenant with title '{value}' already exists.")
+        return value
+
+    class Meta:
+        model = Tenant
+        fields = (
+            "title",
+            "email",
+            "phone",
+            "address",
+            "address2",
+            "city",
+            "country",
+            "region",
+            "state",
+            "zip",
+            "additional_info",
+            "tenant_profile",
+        )
+
+
 class CreateTenantSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255)
     email = serializers.EmailField()
