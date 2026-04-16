@@ -76,10 +76,14 @@ class RoomSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        for device in validated_data.get("devices", {}):
+        devices = validated_data.get("devices", [])
+        for device in devices:
             if device.room_id:
                 raise serializers.ValidationError({"devices": "Device already assigned to another room!"})
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        if devices:
+            AttributeKv.objects.update_or_create_or_delete(devices, instance)
+        return instance
 
     class Meta:
         model = Room

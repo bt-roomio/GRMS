@@ -17,7 +17,8 @@ class GuestQuickListView(TenantCachedMixin, APIView):
             Guest.objects.quick_list(
                 tenant_id=tenant_id,
                 search_value=kwargs.get("search_value"),
-            ).values("id", "name", "lastname")
+                room=kwargs.get("room"),
+            ).values("id", "name", "lastname", "room_id")
         )
 
     @swagger_auto_schema(

@@ -41,6 +41,8 @@ class TenantSerializer(serializers.ModelSerializer):
         data["online_rooms"] = instance.online_rooms if hasattr(instance, "online_rooms") else 0
         data["offline_rooms"] = instance.offline_rooms if hasattr(instance, "offline_rooms") else 0
         data["total_rooms"] = instance.total_rooms if hasattr(instance, "total_rooms") else 0
+        data["offline_gateways"] = instance.offline_gateways if hasattr(instance, "offline_gateways") else 0
+        data["total_gateways"] = instance.total_gateways if hasattr(instance, "total_gateways") else 0
         return data
 
     class Meta:
@@ -48,18 +50,42 @@ class TenantSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "created_at",
+            "title",
+            "email",
             "tenant_profile",
             "additional_info",
             "address",
             "address2",
             "city",
             "country",
-            "email",
             "phone",
             "region",
             "state",
-            "title",
             "zip",
+        )
+
+
+class UpdateTenantSerializer(serializers.ModelSerializer):
+    def validate_title(self, value):
+        if Tenant.objects.filter(title__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError(f"Tenant with title '{value}' already exists.")
+        return value
+
+    class Meta:
+        model = Tenant
+        fields = (
+            "title",
+            "email",
+            "phone",
+            "address",
+            "address2",
+            "city",
+            "country",
+            "region",
+            "state",
+            "zip",
+            "additional_info",
+            "tenant_profile",
         )
 
 

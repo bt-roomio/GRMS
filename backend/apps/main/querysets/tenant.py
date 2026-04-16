@@ -18,6 +18,14 @@ class TenantQuerySet(BaseQuerySet):
                 "device",
                 filter=Q(device__is_active=True, device__room__isnull=False),
             ),
+            offline_gateways=Count(
+                "device",
+                filter=Q(device__is_active=True, device__additional_info__gateway=True, device__status=False),
+            ),
+            total_gateways=Count(
+                "device",
+                filter=Q(device__is_active=True, device__additional_info__gateway=True),
+            ),
         )
 
         if search_field and search_value:
