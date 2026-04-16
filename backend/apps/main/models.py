@@ -28,18 +28,18 @@ from shuttle.models import Relation, TsKvDictionary, TsKvLatest
 
 
 class Tenant(ServiceBaseModel):
+    title = models.CharField(max_length=255, null=True, blank=True)
     tenant_profile = models.ForeignKey("main.TenantProfile", CASCADE)
-    additional_info = models.JSONField(null=True, blank=True)
+    phone = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(max_length=255, null=True, blank=True)
     address = models.CharField(null=True, blank=True)
     address2 = models.CharField(null=True, blank=True)
     city = models.CharField(max_length=255, null=True, blank=True)
     country = models.CharField(max_length=255, null=True, blank=True)
-    email = models.CharField(max_length=255, null=True, blank=True)
-    phone = models.CharField(max_length=255, null=True, blank=True)
     region = models.CharField(max_length=255, null=True, blank=True)
     state = models.CharField(max_length=255, null=True, blank=True)
-    title = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=255, null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
 
     objects = TenantQuerySet.as_manager()
 
