@@ -20,6 +20,7 @@ UI_PERMISSIONS = [
     "r-print",
     "room-inner",
     "ri-controls",
+    "en-controls",
     "ri-cards",
     "ri-card-add",
     "ri-card-active",
