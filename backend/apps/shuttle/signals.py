@@ -1,3 +1,6 @@
+import asyncio
+import threading
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
@@ -6,6 +9,33 @@ from django.dispatch import receiver
 
 from shuttle.models import AttributeKv, TsKv, TsKvLatest
 from shuttle.utils.has_changed_and_update import has_changed_and_update, has_changed_attrs
+
+_local = threading.local()
+
+
+async def _send_groups(channel_layer, groups_payloads: list[tuple[str, dict]]):
+    await asyncio.gather(*[channel_layer.group_send(group, payload) for group, payload in groups_payloads])
+
+
+def _flush_attribute_kv_batch():
+    batch: dict[str, list] | None = getattr(_local, "attr_batch", None)
+    _local.attr_batch = None
+    if not batch:
+        return
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    groups_payloads = []
+    for tenant_id, messages in batch.items():
+        payload = {"type": "get_latest_activity", "updates": messages}
+        groups_payloads.extend(
+            [
+                ("attribute_kv_updates", payload),
+                (f"attribute_kv_updates_{tenant_id}", payload),
+                (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": messages}),
+            ]
+        )
+    async_to_sync(_send_groups)(channel_layer, groups_payloads)
 
 
 @receiver(post_save, sender=TsKv)
@@ -64,40 +94,27 @@ def tskv_latest_signal_handler(sender, instance, **kwargs):
 def attribute_kv_signal_handler(sender, instance: AttributeKv, **kwargs):
     fields = ("bool_v", "str_v", "dbl_v", "long_v", "json_v")
     value = next((getattr(instance, f) for f in fields if getattr(instance, f) is not None), None)
-
     if value is None:
         return
 
     device_id = str(instance.entity_id)
-    scope = instance.attribute_type
-    key_name = instance.attribute_key
-    ts_ms = instance.last_update_ts
-
     message = {
         "entity": device_id,
-        "last_update_ts": ts_ms,
-        "scope": scope,
-        "key_name": key_name,
+        "last_update_ts": instance.last_update_ts,
+        "scope": instance.attribute_type,
+        "key_name": instance.attribute_key,
         "value": value,
     }
-
-    channel_layer = get_channel_layer()
-    if channel_layer is None:
-        return
 
     changed_messages = has_changed_attrs(device_id, [message])
     if not changed_messages:
         return
 
-    tenant_id = instance.entity.tenant_id
+    tenant_id = str(instance.entity.tenant_id)
 
-    def send_to_channel_layer():
-        async_to_sync(channel_layer.group_send)("attribute_kv_updates", {"type": "get_latest_activity", "update": message})
-        async_to_sync(channel_layer.group_send)(
-            f"attribute_kv_updates_{tenant_id}", {"type": "get_latest_activity", "update": message}
-        )
-        async_to_sync(channel_layer.group_send)(
-            f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "update": message}
-        )
+    is_new_batch = not hasattr(_local, "attr_batch") or _local.attr_batch is None
+    if is_new_batch:
+        _local.attr_batch = {}
+        transaction.on_commit(_flush_attribute_kv_batch)
 
-    transaction.on_commit(send_to_channel_layer)
+    _local.attr_batch.setdefault(tenant_id, []).extend(changed_messages)

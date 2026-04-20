@@ -335,6 +335,8 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [(REDIS_HOST, REDIS_PORT)],
             "serializer_format": "uuidjson",  #  Registered in core.apps
+            "capacity": 500,
+            "expiry": 10,
         },
     },
 }
