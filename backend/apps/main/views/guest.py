@@ -23,6 +23,7 @@ class GuestListView(APIView):
             tenant_id=request.user.tenant_id,
             room=params.get("room"),
             sort_by=params.get("sort_by"),
+            room_state=params.get("room_state"),
         )
         serializer = GuestSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
@@ -70,7 +71,7 @@ class GuestCheckoutView(APIView):
     def post(self, request):
         params = GuestCheckoutParams.check(request.GET)
         user = str(request.user.id)
-        guests, result = Room.objects.guest_checkout(params.get("room").id, user=user)
+        guests, result = Room.objects.guest_checkout(params.get("room").id, user=user)  # ty: ignore
 
         if isinstance(result, dict) and not result.get("success", True):
             return Response({"message": f"{guests} guests have left."}, status=400)

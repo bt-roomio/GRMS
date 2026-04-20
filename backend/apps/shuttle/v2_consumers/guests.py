@@ -7,7 +7,7 @@ from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
 class GuestConsumer(BaseGenericAsyncAPIConsumer):
-    queryset = Guest.objects.all()
+    queryset = ...
     serializer_class = GuestSerializer
 
     @action()
@@ -16,10 +16,12 @@ class GuestConsumer(BaseGenericAsyncAPIConsumer):
         return res, 200
 
     def get_queryset(self, **kwargs):
-        query = super().get_queryset(**kwargs)
         params = GuestFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(  # pyright: ignore
-            tenant_id=self.tenant_id, room=params.get("room"), sort_by=params.get("sort_by", [])
+        query = Guest.objects.list(
+            tenant_id=self.tenant_id,
+            room=params.get("room"),
+            sort_by=params.get("sort_by"),
+            room_state=params.get("room_state"),
         )
         return query
 

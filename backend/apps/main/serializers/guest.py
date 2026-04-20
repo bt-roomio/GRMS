@@ -93,6 +93,9 @@ class GuestSerializer(serializers.ModelSerializer):
                 blocked_guest_cards.update(is_blocked=False)
 
         room_to_update = None
+        if "is_reservation" in validated_data:
+            room_to_update = instance.room
+
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
             logger.info(f"Deactivating Guest {instance.id}")
             room = instance.room
@@ -130,6 +133,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "title",
             "birthday",
             "is_active",
+            "is_reservation",
             "room",
             "check_in",
             "check_out",
@@ -141,6 +145,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "check_in": {"required": True},
             "check_out": {"required": True},
             "is_active": {"default": True},
+            "is_reservation": {"default": True},
         }
 
 
