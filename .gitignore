@@ -27,3 +27,6 @@ logs
 *.sqlite3
 *.db
 CLAUDE.md
+
+claude-memory-compiler
+.claude
