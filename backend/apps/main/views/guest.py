@@ -49,7 +49,12 @@ class GuestDetailView(APIView):
     @check_perms(["main.change_guest"])
     def put(self, request, pk):
         instance = get_object_or_404(Guest, pk=pk, tenant_id=request.user.tenant_id, is_active=True)
-        serializer = GuestSerializer(instance, data=request.data, partial=True, context={"tenant_id": request.user.tenant_id})
+        serializer = GuestSerializer(
+            instance,
+            data=request.data,
+            partial=True,
+            context={"tenant_id": request.user.tenant_id},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         deactivate_result = getattr(serializer, "_deactivate_result", None)

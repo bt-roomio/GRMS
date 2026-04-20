@@ -3,6 +3,7 @@ from uuid import UUID
 
 from _typeshed import Incomplete
 from django.db import models
+from django.db.models.fields.related_managers import RelatedManager
 
 from core.models import BaseModel, UpdateByModel
 from main.querysets.dashboard import DashboardQuerySet
@@ -59,16 +60,24 @@ class Room:
     Occupied: int
     Reserved: int
     MakeUpRoom: int
+
+    AVAILABLE: str
+    CHECKEDIN: str
+    OCCUPIED: str
+    RESERVED: str
+    MAKEUPROOM: str
+
     STATE: Incomplete
     ON: str
     OFF: str
     STATUS: Incomplete
+
     id: UUID
     number: Incomplete
     floor: Incomplete
     block: Incomplete
     active: Incomplete
-    state: Incomplete
+    state: list
     public_area_id: Incomplete
     pan_id: Incomplete
     building: Incomplete
@@ -76,11 +85,13 @@ class Room:
     type: Incomplete
     suite: Incomplete
     tenant: Tenant
+    guests: RelatedManager[Guest]
     tenant_id: UUID
     status: Incomplete
     additional_info: Incomplete
     devices: List[Device]
     objects: RoomQuerySet
+
     def clean(self) -> None: ...
     def save(self, *args, **kwargs) -> None: ...
     def ts_kvs_latest_values(self, keys: Iterable[TsKvDictionary] | Iterable[str]) -> dict[str, Any]: ...
@@ -263,6 +274,8 @@ class Guest(BaseModel):
     language: Incomplete
     title: Incomplete
     is_active: Incomplete
+    is_reservation: Incomplete
+    pms_id: Incomplete
     birthday: Incomplete
     check_in: Incomplete
     check_out: Incomplete

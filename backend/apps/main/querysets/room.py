@@ -20,7 +20,6 @@ from django.db.models import (
 from django.db.models.functions import Cast, Coalesce
 
 from core.querysets.base_queryset import BaseQuerySet
-from core.utils.helpers import safely_remove
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
 logger = logging.getLogger(__name__)
@@ -226,8 +225,7 @@ class RoomQuerySet(BaseQuerySet):
 
         guests.update(is_active=False)
         for room in query:
-            room.state = safely_remove(room.state, Room.CheckedIn)
-            room.state.append(Room.Available)
+            room.state = [Room.Available]  # TODO: Check for multiple guests
             room.save(update_fields=["state"])
         return guests.count(), deactivate_result
 

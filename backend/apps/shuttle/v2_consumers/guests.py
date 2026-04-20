@@ -25,10 +25,11 @@ class GuestConsumer(BaseGenericAsyncAPIConsumer):
 
     async def get_activity(self, message, **kwargs):
         update = message.get("update")
+        old_room_id = message.get("old_room_id")
         for request_id, params in self.subscribers.items():
             room = str(params.get("room"))
             action = params.get("action")
-            if room == update.get("room"):
+            if room == str(update.get("room")) or room == old_room_id:
                 if action == "list_subscribe":
                     data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
                     await self.reply(data=data, action="list_subscribe", request_id=request_id)
@@ -53,5 +54,6 @@ class GuestConsumer(BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
-        await self.remove_group(f"guests_{self.subscribers[request_id].get('room')}")
-        self.subscribers.pop(request_id, None)
+        if self.subscribers.get(request_id):
+            await self.remove_group(f"guests_{self.subscribers[request_id].get('room')}")
+            self.subscribers.pop(request_id, None)

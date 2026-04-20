@@ -92,12 +92,18 @@ class Room(BaseModel, UpdateByModel):
     Reserved = 3
     MakeUpRoom = 4
 
+    AVAILABLE = "Available"
+    CHECKEDIN = "CheckedIn"
+    OCCUPIED = "Occupied"
+    RESERVED = "Reserved"
+    MAKEUPROOM = "MakeUpRoom"
+
     STATE = (
-        (Available, "Available"),
-        (CheckedIn, "CheckedIn"),
-        (Occupied, "Occupied"),
-        (Reserved, "Reserved"),
-        (MakeUpRoom, "MakeUpRoom"),
+        (Available, AVAILABLE),
+        (CheckedIn, CHECKEDIN),
+        (Occupied, OCCUPIED),
+        (Reserved, RESERVED),
+        (MakeUpRoom, MAKEUPROOM),
     )
 
     ON = "ON"
@@ -485,6 +491,8 @@ class Guest(BaseModel):
 
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
+    is_reservation = models.BooleanField(default=False)
+    reservation_number = models.CharField(max_length=255, null=True, blank=True)
     lastname = models.CharField(max_length=255, null=True, blank=True)
     gender = models.CharField(max_length=255, null=True, blank=True)
     nationality = models.CharField(max_length=255, null=True, blank=True)  # Make standart nationality
@@ -494,7 +502,6 @@ class Guest(BaseModel):
     check_in = UnixTimeStampField(null=True, blank=True)
     check_out = UnixTimeStampField(null=True, blank=True)
     auto_check_out = models.BooleanField(default=False)
-    reservation_number = models.CharField(max_length=255, null=True, blank=True)
     room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     pms_id = models.CharField(max_length=255, null=True, blank=True)
@@ -502,6 +509,9 @@ class Guest(BaseModel):
     checkout_by = models.CharField(choices=CHECKOUT_BY.choices, max_length=50, null=True, blank=True)
 
     objects = GuestQuerySet.as_manager()
+
+    def __str__(self):
+        return str(f"{self.name} {self.lastname} in {self.room}")
 
     def get_name(self):
         return str(self.name + " " + self.lastname)

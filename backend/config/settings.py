@@ -300,7 +300,7 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 COMPANY_NAME = os.getenv("COMPANY_NAME", "Roomio")
 FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost")
-FRONTEND_PORT = os.getenv("FRONTEND_PORT", 8095)
+FRONTEND_PORT = os.getenv("FRONTEND_PORT")
 
 
 # Rest Framework

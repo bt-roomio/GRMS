@@ -8,6 +8,7 @@ from django.dispatch import receiver
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.cache import invalidate_quick_cache
+from core.utils.helpers import safely_remove
 from main.models import Dashboard, Device, DeviceProfile, Guest, PublicSpace, Room, RoomType
 from main.observables.device import publish_device
 from main.observables.guest import publish_guest_changes
@@ -94,6 +95,8 @@ def room(instance: Room, **kwargs) -> None:
     # 1. Remove duplicates
     _remove_duplicate_states(instance)
 
+    make_stable_room_state(instance)
+
     # 2. Send WebSocket notification
     send_room_status_websocket(instance)
 
@@ -118,6 +121,43 @@ def _remove_duplicate_states(room: Room) -> None:
         Room.objects.filter(id=room.id).update(state=list(set(room.state)))
     except Exception as e:
         logger.error(f"✗ Failed to remove duplicate states for room {room.number}: {e}")
+
+
+def make_stable_room_state(room: Room) -> None:
+    """
+    Control room state based on is_active, is_reservation or no one guests.
+    if any (is_active == true and is_reservation == false) then room is checked in
+
+    Uses QuerySet.update() instead of save() to avoid triggering post_save signal recursion.
+    """
+    active_guests = room.guests.filter(is_active=True, is_reservation=False)
+    reservation_guests = room.guests.filter(is_active=True, is_reservation=True)
+
+    old_state = list(room.state)
+    new_state = list(room.state)
+
+    if active_guests.exists():
+        new_state = safely_remove(new_state, Room.Available)
+        if Room.CheckedIn not in new_state:
+            new_state.append(Room.CheckedIn)
+    else:
+        new_state = safely_remove(new_state, Room.CheckedIn)
+
+    if reservation_guests.exists():
+        new_state = safely_remove(new_state, Room.Available)
+        if Room.Reserved not in new_state:
+            new_state.append(Room.Reserved)
+    else:
+        new_state = safely_remove(new_state, Room.Reserved)
+
+    if not active_guests.exists() and not reservation_guests.exists() and Room.Available not in new_state:
+        new_state.append(Room.Available)
+
+    Room.objects.filter(id=room.id).update(state=new_state)
+    room.state = new_state
+
+    if old_state != new_state:
+        logger.debug(f"Room {room.number} state: {old_state} → {new_state}")
 
 
 def send_room_status_websocket(room: Room) -> None:
