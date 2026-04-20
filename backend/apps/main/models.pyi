@@ -160,6 +160,7 @@ class Device:
     label: Incomplete
     additional_info: Incomplete
     device_data: Incomplete
+    device_public_spaces: list[PublicSpace]
     external_id: Incomplete
     card: Incomplete
     relations: list[Relation]
