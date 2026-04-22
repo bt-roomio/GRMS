@@ -1,5 +1,5 @@
 import time
-from enum import Enum
+from dataclasses import dataclass
 
 from shuttle.models import AttributeKv
 
@@ -8,27 +8,27 @@ def default_state():
     return [0]
 
 
-class StateEnum(str, Enum):
-    CHECK_IN_OUT = "Room reservation status"
-    CHECK_IN_TRIGGER = "Check-in trigger"
-    CHECK_OUT_TRIGGER = "Check-out trigger"
+@dataclass
+class AttributeConfig:
+    attribute_key: str
+    attribute_type: str
+    value: int
 
 
-def attribute_room_state(room, states: list[StateEnum], value: int):
+def update_room_device_attributes(room, attributes: list[AttributeConfig]):
     from main.models import Device
 
-    device = Device.objects.find_device_by_room(room)  # pyright: ignore
-
+    device = Device.objects.find_device_by_room(room)
     if not device:
-        return None, None, None
+        return
 
-    for state in states:
+    for attr in attributes:
         AttributeKv.objects.update_or_create(
             entity=device,
-            attribute_key=state.value,
+            attribute_key=attr.attribute_key,
             entity_type="DEVICE",
-            attribute_type=(AttributeKv.SHARED_SCOPE if state == StateEnum.CHECK_IN_OUT else AttributeKv.CLIENT_SCOPE),
-            defaults={"last_update_ts": time.time(), "long_v": 1 if StateEnum.CHECK_OUT_TRIGGER else int(value)},
+            attribute_type=attr.attribute_type,
+            defaults={"last_update_ts": time.time(), "long_v": attr.value},
         )
-        device_gateway = Device.objects.get_relation_or_gateway(device.id)  # pyright: ignore
-        yield ({state.value: int(value)}, str(device_gateway), device.name)
+        device_gateway = Device.objects.get_relation_or_gateway(device.id)
+        yield ({attr.attribute_key: attr.value}, attr.attribute_type, str(device_gateway), device.name)

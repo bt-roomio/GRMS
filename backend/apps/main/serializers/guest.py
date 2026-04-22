@@ -105,7 +105,7 @@ class GuestSerializer(serializers.ModelSerializer):
                 result = send_rpc_request(str(device.id), cards, 0, guest_id=str(instance.id))
                 not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
-            if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
+            if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:  # pyright: ignore
                 room_to_update = room
 
             self._deactivate_result = deactivate_result
