@@ -31,10 +31,7 @@ class ScannedDevicesConsumer(BaseGenericAsyncAPIConsumer):
         await self.fetch_and_reply(request_id, action, query_params)
 
     async def get_latest_activity(self, message):
-        update = message.get("update") or {}
-        entity = update.get("entity")
-        scope = update.get("scope")
-        key_name = update.get("key_name")
+        updates = message.get("updates") or ([message["update"]] if message.get("update") else [])
         relevant_keys = {"scanned_devices", "upload_status", "scan_status"}
 
         for request_id, params in self.subscribers.items():
@@ -42,10 +39,11 @@ class ScannedDevicesConsumer(BaseGenericAsyncAPIConsumer):
             sub_entity = query_params.get("entity_id")
             sub_connector = query_params.get("connector_name")
 
-            is_relevant = (
-                entity == sub_entity
-                or (scope == "CLIENT_SCOPE" and key_name in relevant_keys)
-                or (scope == "SHARED_SCOPE" and key_name == sub_connector)
+            is_relevant = any(
+                u.get("entity") == sub_entity
+                or (u.get("scope") == "CLIENT_SCOPE" and u.get("key_name") in relevant_keys)
+                or (u.get("scope") == "SHARED_SCOPE" and u.get("key_name") == sub_connector)
+                for u in updates
             )
 
             if is_relevant:

@@ -148,6 +148,8 @@ class MewsAPIClient:
         return self._make_request("reservations/getAll/2023-06-06", params)
 
     def get_all_customers(self, params={}):
+        if "Extent" not in params:
+            params = {**params, "Extent": {"Customers": True, "Documents": False, "Addresses": False}}
         return self._make_request("customers/getAll", params)
 
     def get_customer_by_ids(self, customer_ids: list[str], params={}):
@@ -240,11 +242,6 @@ class MewsAPIClient:
         else:
             params["Extent"] = {  # pyright: ignore
                 "Resources": True,
-                "ResourceCategories": True,
-                "ResourceCategoryAssignments": True,
-                "ResourceCategoryImageAssignments": True,
-                "ResourceFeatures": True,
-                "ResourceFeatureAssignments": True,
                 "Inactive": False,
             }
 

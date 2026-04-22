@@ -115,6 +115,8 @@ def attribute_kv_signal_handler(sender, instance: AttributeKv, **kwargs):
     is_new_batch = not hasattr(_local, "attr_batch") or _local.attr_batch is None
     if is_new_batch:
         _local.attr_batch = {}
-        transaction.on_commit(_flush_attribute_kv_batch)
 
     _local.attr_batch.setdefault(tenant_id, []).extend(changed_messages)
+
+    if is_new_batch:
+        transaction.on_commit(_flush_attribute_kv_batch)
