@@ -145,7 +145,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "check_in": {"required": True},
             "check_out": {"required": True},
             "is_active": {"default": True},
-            "is_reservation": {"default": True},
+            "is_reservation": {"default": False},
         }
 
 
