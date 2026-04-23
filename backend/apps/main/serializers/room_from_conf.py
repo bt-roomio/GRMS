@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from main.models import Device, Room, RoomType
+from shuttle.models import AttributeKv
 
 
 class RoomConfigSerializer(serializers.Serializer):
@@ -59,13 +60,13 @@ class RoomFromConfSerializer(serializers.Serializer):
                     },
                 )
 
-                valid_device_found = False
+                assigned_devices = []
                 for device_mac in room_data.get("devices", []):
                     try:
                         device = Device.objects.get(tenant=tenant, name=device_mac, is_active=True)
                         device.room = room
                         device.save()
-                        valid_device_found = True
+                        assigned_devices.append(device)
                     except Device.DoesNotExist:
                         result["device_errors"].append(
                             {
@@ -77,7 +78,10 @@ class RoomFromConfSerializer(serializers.Serializer):
                             }
                         )
 
-                if valid_device_found or not room_data.get("devices"):
+                if assigned_devices:
+                    AttributeKv.objects.update_or_create_or_delete(list(room.devices.all()), room)
+
+                if assigned_devices or not room_data.get("devices"):
                     result["rooms"].append(
                         {"number": room.number, "floor": room.floor, "block": room.block, "status": "success"}
                     )

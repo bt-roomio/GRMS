@@ -1,4 +1,4 @@
-from admin_panel.serializers.users import AdminChangePasswordSerializer
+from admin_panel.serializers.users import AdminChangePasswordSerializer, AdminTenantUsersFilterParams
 from admin_panel.swagger.users import (
     AdminChangePasswordSwagger,
     AdminCreateTenantUserSwagger,
@@ -25,12 +25,19 @@ class AdminTenantUsersView(APIView):
     @swagger_auto_schema(
         tags=["Admin Panel"],
         responses=AdminTenantUsersSwagger,
+        query_serializer=AdminTenantUsersFilterParams(),
         security=[{"Bearer": []}],
         operation_description="**Superuser only.** Returns a list of active users for the given tenant.",
     )
     def get(self, request, tenant_id):
         get_object_or_404(Tenant, id=tenant_id)
-        queryset = User.objects.prefetch_related("roles").filter(tenant_id=tenant_id, is_active=True)
+        params = AdminTenantUsersFilterParams.check(request.GET)
+        queryset = User.objects.list(
+            tenant_id=tenant_id,
+            sort_by=params.get("sort_by"),
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+        )
         serializer = UserSerializer(queryset, many=True)
         return Response(serializer.data)
 

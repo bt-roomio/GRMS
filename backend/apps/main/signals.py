@@ -8,12 +8,13 @@ from django.dispatch import receiver
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.cache import invalidate_quick_cache
+from core.utils.helpers import safely_remove
 from main.models import Dashboard, Device, DeviceProfile, Guest, PublicSpace, Room, RoomType
 from main.observables.device import publish_device
 from main.observables.guest import publish_guest_changes
 from main.observables.room_detail import publish_room_detail_changes
 from main.observables.room_status import publish_room_status
-from main.utils.default_state import StateEnum, attribute_room_state
+from main.utils.default_state import AttributeConfig, update_room_device_attributes
 from shuttle.models import AttributeKv
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,8 @@ def room(instance: Room, **kwargs) -> None:
     # 1. Remove duplicates
     _remove_duplicate_states(instance)
 
+    make_stable_room_state(instance)
+
     # 2. Send WebSocket notification
     send_room_status_websocket(instance)
 
@@ -118,6 +121,43 @@ def _remove_duplicate_states(room: Room) -> None:
         Room.objects.filter(id=room.id).update(state=list(set(room.state)))
     except Exception as e:
         logger.error(f"✗ Failed to remove duplicate states for room {room.number}: {e}")
+
+
+def make_stable_room_state(room: Room) -> None:
+    """
+    Control room state based on is_active, is_reservation or no one guests.
+    if any (is_active == true and is_reservation == false) then room is checked in
+
+    Uses QuerySet.update() instead of save() to avoid triggering post_save signal recursion.
+    """
+    active_guests = room.guests.filter(is_active=True, is_reservation=False)
+    reservation_guests = room.guests.filter(is_active=True, is_reservation=True)
+
+    old_state = list(room.state)
+    new_state = list(room.state)
+
+    if active_guests.exists():
+        new_state = safely_remove(new_state, Room.Available)
+        if Room.CheckedIn not in new_state:
+            new_state.append(Room.CheckedIn)
+    else:
+        new_state = safely_remove(new_state, Room.CheckedIn)
+
+    if reservation_guests.exists():
+        new_state = safely_remove(new_state, Room.Available)
+        if Room.Reserved not in new_state:
+            new_state.append(Room.Reserved)
+    else:
+        new_state = safely_remove(new_state, Room.Reserved)
+
+    if not active_guests.exists() and not reservation_guests.exists() and Room.Available not in new_state:
+        new_state.append(Room.Available)
+
+    Room.objects.filter(id=room.id).update(state=new_state)
+    room.state = new_state
+
+    if old_state != new_state:
+        logger.debug(f"Room {room.number} state: {old_state} → {new_state}")
 
 
 def send_room_status_websocket(room: Room) -> None:
@@ -149,32 +189,28 @@ def send_room_status_websocket(room: Room) -> None:
 
 
 def _update_room_devices_status(room: Room) -> None:
-    """
-    Update physical devices via RabbitMQ based on room state.
-
-    Sends commands to physical devices (door locks, displays, etc.) when
-    room state changes between Available and CheckedIn.
-
-    Args:
-        room: Room instance to sync devices for
-    """
+    logger.info(f"✓ Updating room attributes for room {room.number}")
     try:
         channel = connect_to_rabbitmq()
+        swap_flag = isinstance(room.additional_info, dict) and bool(room.additional_info.get("swap_flag"))
 
-        if Room.Available in room.state:
-            attr_device_id_device_name = attribute_room_state(
-                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_OUT_TRIGGER, StateEnum.CHECK_IN_TRIGGER], 0
-            )
-            if isinstance(room.additional_info, dict) and room.additional_info.get("swap_flag"):
-                for attrs in attr_device_id_device_name:
-                    send_msg_status_room(channel, *attrs)
-        elif Room.CheckedIn in room.state:
-            attr_device_id_device_name = attribute_room_state(
-                room, [StateEnum.CHECK_IN_OUT, StateEnum.CHECK_IN_TRIGGER], 2
-            )
-            if isinstance(room.additional_info, dict) and room.additional_info.get("swap_flag"):
-                for attrs in attr_device_id_device_name:
-                    send_msg_status_room(channel, *attrs)
+        if Room.CheckedIn in room.state:
+            attrs = [
+                AttributeConfig("Room reservation status", AttributeKv.SHARED_SCOPE, 1),
+                AttributeConfig("Check-in trigger", AttributeKv.CLIENT_SCOPE, 2),
+            ]
+        elif Room.Available in room.state:
+            attrs = [
+                AttributeConfig("Room reservation status", AttributeKv.SHARED_SCOPE, 0),
+                AttributeConfig("Check-out trigger", AttributeKv.CLIENT_SCOPE, 1),
+            ]
+        else:
+            return
+
+        logger.info(f"✓ Changing attributes: {attrs}")
+        for attr_data, attr_type, device_id, device_name in update_room_device_attributes(room, attrs):
+            if attr_type == AttributeKv.SHARED_SCOPE or not swap_flag:
+                send_msg_status_room(channel, attr_data, device_id, device_name)
     except Exception as e:
         logger.error(f"✗ Failed to update room devices for room {room.number}: {e}")
 
@@ -185,4 +221,5 @@ def send_msg_status_room(channel, attr, device_id, device_name):
         "topic": "v1/gateway/attributes",
         "data": {"device": device_name, "data": attr},
     }
+    logger.info(f"✓ Sending RPC: {message}")
     send_to_rabbitmq(channel, message, routing_key="fromGRMS")

@@ -79,6 +79,7 @@ class Command(BaseCommand):
         for tenant in active_tenants:
             try:
                 mews_settings = tenant.additional_info["integration_settings"]["mews"]
+                logger.info(f"Mews settings for tenant {tenant.title}: {mews_settings}")
 
                 self.stdout.write(self.style.SUCCESS(f"Initializing listener for tenant: {tenant.title}"))
 
@@ -137,13 +138,13 @@ class Command(BaseCommand):
         connected_count = sum(1 for client in clients if client.is_connected())
         self.stdout.write(
             self.style.SUCCESS(
-                f"\n{'='*60}\n"
+                f"\n{'=' * 60}\n"
                 f"Mews WebSocket Listener Running\n"
-                f"{'='*60}\n"
+                f"{'=' * 60}\n"
                 f"Active connections: {connected_count}/{len(clients)}\n"
                 f"Listening for reservation events...\n"
                 f"Press Ctrl+C to stop\n"
-                f"{'='*60}\n"
+                f"{'=' * 60}\n"
             )
         )
 
