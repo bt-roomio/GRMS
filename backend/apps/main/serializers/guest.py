@@ -29,8 +29,6 @@ class GuestMoveRoomSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         from_room = validated_data.pop("from_room")
-        from_room.state.append(Room.Available)
-        from_room.state = safely_remove(from_room.state, Room.CheckedIn)
         from_room.save(update_fields=["state"])
 
         for guest in instance:
@@ -38,8 +36,6 @@ class GuestMoveRoomSerializer(serializers.Serializer):
             guest.save()
 
         to_room = validated_data.pop("to_room")
-        to_room.state.append(Room.CheckedIn)
-        to_room.state = safely_remove(to_room.state, Room.Available)
         to_room.save(update_fields=["state"])
 
         return instance
@@ -62,8 +58,8 @@ class GuestSerializer(serializers.ModelSerializer):
             instance = super().create(validated_data)
             room = instance.room
             if room:
-                room.state = safely_remove(room.state, Room.Available)
-                room.state.append(Room.CheckedIn)
+                # room.state = safely_remove(room.state, Room.Available)
+                # room.state.append(Room.CheckedIn)
                 room.save(update_fields=["state"])
             return instance
         except Exception as e:
@@ -71,7 +67,7 @@ class GuestSerializer(serializers.ModelSerializer):
             raise e
 
     def update(self, instance: Guest, validated_data):
-        logger.debug(f"Updating Guest {instance.id} with data: {validated_data}")
+        logger.info(f"Updating Guest {instance.id} with data: {validated_data}")
         deactivate_result = {"success": True}
 
         access_context = get_guest_access_context(instance)
@@ -83,8 +79,7 @@ class GuestSerializer(serializers.ModelSerializer):
 
         new_room = validated_data.get("room") and Room.objects.filter(id=validated_data.get("room").id).first()
         if new_room and not new_room.guests.exists():  # pyright: ignore
-            new_room.state = safely_remove(new_room.state, Room.Available)
-            new_room.state.append(Room.CheckedIn)
+            # new_room.state = [Room.CheckedIn]
             new_room.save(update_fields=["state"])
 
         new_checkout = validated_data.get("check_out")
@@ -97,8 +92,12 @@ class GuestSerializer(serializers.ModelSerializer):
                     )
                 blocked_guest_cards.update(is_blocked=False)
 
+        room_to_update = None
+        if "is_reservation" in validated_data:
+            room_to_update = instance.room
+
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
-            logger.debug(f"Deactivating Guest {instance.id}")
+            logger.info(f"Deactivating Guest {instance.id}")
             room = instance.room
             devices = access_context.get("devices")
             cards = access_context.get("cards")
@@ -106,17 +105,20 @@ class GuestSerializer(serializers.ModelSerializer):
                 result = send_rpc_request(str(device.id), cards, 0, guest_id=str(instance.id))
                 not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
-            if room and len(room.guests.filter(is_active=True)) <= 1:  # pyright: ignore
-                logger.debug(f"Updating Room {room.id} state to Available")
-                room.state = safely_remove(room.state, Room.CheckedIn)
-                room.state.append(Room.Available)
-                room.save(update_fields=["state"])
-                self.context["deactivate_results"] = deactivate_result
+            if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:  # pyright: ignore
+                room_to_update = room
 
             self._deactivate_result = deactivate_result
-
             instance.checkout_by = instance.CHECKOUT_BY.ROOMIO
-        return super().update(instance, validated_data)
+
+        updated = super().update(instance, validated_data)
+
+        if room_to_update:
+            logger.info(f"Updating Room {room_to_update.id} state to Available")
+            room_to_update.save(update_fields=["state"])
+            self.context["deactivate_results"] = deactivate_result
+
+        return updated
 
     class Meta:
         model = Guest
@@ -131,6 +133,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "title",
             "birthday",
             "is_active",
+            "is_reservation",
             "room",
             "check_in",
             "check_out",
@@ -142,6 +145,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "check_in": {"required": True},
             "check_out": {"required": True},
             "is_active": {"default": True},
+            "is_reservation": {"default": True},
         }
 
 
@@ -163,6 +167,14 @@ class GuestFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     room = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), default=[], required=False)
+    room_state = serializers.ChoiceField(choices=(Room.CHECKEDIN, Room.RESERVED), default=Room.CHECKEDIN)
+
+    def validate(self, attrs):
+        STATE_MAP = {name: num for num, name in Room.STATE}
+
+        if "room_state" in attrs:
+            attrs["room_state"] = STATE_MAP[attrs["room_state"]]
+        return super().validate(attrs)
 
 
 class GuestQuickFilterParams(GuestFilterParams):

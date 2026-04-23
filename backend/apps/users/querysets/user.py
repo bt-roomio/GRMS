@@ -28,6 +28,12 @@ class UsersManager(BaseUserManager):
 
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__icontains": search_value}))
+        elif search_value:
+            query = query.filter(
+                Q(first_name__icontains=search_value)
+                | Q(last_name__icontains=search_value)
+                | Q(email__icontains=search_value)
+            )
 
         return query
 

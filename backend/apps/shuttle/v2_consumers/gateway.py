@@ -31,8 +31,9 @@ class GatewayConsumer(BaseGenericAsyncAPIConsumer):
         return self.get_data(**kwargs), 200
 
     async def get_latest_activity(self, message):
-        update = message.get("update") or {}
-        if update.get("key_name") not in {"active", "active_connectors", "inactive_connectors"}:
+        updates = message.get("updates") or ([message["update"]] if message.get("update") else [])
+        relevant_keys = {"active", "active_connectors", "inactive_connectors"}
+        if not any(u.get("key_name") in relevant_keys for u in updates):
             return
 
         for request_id, params in self.subscribers.items():

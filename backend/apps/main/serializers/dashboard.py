@@ -12,7 +12,6 @@ class SimpleDashboardSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
-            "configuration",
             "assigned_customers",
             "mobile_hide",
             "mobile_order",

@@ -15,6 +15,9 @@ class RoomTypeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["dashboard"] = SimpleDashboardSerializer(instance.dashboard).data if instance.dashboard else None
+        data["engineering_dashboard"] = (
+            SimpleDashboardSerializer(instance.engineering_dashboard).data if instance.engineering_dashboard else None
+        )
 
         if hasattr(instance, "prefetched_public_spaces"):
             public_spaces = instance.prefetched_public_spaces
@@ -56,6 +59,7 @@ class RoomTypeSerializer(serializers.ModelSerializer):
             "check_in_value",
             "check_out_value",
             "dashboard",
+            "engineering_dashboard",
             "tenant",
             "public_spaces_ids",
             "public_spaces",

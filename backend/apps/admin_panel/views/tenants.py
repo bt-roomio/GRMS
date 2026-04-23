@@ -4,6 +4,7 @@ from admin_panel.swagger.tenants import (
     AdminTenantListSwagger,
     AdminTenantUpdateSwagger,
 )
+from django.http import Http404
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
@@ -59,8 +60,10 @@ class AdminTenantDetailView(APIView):
         security=[{"Bearer": []}],
         operation_description="**Superuser only.** Returns detailed information about a specific tenant.",
     )
-    def get(self, request, tenant_id):
-        tenant = get_object_or_404(Tenant, id=tenant_id)
+    def get(self, _, tenant_id):
+        tenant: Tenant | None = Tenant.objects.filter(id=tenant_id).count_devices().first()
+        if not tenant:
+            raise Http404("No Tenant matches the given query.")
         serializer = TenantSerializer(tenant)
         return Response(serializer.data)
 
