@@ -23,13 +23,16 @@ class RoomListView(APIView):
     @check_perms(["main.view_room"])
     def get(self, request):
         params = RoomFilterParams.check(request.query_params)
-        queryset = Room.objects.list(
-            tenant=request.user.tenant,
-            state=params.get("state"),
-            status=params.get("status"),
-            search_field=params.get("search_field"),
-            search_value=params.get("search_value"),
-            sort_by=params.get("sort_by"),
+        queryset = (
+            Room.objects.list(
+                tenant=request.user.tenant,
+                state=params.get("state"),
+                status=params.get("status"),
+                search_field=params.get("search_field"),
+                search_value=params.get("search_value"),
+                sort_by=params.get("sort_by"),
+            )
+            .guest_details()
         )
         serializer = RoomSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size", 15))
@@ -89,7 +92,7 @@ class RoomDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Room"], responses=RoomDetailSwagger)
     @check_perms(["main.view_room"])
     def get(self, request, pk):
-        queryset = get_object_or_404(Room, id=pk, active=True, tenant_id=request.user.tenant_id)
+        queryset = get_object_or_404(Room.objects.guest_details(), id=pk, active=True, tenant_id=request.user.tenant_id)
         serializer = RoomSerializer(queryset, context={"detail": True})
         return Response(serializer.data)
 
