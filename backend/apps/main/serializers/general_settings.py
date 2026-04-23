@@ -41,6 +41,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     roomio_node_url = serializers.CharField(max_length=255, default="", allow_blank=True, allow_null=True)
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)
+    guest_auto_block = serializers.BooleanField(default=False)
     check_in_out = serializers.BooleanField(default=False)
     vip_status = serializers.BooleanField(default=False)
     suite_rooms_controls_sync = serializers.BooleanField(default=False)
