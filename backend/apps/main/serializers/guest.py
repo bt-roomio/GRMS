@@ -4,7 +4,6 @@ from access_manager.tasks.send_rpc import send_rpc_request
 
 from rest_framework import serializers
 
-from core.utils.helpers import safely_remove
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context
@@ -58,8 +57,6 @@ class GuestSerializer(serializers.ModelSerializer):
             instance = super().create(validated_data)
             room = instance.room
             if room:
-                # room.state = safely_remove(room.state, Room.Available)
-                # room.state.append(Room.CheckedIn)
                 room.save(update_fields=["state"])
             return instance
         except Exception as e:
@@ -72,21 +69,20 @@ class GuestSerializer(serializers.ModelSerializer):
 
         access_context = get_guest_access_context(instance)
 
-        old_room = instance.room_id and Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
-        if old_room and len(old_room.guests.all()) == 1:  # pyright: ignore
-            old_room.state = safely_remove(old_room.state, Room.Available)
-            old_room.save(update_fields=["state"])
+        if instance.room_id:
+            old_room = Room.objects.prefetch_related("guests").filter(id=instance.room_id).first()
+            if old_room and len(old_room.guests.all()) == 1:
+                old_room.save(update_fields=["state"])
 
         new_room = validated_data.get("room") and Room.objects.filter(id=validated_data.get("room").id).first()
-        if new_room and not new_room.guests.exists():  # pyright: ignore
-            # new_room.state = [Room.CheckedIn]
+        if new_room and not new_room.guests.exists():
             new_room.save(update_fields=["state"])
 
         new_checkout = validated_data.get("check_out")
         if new_checkout and new_checkout > instance.check_out:
             blocked_guest_cards = access_context.get("blocked_guest_cards")
             if blocked_guest_cards:
-                for device in access_context.get("devices"):
+                for device in access_context.get("devices"):  # ty: ignore
                     _ = send_rpc_request(
                         str(device.id), access_context.get("blocked_cards"), 1, guest_id=str(instance.id)
                     )
@@ -99,13 +95,13 @@ class GuestSerializer(serializers.ModelSerializer):
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
             logger.info(f"Deactivating Guest {instance.id}")
             room = instance.room
-            devices = access_context.get("devices")
+            devices = access_context.get("devices", [])
             cards = access_context.get("cards")
             for device in devices:
                 result = send_rpc_request(str(device.id), cards, 0, guest_id=str(instance.id))
-                not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
+                not result.get("success") and deactivate_result.update({"success": False})
 
-            if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:  # pyright: ignore
+            if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:
                 room_to_update = room
 
             self._deactivate_result = deactivate_result

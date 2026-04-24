@@ -131,7 +131,6 @@ def make_stable_room_state(room: Room) -> None:
     Uses QuerySet.update() instead of save() to avoid triggering post_save signal recursion.
     """
     active_guests = room.guests.filter(is_active=True, is_reservation=False)
-    reservation_guests = room.guests.filter(is_active=True, is_reservation=True)
 
     old_state = list(room.state)
     new_state = list(room.state)
@@ -143,14 +142,7 @@ def make_stable_room_state(room: Room) -> None:
     else:
         new_state = safely_remove(new_state, Room.CheckedIn)
 
-    if reservation_guests.exists():
-        new_state = safely_remove(new_state, Room.Available)
-        if Room.Reserved not in new_state:
-            new_state.append(Room.Reserved)
-    else:
-        new_state = safely_remove(new_state, Room.Reserved)
-
-    if not active_guests.exists() and not reservation_guests.exists() and Room.Available not in new_state:
+    if not active_guests.exists() and Room.Available not in new_state:
         new_state.append(Room.Available)
 
     Room.objects.filter(id=room.id).update(state=new_state)
