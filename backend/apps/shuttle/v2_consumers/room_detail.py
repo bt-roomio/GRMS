@@ -65,11 +65,13 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         query = query.prefetch_related(
             Prefetch(
                 "guests",
-                queryset=Guest.objects.filter(tenant_id=self.tenant_id, is_active=True).order_by("-created_at")[:1],
+                queryset=Guest.objects.filter(tenant_id=self.tenant_id, is_active=True, is_reservation=False).order_by(
+                    "-created_at"
+                )[:1],
                 to_attr="last_guests",
             )
         )
-        instance = query.rooms_ts_kvs(tenant=self.tenant_id, keys=keys).first()  # pyright: ignore
+        instance = query.rooms_ts_kvs(tenant=self.tenant_id, keys=keys).first()  # ty: ignore
         serializer = self.get_serializer(instance=instance, action_kwargs={"detail": True})
         return serializer.data
 

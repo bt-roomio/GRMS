@@ -161,6 +161,8 @@ class GuestFilterParams(ValidatorSerializer):
         "-gender",
         "nationality",
         "-nationality",
+        "check_in",
+        "-check_in",
     )
 
     page = serializers.IntegerField(default=1)
