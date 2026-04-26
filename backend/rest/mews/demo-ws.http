@@ -1,8 +1,0 @@
-### 
-
-WS {{BASE_URL_WS}} HTTP/1.1
-Cookie: ClientToken={{ClientToken}};AccessToken={{AccessToken}}
-
-> {%
-  console.log(client.global.get("ClientToken"));
-%}

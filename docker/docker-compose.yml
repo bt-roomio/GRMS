@@ -1,3 +1,19 @@
+x-django-common: &django-common
+  image: registry.gitlab.com/yroomio/grms:dev
+  env_file: .env
+  networks:
+    - roomio_net
+  restart: always
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+
 services:
   postgres:
     image: timescale/timescaledb:2.21.0-pg16
@@ -21,7 +37,7 @@ services:
       timeout: 10s
 
   redis:
-    image: redis:latest
+    image: redis:7-alpine
     container_name: redis
     command: ["redis-server", "--appendonly", "yes"]
     restart: always
@@ -60,15 +76,33 @@ services:
       start_period: 30s
       timeout: 10s
 
-  django:
-    image: registry.gitlab.com/yroomio/grms:dev
+  # --- Django services ---
+
+  migrate:
+    <<: *django-common
+    container_name: migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py createcachetable &&
+             python manage.py collectstatic --noinput"
+    volumes:
+      - static_volume:/app/static/
+      - media_volume:/app/media/
+
+  backend:
+    <<: *django-common
     container_name: django
     hostname: django
     ports:
       - "8000:8000"
-    restart: always
-    env_file: .env
     environment:
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - VIRTUAL_HOST=api.domain.com
       - LETSENCRYPT_HOST=api.domain.com
       - LETSENCRYPT_EMAIL=grms@room.io
@@ -76,12 +110,43 @@ services:
       - static_volume:/app/static/
       - media_volume:/app/media/
       - prom_mp:/prom_mp
-    depends_on:
-      - postgres
-      - redis
-      - rabbitmq
-    networks:
-      - roomio_net
+
+  celery:
+    <<: *django-common
+    container_name: celery
+    environment:
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - IS_CELERY=1
+      - PGAPPNAME=grms-celery
+    command: celery -A config worker -l info -c 4 --max-tasks-per-child=100
+    volumes:
+      - prom_mp:/prom_mp
+
+  celery-beat:
+    <<: *django-common
+    container_name: celery-beat
+    environment:
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+    command: celery -A config beat --loglevel=warning
+    volumes:
+      - prom_mp:/prom_mp
+
+  mq-async:
+    <<: *django-common
+    container_name: mq-async
+    command: python apps/core/management/commands/mq_async.py
+
+  mews-websocket:
+    <<: *django-common
+    container_name: mews-websocket
+    command: python manage.py mews_websocket
+
+  pms-handler:
+    <<: *django-common
+    container_name: pms-handler
+    command: python manage.py pms_handler
+
+  # --- Frontend ---
 
   frontend:
     image: registry.gitlab.com/grms1/grms_front:latest
@@ -186,7 +251,7 @@ services:
       - roomio_net
     depends_on:
       - rabbitmq
-      - django
+      - backend
 
   nodered:
     image: registry.gitlab.com/grms1/node-red-nodes:latest

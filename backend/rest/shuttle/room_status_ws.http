@@ -1,3 +1,0 @@
-### Websocket
-
-WS {{BASE_URL_WS}}?token={{access_token}} HTTP/1.11
