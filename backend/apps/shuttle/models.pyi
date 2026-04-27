@@ -28,7 +28,6 @@ class TsKv:
         unique_together: Incomplete
         ordering: Incomplete
 
-
 class TsKvDictionary:
     key: str
     key_id: int
@@ -36,7 +35,6 @@ class TsKvDictionary:
 
     class Meta:
         db_table: str
-
 
 class TsKvLatest(BaseModelTs):
     entity_id: UUID
@@ -56,11 +54,11 @@ class TsKvLatest(BaseModelTs):
         db_table: str
         unique_together: Incomplete
 
-
 class AttributeKv(BaseModel):
     CLIENT_SCOPE: str
     SERVER_SCOPE: str
     SHARED_SCOPE: str
+    ENTITY_TYPE: tuple[tuple[str, str]]
     entity_type: Incomplete
     entity: Incomplete
     entity_id: UUID
@@ -83,7 +81,6 @@ class AttributeKv(BaseModel):
         constraints: Incomplete
         permissions: Incomplete
 
-
 class Relation(BaseModel, UpdateByModel):
     from_id: Incomplete
     from_id_id: UUID
@@ -100,7 +97,6 @@ class Relation(BaseModel, UpdateByModel):
         db_table: str
         unique_together: Incomplete
 
-
 class RPCMessage:
     id: int
     created_at: Incomplete
@@ -111,7 +107,6 @@ class RPCMessage:
         db_table: str
         permissions: Incomplete
 
-
 class ControllerFile(BaseModel, UpdateByModel):
     content: Incomplete
     tenant: Incomplete
@@ -119,7 +114,6 @@ class ControllerFile(BaseModel, UpdateByModel):
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table: str
-
 
 class Controller(BaseModel, UpdateByModel):
     name: Incomplete
