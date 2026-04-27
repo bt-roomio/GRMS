@@ -53,6 +53,8 @@ class GeneralSettingsSerializer(serializers.Serializer):
     door_lock = DoorLockSerializer(required=False)
     auto_checkout = serializers.BooleanField(default=False)
     aggregate_db = serializers.BooleanField(default=False)
+    check_in_trigger_value = serializers.IntegerField(default=2, min_value=0)
+    check_out_trigger_value = serializers.IntegerField(default=1, min_value=0)
     main_dashboard = serializers.PrimaryKeyRelatedField(
         queryset=Dashboard.objects.all(), required=False, many=False, allow_null=True
     )

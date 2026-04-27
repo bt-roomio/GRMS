@@ -89,21 +89,24 @@ class Room(BaseModel, UpdateByModel):
     Available = 0
     CheckedIn = 1
     Occupied = 2
-    Reserved = 3
+    DoNotDisturb = 3
     MakeUpRoom = 4
+    Reserved = 5
 
     AVAILABLE = "Available"
     CHECKEDIN = "CheckedIn"
     OCCUPIED = "Occupied"
-    RESERVED = "Reserved"
+    DONOTDISTURB = "DoNotDisturb"
     MAKEUPROOM = "MakeUpRoom"
+    RESERVED = "Reserved"
 
     STATE = (
         (Available, AVAILABLE),
         (CheckedIn, CHECKEDIN),
         (Occupied, OCCUPIED),
-        (Reserved, RESERVED),
+        (DoNotDisturb, DONOTDISTURB),
         (MakeUpRoom, MAKEUPROOM),
+        (Reserved, RESERVED),
     )
 
     ON = "ON"
