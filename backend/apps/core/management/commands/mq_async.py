@@ -16,6 +16,7 @@ sys.path.insert(0, str(backend_dir))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
+# ruff: disable[E402]
 import aio_pika
 import redis.asyncio as aioredis
 from asgiref.sync import sync_to_async
@@ -37,6 +38,9 @@ from core.utils.get_time import get_mil_sec
 from main.models import Device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
+
+# ruff: enable[E402]
+
 
 # Queue Names
 QUEUE_TO_GRMS = "toGRMS"
@@ -66,9 +70,9 @@ TOPIC_DEVICES_ATTRIBUTES_REQUEST = "v1/devices/me/attributes/request"
 TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
-BATCH_SIZE = 50
-BATCH_TIMEOUT = 0.2  # 200ms
-PREFETCH_COUNT = 200
+BATCH_SIZE = 100
+BATCH_TIMEOUT = 0.15  # 200ms
+PREFETCH_COUNT = 600
 
 RB_LOGIN = settings.RABBIT_LOGIN
 RB_PASSWORD = settings.RABBIT_PASSWORD
