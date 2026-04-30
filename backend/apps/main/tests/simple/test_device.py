@@ -31,7 +31,7 @@ class SimpleDeviceViewTest(BaseTestCase):
         self.assertIn("id", item)
         self.assertIn("name", item)
         self.assertIn("label", item)
-        self.assertEqual(len(item), 3)
+        self.assertEqual(len(item), 4)
 
     def test_unauthorized(self):
         self.client.credentials()
