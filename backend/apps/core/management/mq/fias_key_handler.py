@@ -84,14 +84,14 @@ def _wait_for_card_on_reader(reader_device_id, timeout=CARD_ON_READER_TIMEOUT):
     while time.time() - start_time < timeout:
         card_on_reader = AttributeKv.objects.filter(
             entity_id=reader_device_id,
-            attribute_type=AttributeKv.CLIENTsCOPE,
+            attribute_type=AttributeKv.CLIENT_SCOPE,
             attribute_key="card_on_reader",
             bool_v=True,
         ).first()
         if card_on_reader:
             card_uid_attr = AttributeKv.objects.filter(
                 entity_id=reader_device_id,
-                attribute_type=AttributeKv.CLIENTsCOPE,
+                attribute_type=AttributeKv.CLIENT_SCOPE,
                 attribute_key="card_uid",
             ).first()
             card_uid = card_uid_attr.str_v if card_uid_attr else None
