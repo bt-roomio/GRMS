@@ -9,12 +9,8 @@ class IntegrationSerializer(serializers.ModelSerializer):
         model = Integration
         fields = (
             "id",
-            "created_at",
-            "updated_at",
-            "created_by",
-            "updated_by",
             "name",
-            "type",
+            "access_token",
             "description",
             "additional_info",
             "enable",
@@ -29,10 +25,10 @@ class IntegrationSerializer(serializers.ModelSerializer):
 
 
 class IntegrationParams(ValidatorSerializer):
-    SORT_FIELDS = ("created_at", "-created_at", "name", "-name", "type", "-type")
+    SORT_FIELDS = ("created_at", "-created_at", "name", "-name")
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search_field = serializers.ChoiceField(choices=("name", "type"), required=False)
+    search_field = serializers.ChoiceField(choices=("name",), required=False)
     search_value = serializers.CharField(required=False)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
