@@ -25,12 +25,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN mkdir -p /prom_mp \
-  && addgroup --system appgroup \
-  && adduser --system --ingroup appgroup --no-create-home appuser \
-  && chown -R appuser:appgroup /app /prom_mp
-
-USER appuser
+RUN mkdir -p /prom_mp
 
 EXPOSE 8000
 
