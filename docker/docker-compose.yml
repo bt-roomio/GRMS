@@ -134,7 +134,12 @@ services:
   mq-async:
     <<: *django-common
     container_name: mq-async
+    env_file: .env
+    environment:
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python apps/core/management/commands/mq_async.py
+    volumes:
+      - prom_mp:/prom_mp
 
   mews-websocket:
     <<: *django-common
