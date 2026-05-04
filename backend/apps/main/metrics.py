@@ -36,14 +36,8 @@ def update_device_metrics() -> None:
         return
 
     try:
-        logger.info("Обновление метрик устройств...")
-
         _clear_metrics()
-
         _update_device_status_metrics()
-
-        logger.info("Метрики устройств успешно обновлены")
-
     except Exception as e:
         logger.error(f"Ошибка при обновлении метрик: {e}", exc_info=True)
 

@@ -28,7 +28,9 @@ class Command(BaseCommand):
 
     def handle(self, **kwargs):
         tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        self.generate_msg_access_door_log()
+        for msg in self.generate_msg_attributes(tenant_id):
+            print(f"Published: {msg}")
+            self.device_connectivity_simulation(msg)
 
     def device_connectivity_simulation(self, msg):
         ch = connect_to_rabbitmq()
@@ -49,20 +51,17 @@ class Command(BaseCommand):
             send_to_rabbitmq(ch, msg, topic)
 
     def generate_msg_attributes(self, tenant_id):
-        print("Hello")
         devices = self.get_devices(tenant_id)
 
         for d in devices:
-            print(d, d.relations)
             if not d.relations:
                 continue
 
             msg = {
                 "sourceDeviceUUID": str(d.relations[0].from_id_id),
                 "data": {d.name: {"online": True}},
-                "topic": "v1/devices/connect",
+                "topic": "v1/gateway/attributes",
             }
-            print(f"Generated message for device {d.name}: {str(msg)[:10]}")
             yield msg
 
     def fias_message(self, *args, **options):
