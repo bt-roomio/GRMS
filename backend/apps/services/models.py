@@ -19,8 +19,14 @@ class BaseModel(models.Model):
 
 
 class Integration(BaseModel):
-    name = models.CharField(max_length=100)
+    class Type(models.TextChoices):
+        FIAS = "fias", "Fias"
+        HOTEZA = "hoteza", "Hoteza"
+        MEWS = "mews", "Mews"
+
+    name = models.CharField(max_length=20, choices=Type.choices)
     description = models.TextField(default="", blank=True)
+    hotel_id = models.CharField(max_length=100, null=True, blank=True)
     access_token = models.CharField(max_length=100, null=True, blank=True, help_text="For KeyCards")
     additional_info = models.JSONField(null=True, blank=True)
     enable = models.BooleanField("enable", default=False, help_text="Designates whether this integration is enable.")
@@ -30,7 +36,7 @@ class Integration(BaseModel):
         help_text="Designates whether this user should be treated as active. "
         "Unselect this instead of deleting accounts.",
     )
-    tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE, "integration")
 
     objects = IntegrationQuerySet.as_manager()
 
