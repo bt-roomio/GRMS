@@ -10,8 +10,9 @@ class IntegrationSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
-            "access_token",
+            "hotel_id",
             "description",
+            "access_token",
             "additional_info",
             "enable",
             "is_active",

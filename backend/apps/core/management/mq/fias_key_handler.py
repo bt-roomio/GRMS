@@ -2,7 +2,7 @@ import json
 import logging
 import time
 
-from access_manager.models import GuestCard
+from access_manager.models import GuestCard, StaffCard, TypeChoices
 from access_manager.tasks.send_rpc import send_rpc_request
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 KEY_COMMANDS = {"keyrequest", "keydelete", "keydatachange", "keyread"}
 CARD_ON_READER_TIMEOUT = 5
+KEYREQUEST_COLLECTION_TIMEOUT = 45
 
 
 class _LookupFailure(Exception):
@@ -45,6 +46,8 @@ def send_card_operation_confirmation(device, operation_id, status="OK", text="")
         },
     }
 
+    logger.debug("Sending confirmation message to %s", message)
+
     try:
         channel = connect_to_rabbitmq()
         send_to_rabbitmq(channel, message)
@@ -56,26 +59,38 @@ def send_card_operation_confirmation(device, operation_id, status="OK", text="")
         raise
 
 
-def _resolve_entities(tenant_id, room_name, key_coder):
-    if not room_name:
-        raise _LookupFailure("Missing required field: roomName")
+def _resolve_reader(tenant_id, key_coder):
     if not key_coder:
         raise _LookupFailure("Missing required field: keyCoder")
+
+    logger.debug(f"Reading key from tenant {tenant_id}, key coder {key_coder}")
+    reader = Device.objects.filter(name=key_coder, tenant_id=tenant_id, is_active=True).first()
+    if not reader:
+        raise _LookupFailure(f"Card reader is unavailable: {key_coder}")
+    return reader
+
+
+def _resolve_card_uid(tenant_id, key_coder):
+    return _wait_for_card_on_reader(_resolve_reader(tenant_id, key_coder).id)
+
+
+def _resolve_room_and_guest(tenant_id, room_name):
+    if not room_name:
+        raise _LookupFailure("Missing required field: roomName")
 
     room = Room.objects.filter(tenant_id=tenant_id, number=room_name).first()
     if not room:
         raise _LookupFailure(f"Room not found: {room_name}")
 
     guest = Guest.objects.filter(room=room, is_active=True).order_by("created_at").first()
-    if not guest:
-        raise _LookupFailure(f"Guest not found for room {room.number}")
 
-    reader = Device.objects.filter(name=key_coder, tenant_id=tenant_id, is_active=True).first()
-    if not reader:
-        raise _LookupFailure(f"Card reader is unavailable: {key_coder}")
 
-    card_uid = _wait_for_card_on_reader(reader.id)
+    return room, guest
 
+
+def _resolve_entities(tenant_id, room_name, key_coder):
+    room, guest = _resolve_room_and_guest(tenant_id, room_name)
+    card_uid = _resolve_card_uid(tenant_id, key_coder)
     return room, guest, card_uid
 
 
@@ -102,14 +117,73 @@ def _wait_for_card_on_reader(reader_device_id, timeout=CARD_ON_READER_TIMEOUT):
     raise _LookupFailure("Timeout waiting for card on reader")
 
 
+def _collect_unique_cards(reader_device_id, count, timeout=KEYREQUEST_COLLECTION_TIMEOUT):
+    collected = []
+    seen = set()
+    deadline = time.time() + timeout
+
+    while len(collected) < count:
+        if time.time() >= deadline:
+            raise _LookupFailure(f"Timeout: collected {len(collected)} of {count} cards")
+
+        on_reader = AttributeKv.objects.filter(
+            entity_id=reader_device_id,
+            attribute_type=AttributeKv.CLIENT_SCOPE,
+            attribute_key="card_on_reader",
+            bool_v=True,
+        ).exists()
+        if on_reader:
+            card_uid_attr = AttributeKv.objects.filter(
+                entity_id=reader_device_id,
+                attribute_type=AttributeKv.CLIENT_SCOPE,
+                attribute_key="card_uid",
+            ).first()
+            uid = card_uid_attr.str_v if card_uid_attr else None
+            if uid and uid not in seen:
+                seen.add(uid)
+                collected.append(uid)
+                if len(collected) >= count:
+                    break
+        time.sleep(0.5)
+    return collected
+
+
+def _find_conflicting_cards(tenant_id, card_uids, guest):
+    conflicts = set(
+        GuestCard.objects.filter(
+            card__number__in=card_uids,
+            card__tenant_id=tenant_id,
+            is_active=True,
+        )
+        .exclude(guest=guest)
+        .values_list("card__number", flat=True)
+    )
+    conflicts.update(
+        StaffCard.objects.filter(
+            card__number__in=card_uids,
+            card__tenant_id=tenant_id,
+            is_active=True,
+        ).values_list("card__number", flat=True)
+    )
+    return sorted(conflicts)
+
+
+def _parse_key_count(value):
+    if value is None:
+        return 1
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return 1
+
+
 def send_rpc_to_guest_devices(guest, card_uid, access):
     context = get_guest_access_context(guest)
     devices = context.get("devices")
     if not devices:
         return False, "No devices found for guest room"
 
-    guest_card = GuestCard.objects.filter(card__number=card_uid, guest=guest, is_active=True).exists()
-    if access == 0 and not guest_card:
+    if access == 0 and not context.get("guest_cards"):
         return True, "Operation completed"
 
     errors = []
@@ -134,6 +208,10 @@ def handle_card_access(data, device, access, success_text):
         send_card_operation_confirmation(device, operation_id, status="UR", text=str(e))
         return
 
+    if access == 0 and not guest:
+        send_card_operation_confirmation(device, operation_id, status="OK", text=success_text)
+        return
+
     success, text = send_rpc_to_guest_devices(guest, card_uid, access=access)
     if success:
         text = success_text
@@ -141,7 +219,56 @@ def handle_card_access(data, device, access, success_text):
 
 
 def handle_keyrequest(data, device):
-    handle_card_access(data, device, access=1, success_text="Guest card created successfully")
+    key_count = _parse_key_count(data.get("keyCount"))
+    if key_count <= 1:
+        handle_card_access(data, device, access=1, success_text="Guest card created successfully")
+        return
+    _handle_multi_card_keyrequest(data, device, key_count)
+
+
+def _handle_multi_card_keyrequest(data, device, key_count):
+    operation_id = data["operationId"]
+    tenant_id = device.get("tenant_id")
+
+    try:
+        _, guest = _resolve_room_and_guest(tenant_id, data.get("roomName"))
+        reader = _resolve_reader(tenant_id, data.get("keyCoder"))
+        card_uids = _collect_unique_cards(reader.id, key_count)
+    except _LookupFailure as e:
+        send_card_operation_confirmation(device, operation_id, status="UR", text=str(e))
+        return
+
+    conflicts = _find_conflicting_cards(tenant_id, card_uids, guest)
+    if conflicts:
+        send_card_operation_confirmation(
+            device,
+            operation_id,
+            status="UR",
+            text=f"Cards already assigned: {', '.join(conflicts)}",
+        )
+        return
+
+    errors = []
+    for uid in card_uids:
+        success, text = send_rpc_to_guest_devices(guest, uid, access=1)
+        if not success:
+            errors.append(f"{uid}: {text}")
+
+    if errors:
+        send_card_operation_confirmation(
+            device,
+            operation_id,
+            status="UR",
+            text=f"Failed to write cards: {'; '.join(errors)}",
+        )
+        return
+
+    send_card_operation_confirmation(
+        device,
+        operation_id,
+        status="OK",
+        text=f"Created {len(card_uids)} guest cards successfully",
+    )
 
 
 def handle_keydelete(data, device):
@@ -185,7 +312,8 @@ def handle_keydatachange(data, device):
 def _build_guest_details(guest, room):
     additional_info = guest.additional_info or {}
     return {
-        "roomNumber": room.number,
+        "holderType": "guest",
+        "roomNumber": room.number if room else "",
         "guestName": guest.name,
         "guestFirstName": guest.lastname or "",
         "guestTitle": guest.title or "",
@@ -199,12 +327,34 @@ def _build_guest_details(guest, room):
     }
 
 
+def _build_staff_details(staff, card_uid):
+    group = staff.group
+    access_group_name = ""
+    group_name = ""
+    if group:
+        group_name = group.name or ""
+        if group.group_type is not None:
+            try:
+                access_group_name = TypeChoices(group.group_type).name
+            except ValueError:
+                access_group_name = ""
+    return {
+        "holderType": "staff",
+        "cardUid": card_uid,
+        "staffName": staff.get_name(),
+        "staffFirstName": staff.first_name or "",
+        "staffLastName": staff.last_name or "",
+        "accessGroup": access_group_name,
+        "groupName": group_name,
+    }
+
+
 def handle_keyread(data, device):
     operation_id = data["operationId"]
     tenant_id = device.get("tenant_id")
 
     try:
-        room, guest, card_uid = _resolve_entities(tenant_id, data.get("roomName"), data.get("keyCoder"))
+        card_uid = _resolve_card_uid(tenant_id, data.get("keyCoder"))
     except _LookupFailure as e:
         send_card_operation_confirmation(device, operation_id, status="UR", text=str(e))
         return
@@ -213,20 +363,35 @@ def handle_keyread(data, device):
         GuestCard.objects.filter(
             card__number=card_uid,
             card__tenant_id=tenant_id,
-            guest__room=room,
             is_active=True,
         )
-        .select_related("guest")
+        .select_related("guest", "guest__room")
         .first()
     )
 
-    if guest_card:
-        details = _build_guest_details(guest_card.guest, room)
+    if guest_card and guest_card.guest:
+        details = _build_guest_details(guest_card.guest, guest_card.guest.room)
         send_card_operation_confirmation(device, operation_id, status="OK", text=json.dumps(details))
-    else:
-        send_card_operation_confirmation(
-            device, operation_id, status="UR", text=f"Card does not belong to any guest of room {room.number}"
+        return
+
+    staff_card = (
+        StaffCard.objects.filter(
+            card__number=card_uid,
+            card__tenant_id=tenant_id,
+            is_active=True,
         )
+        .select_related("staff", "staff__group")
+        .first()
+    )
+
+    if staff_card and staff_card.staff:
+        details = _build_staff_details(staff_card.staff, card_uid)
+        send_card_operation_confirmation(device, operation_id, status="OK", text=json.dumps(details))
+        return
+
+    send_card_operation_confirmation(
+        device, operation_id, status="UR", text=f"Card does not belong to any guest or staff: {card_uid}"
+    )
 
 
 KEY_COMMAND_HANDLERS = {
