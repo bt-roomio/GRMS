@@ -28,9 +28,7 @@ class Command(BaseCommand):
 
     def handle(self, **kwargs):
         tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        for msg in self.generate_msg_attributes(tenant_id):
-            print(f"Published: {msg}")
-            self.device_connectivity_simulation(msg)
+        self.fias_message()
 
     def device_connectivity_simulation(self, msg):
         ch = connect_to_rabbitmq()
@@ -51,17 +49,20 @@ class Command(BaseCommand):
             send_to_rabbitmq(ch, msg, topic)
 
     def generate_msg_attributes(self, tenant_id):
+        print("Hello")
         devices = self.get_devices(tenant_id)
 
         for d in devices:
+            print(d, d.relations)
             if not d.relations:
                 continue
 
             msg = {
                 "sourceDeviceUUID": str(d.relations[0].from_id_id),
                 "data": {d.name: {"online": True}},
-                "topic": "v1/gateway/attributes",
+                "topic": "v1/devices/connect",
             }
+            print(f"Generated message for device {d.name}: {str(msg)[:10]}")
             yield msg
 
     def fias_message(self, *args, **options):
@@ -82,17 +83,32 @@ class Command(BaseCommand):
             "swapFlag": 0,
         }
         data = {
-            "command": "keyread",
-            "operationId": "keyread|THEOVASQL|1|||260331|113238",
+            "command": "keydelete",
+            "operationId": "keyread|THEOVASQL|MyWorkstation|||260331|113238",
             "requiresRpcConfirmation": True,
-            "keyCoder": "1",
-            "roomName": None,
+            "keyCoder": "MyWorkstation",
+            "roomName": "215",
             "workstationId": "THEOVASQL",
             "messageDate": 1774945958000,
             "reservationNumber": None,
         }
+        data = {
+          "command": "keyrequest",
+          "keyType": "newKeyRequest",
+          "keyCoder": "MyWorkstation",
+          "roomName": "215",
+          "keyCount": "2",
+          "checkInDate": 1777507200000,
+          "messageDate": 1777574505000,
+          "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
+          "checkOutDate": 1773316800000,
+          "workstationId": "THEOVASQL",
+          "guestGroupNumber": None,
+          "reservationNumber": "701",
+          "requiresRpcConfirmation": True
+        }
 
-        device = get_object_or_404(Device, pk="98690d14-9b98-47dc-a81d-cd6379d3e3eb")
+        device = get_object_or_404(Device, pk="7778a61d-eefa-4933-b187-699f2baa3744")
         device = {
             "id": str(device.id),
             "name": device.name,
