@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
     def handle(self, **kwargs):
         tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        self.generate_msg_access_door_log()
+        self.fias_message()
 
     def device_connectivity_simulation(self, msg):
         ch = connect_to_rabbitmq()
@@ -83,17 +83,32 @@ class Command(BaseCommand):
             "swapFlag": 0,
         }
         data = {
-            "command": "keyread",
-            "operationId": "keyread|THEOVASQL|1|||260331|113238",
+            "command": "keydelete",
+            "operationId": "keyread|THEOVASQL|MyWorkstation|||260331|113238",
             "requiresRpcConfirmation": True,
-            "keyCoder": "1",
-            "roomName": None,
+            "keyCoder": "MyWorkstation",
+            "roomName": "215",
             "workstationId": "THEOVASQL",
             "messageDate": 1774945958000,
             "reservationNumber": None,
         }
+        data = {
+          "command": "keyrequest",
+          "keyType": "newKeyRequest",
+          "keyCoder": "MyWorkstation",
+          "roomName": "215",
+          "keyCount": "2",
+          "checkInDate": 1777507200000,
+          "messageDate": 1777574505000,
+          "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
+          "checkOutDate": 1773316800000,
+          "workstationId": "THEOVASQL",
+          "guestGroupNumber": None,
+          "reservationNumber": "701",
+          "requiresRpcConfirmation": True
+        }
 
-        device = get_object_or_404(Device, pk="98690d14-9b98-47dc-a81d-cd6379d3e3eb")
+        device = get_object_or_404(Device, pk="7778a61d-eefa-4933-b187-699f2baa3744")
         device = {
             "id": str(device.id),
             "name": device.name,
