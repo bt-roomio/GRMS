@@ -1,6 +1,0 @@
-### 
-
-# Retrive a list of users
-
-GET {{BASE_URL}}/users/users/ HTTP/1.1
-Authorization: Bearer {{access_token}}

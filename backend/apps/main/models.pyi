@@ -58,14 +58,16 @@ class Room:
     Available: int
     CheckedIn: int
     Occupied: int
-    Reserved: int
+    DoNotDisturb: int
     MakeUpRoom: int
+    Reserved: int
 
     AVAILABLE: str
     CHECKEDIN: str
     OCCUPIED: str
-    RESERVED: str
+    DONOTDISTURB: str
     MAKEUPROOM: str
+    RESERVED: str
 
     STATE: Incomplete
     ON: str

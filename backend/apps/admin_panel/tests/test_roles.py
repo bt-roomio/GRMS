@@ -2,7 +2,6 @@ from django.urls import reverse
 
 from core.tests.base import BaseTestCase
 
-
 TENANT_ID = "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
 OTHER_TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
 RECEPTION_ROLE_ID = "d3c94703-ab5e-4926-ac52-a9bf8cf34ac6"  # Reception (tenant: ac73203f)

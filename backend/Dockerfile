@@ -1,26 +1,35 @@
-FROM python:3.12-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# System deps first — changes rarely, good for layer caching
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  htop=3.2.2-2 \
+  vim=2:9.0.1378-2+deb12u2 \
+  && rm -rf /var/lib/apt/lists/*
 
-
-RUN apt-get update && apt-get install -y supervisor htop vim
-
-RUN mkdir -p /var/log/django
-RUN chmod -R 755 /var/log/django
-
-RUN mkdir -p /prom_mp
+# Install Python deps using lockfile — cached separately from source code
+RUN --mount=type=cache,target=/root/.cache/uv \
+  --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+  --mount=type=bind,source=uv.lock,target=uv.lock \
+  uv sync --frozen --no-dev --no-install-project
 
 COPY . .
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-dev
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+ENV PATH="/app/.venv/bin:$PATH"
+
+RUN mkdir -p /prom_mp
 
 EXPOSE 8000
 
-ENTRYPOINT ["/entrypoint.sh"]
-
+CMD ["gunicorn", "config.asgi:application", \
+  "-k", "uvicorn.workers.UvicornWorker", \
+  "--workers", "${GUNICORN_WORKERS:-4}", \
+  "--bind", "0.0.0.0:8000"]

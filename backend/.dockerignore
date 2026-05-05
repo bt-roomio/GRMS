@@ -1,13 +1,14 @@
-# Ignore Docker-related files
-logs/
-media/
-static/
-__pycache__/
-.idea
+.git/
+.idea/
 .DS_Store
 .env
 prod.env
-venv
-logs
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
 *.log
-*.json
+logs/
+media/
+static/

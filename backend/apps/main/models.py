@@ -89,21 +89,24 @@ class Room(BaseModel, UpdateByModel):
     Available = 0
     CheckedIn = 1
     Occupied = 2
-    Reserved = 3
+    DoNotDisturb = 3
     MakeUpRoom = 4
+    Reserved = 5
 
     AVAILABLE = "Available"
     CHECKEDIN = "CheckedIn"
     OCCUPIED = "Occupied"
-    RESERVED = "Reserved"
+    DONOTDISTURB = "DoNotDisturb"
     MAKEUPROOM = "MakeUpRoom"
+    RESERVED = "Reserved"
 
     STATE = (
         (Available, AVAILABLE),
         (CheckedIn, CHECKEDIN),
         (Occupied, OCCUPIED),
-        (Reserved, RESERVED),
+        (DoNotDisturb, DONOTDISTURB),
         (MakeUpRoom, MAKEUPROOM),
+        (Reserved, RESERVED),
     )
 
     ON = "ON"
@@ -323,7 +326,7 @@ class Device(BaseModel):
             if qs.exists():
                 raise ValidationError({"name": "A device with this name, tenant, and active status already exists."})
 
-        if self.room and self.device_public_spaces.exists():  # pyright: ignore
+        if self.room and self.device_public_spaces.exists():  # ty: ignore
             raise ValidationError({"room": "Device cannot be connected to a room and a public space at the same time."})
 
     def save(self, *args, **kwargs):
@@ -505,6 +508,8 @@ class Guest(BaseModel):
     check_in = UnixTimeStampField(null=True, blank=True)
     check_out = UnixTimeStampField(null=True, blank=True)
     auto_check_out = models.BooleanField(default=False)
+    is_reservation = models.BooleanField(default=False)
+    reservation_number = models.CharField(max_length=255, null=True, blank=True)
     room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     pms_id = models.CharField(max_length=255, null=True, blank=True)

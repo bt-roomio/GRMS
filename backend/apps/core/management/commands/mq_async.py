@@ -16,6 +16,7 @@ sys.path.insert(0, str(backend_dir))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
+# ruff: disable[E402]
 import aio_pika
 import redis.asyncio as aioredis
 from asgiref.sync import sync_to_async
@@ -29,6 +30,7 @@ from core.management.mq.device_cache import (
     _update_memory_cache,
 )
 from core.management.mq.get_device import get_sub_device
+from core.management.mq.mq_metrics import mq_keys_processed_total, mq_messages_processed_total
 from core.management.mq.rpc_message import handle_rpc
 from core.management.mq.state_device import handle_connect_disconnect
 from core.management.mq.state_device_batch_async import sync_state_device_batch_async
@@ -37,6 +39,9 @@ from core.utils.get_time import get_mil_sec
 from main.models import Device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
+
+# ruff: enable[E402]
+
 
 # Queue Names
 QUEUE_TO_GRMS = "toGRMS"
@@ -66,9 +71,9 @@ TOPIC_DEVICES_ATTRIBUTES_REQUEST = "v1/devices/me/attributes/request"
 TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
-BATCH_SIZE = 50
-BATCH_TIMEOUT = 0.2  # 200ms
-PREFETCH_COUNT = 200
+BATCH_SIZE = 100
+BATCH_TIMEOUT = 0.15  # 200ms
+PREFETCH_COUNT = 600
 
 RB_LOGIN = settings.RABBIT_LOGIN
 RB_PASSWORD = settings.RABBIT_PASSWORD
@@ -86,13 +91,10 @@ EXPIRY_TIME = 600  # 10 minutes
 
 async def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
     """Get device with 2-tier caching: memory → Redis → database (async version)"""
-    # logger.debug("Getting device: %s", device_id)
-
     # Tier 1: Check in-memory cache (fastest, no network)
     current_time = get_mil_sec() // 1000  # seconds
     cache_entry = _DEVICE_MEMORY_CACHE.get(device_id)
     if cache_entry and (current_time - cache_entry["cached_at"]) < _MEMORY_CACHE_TTL:
-        # logger.debug("Device found in memory cache: %s", device_id)
         return cache_entry["data"]
 
     # Tier 2: Check Redis cache
@@ -101,9 +103,8 @@ async def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
     cached_device = cached_device_raw.decode("utf-8") if isinstance(cached_device_raw, bytes) else None
 
     if cached_device:
-        logger.debug("Device found in Redis cache: %s", cached_device)
+        logger.debug("Device found in Redis cache: %s", device_id)
         data = json.loads(cached_device)
-        # Populate memory cache from Redis hit
         _update_memory_cache(device_id, data)
         return data
 
@@ -124,14 +125,36 @@ async def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
         "device_profile_id": str(device.device_profile_id),
     }
 
-    # Cache in Redis
     await redis_client.set(cache_key, json.dumps(data), ex=EXPIRY_TIME)
-    logger.debug("Device cached: %s", device)
-
-    # Cache in memory
+    logger.debug("Device cached from DB: %s", device_id)
     _update_memory_cache(device_id, data)
 
     return data
+
+
+def _extract_keys(topic: str, data) -> list[str]:
+    keys = []
+    if topic.endswith("/telemetry"):
+        if isinstance(data, list):
+            for entry in data:
+                if isinstance(entry, dict):
+                    keys.extend(entry.get("values", {}).keys())
+        elif isinstance(data, dict):
+            for device_data in data.values():
+                if isinstance(device_data, list):
+                    for entry in device_data:
+                        if isinstance(entry, dict):
+                            keys.extend(entry.get("values", {}).keys())
+    elif topic.endswith("/attributes"):
+        if isinstance(data, dict):
+            first_val = next(iter(data.values()), None)
+            if isinstance(first_val, dict):
+                for sub in data.values():
+                    if isinstance(sub, dict):
+                        keys.extend(sub.keys())
+            else:
+                keys.extend(data.keys())
+    return list(set(keys))
 
 
 async def validate_body(body: bytes):
@@ -199,9 +222,9 @@ async def handle_attribute_request_async(topic: str, device: DeviceType, data: d
             aio_pika.Message(body=json.dumps(response).encode()),
             routing_key=QUEUE_FROM_GRMS,
         )
-        logger.debug(f"Attribute response sent for device {device.get('id')}")
-    except Exception as exc:
-        logger.exception(f"Failed to send attribute response: {exc}")
+        logger.debug("Attribute response sent for device %s", device.get("id"))
+    except Exception:
+        logger.exception("Failed to send attribute response")
         raise
 
 
@@ -247,17 +270,17 @@ class BatchAccumulator:
                     batch = []
                     last_batch_time = current_time
 
-            except Exception as e:
-                logger.exception(f"[{self.queue_name}] Batch processor error: {e}")
+            except Exception:
+                logger.exception("[%s] Batch processor error", self.queue_name)
 
         # Shutdown: process remaining messages
         if batch:
             await self.process_batch(batch)
-            logger.info(f"[{self.queue_name}] Processed remaining {len(batch)} messages on shutdown")
+            logger.info("[%s] Processed remaining %d messages on shutdown", self.queue_name, len(batch))
 
     async def process_batch(self, batch: list[aio_pika.IncomingMessage]):
         """Process batch with per-message success/failure tracking"""
-        logger.debug(f"[{self.queue_name}] Processing batch: {len(batch)} messages")
+        logger.debug("[%s] Processing batch: %d messages", self.queue_name, len(batch))
 
         # Group messages by type
         telemetry_batch = []
@@ -274,6 +297,11 @@ class BatchAccumulator:
                 topic = msg.get("topic", "")
                 data = msg.get("data")
 
+                gateway_id = device.get("id", "unknown")
+                mq_messages_processed_total.labels(gateway_id=gateway_id, topic=topic).inc()
+                for key in _extract_keys(topic, data):
+                    mq_keys_processed_total.labels(gateway_id=gateway_id, key=key).inc()
+
                 if topic.endswith(TOPIC_TELEMETRY):
                     telemetry_batch.append((device, topic, data, message))
                 elif topic.endswith(TOPIC_ATTRIBUTES):
@@ -283,8 +311,10 @@ class BatchAccumulator:
                 else:
                     other_messages.append((device, topic, data, message))
 
-            except Exception as e:
-                logger.warning(f"[{self.queue_name}] Validation failed for message {message.delivery_tag}: {e}")
+            except Exception:
+                logger.warning(
+                    "[%s] Validation failed for message %s", self.queue_name, message.delivery_tag, exc_info=True
+                )
                 message_status[message.delivery_tag] = "failure_no_requeue"
 
         # Step 2: Process telemetry batch
@@ -295,9 +325,9 @@ class BatchAccumulator:
                 # Mark all as success
                 for _, _, _, msg in telemetry_batch:
                     message_status[msg.delivery_tag] = "success"
-                logger.debug(f"[{self.queue_name}] Processed telemetry batch: {len(telemetry_batch)} messages")
-            except Exception as e:
-                logger.exception(f"[{self.queue_name}] Telemetry batch failed: {e}")
+                logger.debug("[%s] Processed telemetry batch: %d messages", self.queue_name, len(telemetry_batch))
+            except Exception:
+                logger.exception("[%s] Telemetry batch failed", self.queue_name)
                 # Mark all as failure with requeue
                 for _, _, _, msg in telemetry_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
@@ -309,9 +339,9 @@ class BatchAccumulator:
                 await sync_attributes_batch_async(data_only)
                 for _, _, _, msg in attributes_batch:
                     message_status[msg.delivery_tag] = "success"
-                logger.debug(f"[{self.queue_name}] Processed attributes batch: {len(attributes_batch)} messages")
-            except Exception as e:
-                logger.exception(f"[{self.queue_name}] Attributes batch failed: {e}")
+                logger.debug("[%s] Processed attributes batch: %d messages", self.queue_name, len(attributes_batch))
+            except Exception:
+                logger.exception("[%s] Attributes batch failed", self.queue_name)
                 for _, _, _, msg in attributes_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
@@ -323,9 +353,11 @@ class BatchAccumulator:
                 # Mark all as success
                 for _, _, _, msg in device_connect_batch:
                     message_status[msg.delivery_tag] = "success"
-                logger.debug(f"[{self.queue_name}] Processed device state batch: {len(device_connect_batch)} messages")
-            except Exception as e:
-                logger.exception(f"[{self.queue_name}] Device state batch failed: {e}")
+                logger.debug(
+                    "[%s] Processed device state batch: %d messages", self.queue_name, len(device_connect_batch)
+                )
+            except Exception:
+                logger.exception("[%s] Device state batch failed", self.queue_name)
                 # Mark all as failure with requeue
                 for _, _, _, msg in device_connect_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
@@ -340,10 +372,10 @@ class BatchAccumulator:
                 elif topic == TOPIC_GATEWAY_RPC:
                     await handle_rpc_async(data)
                 else:
-                    logger.warning(f"[{self.queue_name}] Unhandled topic: {topic}")
+                    logger.warning("[%s] Unhandled topic: %s", self.queue_name, topic)
                 message_status[message.delivery_tag] = "success"
-            except Exception as e:
-                logger.warning(f"[{self.queue_name}] Individual message processing failed: {e}")
+            except Exception:
+                logger.exception("[%s] Individual message processing failed", self.queue_name)
                 message_status[message.delivery_tag] = "failure_requeue"
 
         # Step 6: Acknowledge messages
@@ -362,8 +394,8 @@ class BatchAccumulator:
                 else:  # failure_no_requeue (validation errors)
                     await message.nack(requeue=False)
 
-            except Exception as e:
-                logger.error(f"[{self.queue_name}] Failed to ack/nack message {message.delivery_tag}: {e}")
+            except Exception:
+                logger.exception("[%s] Failed to ack/nack message %s", self.queue_name, message.delivery_tag)
 
 
 class AsyncMQConsumer:
@@ -395,7 +427,7 @@ class AsyncMQConsumer:
                 task = asyncio.create_task(self.consume_queue(connection, queue_name))
                 self.queue_tasks.append(task)
 
-            logger.info(f"Started consuming from {len(QUEUE_CONFIG)} queues")
+            logger.info("Started consuming from %d queues", len(QUEUE_CONFIG))
 
             # Wait for shutdown signal
             await self.shutdown_event.wait()
@@ -422,7 +454,7 @@ class AsyncMQConsumer:
             await accumulator.add_message(message)
 
         await queue.consume(message_callback, no_ack=False)
-        logger.info(f"[{queue_name}] Started consuming with prefetch_count={PREFETCH_COUNT}")
+        logger.info("[%s] Started consuming with prefetch_count=%d", queue_name, PREFETCH_COUNT)
 
         # Keep task alive
         try:
@@ -446,7 +478,7 @@ class AsyncMQConsumer:
 
     def handle_signal(self, signum, frame):
         """Signal handler for SIGTERM/SIGINT"""
-        logger.info(f"Received signal {signum}")
+        logger.info("Received signal %s", signum)
         asyncio.create_task(self.trigger_shutdown())
 
     async def trigger_shutdown(self):
@@ -469,9 +501,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    logger_pika = logging.getLogger("aiormq")
-    logger_pika.setLevel(logging.WARNING)
-    logger_aio_pika = logging.getLogger("aio_pika")
-    logger_aio_pika.setLevel(logging.WARNING)
+    logging.getLogger("aiormq").setLevel(logging.WARNING)
+    logging.getLogger("aio_pika").setLevel(logging.WARNING)
 
     asyncio.run(main())

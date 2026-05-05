@@ -6,8 +6,10 @@ from collections import defaultdict
 from asgiref.sync import sync_to_async
 
 from core.management.mq.get_device import get_sub_device
+from core.utils.cache import invalidate_quick_cache
 from core.utils.get_time import get_mil_sec
 from main.models import Device
+from main.observables.device import publish_device
 from main.observables.room_status_async import publish_room_status_async
 from shuttle.models import AttributeKv
 from shuttle.services.attribute_kv_async import publish_updates_attribute_batch_async
@@ -252,11 +254,16 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             attr_map_by_device[attr.entity_id][attr.attribute_key] = attr
 
     if devices_to_update_status:
-        for device_id, connected in devices_to_update_status:
-            await sync_to_async(
-                lambda did=device_id, conn=connected: Device.objects.filter(id=did).update(status=conn),
-                thread_sensitive=True,
-            )()
+        connect_ids = [did for did, conn in devices_to_update_status if conn]
+        disconnect_ids = [did for did, conn in devices_to_update_status if not conn]
+
+        def _bulk_update_status():
+            if connect_ids:
+                Device.objects.filter(id__in=connect_ids).update(status=True)
+            if disconnect_ids:
+                Device.objects.filter(id__in=disconnect_ids).update(status=False)
+
+        await sync_to_async(_bulk_update_status, thread_sensitive=True)()
         logger.debug(f"[state_device_batch_async] Updated status for {len(devices_to_update_status)} devices")
 
     # Шаг 5: Cache invalidation
@@ -357,11 +364,17 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             thread_sensitive=True,
         )()
 
+    tenant_ids_to_invalidate = set()
     for device in devices_for_room_status:
         try:
             await publish_room_status_async(device)
+            await sync_to_async(publish_device, thread_sensitive=False)(device)
+            tenant_ids_to_invalidate.add(device.tenant_id)
         except Exception as e:
             logger.warning(f"Failed to publish room status for device {device.id}: {e}")
+
+    for tenant_id in tenant_ids_to_invalidate:
+        invalidate_quick_cache("devices", tenant_id)
 
     if devices_for_room_status:
         logger.debug(f"[state_device_batch_async] Published room status for {len(devices_for_room_status)} devices")

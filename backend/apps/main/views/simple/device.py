@@ -18,7 +18,7 @@ class DeviceQuickListView(TenantCachedMixin, APIView):
                 tenant=tenant_id,
                 search_value=kwargs.get("search_value"),
                 device_profile=kwargs.get("device_profile"),
-            ).values("id", "name", "label")
+            ).values("id", "name", "label", "status")
         )
 
     @swagger_auto_schema(

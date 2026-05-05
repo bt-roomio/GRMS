@@ -1,20 +1,21 @@
 from django.core.management.base import BaseCommand
 
 from core.utils.constants import UI_PERMISSIONS
-from users.models import User
+from users.models import Role
 
 
 class Command(BaseCommand):
-    help = "Playground"
+    help = "Assign UI permissions to all TENANT_ADMIN roles"
 
     def handle(self, **_):
-        users = User.objects.filter(roles__name="TENANT_ADMIN")
-        print(f"Users: {users}, len: {users.count()}")
-        for user in users:
-            print(f"User: {user}, Tenant: {user.tenant}")
-            for role in user.roles.filter(name="TENANT_ADMIN"):
-                print(f"User: {user}, role: {role.name}")
-                if role and isinstance(role.additional_info, dict):
-                    role.additional_info["ui_permissions"] = UI_PERMISSIONS
-                    role.save()
-                    print(f"Role: {role}, perms: {len(role.additional_info['ui_permissions'])}")
+        roles = Role.objects.filter(name="TENANT_ADMIN")
+        updated = 0
+
+        for role in roles:
+            if not isinstance(role.additional_info, dict):
+                role.additional_info = {}
+            role.additional_info["ui_permissions"] = UI_PERMISSIONS
+            updated += 1
+
+        Role.objects.bulk_update(roles, ["additional_info"])
+        self.stdout.write(self.style.SUCCESS(f"Updated {updated} TENANT_ADMIN role(s)"))

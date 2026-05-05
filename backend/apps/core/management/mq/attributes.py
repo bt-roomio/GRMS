@@ -99,7 +99,7 @@ def _update_attribute_store(device, data):
     updates_by_device = defaultdict(list)
     fields = ["bool_v", "str_v", "dbl_v", "long_v", "json_v"]
     for attr in to_create + to_update:
-        updates_by_device[f"{device_id}_{device.get("tenant_id")}"].append(
+        updates_by_device[f"{device_id}_{device.get('tenant_id')}"].append(
             {
                 "entity": str(device_id),
                 "key_name": attr.attribute_key,
@@ -238,6 +238,16 @@ def _update_attribute_store_batch(device_updates, device_info):
     if to_update:
         fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
         AttributeKv.objects.bulk_update(to_update, fields)
+
+    # Mirror scanned_devices CLIENT_SCOPE → SHARED_SCOPE (replaces signal logic bypassed by bulk_create/update)
+    for attr in to_create + to_update:
+        if attr.attribute_key == "scanned_devices" and attr.attribute_type == AttributeKv.CLIENT_SCOPE:
+            AttributeKv.objects.update_or_create(
+                attribute_key="scanned_devices",
+                attribute_type=AttributeKv.SHARED_SCOPE,
+                entity_id=attr.entity_id,
+                defaults={"json_v": attr.json_v, "entity_type": "DEVICE"},
+            )
 
     # Send updates to WebSocket clients
     if updates_by_device:

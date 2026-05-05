@@ -2,7 +2,6 @@
   pk: d5793548-ed8b-4ae4-872d-877cc7c2c38b
   fields:
     name: Test
-    type: FIAS
     description: Test description
     enable: true
     tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
@@ -12,7 +11,6 @@
   pk: 3639490f-d247-4558-a512-e245280d8971
   fields:
     name: Test 2
-    type: hoteza
     description: Test description
     enable: true
     tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc

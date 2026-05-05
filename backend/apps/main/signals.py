@@ -131,7 +131,6 @@ def make_stable_room_state(room: Room) -> None:
     Uses QuerySet.update() instead of save() to avoid triggering post_save signal recursion.
     """
     active_guests = room.guests.filter(is_active=True, is_reservation=False)
-    reservation_guests = room.guests.filter(is_active=True, is_reservation=True)
 
     old_state = list(room.state)
     new_state = list(room.state)
@@ -143,14 +142,7 @@ def make_stable_room_state(room: Room) -> None:
     else:
         new_state = safely_remove(new_state, Room.CheckedIn)
 
-    if reservation_guests.exists():
-        new_state = safely_remove(new_state, Room.Available)
-        if Room.Reserved not in new_state:
-            new_state.append(Room.Reserved)
-    else:
-        new_state = safely_remove(new_state, Room.Reserved)
-
-    if not active_guests.exists() and not reservation_guests.exists() and Room.Available not in new_state:
+    if not active_guests.exists() and Room.Available not in new_state:
         new_state.append(Room.Available)
 
     Room.objects.filter(id=room.id).update(state=new_state)
@@ -188,21 +180,31 @@ def send_room_status_websocket(room: Room) -> None:
         logger.error(f"✗ Failed to send WebSocket notification for room {room.number}: {e}")
 
 
+def _get_tenant_general_settings(room: Room) -> dict:
+    if isinstance(room.tenant.additional_info, dict):
+        return room.tenant.additional_info.get("general_settings", {})
+    return {}
+
+
 def _update_room_devices_status(room: Room) -> None:
     logger.info(f"✓ Updating room attributes for room {room.number}")
     try:
         channel = connect_to_rabbitmq()
         swap_flag = isinstance(room.additional_info, dict) and bool(room.additional_info.get("swap_flag"))
 
+        g_settings = _get_tenant_general_settings(room)
+        check_in_trigger_value = g_settings.get("check_in_trigger_value", 2)
+        check_out_trigger_value = g_settings.get("check_out_trigger_value", 1)
+
         if Room.CheckedIn in room.state:
             attrs = [
                 AttributeConfig("Room reservation status", AttributeKv.SHARED_SCOPE, 1),
-                AttributeConfig("Check-in trigger", AttributeKv.CLIENT_SCOPE, 2),
+                AttributeConfig("Check-in trigger", AttributeKv.CLIENT_SCOPE, check_in_trigger_value),
             ]
         elif Room.Available in room.state:
             attrs = [
                 AttributeConfig("Room reservation status", AttributeKv.SHARED_SCOPE, 0),
-                AttributeConfig("Check-out trigger", AttributeKv.CLIENT_SCOPE, 1),
+                AttributeConfig("Check-out trigger", AttributeKv.CLIENT_SCOPE, check_out_trigger_value),
             ]
         else:
             return
