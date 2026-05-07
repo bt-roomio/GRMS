@@ -60,8 +60,8 @@ class JsonRPCView(APIView):
 def prepare_mqtt_request(device, method, params, timeout):
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     device_id = relation and relation.from_id.id
-    gateway_or_none = Device.objects.gateway_or_none(device.id)  # pyright: ignore
-    rpc_message = RPCMessage.objects.create(additional_info={})
+    gateway_or_none = Device.objects.gateway_or_none(device.id)
+    rpc_message = RPCMessage.objects.create(additional_info={})  # ty: ignore
     request_id = rpc_message.id
     message = {
         "targetDeviceUUID": (gateway_or_none and str(gateway_or_none.id)) or str(device_id),
