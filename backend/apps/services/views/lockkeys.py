@@ -7,6 +7,7 @@ from services.serializers.lockkeys import (
     PublicSpaceLockKeySerializer,
     RoomLockKeySerializer,
 )
+from services.swagger.lockkeys import lockkeys_door_open_swagger, lockkeys_doors_list_swagger
 from services.utils.permissions import DoorLockPermission
 from shuttle.views.json_rpc import prepare_mqtt_request
 
@@ -14,6 +15,7 @@ from shuttle.views.json_rpc import prepare_mqtt_request
 class LockKeyDoorsListView(APIView):
     permission_classes = (DoorLockPermission,)
 
+    @lockkeys_doors_list_swagger()
     def get(self, request):
         rooms = Room.objects.by_tenant(request.tenant).door_lock_devices()
         public_spaces = PublicSpace.objects.filter(tenant=request.tenant).prefetch_related(
@@ -27,24 +29,8 @@ class LockKeyDoorsListView(APIView):
 class LockKeyDoorOpenView(APIView):
     permission_classes = (DoorLockPermission,)
 
+    @lockkeys_door_open_swagger()
     def post(self, request, space_id):
         device = get_object_or_404(Device, pk=space_id)
         result = prepare_mqtt_request(device, "unlock", {}, 33)
         return Response(result)
-
-
-"""
-    {
-    "targetDeviceUUID": "5aab4f30-3e46-4ae5-9200-0ec6f51aa344",
-            "topic": "v1/gateway/rpc",
-            "data": {
-                "device": "bc:e3:5c:0e:d3:e4",
-                "data": {
-                    "id": "345678",
-                    "method": "unlock",
-                    "params": {},
-                    "timeout": 10000,
-                },
-            },
-        }
-"""
