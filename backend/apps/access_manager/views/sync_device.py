@@ -75,8 +75,14 @@ class SyncDeviceView(APIView):
     def post(self, request):
         serializer = SyncDeviceSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response({"success": False, "message": "Invalid request data",
-                             "errors": serializer.errors}, status=400)
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid request data",
+                    "errors": serializer.errors,
+                },
+                status=400,
+            )
 
         ids = serializer.validated_data.get("ids", [])  # pyright: ignore
         device_ids = serializer.validated_data.get("device_ids", [])  # pyright: ignore

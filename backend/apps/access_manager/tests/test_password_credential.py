@@ -166,7 +166,10 @@ class SendRpcRequestPwdTest(TestCase):
     def test_pwd_card_offline_creates_need_sync_with_pwd_flag(
         self, mock_send_rabbitmq, mock_connect_rabbitmq
     ):
-        Card.objects.create(number="55555", tenant_id=self.device.tenant_id, is_pwd=True)
+        card = Card.objects.create(
+            number="55555", tenant_id=self.device.tenant_id, is_pwd=True
+        )
+        GuestCard.objects.create(guest=self.guest, card=card, is_active=True)
         self.device.status = False
         self.device.save()
 
