@@ -74,13 +74,18 @@ class Group(BaseModel, UpdateByModel):
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_groups"
         constraints = [
-            UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_card_group")
+            UniqueConstraint(
+                fields=["name", "tenant"],
+                condition=Q(is_active=True),
+                name="unique_card_group",
+            )
         ]
 
 
 class Card(BaseModel, UpdateByModel):
     number = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    is_pwd = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     KNX = models.IntegerField(null=True, blank=True)
@@ -108,9 +113,15 @@ class CardLog(models.Model):
 
     device = models.ForeignKey("main.Device", models.DO_NOTHING)
     staff = models.ForeignKey(
-        "access_manager.Staff", models.DO_NOTHING, null=True, blank=True, related_name="card_logs"
+        "access_manager.Staff",
+        models.DO_NOTHING,
+        null=True,
+        blank=True,
+        related_name="card_logs",
     )
-    guest = models.ForeignKey("main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs")
+    guest = models.ForeignKey(
+        "main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs"
+    )
 
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -135,11 +146,19 @@ class NeedSyncDevice(BaseModel, UpdateByModel):
 
     @property
     def get_card_holder_name(self):
-        staff_card = StaffCard.objects.select_related("staff").filter(card=self.card, is_active=True).first()
+        staff_card = (
+            StaffCard.objects.select_related("staff")
+            .filter(card=self.card, is_active=True)
+            .first()
+        )
         if staff_card:
             return "staff", staff_card.staff.get_name()
 
-        guest_card = GuestCard.objects.select_related("guest").filter(card=self.card, is_active=True).first()
+        guest_card = (
+            GuestCard.objects.select_related("guest")
+            .filter(card=self.card, is_active=True)
+            .first()
+        )
         if guest_card:
             return "guest", guest_card.guest.get_name()
 
@@ -153,7 +172,9 @@ class Staff(BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
-    group = models.ForeignKey("access_manager.Group", models.SET_NULL, null=True, blank=True)
+    group = models.ForeignKey(
+        "access_manager.Group", models.SET_NULL, null=True, blank=True
+    )
     group_id: UUID
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -171,7 +192,9 @@ class Staff(BaseModel):
         db_table = "access_manager_staff"
         constraints = [
             UniqueConstraint(
-                fields=["tenant", "first_name", "last_name"], condition=Q(is_active=True), name="unique_staff"
+                fields=["tenant", "first_name", "last_name"],
+                condition=Q(is_active=True),
+                name="unique_staff",
             )
         ]
 
@@ -184,7 +207,11 @@ class StaffCard(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "access_manager_staff_cards"
         constraints = [
-            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_active_staff_card"),
+            UniqueConstraint(
+                fields=["card"],
+                condition=Q(is_active=True),
+                name="unique_active_staff_card",
+            ),
         ]
 
 
@@ -199,7 +226,9 @@ class GuestCard(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "access_manager_guest_cards"
         constraints = [
-            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_card_active"),
+            UniqueConstraint(
+                fields=["card"], condition=Q(is_active=True), name="unique_card_active"
+            ),
         ]
 
 
@@ -220,8 +249,12 @@ class GroupRoom(BaseModel):
 
 class GroupPublicSpace(BaseModel):
     group_id: UUID
-    group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
-    public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
+    group = models.ForeignKey(
+        "access_manager.Group", models.CASCADE, "group_public_space"
+    )
+    public_space = models.ForeignKey(
+        "main.PublicSpace", models.CASCADE, "group_public_space"
+    )
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta):

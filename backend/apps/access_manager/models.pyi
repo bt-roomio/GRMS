@@ -47,6 +47,7 @@ class Card(BaseModel, UpdateByModel):
     is_active: Incomplete
     KNX: Incomplete
     additional_info: Incomplete
+    is_pwd: Incomplete
     objects: CardQuerySet
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):

@@ -15,8 +15,10 @@ def card_swagger():
 
         - Card number and metadata.
         - Link to staff member (if assigned).
+        - `is_pwd`: indicates a PIN/password credential. When `True`, the row is a password (numeric PIN) rather than an RFID card; the firmware uses `add_pwd` / `remove_pwd` RPC instead of `writeRFID`.
         - `need_sync`: shows whether the card is pending synchronization with any device.
         - `staff_id`: filter cards assigned to a specific staff member.
+        - `is_pwd` (filter): when set, restrict to PIN rows (`true`) or RFID rows (`false`).
         - `need_sync` (filter): whether the card has any device sync pending.
         """
     )

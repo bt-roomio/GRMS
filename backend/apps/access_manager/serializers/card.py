@@ -11,7 +11,9 @@ from main.utils.access_context import get_guest_access_context
 
 
 class CardSerializer(serializers.ModelSerializer):
-    staff_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Staff.objects.all())
+    staff_id = serializers.PrimaryKeyRelatedField(
+        write_only=True, queryset=Staff.objects.all(), required=False
+    )
     staff = SimpleStaffSerializer(source="staffcard.staff", read_only=True)
     need_sync = serializers.SerializerMethodField()
 
@@ -19,7 +21,9 @@ class CardSerializer(serializers.ModelSerializer):
         return NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
 
     def create(self, validated_data):
-        staff = validated_data.pop("staff_id") if validated_data.get("staff_id") else None
+        staff = (
+            validated_data.pop("staff_id") if validated_data.get("staff_id") else None
+        )
         instance = super().create(validated_data)
         try:
             if staff:
@@ -29,7 +33,9 @@ class CardSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        staff = validated_data.pop("staff_id") if validated_data.get("staff_id") else None
+        staff = (
+            validated_data.pop("staff_id") if validated_data.get("staff_id") else None
+        )
         if staff:
             StaffCard.objects.filter(card=instance).delete()
             StaffCard.objects.create(card=instance, staff=staff)
@@ -45,6 +51,7 @@ class CardSerializer(serializers.ModelSerializer):
             "tenant",
             "staff",
             "staff_id",
+            "is_pwd",
             "additional_info",
             "need_sync",
         )
@@ -57,8 +64,11 @@ class CardFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     search_field = serializers.ChoiceField(choices=("number",), required=False)
     search_value = serializers.CharField(required=False)
-    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
+    sort_by = serializers.ListField(
+        child=serializers.ChoiceField(choices=SORT_FIELDS), required=False
+    )
     staff_id = serializers.CharField(required=False)
+    is_pwd = serializers.BooleanField(required=False, allow_null=True, default=None)
 
 
 class DisconnectCardSerializer(serializers.Serializer):
@@ -66,17 +76,26 @@ class DisconnectCardSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         try:
-            card = GuestCard.objects.get(card_id=validated_data["card_id"], is_active=True)
+            card = GuestCard.objects.select_related("card", "guest").get(
+                card_id=validated_data["card_id"], is_active=True
+            )
             deactivate_results = []
             guest = Guest.objects.filter(id=card.guest.id).first()
             access_context = get_guest_access_context(guest)
             devices = access_context.get("devices", [])
             card_number = [card.card.number]
+            is_pwd = bool(card.card.is_pwd)
             for device in devices:
-                deactivate_result = send_rpc_request(str(device.id), card_number, 0)
+                deactivate_result = send_rpc_request(
+                    str(device.id), card_number, 0, is_pwd=is_pwd
+                )
                 deactivate_results.append(deactivate_result)
             if any(not r.get("success", False) for r in deactivate_results):
-                return {"success": False, "message": "Card is not deactivated from some devices !", "results": deactivate_results}
+                return {
+                    "success": False,
+                    "message": "Card is not deactivated from some devices !",
+                    "results": deactivate_results,
+                }
             return {"success": True, "message": "Card is deactivated !"}
         except GuestCard.DoesNotExist:
             return {"success": False, "message": "Active guest card not found !"}

@@ -93,19 +93,19 @@ class Command(BaseCommand):
             "reservationNumber": None,
         }
         data = {
-          "command": "keyrequest",
-          "keyType": "newKeyRequest",
-          "keyCoder": "MyWorkstation",
-          "roomName": "215",
-          "keyCount": "2",
-          "checkInDate": 1777507200000,
-          "messageDate": 1777574505000,
-          "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
-          "checkOutDate": 1773316800000,
-          "workstationId": "THEOVASQL",
-          "guestGroupNumber": None,
-          "reservationNumber": "701",
-          "requiresRpcConfirmation": True
+            "command": "keyrequest",
+            "keyType": "newKeyRequest",
+            "keyCoder": "MyWorkstation",
+            "roomName": "215",
+            "keyCount": "2",
+            "checkInDate": 1777507200000,
+            "messageDate": 1777574505000,
+            "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
+            "checkOutDate": 1773316800000,
+            "workstationId": "THEOVASQL",
+            "guestGroupNumber": None,
+            "reservationNumber": "701",
+            "requiresRpcConfirmation": True,
         }
 
         device = get_object_or_404(Device, pk="7778a61d-eefa-4933-b187-699f2baa3744")
@@ -170,7 +170,11 @@ class Command(BaseCommand):
     @staticmethod
     def get_devices(tenant_id=None) -> list[Device]:
         devices = Device.objects.prefetch_related(
-            Prefetch("to_relations", queryset=Relation.objects.select_related("from_id").all(), to_attr="relations")
+            Prefetch(
+                "to_relations",
+                queryset=Relation.objects.select_related("from_id").all(),
+                to_attr="relations",
+            )
         )
         devices = devices.filter(tenant_id=tenant_id) if tenant_id else devices
         return list(devices)

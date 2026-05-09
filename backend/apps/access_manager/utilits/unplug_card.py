@@ -42,6 +42,7 @@ def _disconnect_guests(card, card_num):
     if not guests:
         return
 
+    is_pwd = bool(card.is_pwd)
     context = get_guest_access_context(guests)
     for device in context["devices"]:
-        send_rpc_request.delay(str(device.id), [card_num], 0)
+        send_rpc_request.delay(str(device.id), [card_num], 0, is_pwd=is_pwd)
