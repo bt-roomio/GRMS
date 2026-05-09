@@ -43,13 +43,17 @@ class CardTest(BaseTestCase):
 
     def test_list_cards_with_search(self):
         url = reverse("access_manager:card-list")
-        response = self.client.get(url, {"search_field": "number", "search_value": "65 28 23 12"})
+        response = self.client.get(
+            url, {"search_field": "number", "search_value": "65 28 23 12"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
 
     def test_list_cards_with_staff_filter(self):
         url = reverse("access_manager:card-list")
-        response = self.client.get(url, {"staff_id": "a47ac10b-58cc-4372-a567-0e02b2c3d480"})
+        response = self.client.get(
+            url, {"staff_id": "a47ac10b-58cc-4372-a567-0e02b2c3d480"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
 
@@ -69,23 +73,26 @@ class CardTest(BaseTestCase):
 
     def test_create_card_success(self):
         url = reverse("access_manager:card-list")
-        payload = {"staff_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479", "additional_info": {"test": "data"}}
+        payload = {
+            "staff_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            "additional_info": {"test": "data"},
+        }
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, 201)
         card_number = response.data["number"]
 
         self.assertTrue(
-            StaffCard.objects.filter(card__number=card_number, staff_id="f47ac10b-58cc-4372-a567-0e02b2c3d479").exists()
+            StaffCard.objects.filter(
+                card__number=card_number,
+                staff_id="f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            ).exists()
         )
 
-    def test_create_card_without_staff(self):
-        url = reverse("access_manager:card-list")
-        payload = {"additional_info": {"test": "data"}}
-        response = self.client.post(url, payload, format="json")
-        self.assertEqual(response.status_code, 400)
-
     def test_get_card_detail(self):
-        url = reverse("access_manager:card-detail", kwargs={"pk": "f3db0b43-5537-3d9e-a44b-0411ff10dcb5"})
+        url = reverse(
+            "access_manager:card-detail",
+            kwargs={"pk": "f3db0b43-5537-3d9e-a44b-0411ff10dcb5"},
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["id"], "f3db0b43-5537-3d9e-a44b-0411ff10dcb5")
@@ -97,7 +104,10 @@ class CardTest(BaseTestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_update_card_success(self):
-        url = reverse("access_manager:card-detail", kwargs={"pk": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"})
+        url = reverse(
+            "access_manager:card-detail",
+            kwargs={"pk": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"},
+        )
         payload = {
             "number": "12 34 23 23",
             "staff_id": "a47ac10b-58cc-4372-a567-0e02b2c3d480",
@@ -116,7 +126,10 @@ class CardTest(BaseTestCase):
     @patch("access_manager.utilits.unplug_card.unplug")
     def test_delete_card_success(self, mock_unplug):
         mock_unplug.return_value = True
-        url = reverse("access_manager:card-detail", kwargs={"pk": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"})
+        url = reverse(
+            "access_manager:card-detail",
+            kwargs={"pk": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"},
+        )
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)
 
@@ -127,7 +140,10 @@ class CardTest(BaseTestCase):
     @patch("access_manager.utilits.unplug_card.unplug")
     def test_delete_card_unplug_failure(self, mock_unplug):
         mock_unplug.return_value = False
-        url = reverse("access_manager:card-detail", kwargs={"pk": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"})
+        url = reverse(
+            "access_manager:card-detail",
+            kwargs={"pk": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"},
+        )
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)
 

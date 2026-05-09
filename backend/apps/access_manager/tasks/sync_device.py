@@ -55,12 +55,23 @@ def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
         for obj in connected_objects:
             device_id = obj.device_id
             access = (obj.additional_info or {}).get("message_params", {}).get("access", "UNKNOWN")
-            grouped[(device_id, access)].append(obj.card.number)
+            is_pwd = bool(obj.card.is_pwd)
+            grouped[(device_id, access, is_pwd)].append(obj.card.number)
 
-        for (device_id, access), cards in grouped.items():
-            result = send_rpc_request(str(device_id), cards, access, sync=True)
-            if result.get("success", False):
-                queryset.filter(device_id=device_id).update(need_sync=False)
+        for (device_id, access, is_pwd), cards in grouped.items():
+            if is_pwd:
+                for card_number in cards:
+                    result = send_rpc_request(
+                        str(device_id), [card_number], access, sync=True, is_pwd=True
+                    )
+                    if result.get("success", False):
+                        NeedSyncDevice.objects.filter(
+                            device_id=device_id, card__number=card_number, need_sync=True
+                        ).update(need_sync=False)
+            else:
+                result = send_rpc_request(str(device_id), cards, access, sync=True)
+                if result.get("success", False):
+                    queryset.filter(device_id=device_id).update(need_sync=False)
 
         return {"success": True, "processed": len(connected_objects)}
 

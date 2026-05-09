@@ -1,8 +1,14 @@
 import logging
 import time
 
-from access_manager.utilits.card_activate import activate_guest_card, activate_staff_card
-from access_manager.utilits.card_deactivate import deactivate_guest_card, deactivate_staff_card
+from access_manager.utilits.card_activate import (
+    activate_guest_card,
+    activate_staff_card,
+)
+from access_manager.utilits.card_deactivate import (
+    deactivate_guest_card,
+    deactivate_staff_card,
+)
 from access_manager.utilits.need_sync import need_sync
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
 from celery import shared_task
@@ -15,9 +21,22 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 10
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False):
-    request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id)
+@shared_task(
+    autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60}
+)
+def send_rpc_request(
+    device_id,
+    cards,
+    access,
+    user=None,
+    guest_id=None,
+    staff_id=None,
+    sync=False,
+    is_pwd=False,
+):
+    request_params = prepare_rpc_request(
+        device_id, cards, access, guest_id, staff_id, is_pwd=is_pwd
+    )
 
     message = request_params.get("message")
     request_id = request_params.get("request_id")
@@ -29,7 +48,11 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     fail_response = request_params.get("fail_response")
 
     if not cards:
-        return {"success": True, "cards_empty": True, "message": "Cards are not provided ! "}
+        return {
+            "success": True,
+            "cards_empty": True,
+            "message": "Cards are not provided ! ",
+        }
 
     if device and not device.status:
         need_sync(cards, device, access, user=user, reason="Device is not connected")
@@ -43,26 +66,51 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
 
     while time.time() - start_time < TIMEOUT:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
-        is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
+        is_success = (
+            str_to_dict(has_message.additional_info).get("success")
+            if has_message
+            else False
+        )
         if has_message and access == 0:
             if is_success:
-                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device, sync)
+                result = (
+                    deactivate_staff_card(staff)
+                    if staff_id
+                    else deactivate_guest_card(cards, device, sync)
+                )
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
-            not sync and need_sync(cards, device, access, user=user, reason="Device rejected the deactivation request")
+            not sync and need_sync(
+                cards,
+                device,
+                access,
+                user=user,
+                reason="Device rejected the deactivation request",
+            )
             return fail_response
 
         elif has_message and is_success and access != 0:
             if sync:
-                return {"success": True, "message": "Operation is passed successfully! "}
+                return {
+                    "success": True,
+                    "message": "Operation is passed successfully! ",
+                }
             result = (
-                activate_staff_card(cards, staff, device) if staff_id else activate_guest_card(cards, device, guest)
+                activate_staff_card(cards, staff, device)
+                if staff_id
+                else activate_guest_card(cards, device, guest, is_pwd=is_pwd)
             )
             result.update({"room": room_number, "public_spaces": public_spaces})
             return result
 
         time.sleep(1)
     else:
-        not sync and need_sync(cards, device, access, user=user, reason="No response from device within timeout")
+        not sync and need_sync(
+            cards,
+            device,
+            access,
+            user=user,
+            reason="No response from device within timeout",
+        )
         fail_response.update({"message": "Time out error!"})
         return fail_response

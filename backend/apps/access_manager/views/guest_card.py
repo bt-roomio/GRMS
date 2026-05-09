@@ -37,18 +37,28 @@ class GuestCardView(APIView):
             guest_id = validated_data["guest_id"]
             public_spaces = validated_data["public_spaces"]
             cards = validated_data["cards"]
+            is_pwd = validated_data.get("is_pwd", False)
             user = str(request.user.id)
 
-            assigned_cards = get_card_assignments(cards=cards, tenant_id=tenant_id, exclude_guest_id=guest_id)
+            assigned_cards = get_card_assignments(
+                cards=cards, tenant_id=tenant_id, exclude_guest_id=guest_id
+            )
 
             if assigned_cards:
                 return Response(
-                    {"success": False, "message": "Card is already assigned.", "assigned_cards": assigned_cards}, 403
+                    {
+                        "success": False,
+                        "message": "Card is already assigned.",
+                        "assigned_cards": assigned_cards,
+                    },
+                    403,
                 )
             guest = get_object_or_404(Guest, id=guest_id)
 
             for public_space in public_spaces:
-                GuestPublicSpace.objects.get_or_create(guest_id=guest_id, public_space_id=public_space)
+                GuestPublicSpace.objects.get_or_create(
+                    guest_id=guest_id, public_space_id=public_space
+                )
 
             context = get_guest_access_context(guest)
 
@@ -64,21 +74,27 @@ class GuestCardView(APIView):
             success = []
 
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id, user=user)
+                result = send_rpc_request(
+                    str(device.id), cards, 1, guest_id=guest_id, user=user, is_pwd=is_pwd
+                )
                 if not result.get("success", False):
                     errors.append(result)
                 else:
                     success.append(result)
 
             if not errors:
-                return Response({"success": True, "message": "Cards connected successfully!"}, 200)
+                return Response(
+                    {"success": True, "message": "Cards connected successfully!"}, 200
+                )
             return Response(
-                {"message": "Couldn't synchronize the card with all devices!", "errors": errors, "success": success},
+                {
+                    "message": "Couldn't synchronize the card with all devices!",
+                    "errors": errors,
+                    "success": success,
+                },
                 400,
             )
 
         except Exception as e:
             logger.exception("Error in GuestCardView")
-            return Response(
-                {"message": "Server error!", "error": str(e)}, 500
-            )
+            return Response({"message": "Server error!", "error": str(e)}, 500)

@@ -29,6 +29,7 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
             search_field="number",
             search_value=params.get("search_value", None),
             filters=params.get("filters", {}),
+            is_pwd=params.get("is_pwd"),
         )
         return query
 

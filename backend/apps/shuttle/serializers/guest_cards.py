@@ -9,6 +9,7 @@ from main.models import Room
 class GuestCardSerializer(serializers.ModelSerializer):
     card_id = serializers.CharField(source="card.id")
     card_number = serializers.CharField(source="card.number")
+    is_pwd = serializers.BooleanField(source="card.is_pwd")
     guest_name = serializers.SerializerMethodField()
     guest_check_in = serializers.IntegerField(source="guest.check_in")
     guest_id = serializers.CharField(source="guest.id")
@@ -17,7 +18,7 @@ class GuestCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GuestCard
-        fields = ["card_id", "card_number", "guest_name", "guest_check_in", "guest_id", "need_to_sync", "is_blocked", "created_at"]
+        fields = ["card_id", "card_number", "is_pwd", "guest_name", "guest_check_in", "guest_id", "need_to_sync", "is_blocked", "created_at"]
 
     def get_guest_name(self, obj):
         guest = obj.guest

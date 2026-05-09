@@ -219,6 +219,13 @@ def sync_device_get_swagger():
                                 type=openapi.TYPE_BOOLEAN,
                                 description="Whether the device is active"
                             ),
+                            "is_pwd": openapi.Schema(
+                                type=openapi.TYPE_BOOLEAN,
+                                description=(
+                                    "Whether the underlying card is a PIN/password credential. "
+                                    "PIN rows resync via `add_pwd`/`remove_pwd` instead of `writeRFID`."
+                                ),
+                            ),
                             "created_at": openapi.Schema(
                                 type=openapi.TYPE_STRING,
                                 format="date-time",

@@ -27,6 +27,7 @@ class CardListView(APIView):
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
             staff_id=params.get("staff_id"),
+            is_pwd=params.get("is_pwd"),
         )
         serializer = CardSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
@@ -36,8 +37,8 @@ class CardListView(APIView):
     @check_perms(["access_manager.add_card"])
     def post(self, request):
         data = with_tenant(request)
-        card_number = random.randint(1, 99999999)
-        data["number"] = card_number
+        if not data.get("is_pwd"):
+            data["number"] = random.randint(1, 99999999)
         serializer = CardSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save(created_by=request.user)
