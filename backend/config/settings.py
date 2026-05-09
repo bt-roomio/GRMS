@@ -440,6 +440,8 @@ CELERY_BEAT_SCHEDULE = {
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
 
+CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")
+
 _LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "WARNING").upper()
 _LOG_FORMATTER = os.getenv("DJANGO_LOG_FORMATTER", "simple")
 _LOG_SQL = os.getenv("DJANGO_LOG_SQL", "false").lower() in ("1", "true", "yes")
