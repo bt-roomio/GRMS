@@ -1,3 +1,5 @@
+import logging
+
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
@@ -5,6 +7,8 @@ from core.utils.date import convert_datetime
 from shuttle.models import TsKv
 from shuttle.serializers.ts_kv_history import TenantRoomAvgParams, TsKvHistorySerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
+
+logger = logging.getLogger(__name__)
 
 
 class TsKvTenantHistoryConsumer(BaseGenericAsyncAPIConsumer):
@@ -20,7 +24,7 @@ class TsKvTenantHistoryConsumer(BaseGenericAsyncAPIConsumer):
     def get_queryset(self, **kwargs):
         p = TenantRoomAvgParams.check(kwargs.get("query_params", {}))
         tenant_id = self.tenant_id
-        return super().get_queryset(**kwargs).tenant_avg_history(
+        return TsKv.objects.tenant_avg_history(
             tenant=tenant_id,
             keys=p.get("keys", []),
             start_ts=convert_datetime(p.get("start_ts")) if p.get("start_ts") else None,
@@ -43,7 +47,7 @@ class TsKvTenantHistoryConsumer(BaseGenericAsyncAPIConsumer):
                     await self.reply(data=fresh, action=action, request_id=request_id)
 
             except Exception as exc:
-                print(f"ts_kv_activity error for {request_id}: {exc}")
+                logger.warning(f"ts_kv_activity error for {request_id}: {exc}")
                 continue
 
     @action()
