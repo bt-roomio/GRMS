@@ -34,7 +34,7 @@ def prepare_rpc_request(
     request_id = rpc_message.id
 
     if is_pwd:
-        method = "add_pwd" if access else "remove_pwd"
+        method = "add_pwd" if access else "delete_pwd"
         password_value = int(cards[0]) if cards else 0
         rpc_data = {
             "id": request_id,
