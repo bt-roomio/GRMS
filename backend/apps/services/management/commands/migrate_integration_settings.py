@@ -4,15 +4,9 @@ from main.models import Tenant
 from services.models import Integration, Integrator
 from services.utils.const import FIAS, HOTEZA, MEWS
 
-MEWS_EXTRA_FIELDS = {
-    "client_token",
-    "access_token",
-    "environment",
-    "send_tasks",
-    "roomio_access_control",
-    "last_sync",
-    "last_keycard_fetch",
-}
+MEWS_INTEGRATOR_FIELDS = {"client_token"}  # → Integrator.client_id
+MEWS_INTEGRATION_FIELDS = {"access_token"}  # → Integration.access_token
+MEWS_ADDITIONAL_FIELDS = {"environment", "send_tasks", "roomio_access_control", "last_sync", "last_keycard_fetch"}
 
 TYPE_MAP = {
     "hoteza": HOTEZA,
@@ -46,21 +40,28 @@ class Command(BaseCommand):
                 if not settings or not isinstance(settings, dict):
                     continue
 
-                print(f"Found: {settings}")
                 hotel_id = settings.get("hotel_id") or None
                 enable = bool(settings.get("enable", False))
 
                 if integration_type == MEWS:
-                    extra = {k: v for k, v in settings.items() if k in MEWS_EXTRA_FIELDS}
+                    client_id = settings.get("client_token") or None
+                    access_token = settings.get("access_token") or None
+                    additional_info = {k: v for k, v in settings.items() if k in MEWS_ADDITIONAL_FIELDS} or None
                 else:
-                    extra = {}
+                    client_id = None
+                    access_token = None
+                    additional_info = None
 
                 existing = Integration.objects.filter(
-                    tenant=tenant, integrator=integration_type, is_active=True
+                    tenant=tenant, integrator__name=integration_type, is_active=True
                 ).first()
 
                 if existing:
-                    changed = existing.hotel_id != hotel_id or existing.enable != enable
+                    changed = (
+                        existing.hotel_id != hotel_id
+                        or existing.enable != enable
+                        or existing.access_token != access_token
+                    )
                     if not changed:
                         self.stdout.write(f"  SKIP   [{tenant.title}] {key} — no changes")
                         skipped_total += 1
@@ -70,22 +71,25 @@ class Command(BaseCommand):
                     if not dry_run:
                         existing.hotel_id = hotel_id
                         existing.enable = enable
-                        if extra:
-                            existing.additional_info = {**(existing.additional_info or {}), **extra}
+                        existing.access_token = access_token
+                        if additional_info:
+                            existing.additional_info = {**(existing.additional_info or {}), **additional_info}
                         existing.save(update_fields=["hotel_id", "enable", "access_token", "additional_info"])
                     updated_total += 1
                 else:
                     self.stdout.write(f"  CREATE [{tenant.title}] {key}")
                     if not dry_run:
-                        integrator, _ = Integrator.objects.get_or_create(name=integration_type)
+                        integrator, _ = Integrator.objects.update_or_create(
+                            name=integration_type, defaults={"client_id": client_id}
+                        )
                         Integration.objects.create(
                             tenant=tenant,
                             integrator=integrator,
                             hotel_id=hotel_id,
                             enable=enable,
-                            additional_info=extra or None,
+                            access_token=access_token,
+                            additional_info=additional_info,
                         )
-
                     created_total += 1
 
         self.stdout.write(
