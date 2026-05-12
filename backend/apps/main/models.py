@@ -237,7 +237,7 @@ class RoomHistory(BaseModel, UpdateByModel):
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
-    door_lock_device = models.OneToOneField(
+    door_lock_device = models.ForeignKey(
         "main.Device", SET_NULL, null=True, blank=True, related_name="as_door_lock_device_history"
     )
     room_type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)
