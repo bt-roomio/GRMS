@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
+from services.utils.const import HOTEZA
 
 logger = logging.getLogger(__name__)
 
@@ -61,13 +62,15 @@ class CheckInSerializer(serializers.Serializer):
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
     def validate(self, attrs):
-        logger.debug(f"CheckInSerializer validate called with attrs: {attrs}")
+        logger.info(f"CheckInSerializer validate called with attrs: {attrs}")
         attrs = self.convert_fields(attrs)
         tenant = None
         if attrs.get("hotel_id"):
             tenant = Tenant.objects.filter(
-                additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
-                additional_info__integration_settings__hoteza__enable=True,
+                integration__integrator=HOTEZA,
+                integration__hotel_id=attrs.get("hotel_id"),
+                integration__enable=True,
+                integration__is_active=True,
             ).first()
 
         if not tenant and attrs.get("tenant_id"):
@@ -84,7 +87,7 @@ class CheckInSerializer(serializers.Serializer):
             additional_info__pms_reg_num=attrs.get("pms_reg_num"),
             is_active=True,
         ).first()
-        logger.debug(f"Existing guest found: {guest}")
+        logger.info(f"Existing guest found: {guest}")
 
         if guest:
             # Check if any changes are needed, we need update existing guest
@@ -159,7 +162,7 @@ class CheckInSerializer(serializers.Serializer):
                 logger.error(f"Error updating guest: {e}")
                 raise JsonValidationError({"result": 9, "message": "Failed to update guest."})
         else:
-            logger.debug("Creating new guest with data: %s", validated_data)
+            logger.info("Creating new guest with data: %s", validated_data)
             # Create new guest
             try:
                 instance = guest_serializer.create(

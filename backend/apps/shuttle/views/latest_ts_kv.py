@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
 from main.models import Device
+from services.utils.const import HOTEZA
 from shuttle.models import TsKvLatest
 from shuttle.serializers.ts_kv_latest import TsKvLatestIntegrationFilterParams, TsKvLatestIntegrationSerializer
 from shuttle.utils.permissions import WhiteListOrIsAuthenticated
@@ -33,7 +34,10 @@ class LatestTsKvListView(APIView):
             result["room__number"] = kwargs.get("room_number")
             return result
         elif kwargs.get("hotel_id") and kwargs.get("room_number"):
-            result["tenant__additional_info__integration_settings__hoteza__hotel_id"] = kwargs.get("hotel_id")
+            result["tenant__integration__integrator"] = HOTEZA
+            result["tenant__integration__hotel_id"] = kwargs.get("hotel_id")
+            result["tenant__integration__enable"] = True
+            result["tenant__integration__is_active"] = True
             result["room__number"] = kwargs.get("room_number")
             return result
         return result

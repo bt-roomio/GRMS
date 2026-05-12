@@ -5,6 +5,8 @@ import requests
 from django.core.management.base import BaseCommand, CommandError
 
 from main.models import Tenant
+from services.models import Integration
+from services.utils.const import HOTEZA
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ class Command(BaseCommand):
         parser.add_argument("--end", type=str, help=f"End datetime ({DATETIME_FORMAT}), default: today 23:59:59")
 
     def handle(self, *args, **options):
-        hotel_id = options["hotel_id"] or self._get_hotel_id_from_tenant(options["tenant_id"])
+        hotel_id = options["hotel_id"] or self._get_hotel_id_from_tenant(options["tenant_id"])  # TODO: rethink
 
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         start_dt = options["start"] or (today - timedelta(days=1)).strftime(DATETIME_FORMAT)
@@ -54,7 +56,9 @@ class Command(BaseCommand):
         except Tenant.DoesNotExist:
             raise CommandError(f"Tenant {tenant_id} not found")
 
-        hotel_id = (tenant.additional_info or {}).get("integration_settings", {}).get("hoteza", {}).get("hotel_id")
+        integration = Integration.objects.filter(tenant=tenant, integrator=HOTEZA).first()
+        hotel_id = integration.hotel_id if integration else None
+
         if not hotel_id:
             raise CommandError(f"Tenant {tenant_id} has no Hoteza hotel_id configured")
 

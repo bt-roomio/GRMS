@@ -13,23 +13,23 @@ from django.core.management.base import BaseCommand
 from mews.handlers import ReservationEventHandler
 from mews.websocket_client import MewsWebSocketClient
 
-from main.models import Tenant
+from services.models import Integration
+from services.utils.const import MEWS
 
 logger = logging.getLogger(__name__)
 
 
 class MewsConfigAdapter:
-    """
-    Adapter to provide MewsConfiguration interface using Tenant.additional_info data
-    """
+    def __init__(self, integration: Integration):
+        additional_info = integration.additional_info or {}
+        self.tenant = integration.tenant
+        self.client_token = integration.integrator.client_id
+        self.access_token = integration.access_token or ""
+        self.company_id = integration.hotel_id or ""
+        self.environment = additional_info.get("environment", "demo")
 
-    def __init__(self, tenant: Tenant, mews_settings: dict):
-        self.tenant = tenant
-        self._mews_settings = mews_settings
-        self.client_token = mews_settings.get("client_token", "")
-        self.access_token = mews_settings.get("access_token", "")
-        self.company_id = mews_settings.get("hotel_id", "")
-        self.environment = mews_settings.get("environment", "demo")
+    def __repr__(self):
+        return f"MewsConfigAdapter(tenant={self.tenant}, client_token={self.client_token}, access_token={self.access_token}, company_id={self.company_id}, environment={self.environment})"
 
     @property
     def api_base_url(self):
@@ -51,23 +51,17 @@ class MewsConfigAdapter:
 class Command(BaseCommand):
     help = "Run Mews WebSocket listener for real-time reservation sync"
 
-    def handle(self, *args, **options):
+    def handle(self, **_):
         self.stdout.write(self.style.SUCCESS("Starting Mews WebSocket Listener..."))
 
-        # Get all tenants with active Mews integration
-        tenants = Tenant.objects.filter(additional_info__integration_settings__mews__enable=True)
-        active_tenants = []
+        active_integrations = Integration.objects.filter(
+            integrator__name__iexact=MEWS,
+            integrator__client_id__isnull=False,
+            enable=True,
+            is_active=True,
+        ).select_related("tenant")
 
-        for tenant in tenants:
-            if not tenant.additional_info:
-                continue
-
-            integration_settings = tenant.additional_info.get("integration_settings", {})
-            mews_settings = integration_settings.get("mews", {})
-            if mews_settings.get("client_token", False) and mews_settings.get("access_token", False):
-                active_tenants.append(tenant)
-
-        if not active_tenants:
+        if not active_integrations:
             self.stdout.write(
                 self.style.ERROR("No active Mews configurations found. Please configure Mews integration first.")
             )
@@ -76,15 +70,12 @@ class Command(BaseCommand):
         clients = []
         handlers = []
 
-        for tenant in active_tenants:
+        for integration in active_integrations:
+            tenant = integration.tenant
             try:
-                mews_settings = tenant.additional_info["integration_settings"]["mews"]
-                logger.info(f"Mews settings for tenant {tenant.title}: {mews_settings}")
-
                 self.stdout.write(self.style.SUCCESS(f"Initializing listener for tenant: {tenant.title}"))
 
-                # Create config adapter
-                config_adapter = MewsConfigAdapter(tenant, mews_settings)
+                config_adapter = MewsConfigAdapter(integration)
 
                 # Create event handler with adapter
                 handler = ReservationEventHandler(config_adapter)
@@ -99,6 +90,7 @@ class Command(BaseCommand):
                     on_connected=lambda t=tenant.title: self._on_connected(t),
                     on_disconnected=lambda reason, t=tenant.title: self._on_disconnected(reason, t),
                     auto_reconnect=True,
+                    max_reconnect_attempts=5,
                 )
 
                 clients.append(client)
@@ -152,21 +144,13 @@ class Command(BaseCommand):
         try:
             while True:
                 time.sleep(1)
-
-                # Check if any client disconnected unexpectedly
-                for client in clients:
-                    if not client.is_connected() and client.running:
-                        logger.warning("Client disconnected unexpectedly")
-
         except KeyboardInterrupt:
             pass
 
     def _on_connected(self, tenant_name: str):
-        """Callback when WebSocket connects"""
         self.stdout.write(self.style.SUCCESS(f"✓ Connected to Mews for tenant: {tenant_name}"))
-        logger.info(f"WebSocket connected for {tenant_name}")
+        logger.info(f"Connected to Mews for tenant: {tenant_name}")
 
     def _on_disconnected(self, reason: str, tenant_name: str):
-        """Callback when WebSocket disconnects"""
         self.stdout.write(self.style.WARNING(f"✗ Disconnected from Mews for tenant {tenant_name}: {reason}"))
-        logger.warning(f"WebSocket disconnected for {tenant_name}: {reason}")
+        logger.warning(f"Disconnected from Mews for tenant {tenant_name}: {reason}")
