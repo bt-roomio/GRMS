@@ -18,14 +18,20 @@ class BaseModel(models.Model):
         ordering = ("id",)
 
 
-class Integration(BaseModel):
-    class Type(models.TextChoices):
-        FIAS = "fias", "Fias"
-        HOTEZA = "hoteza", "Hoteza"
-        MEWS = "mews", "Mews"
+class Integrator(BaseModel):
+    id = None
+    name = models.CharField(max_length=20, primary_key=True)
+    client_id = models.CharField(max_length=100, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
 
-    name = models.CharField(max_length=20, choices=Type.choices)
-    description = models.TextField(default="", blank=True)
+    class Meta:
+        ordering = ("-created_at",)
+
+
+class Integration(BaseModel):
+    integrator = models.ForeignKey("services.Integrator", models.CASCADE, to_field="name", db_column="integrator")
+    description = models.TextField(null=True, blank=True)
     hotel_id = models.CharField(max_length=100, null=True, blank=True)
     access_token = models.CharField(max_length=100, null=True, blank=True, help_text="For KeyCards")
     additional_info = models.JSONField(null=True, blank=True)
@@ -40,13 +46,16 @@ class Integration(BaseModel):
 
     objects = IntegrationQuerySet.as_manager()
 
+    def __str__(self):
+        return f"{self.integrator} ({self.tenant})"
+
     class Meta(BaseModel.Meta):
         db_table = "services_integration"
         constraints = [
             UniqueConstraint(
-                "name",
+                "integrator",
                 "tenant",
                 condition=Q(is_active=True),
-                name="unique_integration_name_tenant_is_active",
+                name="unique_integration_integrator_tenant_is_active",
             ),
         ]

@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
+from services.utils.const import HOTEZA
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +32,15 @@ class CheckOutSerializer(serializers.Serializer):
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
     def validate(self, attrs):
-        logger.debug("Validating CheckOut data: %s", attrs)
+        logger.info("Validating CheckOut data: %s", attrs)
         attrs = self.convert_fields(attrs)
         tenant = None
         if attrs.get("hotel_id"):
             tenant = Tenant.objects.filter(
-                additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
-                additional_info__integration_settings__hoteza__enable=True,
+                integration__integrator__name__iexact=HOTEZA,
+                integration__hotel_id=attrs.get("hotel_id"),
+                integration__enable=True,
+                integration__is_active=True,
             ).first()
 
         if not tenant and attrs.get("tenant_id"):

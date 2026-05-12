@@ -23,7 +23,7 @@ class CheckOutListView(APIView):
             raise
         result = serializer.save()
 
-        if isinstance(result, dict) and result.get("success") == False:
+        if isinstance(result, dict) and isinstance(result.get("success"), bool) and not result.get("success"):
             return Response(result, status=400)
 
         return Response({"result": 0, "message": "Successfully checkout!"}, status=200)
