@@ -34,7 +34,7 @@ class LatestTsKvListView(APIView):
             result["room__number"] = kwargs.get("room_number")
             return result
         elif kwargs.get("hotel_id") and kwargs.get("room_number"):
-            result["tenant__integration__integrator"] = HOTEZA
+            result["tenant__integration__integrator__name__iexact"] = HOTEZA
             result["tenant__integration__hotel_id"] = kwargs.get("hotel_id")
             result["tenant__integration__enable"] = True
             result["tenant__integration__is_active"] = True

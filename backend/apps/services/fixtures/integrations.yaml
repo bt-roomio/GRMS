@@ -1,17 +1,70 @@
+- model: services.Integrator
+  pk: Test
+  fields:
+    client_id: null
+    description: Test integrator
+    additional_info: null
+    created_at: 2025-01-01T00:00:00+00:00
+
+- model: services.Integrator
+  pk: Test2
+  fields:
+    client_id: null
+    description: Test integrator 2
+    additional_info: null
+    created_at: 2025-01-01T00:00:00+00:00
+
+- model: services.Integrator
+  pk: hoteza
+  fields:
+    client_id: null
+    description: Hoteza integrator
+    additional_info: null
+    created_at: 2025-01-01T00:00:00+00:00
+
+- model: services.Integrator
+  pk: mews
+  fields:
+    client_id: null
+    description: Mews integrator
+    additional_info: null
+    created_at: 2025-01-01T00:00:00+00:00
+
 - model: services.Integration
   pk: d5793548-ed8b-4ae4-872d-877cc7c2c38b
   fields:
-    name: Test
+    integrator: Test
     description: Test description
+    hotel_id: null
+    access_token: null
+    additional_info: null
     enable: true
+    is_active: true
     tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
     created_at: 2025-01-01T00:00:00+00:00
 
 - model: services.Integration
   pk: 3639490f-d247-4558-a512-e245280d8971
   fields:
-    name: Test 2
-    description: Test description
+    integrator: Test2
+    description: Test description 2
+    hotel_id: null
+    access_token: null
+    additional_info: null
     enable: true
+    is_active: true
     tenant_id: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
+    created_at: 2025-01-01T00:00:00+00:00
+
+- model: services.Integration
+  pk: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  fields:
+    integrator: hoteza
+    description: Hoteza integration for shuttle tests
+    hotel_id: "999"
+    access_token: null
+    additional_info: null
+    enable: true
+    is_active: true
+    tenant_id: 28c81921-f78e-4864-87d2-cec674f19d1c
     created_at: 2025-01-01T00:00:00+00:00
