@@ -134,7 +134,14 @@ extend-exclude = ["migrations"]
 extend-select = ["I", "F401", "F841"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["main", "shuttle", "users", "core", "services"]
+known-first-party = [
+  "main",
+  "shuttle",
+  "users",
+  "core",
+  "services",
+  "access_manager",
+]
 section-order = [
   "future",
   "standard-library",
