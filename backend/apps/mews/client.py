@@ -132,10 +132,10 @@ class MewsAPIClient:
         }
 
         if extent:
-            params["Extent"] = extent  # pyright: ignore
+            params["Extent"] = extent  # ty: ignore
         else:
             # Default extent - get all related data
-            params["Extent"] = {  # pyright: ignore
+            params["Extent"] = {
                 "Reservations": True,
                 "ReservationGroups": False,
                 "Customers": True,
@@ -238,9 +238,9 @@ class MewsAPIClient:
             params["ResourceIds"] = resource_ids
 
         if extent:
-            params["Extent"] = extent  # pyright: ignore
+            params["Extent"] = extent
         else:
-            params["Extent"] = {  # pyright: ignore
+            params["Extent"] = {
                 "Resources": True,
                 "Inactive": False,
             }
@@ -293,8 +293,8 @@ class MewsAPIClient:
         }
 
         if start_utc and end_utc:
-            params["StartUtc"] = start_utc
-            params["EndUtc"] = end_utc
+            params["StartUtc"] = start_utc  # ty: ignore
+            params["EndUtc"] = end_utc  # ty: ignore
 
         return self._make_request("reservations/getAll", params)
 
@@ -326,16 +326,16 @@ class MewsAPIClient:
         }
 
         if name:
-            params["Name"] = name  # pyright: ignore
+            params["Name"] = name  # ty: ignore
 
         if customer_ids:
-            params["CustomerIds"] = customer_ids  # pyright: ignore
+            params["CustomerIds"] = customer_ids  # ty: ignore
 
         if emails:
-            params["Emails"] = emails  # pyright: ignore
+            params["Emails"] = emails  # ty: ignore
 
         if resource_id:
-            params["ResourceId"] = resource_id  # pyright: ignore
+            params["ResourceId"] = resource_id  # ty: ignore
 
         return self._make_request("customers/search", params)
 

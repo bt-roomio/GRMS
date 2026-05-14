@@ -41,7 +41,7 @@ class IntegrationListViewTest(BaseTestCase):
         )
         self.assertEqual(response.status_code, 200)
         assert response.data is not None
-        self.assertEqual(response.data["name"], "Test")
+        self.assertEqual(response.data["integrator"], "Test")
         self.assertEqual(response.data["description"], "Test description")
         self.assertEqual(response.data["enable"], True)
         self.assertEqual(response.data["is_active"], True)
@@ -53,11 +53,11 @@ class IntegrationListViewTest(BaseTestCase):
                 "services:integration-detail",
                 kwargs={"pk": "d5793548-ed8b-4ae4-872d-877cc7c2c38b"},
             ),
-            data={"name": "mews", "description": "UPDATED_DESCRIPTION"},
+            data={"integrator": "mews", "description": "UPDATED_DESCRIPTION"},
         )
         self.assertEqual(response.status_code, 200)
         assert response.data is not None
-        self.assertEqual(response.data["name"], "mews")
+        self.assertEqual(response.data["integrator"], "mews")
         self.assertEqual(response.data["description"], "UPDATED_DESCRIPTION")
         self.assertEqual(response.data["enable"], True)
         self.assertEqual(response.data["is_active"], True)

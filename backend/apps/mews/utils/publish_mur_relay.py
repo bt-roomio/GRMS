@@ -3,8 +3,11 @@ from datetime import datetime, timedelta
 
 from django.utils import timezone
 from mews.client import MewsAPIClient
+from mews.management.commands.mews_access_tokens import MewsConfigAdapter
 from mews.models import MewsConfiguration
 
+from services.models import Integration
+from services.utils.const import MEWS
 from shuttle.models import TsKvLatest
 
 logger = logging.getLogger(__name__)
@@ -40,15 +43,20 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
         room = ts_kv_latest.entity.room
         tenant = room.tenant
 
-        mews_pms = (
-            isinstance(tenant.additional_info, dict)
-            and tenant.additional_info.get("integration_settings", {}).get("mews", {})
-            or {}
+        mews_integration = (
+            Integration.objects.filter(
+                tenant=tenant,
+                integrator__name__iexact=MEWS,
+                integrator__client_id__isnull=False,
+                enable=True,
+                is_active=True,
+            )
+            .select_related("tenant")
+            .first()
         )
-        mews_pms_enabled = mews_pms.get("enabled")
-        mews_pms_send_tasks = mews_pms.get("send_tasks")
+        mews_pms_send_tasks = mews_integration and (mews_integration.additional_info or {}).get("send_tasks")
 
-        if not (mews_pms_enabled or mews_pms_send_tasks):
+        if not mews_pms_send_tasks:
             logger.info(f"Mews PMS integration or task sending not enabled for tenant {tenant.title}")
             return
 
@@ -67,15 +75,14 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
                 last_mur_time = datetime.fromisoformat(last_mur_relay.replace("Z", "+00:00"))
                 if timezone.now() < last_mur_time + timedelta(minutes=3):
                     logger.info(
-                        f"MUR relay triggered too soon for room {room.number}. "
-                        f"Last trigger: {last_mur_relay}, skipping"
+                        f"MUR relay triggered too soon for room {room.number}. Last trigger: {last_mur_relay}, skipping"
                     )
                     return
             except (ValueError, TypeError) as e:
                 logger.warning(f"Invalid mews_mur_relay timestamp format: {e}")
 
         try:
-            mews_config = MewsConfiguration.objects.get(tenant=ts_kv_latest.entity.tenant, is_active=True)
+            mews_config = MewsConfigAdapter(mews_integration)
         except MewsConfiguration.DoesNotExist:
             logger.info(f"Mews integration not configured or inactive for tenant {ts_kv_latest.entity.tenant.title}")
             return
@@ -88,7 +95,7 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
         client = MewsAPIClient(
             client_token=mews_config.client_token,
             access_token=mews_config.access_token,
-            base_url=mews_config.api_base_url,  # pyright: ignore
+            base_url=mews_config.api_base_url,
         )
 
         deadline_utc = (timezone.now() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -100,8 +107,7 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
         }
 
         logger.info(
-            f"Sending MUR task to Mews for room {room.number}, guest {guest.name}, "
-            f"reservation {mews_reservation_id}"
+            f"Sending MUR task to Mews for room {room.number}, guest {guest.name}, reservation {mews_reservation_id}"
         )
 
         response = client._make_request("tasks/add", params)

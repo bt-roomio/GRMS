@@ -420,10 +420,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "mews.tasks.sync_reservations",
         "schedule": 60.0,
     },
-    "mews-access-tokens": {
-        "task": "mews.tasks.sync_access_tokens",
-        "schedule": 60.0,
-    },
+    # "mews-access-tokens": { # TODO: comand not working, bacause need ServiceOrderIds
+    #     "task": "mews.tasks.sync_access_tokens",
+    #     "schedule": 60.0,
+    # },
     "active-attribute-server-scope": {
         "task": "core.tasks.active_attribute_server_scope_task",
         "schedule": 10.0,  # Every 10 seconds

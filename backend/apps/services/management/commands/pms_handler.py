@@ -12,6 +12,7 @@ import time
 import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Prefetch
 from pika.adapters.blocking_connection import BlockingChannel
 
 from rest_framework.fields import ValidationError
@@ -20,6 +21,8 @@ from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.date import datetime_to_unix
 from main.models import Guest, Room, Tenant
 from main.observables.guest import publish_guest_changes
+from services.models import Integration
+from services.utils.const import MEWS
 from shuttle.utils.access_cards import access_cards
 
 logger = logging.getLogger(__name__)
@@ -136,10 +139,19 @@ class Command(BaseCommand):
             raise
 
     def _base_validate_data(self, data):
-        tenants = Tenant.objects.filter(
-            additional_info__integration_settings__mews__hotel_id=data.get("hotel_id"),
-            additional_info__integration_settings__mews__enable=True,
+        integrations = Integration.objects.filter(
+            integrator__name__iexact=MEWS,
+            integrator__client_id__isnull=False,
+            enable=True,
+            is_active=True,
+            hotel_id=data.get("hotel_id"),
         )
+        tenants = (
+            Tenant.objects.filter(integration__in=integrations)
+            .prefetch_related(Prefetch("integration", integrations))
+            .distinct()
+        )
+
         if tenants.count() > 1:
             logger.warning(f"Found multiple tenants for hotel_id: {data.get('hotel_id')}")
 
@@ -173,10 +185,6 @@ def checkup_guest(data):
     room = data.get("room")
     try:
         guest: Guest = Guest.objects.get(pms_id=data.get("pms_id"))
-        # if guest.is_reservation and guest.room == room:
-        #     return data
-        # if guest and guest.room == room:
-        #     raise ValidationError("This guest already exists!")
         if guest and guest.room != room:
             logger.info(f"→ Guest needs to be moved from room {guest.room.number} to {room.number}")
             handle_guest_move(guest, data)

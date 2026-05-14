@@ -23,24 +23,22 @@ from django.utils import timezone
 from mews.client import MewsAPIClient
 
 from main.models import Guest, Tenant
+from services.models import Integration
+from services.utils.const import MEWS
 from shuttle.utils.access_cards import access_cards_via_card_numbers
 
 logger = logging.getLogger(__name__)
 
 
 class MewsConfigAdapter:
-    """
-    Adapter to provide MewsConfiguration interface using Tenant.additional_info data
-    """
-
-    def __init__(self, tenant: Tenant, mews_settings: dict):
-        self.tenant = tenant
-        self._mews_settings = mews_settings
-        self.client_token = mews_settings.get("client_token", "")
-        self.access_token = mews_settings.get("access_token", "")
-        self.company_id = mews_settings.get("hotel_id", "")
-        self.environment = mews_settings.get("environment", "demo")
-        self.roomio_access_control = mews_settings.get("roomio_access_control", "")
+    def __init__(self, integration: Integration):
+        additional_info = integration.additional_info or {}
+        self.tenant = integration.tenant
+        self.client_token = integration.integrator.client_id
+        self.access_token = integration.access_token or ""
+        self.company_id = integration.hotel_id or ""
+        self.environment = additional_info.get("environment", "demo")
+        self.roomio_access_control = additional_info.get("roomio_access_control", False)
 
     @property
     def api_base_url(self):
@@ -62,57 +60,26 @@ class MewsConfigAdapter:
 class Command(BaseCommand):
     help = "Fetch and assign RFID key cards for active guests to room devices (run every minute)"
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--tenant",
-            type=str,
-            help="Specific tenant title to process (optional, processes all if not provided)",
-        )
-        parser.add_argument(
-            "--force-full",
-            action="store_true",
-            help="Force full fetch instead of incremental (ignores last_keycard_fetch)",
-        )
+    def handle(self, **_):
+        active_integrations = Integration.objects.filter(
+            integrator__name__iexact=MEWS,
+            integrator__client_id__isnull=False,
+            enable=True,
+            is_active=True,
+        ).select_related("tenant")
 
-    def handle(self, *args, **options):
-        tenant_filter = options.get("tenant")
-        force_full = options.get("force_full", False)
-
-        # Get all tenants with active Mews integration
-        tenants = Tenant.objects.filter(additional_info__integration_settings__mews__enable=True)
-
-        # Find by title from options
-        if tenant_filter:
-            tenants = tenants.filter(title__icontains=tenant_filter)
-
-        active_tenants = []
-
-        for tenant in tenants:
-            if not tenant.additional_info:
-                continue
-
-            integration_settings = tenant.additional_info.get("integration_settings", {})
-            mews_settings = integration_settings.get("mews", {})
-            if (
-                mews_settings.get("client_token")
-                and mews_settings.get("access_token")
-                and mews_settings.get("enable")
-                and mews_settings.get("roomio_access_control")
-            ):
-                active_tenants.append(tenant)
-
-        if not active_tenants:
+        if not active_integrations:
             logger.warning("No active Mews configurations found")
             return
 
-        logger.info(f"Processing {len(active_tenants)} tenant(s)")
+        logger.info(f"Processing {len(active_integrations)} tenant(s)")
 
-        # Process each tenant
         total_published = 0
-        for tenant in active_tenants:
-            logger.debug(f"\n{'='*60}")
-            logger.debug(f"Tenant: {tenant.title}")
-            logger.debug(f"{'='*60}")
+        for integration in active_integrations:
+            tenant = integration.tenant
+            logger.info(f"\n{'=' * 60}")
+            logger.info(f"Tenant: {tenant.title}")
+            logger.info(f"{'=' * 60}")
 
             try:
                 # Step 1: Find active guests with Mews reservation IDs
@@ -121,15 +88,16 @@ class Command(BaseCommand):
                     is_active=True,
                     additional_info__mews_reservation_id__isnull=False,
                 )
-                reservation_ids = list(active_guests.values_list("additional_info__mews_reservation_id", flat=True))
+                reservation_ids = list(
+                    active_guests.values_list("additional_info__mews_reservation_id", flat=True).distinct()
+                )
 
-                if not active_guests.exists():
-                    logger.warning(f"No active guests with Mews reservations for this {tenant} tenant")
+                if not reservation_ids:
+                    logger.warning(f"No active guests with Mews reservations for tenant {tenant}")
                     continue
 
                 # Step 2: Setup API client
-                mews_settings = tenant.additional_info["integration_settings"]["mews"]
-                config_adapter = MewsConfigAdapter(tenant, mews_settings)
+                config_adapter = MewsConfigAdapter(integration)
 
                 api_client = MewsAPIClient(
                     client_token=config_adapter.client_token,
@@ -139,35 +107,24 @@ class Command(BaseCommand):
 
                 # Step 3: Determine time range for incremental fetch
                 now = timezone.now()
-                last_fetch = None
-
-                if not force_full:
-                    last_fetch_str = mews_settings.get("last_keycard_fetch")
-                    if last_fetch_str:
-                        try:
-                            # Parse ISO 8601 string
-                            last_fetch = datetime.datetime.fromisoformat(last_fetch_str.replace("Z", "+00:00"))
-                            logger.info(f"  Last fetch: {last_fetch_str}")
-                        except (ValueError, AttributeError) as e:
-                            logger.warning(f"Failed to parse last_keycard_fetch: {e}")
-                            last_fetch = None
-
-                # If no last fetch, use current time minus 1 days as default
-                if last_fetch is None:
+                last_fetch_str = (integration.additional_info or {}).get("last_keycard_fetch")
+                if last_fetch_str:
+                    last_fetch = datetime.datetime.strptime(last_fetch_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                        tzinfo=datetime.timezone.utc
+                    )
+                else:
                     last_fetch = now - datetime.timedelta(days=1)
-                    logger.debug("First fetch - using 1 day ago")
+                    logger.info("First fetch - using 1 day ago as start")
 
                 # Step 4: Fetch access tokens
                 start_utc = last_fetch.strftime("%Y-%m-%dT%H:%M:%SZ")
                 end_utc = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-                logger.debug(f"Fetching tokens updated from {start_utc} to {end_utc}")
+                logger.info(f"Fetching tokens updated from {start_utc} to {end_utc}")
 
-                # Fetch with UpdatedUtc filter for incremental updates
                 response = api_client.get_resource_access_tokens(
                     service_order_ids=reservation_ids,
-                    updated_utc={"StartUtc": "2025-12-10T14:00:00Z", "EndUtc": "2025-12-15T14:00:00Z"},
-                    # TODO: change filter updated_utc to use start_utc and end_utc above
+                    updated_utc={"StartUtc": start_utc, "EndUtc": end_utc},
                     activity_states=["Active"],
                     limit=100,
                 )
@@ -177,7 +134,7 @@ class Command(BaseCommand):
 
                 # Handle pagination
                 while cursor:
-                    logger.debug("  Fetching next page...")
+                    logger.info("  Fetching next page...")
                     response = api_client.get_resource_access_tokens(
                         service_order_ids=reservation_ids,
                         updated_utc={"StartUtc": start_utc, "EndUtc": end_utc},
@@ -191,37 +148,38 @@ class Command(BaseCommand):
                 # Step 5: Filter by Type='RfidTag'
                 rfid_tokens = [token for token in all_tokens if token.get("Type") == "RfidTag"]
 
-                logger.debug(f"  Found {len(all_tokens)} total token(s), {len(rfid_tokens)} RFID tag(s)")
+                logger.info(f"  Found {len(all_tokens)} total token(s), {len(rfid_tokens)} RFID tag(s)")
 
                 if not rfid_tokens:
-                    logger.debug("No RFID tags to publish")
+                    logger.info("No RFID tags to publish")
                     # Still update last fetch timestamp
-                    self._update_last_fetch(tenant, now)
+                    self._update_last_fetch(integration, now)
                     continue
 
                 # Step 6: Assign keycards to devices
-                self._assign_keycards(tenant, rfid_tokens, active_guests)
+                assigned = self._assign_keycards(tenant, rfid_tokens, active_guests)
+                total_published += assigned
 
                 # Step 7: Update last fetch timestamp
-                self._update_last_fetch(tenant, now)
+                self._update_last_fetch(integration, now)
 
                 # Display sample data
                 if rfid_tokens:
-                    logger.debug("\n  Sample key card data:")
+                    logger.info("\n  Sample key card data:")
                     for idx, token in enumerate(rfid_tokens[:3], 1):
-                        logger.debug(f"    {idx}. ID: {token.get('Id', 'N/A')[:20]}...")
-                        logger.debug(f"       Value: {token.get('Value', 'N/A')}")
-                        logger.debug(
+                        logger.info(f"    {idx}. ID: {token.get('Id', 'N/A')[:20]}...")
+                        logger.info(f"       Value: {token.get('Value', 'N/A')}")
+                        logger.info(
                             f"Valid: {token.get('ValidityStartUtc', 'N/A')} → {token.get('ValidityEndUtc', 'N/A')}"
                         )
-                        logger.debug(f"       Reservation: {token.get('ServiceOrderId', 'N/A')[:20]}...")
+                        logger.info(f"       Reservation: {token.get('ServiceOrderId', 'N/A')[:20]}...")
 
             except Exception as e:
                 logger.exception(f"Error processing tenant {tenant.title}")
                 logger.warning(self.style.ERROR(f"  ✗ Failed: {str(e)}"))
                 continue
 
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"Completed. Total key cards assigned: {total_published}")
 
     def _assign_keycards(self, tenant: Tenant, rfid_tokens: list, active_guests) -> int:
@@ -297,34 +255,12 @@ class Command(BaseCommand):
 
         return assigned_count
 
-    def _update_last_fetch(self, tenant: Tenant, fetch_time: datetime.datetime) -> None:
-        """
-        Update last keycard fetch timestamp in tenant.additional_info
-
-        Args:
-            tenant: Tenant instance
-            fetch_time: Timestamp of this fetch operation
-        """
+    def _update_last_fetch(self, integration: Integration, fetch_time: datetime.datetime) -> None:
         try:
-            # Ensure additional_info structure exists
-            if not tenant.additional_info:
-                tenant.additional_info = {}
-
-            if "integration_settings" not in tenant.additional_info:
-                tenant.additional_info["integration_settings"] = {}
-
-            if "mews" not in tenant.additional_info["integration_settings"]:
-                tenant.additional_info["integration_settings"]["mews"] = {}
-
-            # Update last_keycard_fetch as ISO 8601 string
-            tenant.additional_info["integration_settings"]["mews"]["last_keycard_fetch"] = fetch_time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
-
-            tenant.save(update_fields=["additional_info"])
-
-            logger.info(f"Updated last_keycard_fetch for tenant {tenant.title}")
-
+            additional_info = integration.additional_info or {}
+            additional_info["last_keycard_fetch"] = fetch_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            integration.additional_info = additional_info
+            integration.save(update_fields=["additional_info"])
+            logger.info(f"Updated last_keycard_fetch for tenant {integration.tenant.title}")
         except Exception as _:
-            logger.exception(f"Failed to update last_keycard_fetch for tenant {tenant.title}")
-            # Don't raise - this shouldn't fail the entire operation
+            logger.exception(f"Failed to update last_keycard_fetch for tenant {integration.tenant.title}")

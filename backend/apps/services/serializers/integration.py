@@ -1,15 +1,18 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from core.utils.serializers import ValidatorSerializer
-from services.models import Integration
+from services.models import Integration, Integrator
 
 
 class IntegrationSerializer(serializers.ModelSerializer):
+    integrator = serializers.SlugRelatedField(slug_field="name", queryset=Integrator.objects.all())
+
     class Meta:
         model = Integration
         fields = (
             "id",
-            "name",
+            "integrator",
             "hotel_id",
             "description",
             "access_token",
@@ -23,6 +26,13 @@ class IntegrationSerializer(serializers.ModelSerializer):
             "is_active": {"read_only": True},
             "enable": {"read_only": True},
         }
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Integration.objects.filter(is_active=True),
+                fields=("integrator", "tenant"),
+                message="Integration with this integrator already exists for this tenant.",
+            )
+        ]
 
 
 class IntegrationParams(ValidatorSerializer):

@@ -1,7 +1,5 @@
 import logging
 
-from django.conf import settings
-
 from rest_framework import permissions
 
 from services.models import Integration
@@ -17,11 +15,10 @@ class DoorLockPermission(permissions.BasePermission):
         if not client_token or not access_token:
             return False
 
-        if client_token not in settings.CLIENT_TOKENS:
-            return False
-
         try:
-            integration = Integration.objects.get(access_token=access_token)
+            integration = Integration.objects.get(
+                integrator="mobile key", access_token=access_token, integrator__client_id=client_token
+            )
         except Integration.DoesNotExist:
             return False
         except Integration.MultipleObjectsReturned:

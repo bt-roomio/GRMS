@@ -23,6 +23,7 @@ logger.setLevel(logging.WARNING)
 
 # Increased from 60s to 600s (10 minutes) - devices rarely change
 EXPIRY_TIME = 600
+RELATION_CACHE_TTL = 3600  # 1 hour
 
 
 def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
@@ -75,6 +76,23 @@ def _device_cache(cache_key, device):
     return data
 
 
+def _ensure_relation(from_id: str, to_id: str):
+    """Ensure Relation gateway→sub-device exists; Redis-cached to avoid per-message DB hit."""
+    cache_key = f"prs_msg:relation:{from_id}:{to_id}"
+    if redis_client.exists(cache_key):
+        return
+    Relation.objects.get_or_create(
+        from_id_id=from_id,
+        to_id_id=to_id,
+        from_type="DEVICE",
+        to_type="DEVICE",
+        relation_type_group="COMMON",
+        relation_type="Created",
+        defaults={"updated_at": get_mil_sec()},
+    )
+    redis_client.set(cache_key, "1", ex=RELATION_CACHE_TTL)
+
+
 def get_sub_device(device: DeviceType, name: str, device_type: str | None = None):
     sub_cache_key = slugify_key(device.get("id") + "&" + name)  # "UUID_DEVICE & SUB_DEVICE"
     sub_device = get_device(sub_cache_key, device.get("tenant_id"))
@@ -97,6 +115,7 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
         cache_key = f"prs_msg:sub_device_cache:{sub_cache_key}"
         sub_device = _device_cache(cache_key, sub_device)
 
+    _ensure_relation(device.get("id"), sub_device.get("id"))
     return sub_device
 
 

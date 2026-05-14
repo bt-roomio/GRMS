@@ -52,7 +52,10 @@ def size_2mb(value):
 
 
 def file_date_time(instance, filename: str):
-    return f"{int(instance.created_at)}_{filename}"
+    ts = instance.created_at
+    if hasattr(ts, "timestamp"):
+        ts = int(ts.timestamp() * 1000)
+    return f"{int(ts)}_{filename}"
 
 
 def controller_file(*args, **kwargs):
