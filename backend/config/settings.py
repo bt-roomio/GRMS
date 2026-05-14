@@ -243,7 +243,8 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
-        "CONN_MAX_AGE": 0 if (IS_CELERY or TESTING) else 60,
+        "CONN_MAX_AGE": 0,
+        "DISABLE_SERVER_SIDE_CURSORS": True,
         "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
@@ -298,7 +299,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-COMPANY_NAME = os.getenv("COMPANY_NAME", "Roomio")
 FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost")
 FRONTEND_PORT = os.getenv("FRONTEND_PORT")
 
@@ -329,14 +329,20 @@ COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [(REDIS_HOST, REDIS_PORT)],
-            "serializer_format": "uuidjson",  #  Registered in core.apps
-            "capacity": 500,
-            "expiry": 10,
+            "serializer_format": "uuidjson",
+            "capacity": 5000,
+            "expiry": 30,
+            "group_expiry": 86400,
+            "channel_capacity": {
+                "http.request": 200,
+                "websocket.send*": 10,
+            },
         },
     },
 }
@@ -352,8 +358,20 @@ WS_INTERVAL = os.getenv("WS_INTERVAL", 5)
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": os.getenv("CACHE_LOCATION", "cache_table"),
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/4",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 100,
+                "retry_on_timeout": True,
+            },
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+        },
+        "KEY_PREFIX": "grms",
+        "TIMEOUT": 300,
     },
     "security": {
         "BACKEND": "django_redis.cache.RedisCache",

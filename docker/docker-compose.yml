@@ -4,10 +4,15 @@ x-django-common: &django-common
   networks:
     - roomio_net
   restart: always
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "3"
   depends_on:
     migrate:
       condition: service_completed_successfully
-    postgres:
+    pgbouncer:
       condition: service_healthy
     redis:
       condition: service_healthy
@@ -39,10 +44,20 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
-    command: ["redis-server", "--appendonly", "yes"]
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --tcp-keepalive 300
     restart: always
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - roomio_net
     healthcheck:
@@ -76,6 +91,37 @@ services:
       start_period: 30s
       timeout: 10s
 
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    restart: always
+    environment:
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB}
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=25
+      - MIN_POOL_SIZE=5
+      - RESERVE_POOL_SIZE=5
+      - SERVER_IDLE_TIMEOUT=600
+      - LOG_CONNECTIONS=0
+      - LOG_DISCONNECTIONS=0
+      - AUTH_TYPE=scram-sha-256
+    networks:
+      - roomio_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # --- Django services ---
 
   migrate:
@@ -83,13 +129,14 @@ services:
     container_name: migrate
     restart: "no"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
+    environment:
+      - POSTGRES_HOST=pgbouncer
     command: >
       sh -c "python manage.py migrate &&
-             python manage.py createcachetable &&
              python manage.py collectstatic --noinput"
     volumes:
       - static_volume:/app/static/
@@ -102,6 +149,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - POSTGRES_HOST=pgbouncer
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - VIRTUAL_HOST=api.domain.com
       - LETSENCRYPT_HOST=api.domain.com
@@ -111,14 +159,39 @@ services:
       - media_volume:/app/media/
       - prom_mp:/prom_mp
 
-  celery:
+  celery-critical:
     <<: *django-common
-    container_name: celery
+    container_name: celery-critical
     environment:
+      - POSTGRES_HOST=pgbouncer
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - IS_CELERY=1
-      - PGAPPNAME=grms-celery
-    command: celery -A config worker -l info -c 4 --max-tasks-per-child=100
+      - PGAPPNAME=grms-celery-critical
+    command: celery -A config worker -Q critical -l warning -c 2 --max-tasks-per-child=50
+    volumes:
+      - prom_mp:/prom_mp
+
+  celery-default:
+    <<: *django-common
+    container_name: celery-default
+    environment:
+      - POSTGRES_HOST=pgbouncer
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - IS_CELERY=1
+      - PGAPPNAME=grms-celery-default
+    command: celery -A config worker -Q default -l warning -c 4 --max-tasks-per-child=100
+    volumes:
+      - prom_mp:/prom_mp
+
+  celery-low:
+    <<: *django-common
+    container_name: celery-low
+    environment:
+      - POSTGRES_HOST=pgbouncer
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - IS_CELERY=1
+      - PGAPPNAME=grms-celery-low
+    command: celery -A config worker -Q low -l warning -c 1 --max-tasks-per-child=50
     volumes:
       - prom_mp:/prom_mp
 
@@ -126,7 +199,10 @@ services:
     <<: *django-common
     container_name: celery-beat
     environment:
+      - POSTGRES_HOST=pgbouncer
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - IS_CELERY=1
+      - PGAPPNAME=grms-celery-beat
     command: celery -A config beat --loglevel=warning
     volumes:
       - prom_mp:/prom_mp
@@ -134,8 +210,8 @@ services:
   mq-async:
     <<: *django-common
     container_name: mq-async
-    env_file: .env
     environment:
+      - POSTGRES_HOST=pgbouncer
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python apps/core/management/commands/mq_async.py
     volumes:
@@ -144,12 +220,22 @@ services:
   mews-websocket:
     <<: *django-common
     container_name: mews-websocket
+    environment:
+      - POSTGRES_HOST=pgbouncer
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python manage.py mews_websocket
+    volumes:
+      - prom_mp:/prom_mp
 
   pms-handler:
     <<: *django-common
     container_name: pms-handler
+    environment:
+      - POSTGRES_HOST=pgbouncer
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python manage.py pms_handler
+    volumes:
+      - prom_mp:/prom_mp
 
   # --- Frontend ---
 
@@ -284,6 +370,7 @@ volumes:
   static_volume:
   media_volume:
   pg_data:
+  redis_data:
   frontend:
   rabbitmq:
   certs:
