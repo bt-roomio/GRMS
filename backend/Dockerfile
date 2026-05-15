@@ -21,7 +21,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --frozen --no-dev
+  uv sync --frozen --no-dev && \
+  chmod +x /app/entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH"
 
@@ -29,7 +30,13 @@ RUN mkdir -p /prom_mp
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.asgi:application", \
-  "-k", "uvicorn.workers.UvicornWorker", \
-  "--workers", "${GUNICORN_WORKERS:-4}", \
-  "--bind", "0.0.0.0:8000"]
+CMD ["sh", "-c", "gunicorn config.asgi:application \
+  -k uvicorn.workers.UvicornWorker \
+  --workers ${GUNICORN_WORKERS:-$(python -c 'import os; print(2 * os.cpu_count() + 1)')} \
+  --worker-connections ${GUNICORN_WORKER_CONNECTIONS:-1000} \
+  --timeout ${GUNICORN_TIMEOUT:-30} \
+  --keepalive 5 \
+  --max-requests 1000 \
+  --max-requests-jitter 100 \
+  --bind 0.0.0.0:8000"]
+

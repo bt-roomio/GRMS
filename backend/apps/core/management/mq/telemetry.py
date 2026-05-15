@@ -14,7 +14,7 @@ from core.utils.get_time import get_mil_sec
 from core.utils.handle_card_event import handle_card_event
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
-from shuttle.tasks import publish_updates_batch_task, update_activity_device_task
+from shuttle.tasks import publish_updates_batch_task, update_activity_devices_batch_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -225,9 +225,9 @@ def sync_telemetry_batch(batch: list[tuple]):
         except Exception as e:
             logger.exception("Failed to create CardLog entries in batch: %s", e)
 
-    # Update activity for all devices
-    for device_id in device_ids:
-        update_activity_device_task.delay(device_id)
+    # One Celery task for all devices instead of N separate dispatches
+    if device_ids:
+        update_activity_devices_batch_task.delay(list(device_ids))
 
     # Batch publish WebSocket updates
     if updates_by_device:
