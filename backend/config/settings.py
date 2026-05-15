@@ -438,10 +438,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "mews.tasks.sync_reservations",
         "schedule": 60.0,
     },
-    "mews-access-tokens": {
-        "task": "mews.tasks.sync_access_tokens",
-        "schedule": 60.0,
-    },
+    # "mews-access-tokens": { # TODO: comand not working, bacause need ServiceOrderIds
+    #     "task": "mews.tasks.sync_access_tokens",
+    #     "schedule": 60.0,
+    # },
     "active-attribute-server-scope": {
         "task": "core.tasks.active_attribute_server_scope_task",
         "schedule": 10.0,  # Every 10 seconds
@@ -457,6 +457,8 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
+
+CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")
 
 _LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "WARNING").upper()
 _LOG_FORMATTER = os.getenv("DJANGO_LOG_FORMATTER", "simple")

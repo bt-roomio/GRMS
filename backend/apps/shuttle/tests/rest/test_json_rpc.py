@@ -18,6 +18,7 @@ class ShuttleJsonRpcApiTests(BaseTestCase):
         "room.yaml",
         "device_profile.yaml",
         "device.yaml",
+        "integrations.yaml",
     )
 
     def setUp(self):

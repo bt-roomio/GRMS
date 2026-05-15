@@ -492,7 +492,7 @@ class ReservationEventHandler:
         resource_id = reservation.get("AssignedResourceId")
 
         if not all([reservation_id, state, resource_id]):
-            logger.warning(
+            logger.info(
                 f"Skipping reservation {reservation_id}: missing required fields "
                 f"(state={state}, resource={resource_id})"
             )

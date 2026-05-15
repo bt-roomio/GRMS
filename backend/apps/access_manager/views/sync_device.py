@@ -57,13 +57,17 @@ class SyncDeviceView(APIView):
     @sync_device_get_swagger()
     def get(self, request):
         params = NeedSyncDeviceHttpFilterParams.check(request.GET)
-        queryset = Device.objects.get_card_related_devices(params.get("card_id"), params.get("need_sync", None))
+        queryset = Device.objects.get_card_related_devices(
+            params.get("card_id"), params.get("need_sync", None)
+        )
         if not queryset.exists():
             return Response({"message": "No devices need syncing"}, status=200)
 
         holder = get_card_user(params.get("card_id"))
         serializer = SimpleNeedSyncDeviceSerializer(
-            queryset, many=True, context={"holder": holder, "card_id": params.get("card_id")}
+            queryset,
+            many=True,
+            context={"holder": holder, "card_id": params.get("card_id")},
         )
         return Response(serializer.data, 200)
 
@@ -71,18 +75,32 @@ class SyncDeviceView(APIView):
     def post(self, request):
         serializer = SyncDeviceSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response({"success": False, "message": "Invalid request data",
-                             "errors": serializer.errors}, status=400)
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid request data",
+                    "errors": serializer.errors,
+                },
+                status=400,
+            )
 
         ids = serializer.validated_data.get("ids", [])  # pyright: ignore
         device_ids = serializer.validated_data.get("device_ids", [])  # pyright: ignore
         tenant_id = request.user.tenant_id
 
-        need_sync_exists = NeedSyncDevice.objects.check_avialibility(tenant_id, ids=ids, device_ids=device_ids)
+        need_sync_exists = NeedSyncDevice.objects.check_avialibility(
+            tenant_id, ids=ids, device_ids=device_ids
+        )
 
         if not need_sync_exists:
-            return Response({"success": True, "message": "No devices need syncing"}, status=200)
+            return Response(
+                {"success": True, "message": "No devices need syncing"}, status=200
+            )
 
         sync_devices_task.delay(tenant_id, ids, device_ids)
+
         time.sleep(3)
-        return Response({"success": True, "message": "Device sync task started successfully"}, status=202)
+        return Response(
+            {"success": True, "message": "Device sync task started successfully"},
+            status=202,
+        )

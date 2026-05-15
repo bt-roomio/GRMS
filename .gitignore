@@ -30,6 +30,4 @@ CLAUDE.md
 
 claude-memory-compiler
 .claude
-uv.lock
 .planning
-pyproject.toml

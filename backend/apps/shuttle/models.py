@@ -8,7 +8,9 @@ from core.models import BaseModel, BaseModelTs, UpdateByModel
 from core.utils.files import controller_file
 from core.utils.get_time import get_mil_sec
 from core.utils.unix_timestamp import UnixTimeStampField
+from services.models import BaseModel as ServiceBaseModel
 from shuttle.querysets.attributes import AttributeKvQuerySet
+from shuttle.querysets.controller import ControllerQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
 from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
@@ -167,20 +169,22 @@ class RPCMessage(models.Model):
         ]
 
 
-class ControllerFile(BaseModel, UpdateByModel):
+class ControllerFile(ServiceBaseModel):
     content = models.FileField(upload_to=controller_file)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     file_type = models.CharField(max_length=255, default="firmware")
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+    class Meta:
         db_table = "shuttle_controller_file"
 
 
-class Controller(BaseModel, UpdateByModel):
+class Controller(ServiceBaseModel):
     name = models.CharField(max_length=255, blank=True, null=True)
     mac_address = models.CharField(max_length=255)
     file = models.ForeignKey(ControllerFile, CASCADE)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+    objects = ControllerQuerySet.as_manager()
+
+    class Meta:
         db_table = "shuttle_controller"

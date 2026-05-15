@@ -169,7 +169,11 @@ class Command(BaseCommand):
     @staticmethod
     def get_devices(tenant_id=None) -> list[Device]:
         devices = Device.objects.prefetch_related(
-            Prefetch("to_relations", queryset=Relation.objects.select_related("from_id").all(), to_attr="relations")
+            Prefetch(
+                "to_relations",
+                queryset=Relation.objects.select_related("from_id").all(),
+                to_attr="relations",
+            )
         )
         devices = devices.filter(tenant_id=tenant_id) if tenant_id else devices
         return list(devices)

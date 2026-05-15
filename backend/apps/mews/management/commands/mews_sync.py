@@ -11,24 +11,21 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from mews.handlers import ReservationEventHandler
 
-from main.models import Tenant
+from services.models import Integration
+from services.utils.const import MEWS
 
 logger = logging.getLogger(__name__)
 
 
 class MewsConfigAdapter:
-    """
-    Adapter to provide MewsConfiguration interface using Tenant.additional_info data
-    """
-
-    def __init__(self, tenant: Tenant, mews_settings: dict):
-        self.tenant = tenant
-        self._mews_settings = mews_settings
-        self.client_token = mews_settings.get("client_token", "")
-        self.access_token = mews_settings.get("access_token", "")
-        self.company_id = mews_settings.get("hotel_id", "")
-        self.environment = mews_settings.get("environment", "demo")
-        self.last_sync = None  # Will be managed separately if needed
+    def __init__(self, integration: Integration):
+        additional_info = integration.additional_info or {}
+        self.tenant = integration.tenant
+        self.client_token = integration.integrator.client_id
+        self.access_token = integration.access_token or ""
+        self.company_id = integration.hotel_id or ""
+        self.environment = additional_info.get("environment", "demo")
+        self.last_sync = None
 
     @property
     def api_base_url(self):
@@ -66,40 +63,31 @@ class Command(BaseCommand):
         start_date_override = options.get("start_date")
         tenant_filter = options.get("tenant")
 
-        # Get all tenants with active Mews integration
-        tenants = Tenant.objects.filter(additional_info__integration_settings__mews__enable=True)
+        active_integrations = Integration.objects.filter(
+            integrator__name__iexact=MEWS,
+            integrator__client_id__isnull=False,
+            enable=True,
+            is_active=True,
+        ).select_related("tenant")
 
         if tenant_filter:
-            tenants = tenants.filter(title__icontains=tenant_filter)
+            active_integrations = active_integrations.filter(tenant__title__icontains=tenant_filter)
 
-        active_tenants = []
-
-        for tenant in tenants:
-            if not tenant.additional_info:
-                continue
-
-            integration_settings = tenant.additional_info.get("integration_settings", {})
-            mews_settings = integration_settings.get("mews", {})
-            if mews_settings.get("client_token", False) and mews_settings.get("access_token", False):
-                active_tenants.append(tenant)
-
-        if not active_tenants:
+        if not active_integrations:
             self.stdout.write(self.style.WARNING("No active Mews configurations found"))
             return
 
-        self.stdout.write(self.style.SUCCESS(f"Found {len(active_tenants)} configuration(s) to sync"))
+        self.stdout.write(self.style.SUCCESS(f"Found {len(active_integrations)} configuration(s) to sync"))
 
-        # Process each tenant
-        for tenant in active_tenants:
-            self.stdout.write(self.style.SUCCESS(f"\n{'='*60}"))
+        for integration in active_integrations:
+            tenant = integration.tenant
+            self.stdout.write(self.style.SUCCESS(f"\n{'=' * 60}"))
             self.stdout.write(self.style.SUCCESS(f"Syncing tenant: {tenant.title}"))
-            self.stdout.write(self.style.SUCCESS(f"{'='*60}"))
+            self.stdout.write(self.style.SUCCESS(f"{'=' * 60}"))
 
             try:
-                mews_settings = tenant.additional_info["integration_settings"]["mews"]
-
-                # Create config adapter
-                config_adapter = MewsConfigAdapter(tenant, mews_settings)
+                config_adapter = MewsConfigAdapter(integration)
+                additional_info = integration.additional_info or {}
 
                 # Determine sync period
                 if start_date_override:
@@ -121,8 +109,7 @@ class Command(BaseCommand):
                         )
                         continue
                 else:
-                    # Get last_sync from tenant's additional_info if stored there
-                    last_sync_str = mews_settings.get("last_sync")
+                    last_sync_str = additional_info.get("last_sync")
                     if last_sync_str:
                         # Parse ISO format datetime
                         start_date = datetime.datetime.fromisoformat(last_sync_str.replace("Z", "+00:00"))
@@ -148,11 +135,10 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f"Sync failed: {stats['error']}"))
                     continue
 
-                # Update last_sync timestamp in tenant's additional_info
                 current_time = datetime.datetime.now(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-                mews_settings["last_sync"] = current_time
-                tenant.additional_info["integration_settings"]["mews"] = mews_settings
-                tenant.save(update_fields=["additional_info"])
+                additional_info["last_sync"] = current_time
+                integration.additional_info = additional_info
+                integration.save(update_fields=["additional_info"])
 
                 # Display results
                 self.stdout.write(
@@ -172,5 +158,5 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"✗ Sync failed for {tenant.title}: {e}"))
                 logger.error(f"Sync error for tenant {tenant.title}: {e}", exc_info=True)
 
-        self.stdout.write(self.style.SUCCESS(f"\n{'='*60}"))
+        self.stdout.write(self.style.SUCCESS(f"\n{'=' * 60}"))
         self.stdout.write(self.style.SUCCESS("All syncs completed"))

@@ -126,7 +126,7 @@ def handle_card_event(device, value, ts_dt):
             created_at=timezone.now(),
             additional_info=additional_info,
         )
-        print(f"card : {card_log}")
+        logger.info(f"card : {card_log}")
 
         return card_log
 

@@ -1,8 +1,11 @@
+from django.db.models import Prefetch
 from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
 from main.models import Room, Tenant
+from services.models import Integration
+from services.utils.const import HOTEZA
 
 
 class DNDSerializer(serializers.Serializer):
@@ -13,11 +16,19 @@ class DNDSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         attrs = self.convert_fields(attrs)
+        integrations = Integration.objects.filter(
+            is_active=True, name=HOTEZA, enable=True, hotel_id=attrs.get("hotel_id")
+        )
 
-        tenant = Tenant.objects.filter(
-            additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
-            additional_info__integration_settings__hoteza__enable=True,
-        ).first()
+        tenants = (
+            Tenant.objects.filter(integration__in=integrations)
+            .prefetch_related(Prefetch("integration", integrations))
+            .distinct()
+        )
+        if tenants.count() > 1:
+            raise JsonValidationError({"result": 9, "message": "Your hotelId registered multiple times!"})
+
+        tenant = tenants.first()
         if not tenant:
             raise JsonValidationError({"result": 9, "message": "Your hotelId not registered!"})
 
