@@ -4,7 +4,6 @@ import time
 
 from access_manager.models import GuestCard, StaffCard, TypeChoices
 from access_manager.tasks.send_rpc import send_rpc_request
-
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device, Guest, Room
 from main.utils.access_context import get_guest_access_context
@@ -83,7 +82,6 @@ def _resolve_room_and_guest(tenant_id, room_name):
         raise _LookupFailure(f"Room not found: {room_name}")
 
     guest = Guest.objects.filter(room=room, is_active=True).order_by("created_at").first()
-
 
     return room, guest
 
@@ -203,13 +201,20 @@ def send_rpc_to_guest_devices(guest, card_uid, access):
 def handle_card_access(data, device, access, success_text):
     operation_id = data["operationId"]
     try:
-        room, guest, card_uid = _resolve_entities(device.get("tenant_id"), data.get("roomName"), data.get("keyCoder"))
+        _, guest, card_uid = _resolve_entities(device.get("tenant_id"), data.get("roomName"), data.get("keyCoder"))
     except _LookupFailure as e:
         send_card_operation_confirmation(device, operation_id, status="UR", text=str(e))
         return
 
     if access == 0 and not guest:
         send_card_operation_confirmation(device, operation_id, status="OK", text=success_text)
+        return
+
+    if not guest:
+        room_name = data.get("roomName", "")
+        send_card_operation_confirmation(
+            device, operation_id, status="UR", text=f"Reservation not found for room: {room_name}"
+        )
         return
 
     success, text = send_rpc_to_guest_devices(guest, card_uid, access=access)
@@ -232,6 +237,8 @@ def _handle_multi_card_keyrequest(data, device, key_count):
 
     try:
         _, guest = _resolve_room_and_guest(tenant_id, data.get("roomName"))
+        if not guest:
+            raise _LookupFailure(f"Reservation not found for room: {data.get('roomName', '')}")
         reader = _resolve_reader(tenant_id, data.get("keyCoder"))
         card_uids = _collect_unique_cards(reader.id, key_count)
     except _LookupFailure as e:
