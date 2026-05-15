@@ -17,6 +17,8 @@ x-worker-depends: &worker-depends
 x-django-common: &django-common
   image: registry.gitlab.com/yroomio/grms:dev
   env_file: .env
+  environment:
+    - UV_NO_SYNC=1
   networks:
     - roomio_net
   restart: always

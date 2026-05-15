@@ -5,7 +5,6 @@ import redis
 from django.conf import settings
 
 from core.management.mq.get_device import get_sub_device
-from core.management.mq.state_device import update_activity_device
 from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
@@ -239,23 +238,35 @@ def _update_attribute_store_batch(device_updates, device_info):
         fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
         AttributeKv.objects.bulk_update(to_update, fields)
 
-    # Mirror scanned_devices CLIENT_SCOPE → SHARED_SCOPE (replaces signal logic bypassed by bulk_create/update)
-    for attr in to_create + to_update:
-        if attr.attribute_key == "scanned_devices" and attr.attribute_type == AttributeKv.CLIENT_SCOPE:
-            AttributeKv.objects.update_or_create(
-                attribute_key="scanned_devices",
-                attribute_type=AttributeKv.SHARED_SCOPE,
-                entity_id=attr.entity_id,
-                defaults={"json_v": attr.json_v, "entity_type": "DEVICE"},
-            )
+    # Mirror scanned_devices CLIENT_SCOPE → SHARED_SCOPE in a single bulk upsert
+    scanned = [
+        attr for attr in to_create + to_update
+        if attr.attribute_key == "scanned_devices" and attr.attribute_type == AttributeKv.CLIENT_SCOPE
+    ]
+    if scanned:
+        AttributeKv.objects.bulk_create(
+            [
+                AttributeKv(
+                    attribute_key="scanned_devices",
+                    attribute_type=AttributeKv.SHARED_SCOPE,
+                    entity_id=attr.entity_id,
+                    json_v=attr.json_v,
+                    entity_type="DEVICE",
+                )
+                for attr in scanned
+            ],
+            update_conflicts=True,
+            update_fields=["json_v", "entity_type"],
+            unique_fields=["entity_id", "attribute_key", "attribute_type"],
+        )
 
     # Send updates to WebSocket clients
     if updates_by_device:
         publish_updates_attribute_batch(updates_by_device)
 
-    # Update activity for all devices
+    # Offload activity updates to Celery instead of blocking the thread pool
     for device_id in device_updates.keys():
-        update_activity_device(device_id)
+        update_activity_device_task.delay(device_id)
 
     logger.debug(
         "Batch attributes processed: %d devices, created=%d, updated=%d",

@@ -289,32 +289,37 @@ class BatchAccumulator:
         other_messages = []
         message_status = {}  # {delivery_tag: 'success'|'failure_requeue'|'failure_no_requeue'}
 
-        # Step 1: Validate and group messages
-        for message in batch:
-            try:
-                device, msg = await validate_body(message.body)
-                topic = msg.get("topic", "")
-                data = msg.get("data")
+        # Step 1: Validate all messages in parallel (eliminates serial Redis latency)
+        validation_results = await asyncio.gather(
+            *[validate_body(message.body) for message in batch],
+            return_exceptions=True,
+        )
 
-                gateway_id = device.get("id", "unknown")
-                mq_messages_processed_total.labels(gateway_id=gateway_id, topic=topic).inc()
-                for key in _extract_keys(topic, data):
-                    mq_keys_processed_total.labels(gateway_id=gateway_id, key=key).inc()
-
-                if topic.endswith(TOPIC_TELEMETRY):
-                    telemetry_batch.append((device, topic, data, message))
-                elif topic.endswith(TOPIC_ATTRIBUTES):
-                    attributes_batch.append((device, topic, data, message))
-                elif topic in (TOPIC_GATEWAY_CONNECT, TOPIC_GATEWAY_DISCONNECT):
-                    device_connect_batch.append((device, topic, data, message))
-                else:
-                    other_messages.append((device, topic, data, message))
-
-            except Exception:
+        for message, result in zip(batch, validation_results):
+            if isinstance(result, Exception):
                 logger.warning(
-                    "[%s] Validation failed for message %s", self.queue_name, message.delivery_tag, exc_info=True
+                    "[%s] Validation failed for message %s", self.queue_name, message.delivery_tag, exc_info=result
                 )
                 message_status[message.delivery_tag] = "failure_no_requeue"
+                continue
+
+            device, msg = result
+            topic = msg.get("topic", "")
+            data = msg.get("data")
+
+            gateway_id = device.get("id", "unknown")
+            mq_messages_processed_total.labels(gateway_id=gateway_id, topic=topic).inc()
+            for key in _extract_keys(topic, data):
+                mq_keys_processed_total.labels(gateway_id=gateway_id, key=key).inc()
+
+            if topic.endswith(TOPIC_TELEMETRY):
+                telemetry_batch.append((device, topic, data, message))
+            elif topic.endswith(TOPIC_ATTRIBUTES):
+                attributes_batch.append((device, topic, data, message))
+            elif topic in (TOPIC_GATEWAY_CONNECT, TOPIC_GATEWAY_DISCONNECT):
+                device_connect_batch.append((device, topic, data, message))
+            else:
+                other_messages.append((device, topic, data, message))
 
         # Steps 2-4: Process telemetry, attributes, device states in parallel
         async def _run_telemetry():
