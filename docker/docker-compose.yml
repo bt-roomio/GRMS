@@ -298,7 +298,7 @@ services:
       - frontend
 
   proxy:
-    image: jwilder/nginx-proxy:latest
+    image: nginxproxy/nginx-proxy:1.7
     container_name: proxy
     profiles: [proxy]
     logging: *default-logging
@@ -319,7 +319,7 @@ services:
       - "443:443"
 
   letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    image: nginxproxy/acme-companion:2.5
     container_name: letsencrypt
     profiles: [proxy]
     logging: *default-logging
@@ -328,6 +328,7 @@ services:
       - dhparam:/etc/nginx/dhparam
       - vhost:/etc/nginx/vhost.d
       - certs:/etc/nginx/certs
+      - acme:/etc/acme.sh
       - /run/docker.sock:/var/run/docker.sock:ro
     environment:
       NGINX_PROXY_CONTAINER: proxy
@@ -405,6 +406,7 @@ volumes:
   dhparam:
   vhost:
   html:
+  acme:
   nodered:
   prom_mp:
 
