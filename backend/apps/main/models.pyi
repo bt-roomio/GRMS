@@ -147,7 +147,7 @@ class RoomType(BaseModel):
         db_table: str
         unique_together: Incomplete
 
-class Device:
+class Device(BaseModel):
     id: UUID
     name: Incomplete
     type: Incomplete

@@ -34,6 +34,7 @@ services:
     image: timescale/timescaledb:2.21.0-pg16
     restart: always
     container_name: postgres
+    profiles: [core]
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -55,6 +56,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
+    profiles: [core]
     command:
       - redis-server
       - --appendonly no
@@ -76,6 +78,7 @@ services:
   rabbitmq:
     image: rabbitmq:3.10.7-management
     container_name: rabbitmq
+    profiles: [core]
     restart: always
     hostname: rabbitmq
     environment:
@@ -101,6 +104,7 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:latest
     container_name: pgbouncer
+    profiles: [core]
     restart: always
     environment:
       DB_USER: ${POSTGRES_USER}
@@ -117,6 +121,8 @@ services:
       LOG_CONNECTIONS: 0
       LOG_DISCONNECTIONS: 0
       AUTH_TYPE: scram-sha-256
+      ADMIN_USERS: ${POSTGRES_USER}
+      STATS_USERS: ${POSTGRES_USER}
     networks:
       - roomio_net
     logging: *default-logging
@@ -136,6 +142,7 @@ services:
     <<: *django-common
     container_name: django
     hostname: django
+    profiles: [back]
     restart: always
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8000), timeout=5); s.close()"]
@@ -160,6 +167,7 @@ services:
   celery-critical:
     <<: *django-common
     container_name: celery-critical
+    profiles: [worker]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -173,6 +181,7 @@ services:
   celery-default:
     <<: *django-common
     container_name: celery-default
+    profiles: [worker]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -186,6 +195,7 @@ services:
   celery-low:
     <<: *django-common
     container_name: celery-low
+    profiles: [worker]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -199,6 +209,7 @@ services:
   celery-beat:
     <<: *django-common
     container_name: celery-beat
+    profiles: [worker]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -211,7 +222,7 @@ services:
 
   mq-async:
     <<: *django-common
-    container_name: mq-async
+    profiles: [worker]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -219,10 +230,13 @@ services:
     command: python apps/core/management/commands/mq_async.py
     volumes:
       - prom_mp:/prom_mp
+    deploy:
+      replicas: 2
 
   mews-websocket:
     <<: *django-common
     container_name: mews-websocket
+    profiles: [mews]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -234,6 +248,7 @@ services:
   pms-handler:
     <<: *django-common
     container_name: pms-handler
+    profiles: [pms]
     depends_on: *worker-depends
     environment:
       - POSTGRES_HOST=pgbouncer
@@ -247,6 +262,7 @@ services:
   frontend:
     image: registry.gitlab.com/grms1/grms_front:latest
     container_name: vue
+    profiles: [front]
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
@@ -261,6 +277,7 @@ services:
   frontend-nginx:
     image: nginx:alpine
     container_name: frontend-nginx
+    profiles: [front]
     restart: always
     logging: *default-logging
     expose:
@@ -281,6 +298,7 @@ services:
   proxy:
     image: jwilder/nginx-proxy:latest
     container_name: proxy
+    profiles: [proxy]
     logging: *default-logging
     volumes:
       - html:/usr/share/nginx/html
@@ -301,6 +319,7 @@ services:
   letsencrypt:
     image: jrcs/letsencrypt-nginx-proxy-companion:latest
     container_name: letsencrypt
+    profiles: [proxy]
     logging: *default-logging
     volumes:
       - html:/usr/share/nginx/html
@@ -321,6 +340,7 @@ services:
     restart: unless-stopped
     image: registry.gitlab.com/grms1/mqtt-broker
     container_name: mqtt-broker
+    profiles: [mqtt]
     hostname: mqtt-broker
     ports:
       - 9000:9999
@@ -353,6 +373,7 @@ services:
   nodered:
     image: registry.gitlab.com/grms1/node-red-nodes:latest
     container_name: nodered
+    profiles: [nodered]
     logging: *default-logging
     ports:
       - "1880:1880"
@@ -368,7 +389,6 @@ services:
       - nodered:/data
     networks:
       - roomio_net
-    profiles: ["nodered"]
     init: true
     stop_signal: SIGTERM
     stop_grace_period: 30s

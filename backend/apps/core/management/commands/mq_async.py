@@ -71,9 +71,9 @@ TOPIC_DEVICES_ATTRIBUTES_REQUEST = "v1/devices/me/attributes/request"
 TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
-BATCH_SIZE = 100
-BATCH_TIMEOUT = 0.15  # 200ms
-PREFETCH_COUNT = 600
+BATCH_SIZE = 200
+BATCH_TIMEOUT = 0.1  # 100ms
+PREFETCH_COUNT = 1000
 
 RB_LOGIN = settings.RABBIT_LOGIN
 RB_PASSWORD = settings.RABBIT_PASSWORD
@@ -291,7 +291,6 @@ class BatchAccumulator:
 
         # Step 1: Validate and group messages
         for message in batch:
-            logger.info(f"Message: {message.body}")
             try:
                 device, msg = await validate_body(message.body)
                 topic = msg.get("topic", "")
@@ -317,26 +316,25 @@ class BatchAccumulator:
                 )
                 message_status[message.delivery_tag] = "failure_no_requeue"
 
-        # Step 2: Process telemetry batch
-        if telemetry_batch:
+        # Steps 2-4: Process telemetry, attributes, device states in parallel
+        async def _run_telemetry():
+            if not telemetry_batch:
+                return
             try:
-                data_only = [(d, t, data) for d, t, data, _ in telemetry_batch]
-                await sync_telemetry_batch_async(data_only)
-                # Mark all as success
+                await sync_telemetry_batch_async([(d, t, data) for d, t, data, _ in telemetry_batch])
                 for _, _, _, msg in telemetry_batch:
                     message_status[msg.delivery_tag] = "success"
                 logger.debug("[%s] Processed telemetry batch: %d messages", self.queue_name, len(telemetry_batch))
             except Exception:
                 logger.exception("[%s] Telemetry batch failed", self.queue_name)
-                # Mark all as failure with requeue
                 for _, _, _, msg in telemetry_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
-        # Step 3: Process attributes batch
-        if attributes_batch:
+        async def _run_attributes():
+            if not attributes_batch:
+                return
             try:
-                data_only = [(d, t, data) for d, t, data, _ in attributes_batch]
-                await sync_attributes_batch_async(data_only)
+                await sync_attributes_batch_async([(d, t, data) for d, t, data, _ in attributes_batch])
                 for _, _, _, msg in attributes_batch:
                     message_status[msg.delivery_tag] = "success"
                 logger.debug("[%s] Processed attributes batch: %d messages", self.queue_name, len(attributes_batch))
@@ -345,12 +343,11 @@ class BatchAccumulator:
                 for _, _, _, msg in attributes_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
-        # Step 4: Process device connect/disconnect batch
-        if device_connect_batch:
+        async def _run_device_states():
+            if not device_connect_batch:
+                return
             try:
-                data_only = [(d, t, data) for d, t, data, _ in device_connect_batch]
-                await sync_state_device_batch_async(data_only)
-                # Mark all as success
+                await sync_state_device_batch_async([(d, t, data) for d, t, data, _ in device_connect_batch])
                 for _, _, _, msg in device_connect_batch:
                     message_status[msg.delivery_tag] = "success"
                 logger.debug(
@@ -358,12 +355,13 @@ class BatchAccumulator:
                 )
             except Exception:
                 logger.exception("[%s] Device state batch failed", self.queue_name)
-                # Mark all as failure with requeue
                 for _, _, _, msg in device_connect_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
-        # Step 5: Process other messages individually
-        for device, topic, data, message in other_messages:
+        await asyncio.gather(_run_telemetry(), _run_attributes(), _run_device_states())
+
+        # Step 5: Process other messages concurrently
+        async def _handle_other(device, topic, data, message):
             try:
                 if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(
                     TOPIC_DEVICES_ATTRIBUTES_REQUEST
@@ -377,6 +375,9 @@ class BatchAccumulator:
             except Exception:
                 logger.exception("[%s] Individual message processing failed", self.queue_name)
                 message_status[message.delivery_tag] = "failure_requeue"
+
+        if other_messages:
+            await asyncio.gather(*[_handle_other(d, t, data, msg) for d, t, data, msg in other_messages])
 
         # Step 6: Acknowledge messages
         await self.acknowledge_messages(batch, message_status)
