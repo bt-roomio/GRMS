@@ -7,8 +7,7 @@ from django.conf import settings
 from core.management.mq.get_device import get_sub_device
 from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv
-from shuttle.services.attribute_kv import publish_updates_attribute_batch
-from shuttle.tasks import publish_updates_attribute_batch_task, update_activity_device_task
+from shuttle.tasks import publish_updates_attribute_batch_task, update_activity_devices_batch_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -158,33 +157,14 @@ def _collect_attribute_updates(device_id, data, device_updates):
 
 def _update_attribute_store_batch(device_updates, device_info):
     """
-    Bulk save attributes for multiple devices using bulk_create and bulk_update.
+    Bulk save attributes for multiple devices using a single INSERT ... ON CONFLICT DO UPDATE.
     device_updates: {device_id: [(key, field, value), ...]}
     device_info: {device_id: device}
     """
     logger.debug("Starting batch attribute update for %d devices", len(device_updates))
     ts_now = get_mil_sec()
 
-    # Collect all unique (device_id, key) combinations to fetch existing records
-    device_keys = []
-    for device_id, updates in device_updates.items():
-        keys = list({u[0] for u in updates})
-        device_keys.extend([(device_id, key) for key in keys])
-
-    # Fetch all existing AttributeKv rows at once
-    all_device_ids = list(device_updates.keys())
-    all_keys = list({key for _, updates in device_updates.items() for key, _, _ in updates})
-
-    existing_qs = AttributeKv.objects.filter(
-        entity_id__in=all_device_ids,
-        attribute_type=AttributeKv.CLIENT_SCOPE,
-        attribute_key__in=all_keys,
-    )
-    existing_map = {(str(obj.entity_id), obj.attribute_key): obj for obj in existing_qs}
-
-    # Prepare creates and updates
-    to_create = []
-    to_update = []
+    all_objects = []
     updates_by_device = defaultdict(list)
 
     for device_id, updates in device_updates.items():
@@ -192,8 +172,10 @@ def _update_attribute_store_batch(device_updates, device_info):
         if not device:
             continue
 
-        for key, field, value in updates:
-            # Prepare default values
+        # Last write wins for duplicate (device_id, key) within the same batch
+        deduped = {key: (field, value) for key, field, value in updates}
+
+        for key, (field, value) in deduped.items():
             base = {
                 "bool_v": None,
                 "str_v": None,
@@ -204,23 +186,14 @@ def _update_attribute_store_batch(device_updates, device_info):
                 "last_update_ts": ts_now,
                 field: value,
             }
-
-            lookup_key = (device_id, key)
-            if lookup_key in existing_map:
-                inst = existing_map[lookup_key]
-                for attr_name, attr_val in base.items():
-                    setattr(inst, attr_name, attr_val)
-                to_update.append(inst)
-            else:
-                inst = AttributeKv(
+            all_objects.append(
+                AttributeKv(
                     entity_id=device_id,
                     attribute_type=AttributeKv.CLIENT_SCOPE,
                     attribute_key=key,
                     **base,
                 )
-                to_create.append(inst)
-
-            # Prepare WebSocket updates
+            )
             updates_by_device[f"{device_id}_{device.get('tenant_id')}"].append(
                 {
                     "entity": str(device_id),
@@ -231,18 +204,20 @@ def _update_attribute_store_batch(device_updates, device_info):
                 }
             )
 
-    # Bulk operations
-    if to_create:
-        AttributeKv.objects.bulk_create(to_create, ignore_conflicts=True)
-    if to_update:
-        fields = ["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts", "entity_type"]
-        AttributeKv.objects.bulk_update(to_update, fields)
+    if not all_objects:
+        logger.debug("No attribute updates in batch")
+        return
+
+    # Single upsert matching the DB constraint: unique_attrkv_type_scope_entity_key
+    AttributeKv.objects.bulk_create(
+        all_objects,
+        update_conflicts=True,
+        update_fields=["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts"],
+        unique_fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
+    )
 
     # Mirror scanned_devices CLIENT_SCOPE → SHARED_SCOPE in a single bulk upsert
-    scanned = [
-        attr for attr in to_create + to_update
-        if attr.attribute_key == "scanned_devices" and attr.attribute_type == AttributeKv.CLIENT_SCOPE
-    ]
+    scanned = [attr for attr in all_objects if attr.attribute_key == "scanned_devices"]
     if scanned:
         AttributeKv.objects.bulk_create(
             [
@@ -256,21 +231,15 @@ def _update_attribute_store_batch(device_updates, device_info):
                 for attr in scanned
             ],
             update_conflicts=True,
-            update_fields=["json_v", "entity_type"],
-            unique_fields=["entity_id", "attribute_key", "attribute_type"],
+            update_fields=["json_v"],
+            unique_fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
         )
 
-    # Send updates to WebSocket clients
+    # Offload WebSocket publish to Celery — avoids async_to_sync inside thread pool worker
     if updates_by_device:
-        publish_updates_attribute_batch(updates_by_device)
+        publish_updates_attribute_batch_task.delay(dict(updates_by_device))
 
-    # Offload activity updates to Celery instead of blocking the thread pool
-    for device_id in device_updates.keys():
-        update_activity_device_task.delay(device_id)
+    # One Celery task for all devices instead of N separate dispatches
+    update_activity_devices_batch_task.delay(list(device_updates.keys()))
 
-    logger.debug(
-        "Batch attributes processed: %d devices, created=%d, updated=%d",
-        len(device_updates),
-        len(to_create),
-        len(to_update),
-    )
+    logger.debug("Batch attributes processed: %d devices, %d objects", len(device_updates), len(all_objects))
