@@ -26,13 +26,15 @@ class Command(BaseCommand):
             default=1,
         )
 
-    def handle(self, **kwargs):
+    def handle(self, **_):
         tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        self.fias_message()
+        for msg in self.generate_msg_attributes(tenant_id):
+            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
+            self.send_msg(msg)
 
-    def device_connectivity_simulation(self, msg):
+    def send_msg(self, msg, routing_key="/attributes"):
         ch = connect_to_rabbitmq()
-        send_to_rabbitmq(ch, msg, "/attributes")
+        send_to_rabbitmq(ch, msg, routing_key)
 
     @staticmethod
     def bulk_publish():
@@ -49,20 +51,17 @@ class Command(BaseCommand):
             send_to_rabbitmq(ch, msg, topic)
 
     def generate_msg_attributes(self, tenant_id):
-        print("Hello")
         devices = self.get_devices(tenant_id)
 
         for d in devices:
-            print(d, d.relations)
             if not d.relations:
                 continue
 
             msg = {
                 "sourceDeviceUUID": str(d.relations[0].from_id_id),
-                "data": {d.name: {"online": True}},
-                "topic": "v1/devices/connect",
+                "data": {"gatewayOnline": True},
+                "topic": "v1/devices/me/attributes",
             }
-            print(f"Generated message for device {d.name}: {str(msg)[:10]}")
             yield msg
 
     def fias_message(self, *args, **options):

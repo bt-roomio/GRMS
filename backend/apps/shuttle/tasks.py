@@ -131,6 +131,12 @@ def update_activity_device_task(device_id, connected=True):
 
 
 @shared_task
+def update_activity_devices_batch_task(device_ids: list, connected=True):
+    for device_id in device_ids:
+        update_activity_device(device_id, connected)
+
+
+@shared_task
 def publish_updates_batch_task(updates_by_device: dict[str, list[dict]]):
     publish_updates_batch(updates_by_device)
 
