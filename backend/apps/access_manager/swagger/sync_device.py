@@ -193,18 +193,15 @@ def sync_device_get_swagger():
                                 type=openapi.TYPE_BOOLEAN,
                                 description="Whether the device needs synchronization"
                             ),
-                            "guest_name": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                description="Guest name card connected with"
-                            ),
-                            "staff_name": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                description="Staff name card connected with"
-                            ),
                             "room": openapi.Schema(
                                 type=openapi.TYPE_OBJECT,
                                 additional_properties=True,
                                 description="Room data card device connected with"
+                            ),
+                            "message_params": openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                additional_properties=True,
+                                description="Pending sync message params (RPC payload context)"
                             ),
                             "public_spaces": openapi.Schema(
                                 type=openapi.TYPE_ARRAY,

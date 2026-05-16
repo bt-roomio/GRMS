@@ -129,34 +129,12 @@ class SyncDeviceSerializer(serializers.Serializer):
 
 class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data.update(
-            SimpleDeviceSerializer(
-                instance, context={**self.context, "exclude_room_obj": False}
-            ).data
+        data = SimpleDeviceSerializer(
+            instance, context={**self.context, "exclude_room_obj": False}
+        ).data
+        data["message_params"] = self.context.get("message_params_map", {}).get(
+            instance.id, {}
         )
-
-        holder = self.context.get("holder", {})
-        data["staff_name"] = (
-            holder.get("name") if holder.get("type") == "staff" else None
-        )
-        data["guest_name"] = (
-            holder.get("name") if holder.get("type") == "guest" else None
-        )
-
-        card_id = self.context.get("card_id")
-        if card_id:
-            sync_obj = NeedSyncDevice.objects.filter(
-                device=instance, card=card_id, need_sync=True
-            ).first()
-            data["message_params"] = (
-                (sync_obj.additional_info or {}).get("message_params", {})
-                if sync_obj
-                else {}
-            )
-        else:
-            data["message_params"] = {}
-
         return data
 
     class Meta:
@@ -165,15 +143,10 @@ class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
 
 
 class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
-    card_id = serializers.PrimaryKeyRelatedField(
-        queryset=Card.objects.all(), required=True
-    )
+    card_id = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), required=True)
     need_sync = serializers.BooleanField(required=False, allow_null=True, default=None)
-    sort_by = serializers.ListField(
-        child=serializers.ChoiceField(
+    sort_by = serializers.ListField(child=serializers.ChoiceField(
             choices=["-created_at", "created_at"], default="-created_at"
-        ),
-        required=False,
-    )
+        ), required=False)
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)

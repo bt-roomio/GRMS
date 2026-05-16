@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from access_manager.models import Card, GuestCard, NeedSyncDevice
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
@@ -114,7 +114,7 @@ class PrepareRpcRequestPwdTest(TestCase):
             is_pwd=True,
         )
         rpc_data = result["message"]["data"]["data"]
-        self.assertEqual(rpc_data["method"], "remove_pwd")
+        self.assertEqual(rpc_data["method"], "delete_pwd")
         self.assertEqual(rpc_data["params"], {"password": 67890})
 
     def test_pwd_envelope_keeps_top_level_shape(self):

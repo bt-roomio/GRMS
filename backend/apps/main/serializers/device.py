@@ -19,11 +19,18 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
     room_obj = serializers.SerializerMethodField()
     need_sync = serializers.SerializerMethodField()
 
+    @staticmethod
+    def _resolve_room(instance):
+        if instance.room_id:
+            return instance.room
+        return instance.as_door_lock_room if hasattr(instance, "as_door_lock_room") else None
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["device_profile"] = str(instance.device_profile_id)
         data["tenant"] = str(instance.tenant_id)
-        data["room"] = str(instance.room_id) if instance.room_id else None
+        room = self._resolve_room(instance)
+        data["room"] = str(room.id) if room else None
         return data
 
     def get_public_spaces(self, obj):
@@ -35,9 +42,8 @@ class SimpleDeviceSerializer(serializers.ModelSerializer):
 
         if self.context.get("exclude_room_obj", True):
             return None
-        if obj.room:
-            return SimpleRoomSerializer(obj.room).data
-        return None
+        room = self._resolve_room(obj)
+        return SimpleRoomSerializer(room).data if room else None
 
     def get_need_sync(self, obj):
         if hasattr(obj, "need_sync"):

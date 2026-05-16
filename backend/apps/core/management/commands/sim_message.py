@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 
-from core.management.mq.handle_fias import handle_fias
+from core.management.mq.fias import handle_fias
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device
 from shuttle.models import Relation
