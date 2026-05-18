@@ -341,7 +341,7 @@ CHANNEL_LAYERS = {
             "group_expiry": 86400,
             "channel_capacity": {
                 "http.request": 200,
-                "websocket.send*": 10,
+                "websocket.send*": 100,
             },
         },
     },

@@ -1,6 +1,8 @@
 import logging
 import time
 
+from celery import shared_task
+
 from access_manager.utilits.card_activate import (
     activate_guest_card,
     activate_staff_card,
@@ -11,8 +13,6 @@ from access_manager.utilits.card_deactivate import (
 )
 from access_manager.utilits.need_sync import need_sync
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
-from celery import shared_task
-
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
 from shuttle.models import RPCMessage
@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 10
 
 
-@shared_task(
-    autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60}
-)
+@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def send_rpc_request(
     device_id,
     cards,
@@ -34,9 +32,7 @@ def send_rpc_request(
     sync=False,
     is_pwd=False,
 ):
-    request_params = prepare_rpc_request(
-        device_id, cards, access, guest_id, staff_id, is_pwd=is_pwd
-    )
+    request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id, is_pwd=is_pwd)
 
     message = request_params.get("message")
     request_id = request_params.get("request_id")
@@ -60,24 +56,17 @@ def send_rpc_request(
         return fail_response
 
     channel = connect_to_rabbitmq()
+    logger.info(f"Message: {message}")
     send_to_rabbitmq(channel, message)
 
     start_time = time.time()
 
     while time.time() - start_time < TIMEOUT:
         has_message = RPCMessage.objects.filter(id=request_id, received=True).first()
-        is_success = (
-            str_to_dict(has_message.additional_info).get("success")
-            if has_message
-            else False
-        )
+        is_success = str_to_dict(has_message.additional_info).get("success") if has_message else False
         if has_message and access == 0:
             if is_success:
-                result = (
-                    deactivate_staff_card(staff)
-                    if staff_id
-                    else deactivate_guest_card(cards, device, sync)
-                )
+                result = deactivate_staff_card(staff) if staff_id else deactivate_guest_card(cards, device, sync)
                 result.update({"room": room_number, "public_spaces": public_spaces})
                 return result
             not sync and need_sync(

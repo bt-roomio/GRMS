@@ -1,16 +1,12 @@
-from access_manager.utilits.get_device_cards import get_device_cards
-from access_manager.utilits.prepare_cards import prepare_cards
-
 from rest_framework.generics import get_object_or_404
 
+from access_manager.utilits.get_device_cards import get_device_cards
+from access_manager.utilits.prepare_cards import prepare_cards
 from shuttle.models import Relation, RPCMessage
 
 
-def prepare_rpc_request(
-    device_id, cards, access, guest_id=None, staff_id=None, is_pwd=False
-):
+def prepare_rpc_request(device_id, cards, access, guest_id=None, staff_id=None, is_pwd=False):
     from access_manager.models import Staff
-
     from main.models import Device, Guest
 
     device = Device.objects.get(id=device_id)
@@ -19,17 +15,13 @@ def prepare_rpc_request(
     group = staff.group if staff else None
     room_number = device.room.number if device.room else None
     public_spaces = list(
-        device.device_public_spaces.select_related("public_space").values_list(
-            "public_space__name", flat=True
-        )
+        device.device_public_spaces.select_related("public_space").values_list("public_space__name", flat=True)
     )
 
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     relation_device_id = relation and relation.from_id.id
     gateway_or_none = Device.objects.gateway_or_none(device.id)
-    target_device_uuid = (gateway_or_none and str(gateway_or_none.id)) or str(
-        relation_device_id
-    )
+    target_device_uuid = (gateway_or_none and str(gateway_or_none.id)) or str(relation_device_id)
     rpc_message = RPCMessage.objects.create(additional_info={})
     request_id = rpc_message.id
 
