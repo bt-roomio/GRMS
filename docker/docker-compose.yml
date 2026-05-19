@@ -9,6 +9,8 @@ x-worker-depends: &worker-depends
     condition: service_healthy
   redis:
     condition: service_healthy
+  redis-broker:
+    condition: service_healthy
   rabbitmq:
     condition: service_healthy
   backend:
@@ -64,10 +66,33 @@ services:
       - --appendonly no
       - --save ""
       - --maxmemory 512mb
-      - --maxmemory-policy volatile-lru
+      - --maxmemory-policy allkeys-lru
     restart: always
     ports:
       - 6379:6379
+    networks:
+      - roomio_net
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  redis-broker:
+    image: redis:7-alpine
+    container_name: redis-broker
+    profiles: [core]
+    command:
+      - redis-server
+      - --appendonly yes
+      - --maxmemory 512mb
+      - --maxmemory-policy noeviction
+    restart: always
+    ports:
+      - 6380:6379
+    volumes:
+      - redis_broker_data:/data
     networks:
       - roomio_net
     logging: *default-logging
@@ -176,6 +201,8 @@ services:
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - IS_CELERY=1
       - PGAPPNAME=grms-celery-critical
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
     command: celery -A config worker -Q critical -l warning -c 2 --max-tasks-per-child=50
     volumes:
       - prom_mp:/prom_mp
@@ -190,6 +217,8 @@ services:
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - IS_CELERY=1
       - PGAPPNAME=grms-celery-default
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
     command: celery -A config worker -Q default -l warning -c 4 --max-tasks-per-child=100
     volumes:
       - prom_mp:/prom_mp
@@ -204,6 +233,8 @@ services:
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - IS_CELERY=1
       - PGAPPNAME=grms-celery-low
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
     command: celery -A config worker -Q low -l warning -c 1 --max-tasks-per-child=50
     volumes:
       - prom_mp:/prom_mp
@@ -218,6 +249,8 @@ services:
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - IS_CELERY=1
       - PGAPPNAME=grms-celery-beat
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
     command: celery -A config beat --loglevel=warning
     volumes:
       - prom_mp:/prom_mp
@@ -314,6 +347,7 @@ services:
     restart: always
     networks:
       - roomio_net
+      - nginx-proxy
     ports:
       - "80:80"
       - "443:443"
@@ -338,6 +372,7 @@ services:
       - proxy
     networks:
       - roomio_net
+      - nginx-proxy
 
   mqtt:
     restart: unless-stopped
@@ -402,6 +437,7 @@ volumes:
   pg_data:
   frontend:
   rabbitmq:
+  redis_broker_data:
   certs:
   dhparam:
   vhost:
@@ -413,3 +449,5 @@ volumes:
 networks:
   roomio_net:
     name: roomio_net
+  nginx-proxy:
+    external: true
