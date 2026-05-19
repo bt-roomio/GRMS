@@ -559,6 +559,11 @@ LOGGING = {
             "level": _LOG_LEVEL,
             "propagate": False,
         },
+        "pika": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
         "django.request": {
             "handlers": ["console"],
             "level": "ERROR",
