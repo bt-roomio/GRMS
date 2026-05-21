@@ -341,7 +341,7 @@ CHANNEL_LAYERS = {
             "group_expiry": 86400,
             "channel_capacity": {
                 "http.request": 200,
-                "websocket.send*": 10,
+                "websocket.send*": 100,
             },
         },
     },
@@ -557,6 +557,11 @@ LOGGING = {
         "security": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
+            "propagate": False,
+        },
+        "pika": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
         "django.request": {

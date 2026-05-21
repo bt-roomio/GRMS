@@ -1,7 +1,6 @@
-from access_manager.models import CardLog
-
 from rest_framework import serializers
 
+from access_manager.models import CardLog
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device
 
@@ -73,7 +72,9 @@ class CardLogFilterParams(ValidatorSerializer):
     user = serializers.CharField(required=False, help_text="User ID (can be guest or staff)")
     card_num = serializers.CharField(required=False, help_text="Card number to filter by")
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=["-event_ts", "event_ts"], default="-event_ts", required=False),
+        child=serializers.ChoiceField(
+            choices=["-event_ts", "event_ts", "-created_at", "created_at"], default="-created_at", required=False
+        ),
         required=False,
     )
     size = serializers.IntegerField(default=50, max_value=200)
