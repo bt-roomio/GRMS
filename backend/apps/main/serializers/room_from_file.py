@@ -11,8 +11,8 @@ from main.models import Device, Room, RoomType
 EXPORT_FORMATS = {"json", "xlsx"}
 EXPORT_COLUMNS = ["number", "floor", "block", "type", "devices", "door_lock_device"]
 
-REQUIRED_COLUMNS = {"number", "floor", "block", "devices", "type"}
-OPTIONAL_COLUMNS = {"label", "door_lock_device"}
+REQUIRED_COLUMNS = {"number", "floor", "block", "type"}
+OPTIONAL_COLUMNS = {"label", "door_lock_device", "devices"}
 ALLOWED_COLUMNS = REQUIRED_COLUMNS | OPTIONAL_COLUMNS
 
 
@@ -127,10 +127,6 @@ class RoomFromFileSerializer(serializers.Serializer):
         devices = []
         door_lock = None
 
-        if not device_names:
-            errors.append({"row": idx, "message": "Devices field is empty."})
-            return devices, door_lock, errors
-
         for name in device_names:
             try:
                 device = Device.objects.get(tenant=tenant, name=name, is_active=True)
@@ -232,10 +228,6 @@ class RoomFromFileSerializer(serializers.Serializer):
 
             device_names = _extract_device_names(row.get("devices"))
             door_lock_name = _cell_to_str(row.get("door_lock_device"))
-
-            if not device_names:
-                errors.append({"row": idx, "type": "room"})
-                continue
 
             existing_room = Room.objects.filter(
                 number=number,
