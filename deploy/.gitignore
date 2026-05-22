@@ -1,0 +1,17 @@
+# Секреты — никогда не коммитить
+.env
+.env.*
+!.env.nodered.example
+
+# Логи mqtt (bind mount)
+mqtt_logs/
+
+# Данные и секреты мониторинга
+monitoring/.env
+monitoring/grafana/data/
+monitoring/prometheus/data/
+monitoring/targets/blackbox-https.yml
+
+# nginx vhost.d — серверно-специфичные конфиги (только *.example в git)
+nginx/vhost.d/*
+!nginx/vhost.d/*.example

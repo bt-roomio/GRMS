@@ -1,24 +1,29 @@
-.idea
-.venv
-venv
+# Python
 *.pyc
-/static
-media
+__pycache__/
+.venv/
+venv/
+
+# Django
+/static/
+media/
+uploads/
+files/
+data/
+*.sqlite3
+*.db
+*.csv
+
+# Secrets
+.env
 config/settings_dev.py
 config/settings_prod.py
-__pycache__
-.DS_Store
-.vscode/settings.json
-.vscode/launch.json
-.vscode/tags
+
+# Tests
 pytest.ini
-data
-uploads
-.env
-vandelay-py.js
-.envrc
-files
-logs
-*.log
-*.json
+
+# Project specific
 /services_*
+vandelay-py.js
+mqtt_logs/
+celerybeat-schedule

@@ -1,0 +1,22 @@
+groups:
+- name: rabbitmq_alerts
+  rules:
+    - alert: RabbitmqQueueBacklog
+      expr: rabbitmq_queue_messages_ready > 1000
+      for: 5m
+      labels:
+        severity: warning
+        team: infrastructure
+      annotations:
+        summary: "RabbitMQ queue {{ $labels.queue }} has high message backlog"
+        description: "Queue {{ $labels.queue }} has {{ $value }} ready messages. This may indicate processing issues."
+
+    - alert: RabbitmqHighUnackedMessages
+      expr: rabbitmq_queue_messages_unacked > 1000
+      for: 5m
+      labels:
+        severity: warning
+        team: infrastructure
+      annotations:
+        summary: "RabbitMQ queue {{ $labels.queue }} has many unacked messages"
+        description: "Queue {{ $labels.queue }} has {{ $value }} unacknowledged messages."

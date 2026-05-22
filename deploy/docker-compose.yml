@@ -1,0 +1,504 @@
+# =============================================================================
+# roomio GRMS — docker-compose.yml
+# =============================================================================
+# Profiles:
+#   infra     — postgres, pgbouncer, redis, redis-broker, rabbitmq
+#   app       — backend (django), celery-*, mq-async, mews-websocket, pms-handler
+#   front     — frontend, frontend-nginx
+#   proxy     — nginx-proxy, letsencrypt
+#   nodered   — nodered
+#
+# Запуск:
+#   make up-infra       # only infrastructure
+#   make up-app         # infrastructure + application
+#   make up-all         # all
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-file: "5"
+    max-size: "50m"
+
+# --- A common anchor for all Django services ---
+x-django-common: &django-common
+  image: registry.gitlab.com/yroomio/grms:${BACKEND_IMAGE_TAG:-dev}
+  env_file: .env
+  environment:
+    - UV_NO_SYNC=1
+  networks:
+    - roomio_net
+  restart: always
+  logging: *default-logging
+  depends_on:
+    pgbouncer:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+
+x-worker-depends: &worker-depends
+  pgbouncer:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  redis-broker:
+    condition: service_healthy
+  rabbitmq:
+    condition: service_healthy
+  backend:
+    condition: service_healthy
+
+x-celery-env: &celery-env
+  POSTGRES_HOST: pgbouncer
+  PROMETHEUS_MULTIPROC_DIR: /prom_mp
+  IS_CELERY: "1"
+  CELERY_BROKER_URL: redis://redis-broker:6379/0
+  CELERY_RESULT_BACKEND: redis://redis-broker:6379/1
+
+x-celery-volumes: &celery-volumes
+  - prom_mp:/prom_mp
+
+# =============================================================================
+# SERVICES
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # INFRA
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: timescale/timescaledb:2.21.0-pg16
+    container_name: postgres
+    profiles: [infra]
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    expose:
+      - "5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - roomio_net
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.25.1-p0
+    container_name: pgbouncer
+    profiles: [infra]
+    restart: always
+    environment:
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 50
+      MIN_POOL_SIZE: 10
+      RESERVE_POOL_SIZE: 10
+      SERVER_IDLE_TIMEOUT: 600
+      LOG_CONNECTIONS: 0
+      LOG_DISCONNECTIONS: 0
+      AUTH_TYPE: scram-sha-256
+      ADMIN_USERS: ${POSTGRES_USER}
+      STATS_USERS: ${POSTGRES_USER}
+    networks:
+      - roomio_net
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    profiles: [infra]
+    restart: always
+    command:
+      - redis-server
+      - --appendonly no
+      - --save ""
+      - --maxmemory 512mb
+      - --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
+    networks:
+      - roomio_net
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  redis-broker:
+    image: redis:7-alpine
+    container_name: redis-broker
+    profiles: [infra]
+    restart: always
+    command:
+      - redis-server
+      - --appendonly yes
+      - --maxmemory 512mb
+      - --maxmemory-policy noeviction
+    ports:
+      - "${REDIS_BROKER_EXTERNAL_PORT:-6380}:6379"
+    volumes:
+      - redis_broker_data:/data
+    networks:
+      - roomio_net
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    profiles: [infra]
+    restart: always
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_NODENAME: rabbit@rabbitmq
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: ${RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS:-}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+      - "5672"
+    networks:
+      - roomio_net
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # APP (Django + Celery workers)
+  # ---------------------------------------------------------------------------
+
+  backend:
+    <<: *django-common
+    container_name: django
+    hostname: django
+    profiles: [app]
+    expose:
+      - "8000"
+    environment:
+      - UV_NO_SYNC=1
+      - POSTGRES_HOST=pgbouncer
+      - PGAPPNAME=grms-backend
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - VIRTUAL_HOST=${API_VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${API_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    command: ["/app/entrypoint.sh"]
+    volumes:
+      - static_volume:/app/static/
+      - media_volume:/app/media/
+      - prom_mp:/prom_mp
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8000), timeout=5); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  celery-critical:
+    <<: *django-common
+    container_name: celery-critical
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      <<: *celery-env
+      PGAPPNAME: grms-celery-critical
+    command: celery -A config worker -Q critical -l warning -c 2 --max-tasks-per-child=50
+    volumes: *celery-volumes
+
+  celery-default:
+    <<: *django-common
+    container_name: celery-default
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      <<: *celery-env
+      PGAPPNAME: grms-celery-default
+    command: celery -A config worker -Q default -l warning -c 4 --max-tasks-per-child=100
+    volumes: *celery-volumes
+
+  celery-low:
+    <<: *django-common
+    container_name: celery-low
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      <<: *celery-env
+      PGAPPNAME: grms-celery-low
+    command: celery -A config worker -Q low -l warning -c 1 --max-tasks-per-child=50
+    volumes: *celery-volumes
+
+  celery-beat:
+    <<: *django-common
+    container_name: celery-beat
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      <<: *celery-env
+      PGAPPNAME: grms-celery-beat
+    command: celery -A config beat --loglevel=warning
+    volumes: *celery-volumes
+
+  mq-async:
+    <<: *django-common
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      - UV_NO_SYNC=1
+      - POSTGRES_HOST=pgbouncer
+      - PGAPPNAME=grms-mq-async
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+    command: python apps/core/management/commands/mq_async.py
+    volumes: *celery-volumes
+    deploy:
+      replicas: 4
+
+  mews-websocket:
+    <<: *django-common
+    container_name: mews-websocket
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      - UV_NO_SYNC=1
+      - POSTGRES_HOST=pgbouncer
+      - PGAPPNAME=grms-mews-websocket
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+    command: python manage.py mews_websocket
+    volumes: *celery-volumes
+
+  pms-handler:
+    <<: *django-common
+    container_name: pms-handler
+    profiles: [app]
+    depends_on: *worker-depends
+    environment:
+      - UV_NO_SYNC=1
+      - POSTGRES_HOST=pgbouncer
+      - PGAPPNAME=grms-pms-handler
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+    command: python manage.py pms_handler
+    volumes: *celery-volumes
+
+  # ---------------------------------------------------------------------------
+  # IOT
+  # ---------------------------------------------------------------------------
+
+  mqtt:
+    image: registry.gitlab.com/grms1/mqtt-broker
+    container_name: mqtt-broker
+    hostname: mqtt-broker
+    profiles: [iot]
+    restart: unless-stopped
+    ports:
+      - "${MQTT_EXTERNAL_PORT:-9000}:9999"
+    command: python MqttTransportHandler.py
+    volumes:
+      - mqtt_logs:/mqtt/logs
+    logging: *default-logging
+    environment:
+      GRMS_PROTOCOL: http
+      GRMS_HOST: django
+      GRMS_PORT: "8000"
+      GRMS_PROTOCOL1: https
+      GRMS_HOST1: ${API_VIRTUAL_HOST}
+      GRMS_PORT1: "443"
+      QUEUE_TYPE: rabbitMQ
+      QUEUE_HOST: rabbitmq
+      QUEUE_PORT: "5672"
+      QUEUE_LOGIN: ${RABBITMQ_DEFAULT_USER}
+      QUEUE_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      MAX_LOG_DAYS: "7"
+      LOGGING_LEVEL: ${MQTT_LOGGING_LEVEL:-WARNING}
+    networks:
+      - roomio_net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND
+  # ---------------------------------------------------------------------------
+
+  frontend:
+    image: registry.gitlab.com/grms1/grms_front:${FRONT_IMAGE_TAG:-latest}
+    container_name: vue-builder
+    profiles: [front]
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+      - VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
+      - VITE_WS_BASE_URL_V2=${VITE_WS_BASE_URL_V2}
+    command: >
+      sh -c "yarn && yarn build && cp -r dist/* /frontend"
+    volumes:
+      - frontend_dist:/frontend
+    networks:
+      - roomio_net
+
+  frontend-nginx:
+    image: nginx:1.27-alpine
+    container_name: frontend-nginx
+    profiles: [front]
+    restart: always
+    logging: *default-logging
+    expose:
+      - "80"
+    volumes:
+      - frontend_dist:/usr/share/nginx/html:ro
+      - ./nginx/frontend.conf:/etc/nginx/conf.d/default.conf:ro
+    environment:
+      - VIRTUAL_PORT=80
+      - VIRTUAL_HOST=${FRONTEND_VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${FRONTEND_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - roomio_net
+    # Ждём ЗАВЕРШЕНИЯ сборки (не просто старта контейнера)
+    depends_on:
+      frontend:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # PROXY
+  # ---------------------------------------------------------------------------
+
+  proxy:
+    image: jwilder/nginx-proxy:latest
+    container_name: proxy
+    profiles: [proxy]
+    restart: always
+    logging: *default-logging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - html:/usr/share/nginx/html
+      - dhparam:/etc/nginx/dhparam
+      - vhost:/etc/nginx/vhost.d
+      - certs:/etc/nginx/certs
+      - /run/docker.sock:/tmp/docker.sock:ro
+      - static_volume:/app/static/
+      - media_volume:/app/media/
+      - ./nginx/vhost.d:/etc/nginx/vhost.d:ro
+    networks:
+      - roomio_net
+      - proxy_net
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    container_name: letsencrypt
+    profiles: [proxy]
+    restart: always
+    logging: *default-logging
+    environment:
+      NGINX_PROXY_CONTAINER: proxy
+      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+    volumes:
+      - html:/usr/share/nginx/html
+      - dhparam:/etc/nginx/dhparam
+      - vhost:/etc/nginx/vhost.d
+      - certs:/etc/nginx/certs
+      - /run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - proxy
+    networks:
+      - roomio_net
+      - proxy_net
+
+  # ---------------------------------------------------------------------------
+  # NODE-RED
+  # ---------------------------------------------------------------------------
+
+  nodered:
+    image: registry.gitlab.com/grms1/node-red-nodes:latest
+    container_name: nodered
+    profiles: [nodered]
+    restart: always
+    logging: *default-logging
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    ports:
+      - "${NODERED_EXTERNAL_PORT:-1880}:1880"
+    environment:
+      - VIRTUAL_HOST=${NODERED_VIRTUAL_HOST}
+      - VIRTUAL_PORT=1880
+      - LETSENCRYPT_HOST=${NODERED_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - API_URL=http://django:8000
+      - TENANT_ID=${NODERED_TENANT_ID}
+    volumes:
+      - nodered_data:/data
+    networks:
+      - roomio_net
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  pg_data:
+  redis_broker_data:
+  rabbitmq_data:
+  static_volume:
+  media_volume:
+  frontend_dist:
+  mqtt_logs:
+  nodered_data:
+  prom_mp:
+  backend_venv:
+  # nginx-proxy volumes
+  certs:
+  dhparam:
+  vhost:
+  html:
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+
+networks:
+  roomio_net:
+    name: roomio_net
+  proxy_net:
+    name: proxy_net

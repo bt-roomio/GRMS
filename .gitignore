@@ -1,34 +1,21 @@
+# IDE
 .idea
-.venv
-venv
-*.pyc
-/static
-media
-config/settings_dev.py
-config/settings_prod.py
-__pycache__
-.DS_Store
 .vscode/settings.json
 .vscode/launch.json
 .vscode/tags
-pytest.ini
-data
-uploads
-*.env
-!prod.env.example
-vandelay-py.js
-.envrc
-files
-logs
-mqtt_logs
-logs
-*.log
-*.csv
-*.sqlite3
-*.db
-CLAUDE.md
 
-claude-memory-compiler
+# OS
+.DS_Store
+
+# Claude Code
+CLAUDE.md
 .claude
 .planning
-/services_*
+claude-memory-compiler
+
+# Shell
+.envrc
+
+# Logs
+*.log
+logs/
