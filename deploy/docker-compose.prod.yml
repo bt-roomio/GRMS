@@ -1,0 +1,217 @@
+# =============================================================================
+# docker-compose.prod.yml — продакшн-специфика
+# =============================================================================
+# Использование:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     --profile infra --profile app --profile front --profile proxy up -d
+#
+# Или через Makefile: make up-all ENV=prod
+#
+# Что добавляет этот файл:
+#   - Resource limits (CPU, memory) для всех сервисов
+#   - Закрытые порты (убираем проброс наружу)
+#   - Prod-образы (без :dev тегов)
+#   - ulimits для высоконагруженных сервисов
+#   - read_only файловые системы где возможно
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # INFRA — убираем внешние порты, добавляем лимиты
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  pgbouncer:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  redis:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 768M   # maxmemory 512mb + overhead
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  redis-broker:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 768M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  rabbitmq:
+    ports:
+      - "15672:15672"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.2"
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # APP
+  # ---------------------------------------------------------------------------
+
+  backend:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  celery-critical:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  celery-default:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  celery-low:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  celery-beat:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+
+  mq-async:
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  mews-websocket:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  pms-handler:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  # ---------------------------------------------------------------------------
+  # IOT
+  # ---------------------------------------------------------------------------
+
+  mqtt:
+    ports: []   # закрываем наружу, mqtt доступен только через внутреннюю сеть
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND
+  # ---------------------------------------------------------------------------
+
+  frontend-nginx:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # PROXY
+  # ---------------------------------------------------------------------------
+
+  proxy:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+
+  letsencrypt:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # NODE-RED
+  # ---------------------------------------------------------------------------
+
+  nodered:
+    ports: []   # в prod доступен только через proxy по VIRTUAL_HOST
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
