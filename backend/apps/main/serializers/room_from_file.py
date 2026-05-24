@@ -7,6 +7,7 @@ from openpyxl import load_workbook
 from rest_framework import serializers
 
 from main.models import Device, Room, RoomType
+from shuttle.models import AttributeKv
 
 EXPORT_FORMATS = {"json", "xlsx"}
 EXPORT_COLUMNS = ["number", "floor", "block", "type", "devices", "door_lock_device"]
@@ -301,6 +302,9 @@ class RoomFromFileSerializer(serializers.Serializer):
                 for device in entry["devices"]:
                     device.room = room
                     device.save(update_fields=["room"])
+
+                if entry["devices"]:
+                    AttributeKv.objects.update_or_create_or_delete(entry["devices"], room)
 
         return {"success": True, "message": "Import completed successfully !"}
 
