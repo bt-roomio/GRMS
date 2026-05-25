@@ -80,6 +80,8 @@ services:
   # ---------------------------------------------------------------------------
 
   backend:
+    environment:
+      - GUNICORN_WORKERS=4
     deploy:
       resources:
         limits:
