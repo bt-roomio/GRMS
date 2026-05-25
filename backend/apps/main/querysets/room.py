@@ -1,6 +1,5 @@
 import logging
 
-from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import (
     Aggregate,
     BooleanField,
@@ -20,6 +19,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Cast, Coalesce
 
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 

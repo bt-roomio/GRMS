@@ -1,8 +1,16 @@
 # Python
 *.pyc
+*.pyo
+*.pyd
 __pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 .venv/
 venv/
+pip-wheel-metadata/
 
 # Django
 /static/
@@ -16,14 +24,36 @@ data/
 
 # Secrets
 .env
+.env.*
+!.env.example
 config/settings_dev.py
 config/settings_prod.py
 
-# Tests
+# Logs
+*.log
+logs/
+mqtt_logs/
+
+# Tests & coverage
 pytest.ini
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Type checkers & linters
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # Project specific
 /services_*
 vandelay-py.js
-mqtt_logs/
 celerybeat-schedule
