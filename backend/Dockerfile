@@ -18,14 +18,10 @@ COPY . .
 # Установка проекта + создание пользователя + права
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --frozen --no-dev && \
-  groupadd -r app && useradd -r -g app -m -d /home/app app && \
   mkdir -p /prom_mp && \
-  chown -R app:app /app /prom_mp && \
   chmod +x /app/entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH"
-
-USER app
 
 EXPOSE 8000
 

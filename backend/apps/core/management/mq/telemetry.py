@@ -4,17 +4,17 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import DefaultDict
 
 import redis
-from access_manager.models import CardLog
 from django.conf import settings
 
-from core.management.mq.get_device import get_sub_device
+from access_manager.models import CardLog
 from core.management.mq.fias import handle_fias
+from core.management.mq.get_device import get_sub_device
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
 from core.utils.handle_card_event import handle_card_event
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
-from shuttle.tasks import publish_updates_batch_task, update_activity_devices_batch_task, update_activity_device_task
+from shuttle.tasks import publish_updates_batch_task, update_activity_device_task, update_activity_devices_batch_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -37,13 +37,13 @@ class TsKvDictionaryType(DefaultDict):
 
 def get_tskv_dict(key):
     """Get TsKvDictionary with 2-tier caching: memory → Redis → database"""
-    logger.debug("Getting ts_kv_dictionary: %s", key)
+    logger.info("Getting ts_kv_dictionary: %s", key)
 
     # Tier 1: Check in-memory cache
     current_time = get_mil_sec() // 1000
     cache_entry = _TSKV_DICT_MEMORY_CACHE.get(key)
     if cache_entry and (current_time - cache_entry["cached_at"]) < _TSKV_DICT_CACHE_TTL:
-        logger.debug("TsKvDictionary found in memory cache: %s", key)
+        logger.info("TsKvDictionary found in memory cache: %s", key)
         return cache_entry["data"]
 
     # Tier 2: Check Redis cache
@@ -52,7 +52,7 @@ def get_tskv_dict(key):
     cached_obj = cached_raw.decode("utf-8") if isinstance(cached_raw, bytes) else None
 
     if cached_obj:
-        logger.debug("TsKvDictionary found in Redis cache: %s", cached_obj)
+        logger.info("TsKvDictionary found in Redis cache: %s", cached_obj)
         data = json.loads(cached_obj)
         # Populate memory cache from Redis hit
         _TSKV_DICT_MEMORY_CACHE[key] = {"data": data, "cached_at": current_time}
@@ -83,7 +83,7 @@ def sync_telemetry(device, topic, payload):
 
     device_id = device.get("id")
     entries = []
-    logger.debug(
+    logger.info(
         "Sync telemetry: device=%s topic=%s entries=%s",
         device_id,
         topic,
@@ -162,11 +162,22 @@ def sync_telemetry(device, topic, payload):
         except Exception as e:
             logger.exception("Failed to create CardLog entries: %s", e)
 
+    logger.info(
+        "sync_telemetry done: device=%s historical=%d latest=%d updates_keys=%s",
+        device_id,
+        len(historical_objs),
+        len(latest_objs),
+        list(updates_by_device.keys()),
+    )
+
     update_activity_device_task.delay(device_id)
 
     # Пакетная отправка всем подписанным WebSocket-клиентам
     if updates_by_device:
+        logger.info("Dispatching publish_updates_batch_task for device=%s", device_id)
         publish_updates_batch_task.delay(updates_by_device)
+    else:
+        logger.info("No updates to publish for device=%s", device_id)
 
 
 def sync_telemetry_batch(batch: list[tuple]):
@@ -231,9 +242,10 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     # Batch publish WebSocket updates
     if updates_by_device:
+        logger.info("Dispatching publish_updates_batch_task: devices=%s", list(updates_by_device.keys()))
         publish_updates_batch_task.delay(updates_by_device)
 
-    logger.debug(
+    logger.info(
         "Batch telemetry processed: %d messages, %d historical, %d latest",
         len(batch),
         len(historical_objs),
