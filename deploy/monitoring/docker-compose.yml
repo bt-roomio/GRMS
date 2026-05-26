@@ -21,13 +21,8 @@ services:
     container_name: prometheus
     restart: always
     logging: *default-logging
-    expose:
-      - "9090"
-    environment:
-      - VIRTUAL_HOST=${PROMETHEUS_VIRTUAL_HOST:-prometheus.domain.com}
-      - VIRTUAL_PORT=9090
-      - LETSENCRYPT_HOST=${PROMETHEUS_VIRTUAL_HOST:-prometheus.domain.com}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    ports:
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./rules:/etc/prometheus/rules:ro
@@ -102,7 +97,9 @@ services:
       - sh
       - -c
       - |
-        envsubst < /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml
+        awk -v tok="${TELEGRAM_BOT_TOKEN}" -v cid="${TELEGRAM_CHAT_ID}" \
+          '{gsub(/[$$][{]TELEGRAM_BOT_TOKEN[}]/, tok); gsub(/[$$][{]TELEGRAM_CHAT_ID[}]/, cid); print}' \
+          /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml
         exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
     networks:
       - roomio_net
@@ -114,10 +111,19 @@ services:
     logging: *default-logging
     expose:
       - "9115"
+    environment:
+      - BLACKBOX_LOGIN_EMAIL=${BLACKBOX_LOGIN_EMAIL}
+      - BLACKBOX_LOGIN_PASSWORD=${BLACKBOX_LOGIN_PASSWORD}
     volumes:
-      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
-    command:
-      - --config.file=/etc/blackbox_exporter/config.yml
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml.tmpl:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        awk -v email="${BLACKBOX_LOGIN_EMAIL}" -v pass="${BLACKBOX_LOGIN_PASSWORD}" \
+          '{gsub(/[$$][{]BLACKBOX_LOGIN_EMAIL[}]/, email); gsub(/[$$][{]BLACKBOX_LOGIN_PASSWORD[}]/, pass); print}' \
+          /etc/blackbox_exporter/config.yml.tmpl > /tmp/config.yml
+        exec /bin/blackbox_exporter --config.file=/tmp/config.yml
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9115"]
       interval: 30s
