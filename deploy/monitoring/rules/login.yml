@@ -8,4 +8,4 @@ groups:
           severity: critical
         annotations:
           summary: "Login check failed"
-          description: "POST {{ $labels.instance }} is failing for 2 minutes."
+          description: "POST users/access-token/ is failing for 2 minutes."

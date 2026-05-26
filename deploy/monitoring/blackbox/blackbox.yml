@@ -21,7 +21,7 @@ modules:
       method: POST
       headers:
         Content-Type: application/json
-      body: '{"email":"change_me@domain.com","password":"change_me"}'
+      body: '{"email":"${BLACKBOX_LOGIN_EMAIL}","password":"${BLACKBOX_LOGIN_PASSWORD}"}'
       valid_status_codes: [200]
       fail_if_body_matches_regexp:
         - '"invalid"'
