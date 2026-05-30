@@ -2,7 +2,6 @@ import json
 import logging
 
 from access_manager.utilits.check_card_assignment import get_card_holder
-
 from core.management.mq.fias.exceptions import LookupFailure
 from core.management.mq.fias.utils.guests import resolve_card_uid
 from core.management.mq.fias.utils.payloads import build_card_holder_details

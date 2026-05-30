@@ -1,13 +1,12 @@
 import logging
 
-from main.models import Guest, Room
-
 from core.management.mq.fias.exceptions import LookupFailure
 from core.management.mq.fias.utils.guests import resolve_entities
 from core.management.mq.fias.utils.rpc import (
     send_card_operation_confirmation,
     send_rpc_to_guest_devices,
 )
+from main.models import Guest, Room
 
 logger = logging.getLogger(__name__)
 
