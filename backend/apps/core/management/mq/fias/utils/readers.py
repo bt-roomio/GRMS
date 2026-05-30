@@ -1,9 +1,8 @@
 import time
 
-from shuttle.models import AttributeKv
-
 from core.management.mq.fias.constants import KEYREQUEST_COLLECTION_TIMEOUT
 from core.management.mq.fias.exceptions import LookupFailure
+from shuttle.models import AttributeKv
 
 
 def _read_card_uid(reader_device_id):

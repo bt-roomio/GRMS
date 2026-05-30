@@ -1,7 +1,6 @@
 import logging
 
 from access_manager.models import GuestCard
-
 from core.management.mq.fias.exceptions import LookupFailure
 from core.management.mq.fias.utils.guests import resolve_guests_for_keydelete
 from core.management.mq.fias.utils.rpc import (
@@ -28,7 +27,9 @@ def handle_keydelete(data, device):
             reservation_number,
             e,
         )
-        send_card_operation_confirmation(device, operation_id, status="UR", text=str(e))
+        send_card_operation_confirmation(
+            device, operation_id, status="OK", text="No cards to delete"
+        )
         return
 
     guest_cards = list(
@@ -48,23 +49,14 @@ def handle_keydelete(data, device):
         room_name,
         len(guest_cards),
     )
-    errors = _revoke_guest_cards(guest_cards)
-    if errors:
-        send_card_operation_confirmation(
-            device,
-            operation_id,
-            status="UR",
-            text=f"Failed to delete cards: {'; '.join(errors)}",
-        )
-        return
+    _revoke_guest_cards(guest_cards)
 
     send_card_operation_confirmation(
-        device, operation_id, status="OK", text="Guest cards deleted successfully"
+        device, operation_id, status="OK", text="Delete request accepted"
     )
 
 
 def _revoke_guest_cards(guest_cards):
-    errors = []
     for gc in guest_cards:
         uid = gc.card.number
         success, text = send_rpc_to_guest_devices(gc.guest, uid, access=0)
@@ -75,5 +67,3 @@ def _revoke_guest_cards(guest_cards):
                 gc.guest.id,
                 text,
             )
-            errors.append(f"{uid}: {text}")
-    return errors
