@@ -1,7 +1,6 @@
 import logging
 
 from access_manager.utilits.check_card_assignment import get_card_assignments
-
 from core.management.mq.fias.constants import KEYREQUEST_COLLECTION_TIMEOUT
 from core.management.mq.fias.exceptions import LookupFailure
 from core.management.mq.fias.utils.cards import parse_key_count

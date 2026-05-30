@@ -1,7 +1,6 @@
 import logging
 
 from access_manager.tasks.send_rpc import send_rpc_request
-
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device
 from main.utils.access_context import get_guest_access_context
