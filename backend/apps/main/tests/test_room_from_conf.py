@@ -52,4 +52,4 @@ class RoomFromConfTestCase(BaseTestCase):
 
         # Device should now be assigned to room 101
         self.device.refresh_from_db()
-        self.assertEqual(self.device.room.number, '101')
+        self.assertEqual(self.device.room.number, "101")

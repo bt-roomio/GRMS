@@ -1,9 +1,8 @@
 import logging
 
-from access_manager.tasks.send_rpc import send_rpc_request
-
 from rest_framework import serializers
 
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context

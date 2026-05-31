@@ -60,8 +60,7 @@ class AdminTenantUsersListTest(BaseTestCase):
 
     def test_create_with_send_activation_mail(self):
         response = self.post(
-            reverse("admin_panel:admin-tenant-users", kwargs={"tenant_id": TENANT_ID})
-            + "?send_activation_mail=true",
+            reverse("admin_panel:admin-tenant-users", kwargs={"tenant_id": TENANT_ID}) + "?send_activation_mail=true",
             {
                 "email": "mailuser@hotel.com",
                 "roles": [TENANT_ROLE_ID],

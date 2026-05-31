@@ -1,7 +1,6 @@
-from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
-
 from rest_framework import serializers
 
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, PublicSpace
 from main.serializers.device import SimpleDeviceSerializer
@@ -51,20 +50,12 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
     def _get_active_staff_card(self, obj):
         if not obj.card_id:
             return None
-        return (
-            StaffCard.objects.select_related("staff")
-            .filter(card_id=obj.card_id, is_active=True)
-            .first()
-        )
+        return StaffCard.objects.select_related("staff").filter(card_id=obj.card_id, is_active=True).first()
 
     def _get_active_guest_card(self, obj):
         if not obj.card_id:
             return None
-        return (
-            GuestCard.objects.select_related("guest")
-            .filter(card_id=obj.card_id, is_active=True)
-            .first()
-        )
+        return GuestCard.objects.select_related("guest").filter(card_id=obj.card_id, is_active=True).first()
 
     def get_user_name(self, obj):
         staff_card = self._get_active_staff_card(obj)
@@ -88,11 +79,7 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
         if not obj.device_id:
             return None
 
-        public_space = (
-            PublicSpace.objects.filter(device_public_spaces__device_id=obj.device_id)
-            .only("name")
-            .first()
-        )
+        public_space = PublicSpace.objects.filter(device_public_spaces__device_id=obj.device_id).only("name").first()
         return f"Public Space: {public_space.name}" if public_space else None
 
     def get_room(self, obj):
@@ -102,9 +89,7 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
 
 class NeedSyncDeviceFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(
-            choices=["-created_at", "created_at"], required=False
-        ),
+        child=serializers.ChoiceField(choices=["-created_at", "created_at"], required=False),
         required=False,
         default=["-created_at"],
     )
@@ -129,12 +114,8 @@ class SyncDeviceSerializer(serializers.Serializer):
 
 class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
-        data = SimpleDeviceSerializer(
-            instance, context={**self.context, "exclude_room_obj": False}
-        ).data
-        data["message_params"] = self.context.get("message_params_map", {}).get(
-            instance.id, {}
-        )
+        data = SimpleDeviceSerializer(instance, context={**self.context, "exclude_room_obj": False}).data
+        data["message_params"] = self.context.get("message_params_map", {}).get(instance.id, {})
         return data
 
     class Meta:
@@ -145,8 +126,8 @@ class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
 class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
     card_id = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), required=True)
     need_sync = serializers.BooleanField(required=False, allow_null=True, default=None)
-    sort_by = serializers.ListField(child=serializers.ChoiceField(
-            choices=["-created_at", "created_at"], default="-created_at"
-        ), required=False)
+    sort_by = serializers.ListField(
+        child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at"), required=False
+    )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)

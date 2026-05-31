@@ -1,7 +1,6 @@
-from access_manager.models import GuestCard
-
 from rest_framework import serializers
 
+from access_manager.models import GuestCard
 from core.utils.serializers import ValidatorSerializer
 from main.models import Room
 
@@ -18,7 +17,17 @@ class GuestCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GuestCard
-        fields = ["card_id", "card_number", "is_pwd", "guest_name", "guest_check_in", "guest_id", "need_to_sync", "is_blocked", "created_at"]
+        fields = [
+            "card_id",
+            "card_number",
+            "is_pwd",
+            "guest_name",
+            "guest_check_in",
+            "guest_id",
+            "need_to_sync",
+            "is_blocked",
+            "created_at",
+        ]
 
     def get_guest_name(self, obj):
         guest = obj.guest

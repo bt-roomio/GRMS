@@ -1,9 +1,9 @@
 import uuid
 from unittest.mock import call, patch
 
-from access_manager.models import Group, GroupPublicSpace, GroupRoom
 from django.urls import reverse
 
+from access_manager.models import Group, GroupPublicSpace, GroupRoom
 from core.tests.base import BaseTestCase
 
 
@@ -48,39 +48,29 @@ class GroupViewTest(BaseTestCase):
 
     def test_list_groups_with_search(self):
         """Test listing groups with search"""
-        response = self.client.get(self.list_url, {
-            "search_field": "name",
-            "search_value": "Housekeeping"
-        })
+        response = self.client.get(self.list_url, {"search_field": "name", "search_value": "Housekeeping"})
 
         self.assertEqual(response.status_code, 200)
         self.assertGreater(response.data["count"], 0)
 
     def test_list_groups_with_sorting(self):
         """Test listing groups with sorting"""
-        response = self.client.get(self.list_url, {
-            "sort_by": ["-name"]
-        })
+        response = self.client.get(self.list_url, {"sort_by": ["-name"]})
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("results", response.data)
-        response = self.client.get(self.list_url, {
-            "sort_by": ["name"]
-        })
+        response = self.client.get(self.list_url, {"sort_by": ["name"]})
         self.assertEqual(response.status_code, 200)
 
     def test_list_groups_with_pagination(self):
         """Test listing groups with pagination"""
-        response = self.client.get(self.list_url, {
-            "page": 1,
-            "size": 1
-        })
+        response = self.client.get(self.list_url, {"page": 1, "size": 1})
 
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(response.data["results"]), 1)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_create_group_success(self, mock_public_space_task, mock_room_task):
         """Test successful group creation"""
         mock_room_task.return_value = None
@@ -93,7 +83,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": ["df77f910-2dcd-45cf-b6be-054c744561a7"],  # Room 101
-            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]  # Lobby
+            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],  # Lobby
         }
 
         response = self.client.post(self.list_url, payload, format="json")
@@ -104,16 +94,12 @@ class GroupViewTest(BaseTestCase):
 
         group_id = response.data["id"]
         self.assertTrue(
-            GroupRoom.objects.filter(
-                group_id=group_id,
-                room_id="df77f910-2dcd-45cf-b6be-054c744561a7"
-            ).exists()
+            GroupRoom.objects.filter(group_id=group_id, room_id="df77f910-2dcd-45cf-b6be-054c744561a7").exists()
         )
 
         self.assertTrue(
             GroupPublicSpace.objects.filter(
-                group_id=group_id,
-                public_space_id="ad09aa20-77b8-457a-bfc4-5dee69790243"
+                group_id=group_id, public_space_id="ad09aa20-77b8-457a-bfc4-5dee69790243"
             ).exists()
         )
 
@@ -146,8 +132,8 @@ class GroupViewTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_create_group_without_rooms_and_spaces(self, mock_public_space_task, mock_room_task):
         """Test creating group without rooms and public spaces"""
         mock_room_task.return_value = None
@@ -160,7 +146,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": [],
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         response = self.client.post(self.list_url, payload, format="json")
@@ -206,8 +192,8 @@ class GroupViewTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_update_group_success(self, mock_public_space_task, mock_room_task):
         """Test successful group update"""
         mock_room_task.return_value = None
@@ -223,7 +209,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "08:30",
             "end_time": "17:30",
             "rooms_ids": ["ab09aa20-77b8-457a-bfc4-5dee69790241"],  # Room 102
-            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790242"]  # Conference Room
+            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790242"],  # Conference Room
         }
 
         response = self.client.put(url, payload, format="json")
@@ -232,8 +218,8 @@ class GroupViewTest(BaseTestCase):
         self.assertEqual(response.data["name"], "Updated Housekeeping Group")
         self.assertEqual(response.data["start_time"], "08:30")
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_update_group_rooms_addition_removal(self, mock_public_space_task, mock_room_task):
         """Test updating group with room additions and removals - verify only changed rooms trigger tasks"""
         mock_room_task.return_value = None
@@ -252,9 +238,9 @@ class GroupViewTest(BaseTestCase):
             "end_time": "17:00",
             "rooms_ids": [
                 "ab09aa20-77b8-457a-bfc4-5dee69790241",  # Room 102 (new)
-                "cb09aa20-77b8-457a-bfc5-5dee69790243"  # Room 103 (new)
+                "cb09aa20-77b8-457a-bfc5-5dee69790243",  # Room 103 (new)
             ],
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         response = self.client.put(url, payload, format="json")
@@ -269,8 +255,8 @@ class GroupViewTest(BaseTestCase):
         ]
         mock_room_task.assert_has_calls(expected_calls, any_order=False)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_update_group_public_spaces_addition_removal(self, mock_public_space_task, mock_room_task):
         """Test updating group with public space additions and removals - verify only changed spaces trigger tasks"""
         mock_room_task.return_value = None
@@ -285,7 +271,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "08:00",
             "end_time": "18:00",
             "rooms_ids": [],
-            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790242"]  # Conference Room only
+            "public_spaces_ids": ["ad09aa20-77b8-457a-bfc4-5dee69790242"],  # Conference Room only
         }
 
         response = self.client.put(url, payload, format="json")
@@ -318,7 +304,7 @@ class GroupViewTest(BaseTestCase):
 
         payload = {
             "name": "",  # Invalid empty name
-            "group_type": "Hello world"  # Invalid group type
+            "group_type": "Hello world",  # Invalid group type
         }
 
         response = self.client.put(url, payload, format="json")
@@ -339,9 +325,7 @@ class GroupViewTest(BaseTestCase):
         self.assertFalse(group.is_active)
 
         # Verify GroupRoom relationships are deleted
-        self.assertFalse(
-            GroupRoom.objects.filter(group_id=group_id).exists()
-        )
+        self.assertFalse(GroupRoom.objects.filter(group_id=group_id).exists())
 
     def test_delete_group_not_found(self):
         """Test deleting non-existent group"""
@@ -365,40 +349,29 @@ class GroupViewTest(BaseTestCase):
     # Filter and Search Tests
     def test_list_groups_invalid_search_field(self):
         """Test listing groups with invalid search field"""
-        response = self.client.get(self.list_url, {
-            "search_field": "invalid_field",
-            "search_value": "test"
-        })
+        response = self.client.get(self.list_url, {"search_field": "invalid_field", "search_value": "test"})
 
         self.assertEqual(response.status_code, 400)
 
     def test_list_groups_invalid_sort_field(self):
         """Test listing groups with invalid sort field"""
-        response = self.client.get(self.list_url, {
-            "sort_by": ["invalid_field"]
-        })
+        response = self.client.get(self.list_url, {"sort_by": ["invalid_field"]})
 
         self.assertEqual(response.status_code, 400)
 
     def test_list_groups_pagination_edge_cases(self):
         """Test pagination with edge cases"""
         # Test with page 0
-        response = self.client.get(self.list_url, {
-            "page": 0,
-            "size": 10
-        })
+        response = self.client.get(self.list_url, {"page": 0, "size": 10})
 
         self.assertEqual(response.status_code, 200)
 
         # Test with very large page number
-        response = self.client.get(self.list_url, {
-            "page": 999,
-            "size": 10
-        })
+        response = self.client.get(self.list_url, {"page": 999, "size": 10})
 
         self.assertEqual(response.status_code, 200)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
     def test_create_group_task_exception_handling(self, mock_room_task):
         """Test group creation when task raises exception"""
         mock_room_task.side_effect = Exception("Task failed")
@@ -410,7 +383,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": ["df77f910-2dcd-45cf-b6be-054c744561a7"],
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         # The view should still succeed even if tasks fail
@@ -428,7 +401,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": [str(uuid.uuid4())],  # Non-existent room
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         response = self.client.post(self.list_url, payload, format="json")
@@ -444,7 +417,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": [],
-            "public_spaces_ids": [str(uuid.uuid4())]  # Non-existent public space
+            "public_spaces_ids": [str(uuid.uuid4())],  # Non-existent public space
         }
 
         response = self.client.post(self.list_url, payload, format="json")
@@ -462,8 +435,8 @@ class GroupViewTest(BaseTestCase):
         self.assertIn("count_staff", response.data)
         self.assertIsInstance(response.data["count_staff"], int)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_update_group_empty_rooms_and_spaces(self, mock_public_space_task, mock_room_task):
         """Test updating group to remove all rooms and public spaces"""
         mock_room_task.return_value = None
@@ -479,7 +452,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": [],
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         response = self.client.put(url, payload, format="json")
@@ -494,8 +467,8 @@ class GroupViewTest(BaseTestCase):
         ]
         mock_public_space_task.assert_has_calls(expected_public_space_calls, any_order=True)
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_update_group_with_same_relationships(self, mock_public_space_task, mock_room_task):
         """Test updating group with same room and public space relationships - should still call connect"""
         mock_room_task.return_value = None
@@ -511,7 +484,7 @@ class GroupViewTest(BaseTestCase):
             "start_time": "09:00",
             "end_time": "17:00",
             "rooms_ids": ["df77f910-2dcd-45cf-b6be-054c744561a7"],  # Same as existing
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         response = self.client.put(url, payload, format="json")
@@ -524,8 +497,8 @@ class GroupViewTest(BaseTestCase):
             group_id, "df77f910-2dcd-45cf-b6be-054c744561a7", "connect", card_num=None
         )
 
-    @patch('access_manager.tasks.room_card.manage_cards_for_room_task.delay')
-    @patch('access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay')
+    @patch("access_manager.tasks.room_card.manage_cards_for_room_task.delay")
+    @patch("access_manager.tasks.public_space_card.manage_cards_for_public_space_task.delay")
     def test_update_group_partial_room_changes(self, mock_public_space_task, mock_room_task):
         """Test complex room update scenario: keep some, remove some, add new"""
         mock_room_task.return_value = None
@@ -537,7 +510,7 @@ class GroupViewTest(BaseTestCase):
         # Add Room 102 to the group manually for testing
         GroupRoom.objects.create(
             group=group,
-            room_id="ab09aa20-77b8-457a-bfc4-5dee69790241"  # Room 102
+            room_id="ab09aa20-77b8-457a-bfc4-5dee69790241",  # Room 102
         )
 
         group_id = str(group.id)
@@ -553,9 +526,9 @@ class GroupViewTest(BaseTestCase):
             "end_time": "17:00",
             "rooms_ids": [
                 "df77f910-2dcd-45cf-b6be-054c744561a7",  # Room 101 (keep)
-                "cb09aa20-77b8-457a-bfc5-5dee69790243"  # Room 103 (add)
+                "cb09aa20-77b8-457a-bfc5-5dee69790243",  # Room 103 (add)
             ],
-            "public_spaces_ids": []
+            "public_spaces_ids": [],
         }
 
         response = self.client.put(url, payload, format="json")

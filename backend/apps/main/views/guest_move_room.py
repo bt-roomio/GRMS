@@ -31,7 +31,9 @@ class GuestMoveRoomListView(APIView):
         guests_list = list(instance)
         old_context = get_guest_access_context(guests_list)
 
-        serializer = GuestMoveRoomSerializer(instance, data={"to_room": to_room.id, "from_room": from_room.id})  # ty: ignore
+        serializer = GuestMoveRoomSerializer(
+            instance, data={"to_room": to_room.id, "from_room": from_room.id}
+        )  # ty: ignore
         serializer.is_valid(raise_exception=True)
         serializer.save()
 

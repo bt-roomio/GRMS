@@ -1,7 +1,7 @@
 # Roomio Mobile Keys — Integration Guide
 
-**Version:** 1.0  
-**Date:** 08.05.2025  
+**Version:** 1.0
+**Date:** 08.05.2025
 **Confidentiality:** Partner Use Only
 
 ---

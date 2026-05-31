@@ -2,7 +2,6 @@ import logging
 
 from access_manager.models import GuestCard, NeedSyncDevice, StaffCard
 from access_manager.tasks.send_rpc import send_rpc_request
-
 from main.utils.access_context import get_guest_access_context, get_staff_access_context
 
 logger = logging.getLogger(__name__)

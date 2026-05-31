@@ -1,15 +1,15 @@
-from access_manager.models import Group
-from access_manager.utilits.process_multi_devices_rpc import process_devices_parallel
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db.models import F
 
+from access_manager.models import Group
+from access_manager.utilits.process_multi_devices_rpc import process_devices_parallel
 from main.models import Device
 
 logger = get_task_logger(__name__)
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+@shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_num=None):
     try:
         cards, group = Group.objects.get_staff_cards(group_id)
@@ -18,10 +18,7 @@ def manage_cards_for_room_task(group_id: str, room_id: str, action: str, card_nu
             return {"success": False, "message": f"No cards found for group {group_id}"}
 
         door_lock_devices = Device.objects.filter(
-            room_id=room_id,
-            tenant=group.tenant,
-            is_active=True,
-            id=F('room__door_lock_device_id')
+            room_id=room_id, tenant=group.tenant, is_active=True, id=F("room__door_lock_device_id")
         ).distinct()
 
         if door_lock_devices.exists():

@@ -1,10 +1,10 @@
 import time
 
-from access_manager.tasks.send_rpc import send_rpc_request
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db.models import Count, Q
 
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.helpers import safely_remove
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context
@@ -45,8 +45,9 @@ def auto_check_out():
 @shared_task
 def auto_block():
     logger.info("Auto block task run.")
-    guests = Guest.objects.filter(tenant__additional_info__general_settings__guest_auto_block=True, is_active=True,
-                                  check_out__lte=time.time())
+    guests = Guest.objects.filter(
+        tenant__additional_info__general_settings__guest_auto_block=True, is_active=True, check_out__lte=time.time()
+    )
     access_context = get_guest_access_context(guests)
     guest_cards = access_context.get("guest_cards")
     cards = access_context.get("cards")

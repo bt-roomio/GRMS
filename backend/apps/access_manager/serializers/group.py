@@ -1,9 +1,8 @@
+from rest_framework import serializers
+
 from access_manager.models import Group, GroupPublicSpace, GroupRoom, TypeChoices
 from access_manager.serializers.group_room import SimpleGroupPublicSpaceSerializer, SimpleGroupRoomSerializer
 from access_manager.utilits.task_trigger import card_public_space, card_room
-
-from rest_framework import serializers
-
 from core.utils.serializers import ValidatorSerializer
 from main.models import PublicSpace, Room
 from users.serializers.user import SimpleUserSerializer
@@ -26,7 +25,7 @@ class TypeChoiceField(serializers.Field):
             return TypeChoices[data].value
         except KeyError:
             valid_names = ", ".join([choice.name for choice in TypeChoices])
-            raise serializers.ValidationError(f'"{data}" is not a valid choice. ' f"Valid options are: {valid_names}.")
+            raise serializers.ValidationError(f'"{data}" is not a valid choice. Valid options are: {valid_names}.')
 
     def to_representation(self, value):
         try:

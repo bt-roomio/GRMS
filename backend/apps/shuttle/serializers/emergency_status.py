@@ -8,11 +8,11 @@ class EmergencyStatusFilterParams(ValidatorSerializer):
     devices = serializers.ListField(child=serializers.CharField(), required=False)
     keys = serializers.ListField(child=serializers.CharField())
     room_types = serializers.ListField(child=serializers.CharField(), required=False)
-    data_type = serializers.ChoiceField(choices=['telemetry', 'attribute'], required=True)
+    data_type = serializers.ChoiceField(choices=["telemetry", "attribute"], required=True)
     attribute_scope = serializers.ChoiceField(
-        choices=['CLIENT_SCOPE', 'SERVER_SCOPE', 'SHARED_SCOPE'],
+        choices=["CLIENT_SCOPE", "SERVER_SCOPE", "SHARED_SCOPE"],
         required=False,
-        help_text="Required if data_type is 'attribute'"
+        help_text="Required if data_type is 'attribute'",
     )
 
 
@@ -30,5 +30,4 @@ class RoomSerializer(serializers.Serializer):
 class DeviceTelemetrySerializer(serializers.Serializer):
     device_id = serializers.CharField()
     room = RoomSerializer()
-    telemetry_data = TelemetryDataItemSerializer(many=True, source='data')
-
+    telemetry_data = TelemetryDataItemSerializer(many=True, source="data")

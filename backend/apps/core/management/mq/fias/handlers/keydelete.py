@@ -27,20 +27,12 @@ def handle_keydelete(data, device):
             reservation_number,
             e,
         )
-        send_card_operation_confirmation(
-            device, operation_id, status="OK", text="No cards to delete"
-        )
+        send_card_operation_confirmation(device, operation_id, status="OK", text="No cards to delete")
         return
 
-    guest_cards = list(
-        GuestCard.objects.filter(guest__in=guests, is_active=True).select_related(
-            "guest", "card"
-        )
-    )
+    guest_cards = list(GuestCard.objects.filter(guest__in=guests, is_active=True).select_related("guest", "card"))
     if not guest_cards:
-        send_card_operation_confirmation(
-            device, operation_id, status="OK", text="No assigned cards to delete"
-        )
+        send_card_operation_confirmation(device, operation_id, status="OK", text="No assigned cards to delete")
         return
 
     logger.info(
@@ -51,9 +43,7 @@ def handle_keydelete(data, device):
     )
     _revoke_guest_cards(guest_cards)
 
-    send_card_operation_confirmation(
-        device, operation_id, status="OK", text="Delete request accepted"
-    )
+    send_card_operation_confirmation(device, operation_id, status="OK", text="Delete request accepted")
 
 
 def _revoke_guest_cards(guest_cards):

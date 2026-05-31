@@ -102,7 +102,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         if is_blocked:
             logger.warning(
-                f"Blocked request: {request.method} {request.path} " f"from {ip} (email: {email}) - {block_reason}"
+                f"Blocked request: {request.method} {request.path} from {ip} (email: {email}) - {block_reason}"
             )
 
             return self._blocked_response(block_reason)

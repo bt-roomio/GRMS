@@ -1,5 +1,12 @@
 import time
 
+from celery.utils.log import get_task_logger
+
+from rest_framework.fields import ValidationError
+from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from access_manager.models import NeedSyncDevice
 from access_manager.serializers.need_sync import (
     NeedSyncDeviceHttpFilterParams,
@@ -13,13 +20,6 @@ from access_manager.swagger.sync_device import (
     sync_device_swagger,
 )
 from access_manager.tasks.sync_device import sync_devices_task
-from celery.utils.log import get_task_logger
-
-from rest_framework.fields import ValidationError
-from rest_framework.generics import get_object_or_404
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from main.models import Device
 
 logger = get_task_logger(__name__)
@@ -84,14 +84,10 @@ class SyncDeviceView(APIView):
         device_ids = serializer.validated_data.get("device_ids", [])  # pyright: ignore
         tenant_id = request.user.tenant_id
 
-        need_sync_exists = NeedSyncDevice.objects.check_avialibility(
-            tenant_id, ids=ids, device_ids=device_ids
-        )
+        need_sync_exists = NeedSyncDevice.objects.check_avialibility(tenant_id, ids=ids, device_ids=device_ids)
 
         if not need_sync_exists:
-            return Response(
-                {"success": True, "message": "No devices need syncing"}, status=200
-            )
+            return Response({"success": True, "message": "No devices need syncing"}, status=200)
 
         sync_devices_task.delay(tenant_id, ids, device_ids)
 

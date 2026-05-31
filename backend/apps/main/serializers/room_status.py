@@ -6,6 +6,7 @@ class RoomHistoryStatusSerializer(serializers.Serializer):
     last_24_hour = serializers.IntegerField()  # TODO: change after Presentation
     diff_previous_day = serializers.IntegerField()
 
+
 class RoomLiveStatusSerializer(serializers.Serializer):
     available = serializers.IntegerField()
     checkedin = serializers.IntegerField()

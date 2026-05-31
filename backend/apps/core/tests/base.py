@@ -21,7 +21,6 @@ class BaseTestCase(APITestCase):
         refresh = cast(RefreshToken, RefreshToken.for_user(user))
         return f"Bearer {refresh.access_token}"
 
-
     @property
     def angelina_token(self):
         user = authenticate(email="angelina@gmail.com", password="password")
@@ -39,7 +38,6 @@ class BaseTestCase(APITestCase):
 
         refresh = cast(RefreshToken, RefreshToken.for_user(user))
         return f"Bearer {refresh.access_token}"
-
 
     def dump(self, response):
         print("-" * 40)

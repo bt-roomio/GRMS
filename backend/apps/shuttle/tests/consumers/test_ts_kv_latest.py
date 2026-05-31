@@ -22,7 +22,6 @@ def test_device2():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestTsKvLatestConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -458,7 +457,6 @@ class TestTsKvLatestConsumer:
             )
             reply1 = await comm.receive_json_from()
             payload1 = reply1.get("payload") or {}
-            results1_ids = [item.get("key_name") for item in payload1["data"]]
 
             await comm.send_json_to(
                 {
@@ -476,7 +474,6 @@ class TestTsKvLatestConsumer:
             payload2 = reply2.get("payload") or {}
 
             assert payload2["response_status"] == 200
-            results2_ids = [item.get("key_name") for item in payload2["data"]]
             assert payload1["response_status"] == 200
         finally:
             await comm.disconnect()
@@ -533,7 +530,6 @@ class TestTsKvLatestConsumer:
         finally:
             await comm.disconnect()
 
-
     async def test_subscribe_validation_missing_device(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -554,7 +550,6 @@ class TestTsKvLatestConsumer:
             assert len(payload["errors"]) > 0
         finally:
             await comm.disconnect()
-
 
     async def test_subscribe_different_device_no_update(self, ws_connect, karina_token, test_device, test_device2):
         comm = await ws_connect(karina_token)
@@ -583,8 +578,9 @@ class TestTsKvLatestConsumer:
             )
 
             import asyncio
+
             try:
-                reply = await asyncio.wait_for(comm.receive_json_from(), timeout=0.5)
+                await asyncio.wait_for(comm.receive_json_from(), timeout=0.5)
                 assert False, "Should not receive update for different device"
             except asyncio.TimeoutError:
                 pass

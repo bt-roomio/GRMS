@@ -5,7 +5,6 @@ from channels.testing import WebsocketCommunicator
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestRoomStatusConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:

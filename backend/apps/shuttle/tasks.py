@@ -120,7 +120,7 @@ def delete_old_logs():
     keys = TsKvDictionary.objects.filter(
         Q(key__endswith="_LOGS") | Q(key__contains="Events") | Q(key__contains="ERRORS")
     )
-    logger.info(f"Keys: {", ".join(keys.values_list('key', flat=True))}")
+    logger.info(f"Keys: {', '.join(keys.values_list('key', flat=True))}")
     logs = TsKv.objects.filter(key__in=keys, ts__lte=(timezone.now() - timedelta(days=7)))
     logger.info(f" {logs.delete()[0]} log(s) deleted!")
 

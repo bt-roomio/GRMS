@@ -1,8 +1,8 @@
 from typing import List
 
-from access_manager.utilits.check_card_assignment import get_card_assignments
 from celery.utils.log import get_task_logger
 
+from access_manager.utilits.check_card_assignment import get_card_assignments
 from shuttle.services.publish_updates import publish_updates
 
 logger = get_task_logger(__name__)

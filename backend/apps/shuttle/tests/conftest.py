@@ -4,6 +4,7 @@ Shared pytest configuration for shuttle tests.
 This conftest.py handles fixture loading for both consumer tests (pytest-style)
 and REST tests (Django TestCase style) to avoid conflicts when running together.
 """
+
 import pytest
 from django.core.management import call_command
 

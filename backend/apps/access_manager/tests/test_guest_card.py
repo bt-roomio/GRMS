@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
-from access_manager.models import GuestPublicSpace
 from django.urls import reverse
 
+from access_manager.models import GuestPublicSpace
 from core.tests.base import BaseTestCase
 from main.models import Device
 
@@ -35,7 +35,7 @@ class GuestCardViewTest(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.url = reverse("access_manager:guest-card")
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_connect_cards_to_guest_success(self, mock_send_rpc):
         """Test successful connection of cards to guest"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -43,7 +43,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",  # Amigo
             "cards": ["11 22 33 44", "55 66 77 88"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]  # Lobby
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],  # Lobby
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -58,20 +58,16 @@ class GuestCardViewTest(BaseTestCase):
         # Verify GuestPublicSpace was created
         self.assertTrue(
             GuestPublicSpace.objects.filter(
-                guest_id="5b66af57-fb27-4c26-9986-b9994e644605",
-                public_space_id="ad09aa20-77b8-457a-bfc4-5dee69790243"
+                guest_id="5b66af57-fb27-4c26-9986-b9994e644605", public_space_id="ad09aa20-77b8-457a-bfc4-5dee69790243"
             ).exists()
         )
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_connect_cards_without_public_spaces(self, mock_send_rpc):
         """Test connecting cards without specifying public spaces"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
 
-        payload = {
-            "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
-            "cards": ["11 22 33 44"]
-        }
+        payload = {"guest_id": "5b66af57-fb27-4c26-9986-b9994e644605", "cards": ["11 22 33 44"]}
 
         response = self.client.post(self.url, payload, format="json")
 
@@ -83,7 +79,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
             "cards": ["65 28 23 12"],  # This card is connected to staff via StaffCard
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -96,7 +92,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "52d8ba26-6fac-463b-a131-c16410e42ede",  # Alexandr Slaven
             "cards": ["12 23 34 45"],  # This card is connected to Amigo via GuestCard
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -106,13 +102,13 @@ class GuestCardViewTest(BaseTestCase):
 
     def test_connect_cards_same_guest_allowed(self):
         """Test that connecting cards to the same guest is allowed"""
-        with patch('access_manager.tasks.send_rpc.send_rpc_request') as mock_send_rpc:
+        with patch("access_manager.tasks.send_rpc.send_rpc_request") as mock_send_rpc:
             mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
 
             payload = {
                 "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",  # Amigo (same as in fixture)
                 "cards": ["12 23 34 45"],  # Card already connected to this guest
-                "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+                "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
             }
 
             response = self.client.post(self.url, payload, format="json")
@@ -126,7 +122,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "52d8ba26-6fac-463b-a131-c16410e42ede",  # Alexandr Slaven in room 102
             "cards": ["11 22 33 44"],
-            "public_spaces": []  # No public spaces and room has no devices
+            "public_spaces": [],  # No public spaces and room has no devices
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -139,7 +135,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
             "cards": [f"card_{i:02d}" for i in range(11)],  # 11 cards
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -149,10 +145,7 @@ class GuestCardViewTest(BaseTestCase):
 
     def test_connect_cards_missing_guest_id(self):
         """Test validation error when guest_id is missing"""
-        payload = {
-            "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
-        }
+        payload = {"cards": ["11 22 33 44"], "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]}
 
         response = self.client.post(self.url, payload, format="json")
 
@@ -163,14 +156,13 @@ class GuestCardViewTest(BaseTestCase):
         """Test validation error when cards are missing"""
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("cards", response.data)
-
 
     def test_connect_cards_invalid_serializer_data(self):
         """Test error when serializer receives invalid data"""
@@ -180,7 +172,7 @@ class GuestCardViewTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_connect_cards_exception_handling(self, mock_send_rpc):
         """Test handling of exceptions during processing"""
         mock_send_rpc.side_effect = Exception("Database connection failed")
@@ -188,7 +180,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
             "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -197,7 +189,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.data["message"], "Server error!")
         self.assertIn("error", response.data)
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_rpc_request_parameters(self, mock_send_rpc):
         """Test that RPC request is called with correct parameters"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -205,7 +197,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
             "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -221,7 +213,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(call_args[0][2], 1)  # is_active parameter (1 for guest)
         self.assertEqual(call_args[1]["guest_id"], "5b66af57-fb27-4c26-9986-b9994e644605")
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_device_filtering_query(self, mock_send_rpc):
         """Test the device filtering query logic"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -229,7 +221,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",  # Guest in room 101
             "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]  # Lobby
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],  # Lobby
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -237,7 +229,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_multiple_public_spaces(self, mock_send_rpc):
         """Test connecting cards with multiple public spaces"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -247,8 +239,8 @@ class GuestCardViewTest(BaseTestCase):
             "cards": ["11 22 33 44"],
             "public_spaces": [
                 "ad09aa20-77b8-457a-bfc4-5dee69790243",  # Lobby
-                "ad09aa20-77b8-457a-bfc4-5dee69790242"  # Conference Room
-            ]
+                "ad09aa20-77b8-457a-bfc4-5dee69790242",  # Conference Room
+            ],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -260,12 +252,11 @@ class GuestCardViewTest(BaseTestCase):
         for public_space_id in payload["public_spaces"]:
             self.assertTrue(
                 GuestPublicSpace.objects.filter(
-                    guest_id="5b66af57-fb27-4c26-9986-b9994e644605",
-                    public_space_id=public_space_id
+                    guest_id="5b66af57-fb27-4c26-9986-b9994e644605", public_space_id=public_space_id
                 ).exists()
             )
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_connect_multiple_cards_success(self, mock_send_rpc):
         """Test connecting multiple cards successfully"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -273,7 +264,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
             "cards": ["11 22 33 44", "55 66 77 88", "99 00 11 22"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")
@@ -284,20 +275,19 @@ class GuestCardViewTest(BaseTestCase):
 
     def test_incorrect_validated_data_handling(self):
         """Test handling when validated_data is not dict or None"""
-        with patch('access_manager.serializers.guest_card.GuestCardRequestSerializer.is_valid', return_value=True):
-            with patch('access_manager.serializers.guest_card.GuestCardRequestSerializer.validated_data',
-                       new_callable=lambda: None):
-                payload = {
-                    "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
-                    "cards": ["11 22 33 44"]
-                }
+        with patch("access_manager.serializers.guest_card.GuestCardRequestSerializer.is_valid", return_value=True):
+            with patch(
+                "access_manager.serializers.guest_card.GuestCardRequestSerializer.validated_data",
+                new_callable=lambda: None,
+            ):
+                payload = {"guest_id": "5b66af57-fb27-4c26-9986-b9994e644605", "cards": ["11 22 33 44"]}
 
                 response = self.client.post(self.url, payload, format="json")
 
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(response.data["message"], "Incorrect data!")
 
-    @patch('access_manager.tasks.send_rpc.send_rpc_request')
+    @patch("access_manager.tasks.send_rpc.send_rpc_request")
     def test_device_inactive_filtering(self, mock_send_rpc):
         """Test that inactive devices are not included"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -308,7 +298,7 @@ class GuestCardViewTest(BaseTestCase):
         payload = {
             "guest_id": "5b66af57-fb27-4c26-9986-b9994e644605",
             "cards": ["11 22 33 44"],
-            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"]
+            "public_spaces": ["ad09aa20-77b8-457a-bfc4-5dee69790243"],
         }
 
         response = self.client.post(self.url, payload, format="json")

@@ -368,4 +368,3 @@ debugpy.wait_for_client()
 - ✅ Отслеживать hit rate кэша устройств (memory/redis/db)
 - ✅ Понимать почему сообщения requeue или reject
 - ✅ Анализировать полный поток данных от RabbitMQ до БД
-

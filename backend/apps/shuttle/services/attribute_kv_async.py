@@ -24,11 +24,13 @@ async def publish_updates_attribute_batch_async(updates_by_device: dict[str, lis
         if not changed_messages:
             continue
         payload = {"type": "get_latest_activity", "updates": changed_messages}
-        groups_payloads.extend([
-            ("attribute_kv_updates", payload),
-            (f"attribute_kv_updates_{tenant_id}", payload),
-            (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}),
-        ])
+        groups_payloads.extend(
+            [
+                ("attribute_kv_updates", payload),
+                (f"attribute_kv_updates_{tenant_id}", payload),
+                (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}),
+            ]
+        )
 
     if groups_payloads:
         await asyncio.gather(*[channel_layer.group_send(group, payload) for group, payload in groups_payloads])

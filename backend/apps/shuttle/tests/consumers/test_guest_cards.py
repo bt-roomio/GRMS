@@ -1,15 +1,14 @@
 import pytest
-from access_manager.models import GuestCard
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
+from access_manager.models import GuestCard
 from main.models import Room
 
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestGuestCardConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:

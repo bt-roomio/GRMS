@@ -67,7 +67,6 @@ class RoomSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-
         for device in validated_data.get("devices", {}):
             if device.room_id and device.room_id != instance.id:
                 raise serializers.ValidationError({"devices": "Device already assigned to another room!"})

@@ -110,7 +110,7 @@ class ShuttleRelationApiTests(BaseTestCase):
         payload = {
             "from_id": str(self.dev_other_tenant),  # should be ignored by serializer.update()
             "from_type": "SHOULD_IGNORE",
-            "to_id": str(self.dev_other_tenant),    # should be ignored
+            "to_id": str(self.dev_other_tenant),  # should be ignored
             "to_type": "SHOULD_IGNORE",
             "relation_type_group": "SHOULD_IGNORE",
             "relation_type": "SHOULD_IGNORE",

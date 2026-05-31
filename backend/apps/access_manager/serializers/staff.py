@@ -1,9 +1,8 @@
+from rest_framework import serializers
+
 from access_manager.models import Group, Staff, StaffCard
 from access_manager.serializers.group import SimpleGroupSerializer
 from access_manager.serializers.staff_card import StaffCardSerializer
-
-from rest_framework import serializers
-
 from core.utils.serializers import ValidatorSerializer
 
 

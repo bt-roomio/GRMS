@@ -1,5 +1,6 @@
-from access_manager.models import CardDeviceSlot, GuestCard, NeedSyncDevice, StaffCard
 from django.db.models import Q
+
+from access_manager.models import CardDeviceSlot, GuestCard, NeedSyncDevice, StaffCard
 
 
 def deactivate_guest_card(cards, device, sync):

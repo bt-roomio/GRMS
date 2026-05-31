@@ -1,19 +1,16 @@
-from access_manager.models import Card, GuestCard, NeedSyncDevice, Staff, StaffCard
-from access_manager.serializers.staff import SimpleStaffSerializer
-from access_manager.tasks.send_rpc import send_rpc_request
-
 from rest_framework import serializers
 from rest_framework.fields import ValidationError
 
+from access_manager.models import Card, GuestCard, NeedSyncDevice, Staff, StaffCard
+from access_manager.serializers.staff import SimpleStaffSerializer
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest
 from main.utils.access_context import get_guest_access_context
 
 
 class CardSerializer(serializers.ModelSerializer):
-    staff_id = serializers.PrimaryKeyRelatedField(
-        write_only=True, queryset=Staff.objects.all(), required=False
-    )
+    staff_id = serializers.PrimaryKeyRelatedField(write_only=True, queryset=Staff.objects.all(), required=False)
     staff = SimpleStaffSerializer(source="staffcard.staff", read_only=True)
     need_sync = serializers.SerializerMethodField()
 
@@ -21,9 +18,7 @@ class CardSerializer(serializers.ModelSerializer):
         return NeedSyncDevice.objects.filter(card=card, need_sync=True).exists()
 
     def create(self, validated_data):
-        staff = (
-            validated_data.pop("staff_id") if validated_data.get("staff_id") else None
-        )
+        staff = validated_data.pop("staff_id") if validated_data.get("staff_id") else None
         instance = super().create(validated_data)
         try:
             if staff:
@@ -33,9 +28,7 @@ class CardSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        staff = (
-            validated_data.pop("staff_id") if validated_data.get("staff_id") else None
-        )
+        staff = validated_data.pop("staff_id") if validated_data.get("staff_id") else None
         if staff:
             StaffCard.objects.filter(card=instance).delete()
             StaffCard.objects.create(card=instance, staff=staff)
@@ -64,9 +57,7 @@ class CardFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=50)
     search_field = serializers.ChoiceField(choices=("number",), required=False)
     search_value = serializers.CharField(required=False)
-    sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=SORT_FIELDS), required=False
-    )
+    sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     staff_id = serializers.CharField(required=False)
     is_pwd = serializers.BooleanField(required=False, allow_null=True, default=None)
 
@@ -86,9 +77,7 @@ class DisconnectCardSerializer(serializers.Serializer):
             card_number = [card.card.number]
             is_pwd = bool(card.card.is_pwd)
             for device in devices:
-                deactivate_result = send_rpc_request(
-                    str(device.id), card_number, 0, is_pwd=is_pwd
-                )
+                deactivate_result = send_rpc_request(str(device.id), card_number, 0, is_pwd=is_pwd)
                 deactivate_results.append(deactivate_result)
             if any(not r.get("success", False) for r in deactivate_results):
                 return {

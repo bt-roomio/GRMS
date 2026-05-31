@@ -1,6 +1,3 @@
-from access_manager.models import CardLog
-from access_manager.serializers.card_log import CardLogFilterParams
-from access_manager.swagger.card_log_export import swagger_export_card_logs
 from django.db.models import Prefetch
 from django.http import HttpResponse, JsonResponse
 from openpyxl import Workbook
@@ -9,6 +6,9 @@ from openpyxl.utils import get_column_letter
 
 from rest_framework.views import APIView
 
+from access_manager.models import CardLog
+from access_manager.serializers.card_log import CardLogFilterParams
+from access_manager.swagger.card_log_export import swagger_export_card_logs
 from main.models import DevicePublicSpaces
 
 EXPORT_LIMIT = 10_000

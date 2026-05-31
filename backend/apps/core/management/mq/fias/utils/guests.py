@@ -1,10 +1,9 @@
 import logging
 
-from main.models import Device, Guest, Room
-
 from core.management.mq.fias.constants import CARD_ON_READER_TIMEOUT
 from core.management.mq.fias.exceptions import LookupFailure
 from core.management.mq.fias.utils.readers import collect_unique_cards
+from main.models import Device, Guest, Room
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +13,7 @@ def resolve_reader(tenant_id, key_coder):
         raise LookupFailure("Missing required field: keyCoder")
 
     logger.debug(f"Reading key from tenant {tenant_id}, key coder {key_coder}")
-    reader = Device.objects.filter(
-        name=key_coder, tenant_id=tenant_id, is_active=True
-    ).first()
+    reader = Device.objects.filter(name=key_coder, tenant_id=tenant_id, is_active=True).first()
     if not reader:
         raise LookupFailure(f"Card reader is unavailable: {key_coder}")
     return reader
@@ -35,9 +32,7 @@ def resolve_room_and_guest(tenant_id, room_name):
     if not room:
         raise LookupFailure(f"Room not found: {room_name}")
 
-    guest = (
-        Guest.objects.filter(room=room, is_active=True).order_by("created_at").first()
-    )
+    guest = Guest.objects.filter(room=room, is_active=True).order_by("created_at").first()
     if not guest:
         raise LookupFailure(f"No active guest in room {room_name}")
 
@@ -65,8 +60,6 @@ def resolve_guests_for_keydelete(tenant_id, room_name, reservation_number):
     guests = list(guests_qs.order_by("created_at"))
     if not guests:
         if reservation_number:
-            raise LookupFailure(
-                f"Guest not found for reservation {reservation_number} in room {room_name}"
-            )
+            raise LookupFailure(f"Guest not found for reservation {reservation_number} in room {room_name}")
         raise LookupFailure(f"No active guests in room {room_name}")
     return guests

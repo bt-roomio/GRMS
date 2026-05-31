@@ -1,9 +1,9 @@
 import logging
 from typing import List, Union
 
-from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, Staff, StaffCard
 from django.db.models import Q
 
+from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, Staff, StaffCard
 from main.models import Device, Guest, PublicSpace
 
 _logger = logging.getLogger(__name__)

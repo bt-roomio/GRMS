@@ -1,17 +1,17 @@
 from uuid import UUID
 
-from access_manager.querysets.card import CardQuerySet
-from access_manager.querysets.card_log import CardLogQuerySet
-from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
-from access_manager.querysets.guest_card import GuestCardQuerySet
-from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
-from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
+from access_manager.querysets.card import CardQuerySet
+from access_manager.querysets.card_log import CardLogQuerySet
+from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
+from access_manager.querysets.guest_card import GuestCardQuerySet
+from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
+from access_manager.querysets.staff import StaffQuerySet
 from core.models import BaseModel, UpdateByModel
 
 
@@ -119,9 +119,7 @@ class CardLog(models.Model):
         blank=True,
         related_name="card_logs",
     )
-    guest = models.ForeignKey(
-        "main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs"
-    )
+    guest = models.ForeignKey("main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs")
 
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -146,19 +144,11 @@ class NeedSyncDevice(BaseModel, UpdateByModel):
 
     @property
     def get_card_holder_name(self):
-        staff_card = (
-            StaffCard.objects.select_related("staff")
-            .filter(card=self.card, is_active=True)
-            .first()
-        )
+        staff_card = StaffCard.objects.select_related("staff").filter(card=self.card, is_active=True).first()
         if staff_card:
             return "staff", staff_card.staff.get_name()
 
-        guest_card = (
-            GuestCard.objects.select_related("guest")
-            .filter(card=self.card, is_active=True)
-            .first()
-        )
+        guest_card = GuestCard.objects.select_related("guest").filter(card=self.card, is_active=True).first()
         if guest_card:
             return "guest", guest_card.guest.get_name()
 
@@ -172,9 +162,7 @@ class Staff(BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
-    group = models.ForeignKey(
-        "access_manager.Group", models.SET_NULL, null=True, blank=True
-    )
+    group = models.ForeignKey("access_manager.Group", models.SET_NULL, null=True, blank=True)
     group_id: UUID
     additional_info = models.JSONField(null=True, blank=True)
 
@@ -226,9 +214,7 @@ class GuestCard(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "access_manager_guest_cards"
         constraints = [
-            UniqueConstraint(
-                fields=["card"], condition=Q(is_active=True), name="unique_card_active"
-            ),
+            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_card_active"),
         ]
 
 
@@ -249,12 +235,8 @@ class GroupRoom(BaseModel):
 
 class GroupPublicSpace(BaseModel):
     group_id: UUID
-    group = models.ForeignKey(
-        "access_manager.Group", models.CASCADE, "group_public_space"
-    )
-    public_space = models.ForeignKey(
-        "main.PublicSpace", models.CASCADE, "group_public_space"
-    )
+    group = models.ForeignKey("access_manager.Group", models.CASCADE, "group_public_space")
+    public_space = models.ForeignKey("main.PublicSpace", models.CASCADE, "group_public_space")
     additional_info = models.JSONField(null=True, blank=True)
 
     class Meta(BaseModel.Meta):

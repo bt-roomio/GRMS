@@ -23,9 +23,7 @@ def handle_keyrequest(data, device):
     try:
         _, guest = resolve_room_and_guest(tenant_id, room_name)
         reader = resolve_reader(tenant_id, data.get("keyCoder"))
-        card_uids = collect_unique_cards(
-            reader.id, key_count, timeout=KEYREQUEST_COLLECTION_TIMEOUT
-        )
+        card_uids = collect_unique_cards(reader.id, key_count, timeout=KEYREQUEST_COLLECTION_TIMEOUT)
     except LookupFailure as e:
         logger.warning(
             "keyrequest lookup failed operationId=%s room=%s: %s",
@@ -82,6 +80,4 @@ def write_guest_cards(guest, card_uids, operation_id, device):
         if len(card_uids) == 1
         else f"Created {len(card_uids)} guest cards successfully"
     )
-    send_card_operation_confirmation(
-        device, operation_id, status="OK", text=success_text
-    )
+    send_card_operation_confirmation(device, operation_id, status="OK", text=success_text)

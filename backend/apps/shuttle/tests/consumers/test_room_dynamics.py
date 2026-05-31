@@ -7,7 +7,6 @@ from channels.testing import WebsocketCommunicator
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestTsKvTenantHistoryConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -258,7 +257,6 @@ class TestTsKvTenantHistoryConsumer:
             payload = reply.get("payload") or {}
 
             assert payload["response_status"] == 200
-            tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
         finally:
             await comm.disconnect()
 

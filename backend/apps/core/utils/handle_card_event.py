@@ -1,8 +1,8 @@
 import logging
 
-from access_manager.models import AccessGroupChoices, Card, CardLog
 from django.utils import timezone
 
+from access_manager.models import AccessGroupChoices, Card, CardLog
 from core.utils.date import unix_to_datetime
 from core.utils.update_lock_last_log import update_lock_last_log_id
 

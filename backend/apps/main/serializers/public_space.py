@@ -1,9 +1,8 @@
 import logging
 
-from access_manager.utilits.cards_public_space import register_cards_for_public_space
-
 from rest_framework import serializers
 
+from access_manager.utilits.cards_public_space import register_cards_for_public_space
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DevicePublicSpaces, PublicSpace
 from main.serializers.dashboard import SimpleDashboardSerializer

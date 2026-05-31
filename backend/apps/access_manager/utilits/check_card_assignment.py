@@ -1,17 +1,16 @@
 from typing import Dict, List
 
-from access_manager.models import GuestCard, StaffCard
 from django.db.models import Q
 
+from access_manager.models import GuestCard, StaffCard
 
-def get_card_assignments(
-    cards: List[str], tenant_id: str, exclude_guest_id=None, exclude_staff=None
-) -> Dict[str, str]:
+
+def get_card_assignments(cards: List[str], tenant_id: str, exclude_guest_id=None, exclude_staff=None) -> Dict[str, str]:
     assignments: Dict[str, str] = {}
 
-    guest_qs = GuestCard.objects.filter(
-        guest__tenant_id=tenant_id, card__number__in=cards
-    ).filter(Q(is_active=True) | Q(is_blocked=True))
+    guest_qs = GuestCard.objects.filter(guest__tenant_id=tenant_id, card__number__in=cards).filter(
+        Q(is_active=True) | Q(is_blocked=True)
+    )
     if exclude_guest_id:
         guest_qs = guest_qs.exclude(guest__id=exclude_guest_id)
 

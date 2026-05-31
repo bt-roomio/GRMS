@@ -1,11 +1,11 @@
-from access_manager.models import Group, GroupRoom
-from access_manager.serializers.group import GroupFilterParams, GroupSerializer
-from access_manager.swagger.group import group_swagger
 from django.db.models import Count, Q
 
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
+from access_manager.models import Group, GroupRoom
+from access_manager.serializers.group import GroupFilterParams, GroupSerializer
+from access_manager.swagger.group import group_swagger
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms

@@ -1,6 +1,6 @@
-from access_manager.serializers.group import GroupFilterParams, GroupSerializer
-
 from drf_yasg.utils import swagger_auto_schema
+
+from access_manager.serializers.group import GroupFilterParams, GroupSerializer
 
 
 def group_swagger(type=None):

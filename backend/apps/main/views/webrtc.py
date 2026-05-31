@@ -13,6 +13,7 @@ from main.swagger.webrtc import swagger_webrtc_agents_status, swagger_webrtc_bro
 
 BROKER_BASE_URL = getattr(settings, "WEBRTC_BROKER_URL", os.getenv("WEBRTC_BROKER_URL", "http://localhost:8080"))
 
+
 class WebrtcBroker(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -62,8 +63,8 @@ class WebrtcAgentStatus(APIView):
             return Response({"success": True, "results": {}, "count": 0}, status=200)
         try:
             r = requests.post(
-                f"{BROKER_BASE_URL.rstrip('/')}/api/agents/status",
-                json={"gateway_ids": gateway_ids}, timeout=7)
+                f"{BROKER_BASE_URL.rstrip('/')}/api/agents/status", json={"gateway_ids": gateway_ids}, timeout=7
+            )
         except requests.RequestException as e:
             return Response({"success": False, "error": f"Broker unreachable: {e}"}, status=500)
 
@@ -77,5 +78,11 @@ class WebrtcAgentStatus(APIView):
             normalized = {gid: results.get(gid, "offline") for gid in gateway_ids}
             return Response({"success": True, "results": normalized, "count": len(normalized)}, status=200)
 
-        return Response({"success": False, "error": payload.get("message") or payload.get("error") or "Broker error",
-                         "details": payload}, status=502)
+        return Response(
+            {
+                "success": False,
+                "error": payload.get("message") or payload.get("error") or "Broker error",
+                "details": payload,
+            },
+            status=502,
+        )

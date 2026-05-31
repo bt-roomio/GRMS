@@ -110,7 +110,11 @@ class GeneralSettingsTest(BaseTestCase):
         """PUT updates config JSON field inside a room_fields tag."""
         payload = {
             "room_fields": [
-                {"name": "temperature", "tag_type": "telemetry", "config": {"custom_key": "custom_value", "nested": {"a": 1}}},
+                {
+                    "name": "temperature",
+                    "tag_type": "telemetry",
+                    "config": {"custom_key": "custom_value", "nested": {"a": 1}},
+                },
             ]
         }
         response = self.put(self.url, data=payload, format="json")

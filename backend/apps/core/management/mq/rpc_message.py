@@ -7,7 +7,7 @@ logger.setLevel(logging.WARNING)
 
 
 def handle_rpc(data):
-    logger.debug("Handling RPC: %s", data)
+    logger.info("Handling RPC: %s", data)
     RPCMessage.objects.filter(id=data.get("id"), received=False).update(
         received=True,
         additional_info=data.get("data"),

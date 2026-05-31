@@ -21,9 +21,7 @@ def collect_unique_cards(reader_device_id, count, timeout=KEYREQUEST_COLLECTION_
 
     while len(collected) < count:
         if time.time() >= deadline:
-            raise LookupFailure(
-                f"Timeout: collected {len(collected)} of {count} cards"
-            )
+            raise LookupFailure(f"Timeout: collected {len(collected)} of {count} cards")
 
         on_reader = AttributeKv.objects.filter(
             entity_id=reader_device_id,
