@@ -16,9 +16,7 @@ def handle_keydatachange(data, device):
     tenant_id = device.get("tenant_id")
 
     try:
-        _, new_guest, card_uid = resolve_entities(
-            tenant_id, data.get("roomName"), data.get("keyCoder")
-        )
+        _, new_guest, card_uid = resolve_entities(tenant_id, data.get("roomName"), data.get("keyCoder"))
     except LookupFailure as e:
         logger.warning(
             "keydatachange lookup failed operationId=%s room=%s: %s",
@@ -61,17 +59,11 @@ def handle_keydatachange(data, device):
 
 
 def _revoke_from_old_room(tenant_id, old_room_name, card_uid):
-    old_room = Room.objects.filter(
-        tenant_id=tenant_id, number=old_room_name
-    ).first()
+    old_room = Room.objects.filter(tenant_id=tenant_id, number=old_room_name).first()
     if not old_room:
         return f"Old room {old_room_name}: Room not found: {old_room_name}"
 
-    old_guest = (
-        Guest.objects.filter(room=old_room, is_active=True)
-        .order_by("created_at")
-        .first()
-    )
+    old_guest = Guest.objects.filter(room=old_room, is_active=True).order_by("created_at").first()
     if not old_guest:
         return f"Old room {old_room_name}: Guest not found for room {old_room.number}"
 

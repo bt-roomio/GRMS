@@ -1,3 +1,5 @@
+from django.urls import path
+
 from access_manager.views.card import CardDetailView, CardListView, DisconnectCardView
 from access_manager.views.card_logs_export import ExportCardLogsExcelView
 from access_manager.views.group import GroupDetailView, GroupListView
@@ -5,7 +7,6 @@ from access_manager.views.guest_card import GuestCardView
 from access_manager.views.staff import StaffDetailView, StaffListView
 from access_manager.views.staff_card import StaffCardView
 from access_manager.views.sync_device import SyncDeviceByDeviceDetailView, SyncDeviceDetailView, SyncDeviceView
-from django.urls import path
 
 urlpatterns = [
     path("groups/", GroupListView.as_view(), name="group-list"),

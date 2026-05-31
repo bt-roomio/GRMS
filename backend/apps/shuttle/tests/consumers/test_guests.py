@@ -10,7 +10,6 @@ from main.models import Guest, Room
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestGuestConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -105,9 +104,7 @@ class TestGuestConsumer:
             assert payload["response_status"] == 200
             results = payload["data"]["results"]
             for item in results:
-                guest = await database_sync_to_async(
-                    Guest.objects.filter(id=item["id"], is_active=True).first
-                )()
+                guest = await database_sync_to_async(Guest.objects.filter(id=item["id"], is_active=True).first)()
                 if guest and room:
                     assert guest.room_id == room.id
         finally:

@@ -1,9 +1,8 @@
 import logging
 
-from access_manager.models import NeedSyncDevice
-
 from rest_framework import serializers
 
+from access_manager.models import NeedSyncDevice
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DeviceCredentials, Tenant

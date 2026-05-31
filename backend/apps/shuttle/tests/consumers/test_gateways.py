@@ -17,7 +17,6 @@ def test_gateway_device():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestGatewayConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:

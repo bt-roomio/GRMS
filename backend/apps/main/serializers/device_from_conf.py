@@ -215,4 +215,3 @@ class DeviceFromConfSerializer(serializers.Serializer):
             "devices": result_devices,
             "address_maps": maps_in,
         }
-

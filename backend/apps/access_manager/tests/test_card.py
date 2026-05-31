@@ -1,9 +1,9 @@
 import uuid
 from unittest.mock import patch
 
-from access_manager.models import Card, StaffCard
 from django.urls import reverse
 
+from access_manager.models import Card, StaffCard
 from core.tests.base import BaseTestCase
 
 
@@ -43,17 +43,13 @@ class CardTest(BaseTestCase):
 
     def test_list_cards_with_search(self):
         url = reverse("access_manager:card-list")
-        response = self.client.get(
-            url, {"search_field": "number", "search_value": "65 28 23 12"}
-        )
+        response = self.client.get(url, {"search_field": "number", "search_value": "65 28 23 12"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
 
     def test_list_cards_with_staff_filter(self):
         url = reverse("access_manager:card-list")
-        response = self.client.get(
-            url, {"staff_id": "a47ac10b-58cc-4372-a567-0e02b2c3d480"}
-        )
+        response = self.client.get(url, {"staff_id": "a47ac10b-58cc-4372-a567-0e02b2c3d480"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
 

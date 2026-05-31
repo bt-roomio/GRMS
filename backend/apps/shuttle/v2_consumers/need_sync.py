@@ -1,8 +1,8 @@
-from access_manager.models import NeedSyncDevice
-from access_manager.serializers.need_sync import NeedSyncDeviceFilterParams, NeedSyncDeviceSerializer
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
+from access_manager.models import NeedSyncDevice
+from access_manager.serializers.need_sync import NeedSyncDeviceFilterParams, NeedSyncDeviceSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 

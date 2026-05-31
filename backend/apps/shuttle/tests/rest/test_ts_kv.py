@@ -148,6 +148,7 @@ class ShuttleTsKvApiTests(BaseTestCase):
                     if key_name == "temperature":
                         return SimpleNamespace(bool_v=None, str_v=None, long_v=None, dbl_v=24.2, json_v=None)
                     return None
+
             return _QS()
 
         mock_manager.filter.side_effect = filter_side_effect

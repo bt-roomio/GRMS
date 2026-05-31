@@ -7,7 +7,8 @@ from rest_framework.fields import RegexValidator
 
 from core.utils.serializers import ValidatorSerializer
 
-ROOM_NUMBER_RE = r'^(?:\d+-\d+|\d+[A-Za-z]*)(?:;(?:\d+-\d+|\d+[A-Za-z]*))*;?$'
+ROOM_NUMBER_RE = r"^(?:\d+-\d+|\d+[A-Za-z]*)(?:;(?:\d+-\d+|\d+[A-Za-z]*))*;?$"
+
 
 class RoomNumberValidator(ValidatorSerializer):
     number = serializers.CharField(

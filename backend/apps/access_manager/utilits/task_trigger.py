@@ -12,8 +12,9 @@ def card_room(group_id, room_id, action, card_num=None):
 
 def card_public_space(group_id, public_space_id, action, card_num=None):
     try:
-        result = manage_cards_for_public_space_task.delay(str(group_id), str(public_space_id), action,
-                                                          card_num=card_num)
+        result = manage_cards_for_public_space_task.delay(
+            str(group_id), str(public_space_id), action, card_num=card_num
+        )
         return f"Connect/Disconect public space task result: {result}"
     except Exception as e:
         return f"Error connecting cards to public space: {str(e)}"

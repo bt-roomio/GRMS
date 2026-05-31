@@ -15,17 +15,16 @@ def find_or_assign_slot(card_number: str, device, connect) -> int:
             logger.warning(f"Card {card_number} not found in device {device.id}")
             raise
     else:
+
         def get_next_slot():
-            used_slots = set(CardDeviceSlot.objects.filter(device=device).values_list('slot', flat=True))
+            used_slots = set(CardDeviceSlot.objects.filter(device=device).values_list("slot", flat=True))
             current_slot = 1
             while current_slot in used_slots:
                 current_slot += 1
             return current_slot
 
         card_slot, _ = CardDeviceSlot.objects.get_or_create(
-            card_number=card_number,
-            device=device,
-            defaults={'slot': get_next_slot()}
+            card_number=card_number, device=device, defaults={"slot": get_next_slot()}
         )
         return card_slot.slot
 
@@ -49,7 +48,7 @@ def prepare_cards(cards: List[str], device, connect, group: Group = None) -> Lis
             "start_time": card_data_params.get("start_time"),
             "end_time": card_data_params.get("end_time"),
             "weekdays": card_data_params.get("weekdays"),
-            "slot_num": card_data_params.get("slot_num")
+            "slot_num": card_data_params.get("slot_num"),
         }
         rpc_params.append(card_data)
 
@@ -65,27 +64,20 @@ def get_indexes_of_day(group: Group):
 def get_group(card_number: str, tenant_id):
     try:
         staff_card = (
-            StaffCard.objects
-            .select_related("staff__group", "card")
+            StaffCard.objects.select_related("staff__group", "card")
             .filter(
                 is_active=True,
                 card__number=card_number,
                 card__tenant_id=tenant_id,
                 staff__is_active=True,
                 staff__tenant_id=tenant_id,
-                staff__group__isnull=False
+                staff__group__isnull=False,
             )
             .first()
         )
-        guest_card = (
-            GuestCard.objects.filter(
-                is_active=True,
-                card__number=card_number,
-                card__tenant_id=tenant_id,
-                guest__tenant_id=tenant_id
-            )
-            .first()
-        )
+        guest_card = GuestCard.objects.filter(
+            is_active=True, card__number=card_number, card__tenant_id=tenant_id, guest__tenant_id=tenant_id
+        ).first()
 
         group = staff_card.staff.group if staff_card else None
         user = "staff" if staff_card else "guest" if guest_card else None
@@ -93,19 +85,34 @@ def get_group(card_number: str, tenant_id):
     except Exception:
         return None, None
 
+
 def data_params(card_number, group, connect, slot):
     params = {}
     card_number = str(card_number)
     if card_number == "00 00 00 00":
-        return {"cardNumber": card_number, "access_group": "0", "start_time": "00:00", "end_time": "00:00",
-                "weekdays": "0", "slot_num": "1"}
+        return {
+            "cardNumber": card_number,
+            "access_group": "0",
+            "start_time": "00:00",
+            "end_time": "00:00",
+            "weekdays": "0",
+            "slot_num": "1",
+        }
     access_group = str(group.group_type) if group and connect else str(int(connect))
     start_time = group.start_time.strftime("%H:%M") if group and group.start_time else "00:00"
     end_time = group.end_time.strftime("%H:%M") if group and group.end_time else "23:59"
-    weekdays = ["1", "2", "3", "4", "5", "6", "7"] if not group or ALL_DAYS in group.week_days else get_indexes_of_day(
-        group)
+    weekdays = (
+        ["1", "2", "3", "4", "5", "6", "7"] if not group or ALL_DAYS in group.week_days else get_indexes_of_day(group)
+    )
     slot_num = str(slot)
     params.update(
-        {"cardNumber": card_number, "access_group": access_group, "start_time": start_time, "end_time": end_time,
-         "weekdays": weekdays, "slot_num": slot_num})
+        {
+            "cardNumber": card_number,
+            "access_group": access_group,
+            "start_time": start_time,
+            "end_time": end_time,
+            "weekdays": weekdays,
+            "slot_num": slot_num,
+        }
+    )
     return params

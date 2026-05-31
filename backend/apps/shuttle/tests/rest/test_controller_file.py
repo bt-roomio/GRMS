@@ -50,7 +50,9 @@ class ShuttleControllerFileApiTests(BaseTestCase):
         cf = ControllerFile.objects.get(pk=file_block["id"])
         self.assertEqual(cf.file_type, "firmware")
         # controllers created and linked to controller_file
-        created = list(Controller.objects.filter(file_id=cf.id).order_by("mac_address").values_list("mac_address", flat=True))
+        created = list(
+            Controller.objects.filter(file_id=cf.id).order_by("mac_address").values_list("mac_address", flat=True)
+        )
         self.assertEqual(sorted(macs), created)
 
     def test_upload_success_custom_file_type(self):
@@ -63,6 +65,7 @@ class ShuttleControllerFileApiTests(BaseTestCase):
         resp = self._upload([], status_code=400)
         self.assertIn("controllers", resp.data)
         from shuttle.models import Controller, ControllerFile
+
         self.assertFalse(ControllerFile.objects.exists())
         self.assertFalse(Controller.objects.exists())
 

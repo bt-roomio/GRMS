@@ -85,8 +85,6 @@ class ShuttleAttributesApiTests(BaseTestCase):
         self.assertEqual(sent_msg["data"]["RemoteLoggingLevel"], "DEBUG")
         self.assertEqual(sent_msg["data"]["NewKey"], "SomeValue")
 
-
-
     @patch("shuttle.views.attributes.send_to_rabbitmq")
     @patch("shuttle.views.attributes.connect_to_rabbitmq")
     @patch("shuttle.views.attributes.prepare_mqtt_request")

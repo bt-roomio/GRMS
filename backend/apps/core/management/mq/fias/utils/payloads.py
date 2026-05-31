@@ -22,7 +22,6 @@ def build_reservation_payload(command, data, device):
 
 
 def build_card_holder_details(holder_type, holder, card_uid):
-
     if holder_type == "guest":
         additional_info = holder.additional_info or {}
         return {

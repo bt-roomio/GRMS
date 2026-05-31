@@ -1,8 +1,8 @@
-from access_manager.models import Card
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import ListModelMixin
 from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
 
+from access_manager.models import Card
 from shuttle.serializers.cards import CardFilterParams, CardSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 

@@ -26,11 +26,13 @@ def publish_updates_attribute_batch(updates_by_device: dict[str, list[dict]]):
         if not changed_messages:
             continue
         payload = {"type": "get_latest_activity", "updates": changed_messages}
-        groups_payloads.extend([
-            ("attribute_kv_updates", payload),
-            (f"attribute_kv_updates_{tenant_id}", payload),
-            (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}),
-        ])
+        groups_payloads.extend(
+            [
+                ("attribute_kv_updates", payload),
+                (f"attribute_kv_updates_{tenant_id}", payload),
+                (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}),
+            ]
+        )
 
     if groups_payloads:
         async_to_sync(_send_groups)(channel_layer, groups_payloads)

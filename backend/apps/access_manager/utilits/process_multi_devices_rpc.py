@@ -2,13 +2,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
 
+from celery.utils.log import get_task_logger
+
 from access_manager.models import Group
 from access_manager.utilits.need_sync import need_sync
 from access_manager.utilits.not_need_sync import not_need_sync
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
 from access_manager.utilits.remove_slots import remove_card_device_slots
-from celery.utils.log import get_task_logger
-
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
 from main.models import Device

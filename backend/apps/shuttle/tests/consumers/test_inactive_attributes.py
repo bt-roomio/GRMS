@@ -21,7 +21,6 @@ def test_device2():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestInactiveDeviceAttributeConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -344,9 +343,7 @@ class TestInactiveDeviceAttributeConsumer:
                 if device_id:
                     device = await database_sync_to_async(Device.objects.get)(id=device_id)
                     has_room = device.room is not None
-                    has_public_space = await database_sync_to_async(
-                        lambda: device.device_public_spaces.exists()
-                    )()
+                    has_public_space = await database_sync_to_async(lambda: device.device_public_spaces.exists())()
                     assert has_room or has_public_space
         finally:
             await comm.disconnect()

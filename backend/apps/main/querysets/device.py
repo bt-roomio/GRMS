@@ -1,7 +1,7 @@
-from access_manager.models import NeedSyncDevice
 from django.db.models import Case, Exists, OuterRef, Prefetch, Q, Value, When
 from django.db.models.fields import IntegerField
 
+from access_manager.models import NeedSyncDevice
 from core.querysets.base_queryset import BaseQuerySet
 
 
@@ -108,12 +108,16 @@ class DeviceQuerySet(BaseQuerySet):
 
         staff_ids = list(
             StaffCard.objects.filter(
-                card_id=card_id, is_active=True, staff__is_active=True,
+                card_id=card_id,
+                is_active=True,
+                staff__is_active=True,
             ).values_list("staff_id", flat=True)
         )
         guest_ids = list(
             GuestCard.objects.filter(
-                card_id=card_id, is_active=True, guest__is_active=True,
+                card_id=card_id,
+                is_active=True,
+                guest__is_active=True,
             ).values_list("guest_id", flat=True)
         )
 
@@ -130,9 +134,7 @@ class DeviceQuerySet(BaseQuerySet):
         open_room_ids: set = set()
         if room_q:
             for rid, dlock in (
-                Room.objects.filter(room_q, tenant_id=tenant_id)
-                .values_list("id", "door_lock_device_id")
-                .distinct()
+                Room.objects.filter(room_q, tenant_id=tenant_id).values_list("id", "door_lock_device_id").distinct()
             ):
                 if dlock:
                     door_lock_device_ids.add(dlock)
@@ -146,30 +148,24 @@ class DeviceQuerySet(BaseQuerySet):
                 group_public_space__group__is_active=True,
             )
         if guest_ids:
-            ps_q |= (
-                Q(guestpublicspace__guest_id__in=guest_ids)
-                | Q(room_type_public_spaces__room_type__room__guests__id__in=guest_ids)
+            ps_q |= Q(guestpublicspace__guest_id__in=guest_ids) | Q(
+                room_type_public_spaces__room_type__room__guests__id__in=guest_ids
             )
 
         public_space_device_ids: set = set()
         if ps_q:
             public_space_ids = list(
-                PublicSpace.objects.filter(ps_q, tenant_id=tenant_id)
-                .values_list("id", flat=True)
-                .distinct()
+                PublicSpace.objects.filter(ps_q, tenant_id=tenant_id).values_list("id", flat=True).distinct()
             )
             if public_space_ids:
                 public_space_device_ids = set(
-                    DevicePublicSpaces.objects
-                    .filter(public_space_id__in=public_space_ids)
+                    DevicePublicSpaces.objects.filter(public_space_id__in=public_space_ids)
                     .values_list("device_id", flat=True)
                     .distinct()
                 )
 
-
         queued_device_ids = set(
-            NeedSyncDevice.objects
-            .filter(card_id=card_id, need_sync=True)
+            NeedSyncDevice.objects.filter(card_id=card_id, need_sync=True)
             .values_list("device_id", flat=True)
             .distinct()
         )
@@ -192,7 +188,9 @@ class DeviceQuerySet(BaseQuerySet):
             .annotate(
                 need_sync=Exists(
                     NeedSyncDevice.objects.filter(
-                        device=OuterRef("pk"), card_id=card_id, need_sync=True,
+                        device=OuterRef("pk"),
+                        card_id=card_id,
+                        need_sync=True,
                     )
                 )
             )

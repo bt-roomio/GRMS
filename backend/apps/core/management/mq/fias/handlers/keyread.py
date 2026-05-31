@@ -17,9 +17,7 @@ def handle_keyread(data, device):
     try:
         card_uid = resolve_card_uid(tenant_id, data.get("keyCoder"))
     except LookupFailure as e:
-        logger.warning(
-            "keyread lookup failed operationId=%s: %s", operation_id, e
-        )
+        logger.warning("keyread lookup failed operationId=%s: %s", operation_id, e)
         send_card_operation_confirmation(device, operation_id, status="UR", text=str(e))
         return
 
@@ -32,14 +30,10 @@ def handle_keyread(data, device):
             card_uid,
             holder_type,
         )
-        send_card_operation_confirmation(
-            device, operation_id, status="OK", text=json.dumps(details)
-        )
+        send_card_operation_confirmation(device, operation_id, status="OK", text=json.dumps(details))
         return
 
-    logger.warning(
-        "keyread unassigned card operationId=%s card=%s", operation_id, card_uid
-    )
+    logger.warning("keyread unassigned card operationId=%s card=%s", operation_id, card_uid)
     send_card_operation_confirmation(
         device,
         operation_id,

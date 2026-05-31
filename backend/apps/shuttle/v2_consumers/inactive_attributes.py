@@ -43,17 +43,18 @@ class InactiveDeviceAttributeConsumer(BaseGenericAsyncAPIConsumer):
             await self._maybe_push(message.get("update"))
 
     async def _maybe_push(self, payload):
-        if (not payload or payload.get("scope") != "SERVER_SCOPE"
-                or payload.get("key_name") != "active"): return
+        if not payload or payload.get("scope") != "SERVER_SCOPE" or payload.get("key_name") != "active":
+            return
 
         device_id = payload.get("entity")
-        if not device_id: return
+        if not device_id:
+            return
 
         from main.models import Device
+
         tenant_id = self.tenant_id
         device_connected = await sync_to_async(
-            lambda: Device.objects
-            .filter(id=device_id, tenant_id=tenant_id)
+            lambda: Device.objects.filter(id=device_id, tenant_id=tenant_id)
             .filter(Q(room__isnull=False) | Q(device_public_spaces__isnull=False))
             .exists()
         )()

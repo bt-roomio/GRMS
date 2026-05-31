@@ -67,9 +67,8 @@ def swagger_webrtc_broker():
         ```
 
         The URL is single-use (or short-lived) and sets the upstream mapping server-side for subsequent navigation.
-        """
+        """,
     )
-
 
 
 def swagger_webrtc_agents_status():
@@ -83,7 +82,9 @@ def swagger_webrtc_agents_status():
                         "success": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True),
                         "results": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
-                            additional_properties=openapi.Schema(type=openapi.TYPE_STRING, enum=["online", "connecting", "offline"]),
+                            additional_properties=openapi.Schema(
+                                type=openapi.TYPE_STRING, enum=["online", "connecting", "offline"]
+                            ),
                             example={
                                 "9b2fb4f3-9a6e-47b2-8e8b-8a6f8e2f2a77": "online",
                                 "8d1a0e2f-3c44-4b3d-a9e0-d7d2f8f1c111": "offline",
@@ -114,5 +115,5 @@ def swagger_webrtc_agents_status():
           ]
         }
         ```
-        """
+        """,
     )

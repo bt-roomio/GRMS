@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_target_device_uuid(device):
-    relation = (
-        Relation.objects.filter(to_id_id=device["id"]).order_by("updated_at").last()
-    )
+    relation = Relation.objects.filter(to_id_id=device["id"]).order_by("updated_at").last()
     device_id = relation and relation.from_id.id
     gateway_or_none = Device.objects.gateway_or_none(device["id"])  # pyright: ignore
     return (gateway_or_none and str(gateway_or_none.id)) or str(device_id)
@@ -50,13 +48,9 @@ def send_card_operation_confirmation(device, operation_id, status="OK", text="")
         send_to_rabbitmq(channel, message)
         channel.connection.close()
 
-        logger.info(
-            "confirmCardOperation operationId=%s status=%s", operation_id, status
-        )
+        logger.info("confirmCardOperation operationId=%s status=%s", operation_id, status)
     except Exception as exc:
-        logger.exception(
-            "Failed confirmCardOperation operationId=%s: %s", operation_id, exc
-        )
+        logger.exception("Failed confirmCardOperation operationId=%s: %s", operation_id, exc)
         raise
 
 
@@ -72,9 +66,7 @@ def send_rpc_to_guest_devices(guest, card_uid, access):
     errors = []
     successes = []
     for dev in devices:
-        result = send_rpc_request(
-            str(dev.id), [card_uid], access, guest_id=str(guest.id)
-        )
+        result = send_rpc_request(str(dev.id), [card_uid], access, guest_id=str(guest.id))
         if result.get("success"):
             successes.append(result.get("message", "OK"))
         else:

@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             ALTER TABLE shuttle_ts_kv ALTER COLUMN entity_id SET NOT NULL;
 
             -- Create new primary key
-            ALTER TABLE shuttle_ts_kv ADD CONSTRAINT shuttle_ts_kv_pkey 
+            ALTER TABLE shuttle_ts_kv ADD CONSTRAINT shuttle_ts_kv_pkey
             PRIMARY KEY (ts, key, entity_id);
 
             CREATE INDEX shuttle_ts_kv_entity_id_ts_idx ON shuttle_ts_kv (entity_id, ts DESC);

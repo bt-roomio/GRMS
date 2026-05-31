@@ -1,7 +1,7 @@
-from access_manager.serializers.card_log import CardLogFilterParams
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+
+from access_manager.serializers.card_log import CardLogFilterParams
 
 
 def swagger_export_card_logs():
@@ -11,15 +11,13 @@ def swagger_export_card_logs():
             200: openapi.Response(
                 description="Excel file containing card logs. The response is a downloadable `.xlsx` file."
             ),
-            404: openapi.Response(
-                description="No logs found for given filters."
-            ),
+            404: openapi.Response(description="No logs found for given filters."),
         },
         tags=["Access manager, CardLogs"],
         operation_description="""
         **This endpoint exports `card log` records into an Excel (`.xlsx`) file.**
 
-        The response is a downloadable Excel file containing all filtered card logs.  
+        The response is a downloadable Excel file containing all filtered card logs.
 
         ### Excel File Format:
         The exported file will contain the following columns:
@@ -35,17 +33,17 @@ def swagger_export_card_logs():
         ### Filtering Options:
         You can filter the logs by sending JSON in the request body:
 
-        - `room_ids` (array of strings): List of Room IDs  
-        - `public_space_ids` (array of strings): List of Public Space IDs  
-        - `user` (string): User ID (staff or guest)  
-        - `card_num` (string): Card number to filter by  
-        - `device_ids` (array of strings): Filter by device IDs  
-        - `filters` (object): Key-value pairs with datetime filtering  
-          - `from_date` (string, format `"YYYY-MM-DD HH:MM:SS"`)  
-          - `to_date` (string, format `"YYYY-MM-DD HH:MM:SS"`)  
-        - `sort_by` (array of strings): Sorting options, e.g. `["-event_ts"]`  
-        - `size` (integer): Page size, default 50, max 200  
-        - `page` (integer): Page number, default 1  
+        - `room_ids` (array of strings): List of Room IDs
+        - `public_space_ids` (array of strings): List of Public Space IDs
+        - `user` (string): User ID (staff or guest)
+        - `card_num` (string): Card number to filter by
+        - `device_ids` (array of strings): Filter by device IDs
+        - `filters` (object): Key-value pairs with datetime filtering
+          - `from_date` (string, format `"YYYY-MM-DD HH:MM:SS"`)
+          - `to_date` (string, format `"YYYY-MM-DD HH:MM:SS"`)
+        - `sort_by` (array of strings): Sorting options, e.g. `["-event_ts"]`
+        - `size` (integer): Page size, default 50, max 200
+        - `page` (integer): Page number, default 1
 
         ### Example Request Body:
         ```json
@@ -66,7 +64,7 @@ def swagger_export_card_logs():
         ```
 
         ### Responses:
-        - **200**: Returns Excel file with logs.  
-        - **404**: No logs found for given filters.  
-        """
+        - **200**: Returns Excel file with logs.
+        - **404**: No logs found for given filters.
+        """,
     )

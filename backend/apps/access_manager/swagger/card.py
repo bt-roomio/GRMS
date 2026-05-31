@@ -1,6 +1,6 @@
-from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
-
 from drf_yasg.utils import swagger_auto_schema
+
+from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
 
 
 def card_swagger():
@@ -20,7 +20,7 @@ def card_swagger():
         - `staff_id`: filter cards assigned to a specific staff member.
         - `is_pwd` (filter): when set, restrict to PIN rows (`true`) or RFID rows (`false`).
         - `need_sync` (filter): whether the card has any device sync pending.
-        """
+        """,
     )
 
 
@@ -30,13 +30,13 @@ def swagger_card_disconnect():
         responses={200: DisconnectCardSerializer()},
         tags=["Access manager, Card"],
         operation_description="""
-        
+
         **This endpoint deactivates an active guest card in the system with the provided card_id.**
-        
+
         The card disconnection process:
             - Finds the active guest card with the specified card_id
             - Sends a deactivation request to the associated device
             - Marks the card as inactive in the system
-            
+
         """,
     )

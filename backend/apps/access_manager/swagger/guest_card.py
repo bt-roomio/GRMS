@@ -44,6 +44,7 @@ GuestCardResponseSwagger = openapi.Schema(
     },
 )
 
+
 def guest_card_swagger():
     return swagger_auto_schema(
         tags=["Access manager, Guest Card"],
@@ -64,4 +65,4 @@ def guest_card_swagger():
 
         **Note:** The operation has a 5-second timeout.
         """,
-    ) 
+    )

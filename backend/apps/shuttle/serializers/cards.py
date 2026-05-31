@@ -1,8 +1,7 @@
-from access_manager.models import Card, Group, GuestCard, StaffCard
-from access_manager.serializers.staff import StaffSerializer
-
 from rest_framework import serializers
 
+from access_manager.models import Card, Group, GuestCard, StaffCard
+from access_manager.serializers.staff import StaffSerializer
 from core.utils.serializers import ValidatorSerializer
 from main.serializers.guest import GuestSerializer
 from main.serializers.room import SimpleRoomSerializer
@@ -76,7 +75,4 @@ class CardFilterParams(ValidatorSerializer):
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     search_value = serializers.CharField(required=False, allow_null=True)
     is_pwd = serializers.BooleanField(required=False, allow_null=True, default=None)
-    filters = serializers.DictField(
-        required=False,
-        child=serializers.BooleanField()
-    )
+    filters = serializers.DictField(required=False, child=serializers.BooleanField())

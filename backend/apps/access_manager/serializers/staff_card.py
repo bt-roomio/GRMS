@@ -1,8 +1,8 @@
 from typing import List, TypedDict
 
-from access_manager.models import Staff, StaffCard
-
 from rest_framework import serializers
+
+from access_manager.models import Staff, StaffCard
 
 
 class StaffCardRequestData(TypedDict):
@@ -39,7 +39,7 @@ class StaffCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StaffCard
-        fields = ('created_at', 'card_id', 'card_number', 'need_sync')
+        fields = ("created_at", "card_id", "card_number", "need_sync")
 
     def get_card_id(self, obj):
         return obj.card.id
@@ -49,7 +49,5 @@ class StaffCardSerializer(serializers.ModelSerializer):
 
     def get_need_sync(self, obj):
         from access_manager.models import NeedSyncDevice
-        return NeedSyncDevice.objects.filter(
-            card=obj.card,
-            need_sync=True
-        ).exists()
+
+        return NeedSyncDevice.objects.filter(card=obj.card, need_sync=True).exists()

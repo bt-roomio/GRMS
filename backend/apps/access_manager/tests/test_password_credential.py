@@ -1,13 +1,12 @@
 from unittest.mock import patch
 
+from django.test import TestCase
+
 from access_manager.models import Card, GuestCard, NeedSyncDevice
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.tasks.send_rpc import send_rpc_request
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
-from django.test import TestCase
-
 from main.models import Device, Guest
-
 
 FIXTURES = (
     "tenant_profile.yaml",
@@ -49,25 +48,19 @@ class CardIsPwdDefaultTest(TestCase):
 
 class GuestCardRequestSerializerPwdTest(TestCase):
     def test_is_pwd_false_keeps_all_cards(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["111", "222", "333"]}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["111", "222", "333"]})
         s.is_valid(raise_exception=True)
         self.assertEqual(s.validated_data["cards"], ["111", "222", "333"])
         self.assertFalse(s.validated_data["is_pwd"])
 
     def test_is_pwd_true_truncates_to_first(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["111", "222", "333"], "is_pwd": True}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["111", "222", "333"], "is_pwd": True})
         s.is_valid(raise_exception=True)
         self.assertEqual(s.validated_data["cards"], ["111"])
         self.assertTrue(s.validated_data["is_pwd"])
 
     def test_is_pwd_true_with_single_card_unchanged(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["12345"], "is_pwd": True}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["12345"], "is_pwd": True})
         s.is_valid(raise_exception=True)
         self.assertEqual(s.validated_data["cards"], ["12345"])
 
@@ -163,12 +156,8 @@ class SendRpcRequestPwdTest(TestCase):
 
     @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
     @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
-    def test_pwd_card_offline_creates_need_sync_with_pwd_flag(
-        self, mock_send_rabbitmq, mock_connect_rabbitmq
-    ):
-        card = Card.objects.create(
-            number="55555", tenant_id=self.device.tenant_id, is_pwd=True
-        )
+    def test_pwd_card_offline_creates_need_sync_with_pwd_flag(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        card = Card.objects.create(number="55555", tenant_id=self.device.tenant_id, is_pwd=True)
         GuestCard.objects.create(guest=self.guest, card=card, is_active=True)
         self.device.status = False
         self.device.save()
