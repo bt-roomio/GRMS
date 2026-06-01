@@ -37,7 +37,7 @@ services:
   rabbitmq:
     ports:
       - "15672:15672"
-      - "5672:5672"   # прямой AMQP без порт-маппинга
+      - "5672:5672"
 
   # --- Django: bind-mount кода + verbose логи + dev-сервер ---
   backend:
@@ -121,7 +121,8 @@ services:
     # frontend-nginx не нужен в dev — Vite сам раздаёт
 
   frontend-nginx:
-    profiles: [disabled]   # выключить nginx в dev
+    deploy:
+      replicas: 0   # не нужен в dev — Vite раздаёт напрямую
 
   # --- Node-RED: открытый порт без proxy ---
   nodered:

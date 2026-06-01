@@ -37,6 +37,7 @@ class DashboardSerializer(serializers.ModelSerializer):
         model = Dashboard
         fields = (
             "id",
+            "created_at",
             "title",
             "configuration",
             "assigned_customers",

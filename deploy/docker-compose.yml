@@ -1,17 +1,18 @@
 # =============================================================================
 # roomio GRMS — docker-compose.yml
 # =============================================================================
-# Profiles:
+# Группы сервисов (используются в Makefile):
 #   infra     — postgres, pgbouncer, redis, redis-broker, rabbitmq
 #   app       — backend (django), celery-*, mq-async, mews-websocket, pms-handler
+#   iot       — mqtt
 #   front     — frontend, frontend-nginx
-#   proxy     — nginx-proxy, letsencrypt
+#   proxy     — proxy, letsencrypt
 #   nodered   — nodered
 #
 # Запуск:
-#   make up-infra       # only infrastructure
-#   make up-app         # infrastructure + application
-#   make up-all         # all
+#   make up-infra       # только инфраструктура
+#   make up-app         # инфра + приложение
+#   make up-all         # всё
 # =============================================================================
 
 x-logging: &default-logging
@@ -73,7 +74,6 @@ services:
   postgres:
     image: timescale/timescaledb:2.21.0-pg16
     container_name: postgres
-    profiles: [infra]
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -96,7 +96,6 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:v1.25.1-p0
     container_name: pgbouncer
-    profiles: [infra]
     restart: always
     environment:
       DB_USER: ${POSTGRES_USER}
@@ -131,7 +130,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
-    profiles: [infra]
     restart: always
     command:
       - redis-server
@@ -153,7 +151,6 @@ services:
   redis-broker:
     image: redis:7-alpine
     container_name: redis-broker
-    profiles: [infra]
     restart: always
     command:
       - redis-server
@@ -176,7 +173,6 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: rabbitmq
-    profiles: [infra]
     restart: always
     hostname: rabbitmq
     environment:
@@ -207,7 +203,6 @@ services:
     <<: *django-common
     container_name: django
     hostname: django
-    profiles: [app]
     expose:
       - "8000"
     environment:
@@ -233,7 +228,6 @@ services:
   celery-critical:
     <<: *django-common
     container_name: celery-critical
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       <<: *celery-env
@@ -244,7 +238,6 @@ services:
   celery-default:
     <<: *django-common
     container_name: celery-default
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       <<: *celery-env
@@ -255,7 +248,6 @@ services:
   celery-low:
     <<: *django-common
     container_name: celery-low
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       <<: *celery-env
@@ -266,7 +258,6 @@ services:
   celery-beat:
     <<: *django-common
     container_name: celery-beat
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       <<: *celery-env
@@ -276,7 +267,6 @@ services:
 
   mq-async:
     <<: *django-common
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       - UV_NO_SYNC=1
@@ -291,7 +281,6 @@ services:
   mews-websocket:
     <<: *django-common
     container_name: mews-websocket
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       - UV_NO_SYNC=1
@@ -304,7 +293,6 @@ services:
   pms-handler:
     <<: *django-common
     container_name: pms-handler
-    profiles: [app]
     depends_on: *worker-depends
     environment:
       - UV_NO_SYNC=1
@@ -322,7 +310,6 @@ services:
     image: registry.gitlab.com/grms1/mqtt-broker
     container_name: mqtt-broker
     hostname: mqtt-broker
-    profiles: [iot]
     restart: unless-stopped
     ports:
       - "${MQTT_EXTERNAL_PORT:-9000}:9999"
@@ -357,7 +344,6 @@ services:
   frontend:
     image: registry.gitlab.com/grms1/grms_front:${FRONT_IMAGE_TAG:-latest}
     container_name: vue-builder
-    profiles: [front]
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
@@ -372,7 +358,6 @@ services:
   frontend-nginx:
     image: nginx:1.27-alpine
     container_name: frontend-nginx
-    profiles: [front]
     restart: always
     logging: *default-logging
     expose:
@@ -405,7 +390,6 @@ services:
   proxy:
     image: jwilder/nginx-proxy:latest
     container_name: proxy
-    profiles: [proxy]
     restart: always
     logging: *default-logging
     ports:
@@ -427,7 +411,6 @@ services:
   letsencrypt:
     image: jrcs/letsencrypt-nginx-proxy-companion:latest
     container_name: letsencrypt
-    profiles: [proxy]
     restart: always
     logging: *default-logging
     environment:
@@ -452,7 +435,6 @@ services:
   nodered:
     image: registry.gitlab.com/grms1/node-red-nodes:latest
     container_name: nodered
-    profiles: [nodered]
     restart: always
     logging: *default-logging
     init: true

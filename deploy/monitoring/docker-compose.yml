@@ -1,11 +1,11 @@
 # =============================================================================
-# roomio GRMS — monitoring stack
+# roomio GRMS — monitoring/docker-compose.yml
 # =============================================================================
-# Запуск:
-#   docker compose -f monitoring/docker-compose.yml up -d
+# Profiles: нет — все сервисы поднимаются вместе
 #
-# Переменные окружения:
-#   cp monitoring/.env.example monitoring/.env
+# Запуск:
+#   make up              # dev (override применяется автоматически)
+#   make up ENV=prod     # prod (+ docker-compose.prod.yml)
 # =============================================================================
 
 x-logging: &default-logging
@@ -15,6 +15,7 @@ x-logging: &default-logging
     max-size: "50m"
 
 services:
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: prometheus
