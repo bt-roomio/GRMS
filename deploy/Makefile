@@ -28,15 +28,21 @@ else
 	COMPOSE = $(COMPOSE_BASE) -f docker-compose.override.yml
 endif
 
-# Все профили для down (нужно перечислить явно)
-ALL_PROFILES = --profile infra --profile app --profile iot --profile front --profile proxy --profile nodered
+# Группы сервисов
+INFRA_SVCS   = postgres pgbouncer redis redis-broker rabbitmq
+APP_SVCS     = backend celery-critical celery-default celery-low celery-beat mq-async mews-websocket pms-handler
+IOT_SVCS     = mqtt
+FRONT_SVCS   = frontend frontend-nginx
+PROXY_SVCS   = proxy letsencrypt
+NODERED_SVCS = nodered
+ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS) $(NODERED_SVCS)
 
 # Node-RED multi-tenant
 NODERED         = docker compose -f docker-compose.nodered.yml
 NODERED_TENANTS ?= nines map olympic
 
 .PHONY: help up-infra up-app up-iot up-front up-proxy up-nodered up-all \
-        down restart logs shell ps pull deploy \
+        down down-v restart logs shell ps deploy deploy-backend \
         migrate collectstatic \
         nodered-up-all nodered-down-all nodered-pull-all nodered-restart-all
 
@@ -65,7 +71,6 @@ help:
 	@echo "    make logs s=backend        Логи сервиса (Ctrl+C для выхода)"
 	@echo "    make shell s=backend       Bash в контейнер"
 	@echo "    make ps                    Статус всех контейнеров"
-	@echo "    make pull                  Обновить все образы"
 	@echo ""
 	@echo "  Django:"
 	@echo "    make migrate               Запустить миграции"
@@ -83,35 +88,36 @@ help:
 	@echo ""
 
 # --- Запуск по уровням ---
+# --no-recreate: не пересоздавать уже запущенные контейнеры (только добавлять новые).
 
 up-infra:
-	$(COMPOSE) --profile infra up -d
+	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS)
 
 up-app:
-	$(COMPOSE) --profile infra --profile app up -d
+	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS)
 
 up-iot:
-	$(COMPOSE) --profile infra --profile app --profile iot up -d
+	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS)
 
 up-front:
-	$(COMPOSE) --profile infra --profile app --profile front up -d
+	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS) $(FRONT_SVCS)
 
 up-proxy:
-	$(COMPOSE) --profile proxy up -d
+	$(COMPOSE) up -d --no-recreate $(PROXY_SVCS)
 
 up-nodered:
-	$(COMPOSE) --profile infra --profile app --profile nodered up -d
+	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS) $(NODERED_SVCS)
 
 up-all:
-	$(COMPOSE) $(ALL_PROFILES) up -d
+	$(COMPOSE) up -d $(ALL_SVCS)
 
 # --- Остановка ---
 
 down:
-	$(COMPOSE) $(ALL_PROFILES) down
+	$(COMPOSE) down
 
 down-v:  ## Остановить и удалить volumes (ОСТОРОЖНО: удалит данные!)
-	$(COMPOSE) $(ALL_PROFILES) down -v
+	$(COMPOSE) down -v
 
 # --- Управление сервисами ---
 
@@ -119,41 +125,38 @@ restart:
 ifndef s
 	$(error Укажи сервис: make restart s=backend)
 endif
-	$(COMPOSE) $(ALL_PROFILES) restart $(s)
+	$(COMPOSE) restart $(s)
 
 logs:
 ifndef s
-	$(COMPOSE) $(ALL_PROFILES) logs -f --tail=100
+	$(COMPOSE) logs -f --tail=100
 else
-	$(COMPOSE) $(ALL_PROFILES) logs -f --tail=100 $(s)
+	$(COMPOSE) logs -f --tail=100 $(s)
 endif
 
 shell:
 ifndef s
 	$(error Укажи сервис: make shell s=backend)
 endif
-	$(COMPOSE) $(ALL_PROFILES) exec $(s) bash
+	$(COMPOSE) exec $(s) bash
 
 ps:
-	$(COMPOSE) $(ALL_PROFILES) ps --format "table {{.Name}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}"
-
-pull:
-	$(COMPOSE) $(ALL_PROFILES) pull
+	$(COMPOSE) ps --format "table {{.Name}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}"
 
 # --- Django ---
 
 migrate:
-	$(COMPOSE) $(ALL_PROFILES) exec backend python manage.py migrate
+	$(COMPOSE) exec backend python manage.py migrate
 
 collectstatic:
-	$(COMPOSE) $(ALL_PROFILES) exec backend python manage.py collectstatic --noinput
+	$(COMPOSE) exec backend python manage.py collectstatic --noinput
 
 # --- Деплой ---
 
 deploy:
 	git pull
-	$(COMPOSE) $(ALL_PROFILES) pull
-	$(COMPOSE) --profile infra --profile app up -d --remove-orphans
+	$(COMPOSE) pull $(APP_SVCS)
+	$(COMPOSE) up -d --no-recreate --remove-orphans $(INFRA_SVCS) $(APP_SVCS)
 	@echo "Деплой завершён: $$(git log -1 --oneline)"
 
 deploy-backend:
@@ -188,5 +191,5 @@ nodered-restart-all: $(addprefix nodered-restart-, $(NODERED_TENANTS))
 init: up-infra
 	@echo "Ожидаем готовности БД..."
 	@sleep 5
-	$(COMPOSE) $(ALL_PROFILES) exec postgres pg_isready -U $(shell grep POSTGRES_USER .env | cut -d= -f2)
+	$(COMPOSE) exec postgres pg_isready -U $(shell grep POSTGRES_USER .env | cut -d= -f2)
 	@echo "Инфраструктура готова. Запусти: make up-app"

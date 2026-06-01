@@ -17,16 +17,15 @@ Observability-стек на базе Prometheus + Grafana с алертами в
 ## Быстрый старт
 
 ```bash
-# 1. Создать .env из примера
-cp env.example .env
-# Заполнить значения (см. раздел «Переменные окружения»)
+# Из директории deploy/monitoring/
 
-# 2. Настроить список доменов для HTTPS-проверок
-cp targets/blackbox-https.example.yml targets/blackbox-https.yml
-# Вписать свои домены в targets/blackbox-https.yml
+# 1. Создать .env и targets/blackbox-https.yml из примеров
+make init
+# Заполнить значения в .env (см. раздел «Переменные окружения»)
+# Добавить свои домены в targets/blackbox-https.yml
 
-# 3. Запустить стек
-docker compose -f monitoring/docker-compose.yml up -d
+# 2. Запустить стек
+make up
 ```
 
 ## Переменные окружения (`.env`)
@@ -116,7 +115,9 @@ monitoring/
 ## Перезагрузка конфигурации Prometheus без рестарта
 
 ```bash
-curl -X POST http://localhost:9090/-/reload
+make reload
+# или напрямую:
+# curl -X POST http://localhost:9090/-/reload
 ```
 
 ## Grafana

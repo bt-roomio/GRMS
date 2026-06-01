@@ -106,9 +106,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "devices",
             "additional_info",
         )
-        extra_kwargs = {
-            "state": {"help_text": "0=Available, 1=CheckedIn, 2=Occupied, 3=Reserved, 4=MakeUpRoom"},
-        }
+        extra_kwargs = {"state": {"help_text": [f"{state[0]} = {state[1]}" for state in Room.STATE]}}
 
 
 class SimpleRoomSerializer(serializers.ModelSerializer):
