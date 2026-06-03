@@ -371,14 +371,13 @@ services:
       - LETSENCRYPT_HOST=${FRONTEND_VIRTUAL_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1/healthz || exit 1"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
     networks:
       - roomio_net
-    # Ждём ЗАВЕРШЕНИЯ сборки (не просто старта контейнера)
     depends_on:
       frontend:
         condition: service_completed_successfully
@@ -407,6 +406,12 @@ services:
     networks:
       - roomio_net
       - proxy_net
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t 2>/dev/null && pgrep nginx > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   letsencrypt:
     image: jrcs/letsencrypt-nginx-proxy-companion:latest
@@ -423,7 +428,8 @@ services:
       - certs:/etc/nginx/certs
       - /run/docker.sock:/var/run/docker.sock:ro
     depends_on:
-      - proxy
+      proxy:
+        condition: service_healthy
     networks:
       - roomio_net
       - proxy_net

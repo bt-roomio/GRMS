@@ -11,6 +11,8 @@
 #   make shell s=backend       # exec bash в контейнер
 #   make deploy                # git pull + docker pull + restart
 #
+#   На проде можно добавить ENV=prod в .bashrc
+#
 # Node-RED (multi-tenant):
 #   make nodered-up-nines      # поднять тенанта "nines"
 #   make nodered-up-all        # поднять всех тенантов из NODERED_TENANTS
@@ -18,6 +20,9 @@
 # =============================================================================
 
 ENV ?= dev
+
+PLATFORM := $(if $(filter arm64 aarch64,$(shell uname -m)),linux/arm64,linux/amd64)
+export DOCKER_DEFAULT_PLATFORM = $(PLATFORM)
 
 COMPOSE_BASE = docker compose -f docker-compose.yml
 COMPOSE_PROD = $(COMPOSE_BASE) -f docker-compose.prod.yml
@@ -88,25 +93,24 @@ help:
 	@echo ""
 
 # --- Запуск по уровням ---
-# --no-recreate: не пересоздавать уже запущенные контейнеры (только добавлять новые).
 
 up-infra:
-	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS)
+	$(COMPOSE) up -d  $(INFRA_SVCS)
 
 up-app:
-	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS)
+	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS)
 
 up-iot:
-	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS)
+	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS)
 
 up-front:
-	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS) $(FRONT_SVCS)
+	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS) $(FRONT_SVCS)
 
 up-proxy:
-	$(COMPOSE) up -d --no-recreate $(PROXY_SVCS)
+	$(COMPOSE) up -d  $(PROXY_SVCS)
 
 up-nodered:
-	$(COMPOSE) up -d --no-recreate $(INFRA_SVCS) $(APP_SVCS) $(NODERED_SVCS)
+	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS) $(NODERED_SVCS)
 
 up-all:
 	$(COMPOSE) up -d $(ALL_SVCS)
@@ -156,7 +160,7 @@ collectstatic:
 deploy:
 	git pull
 	$(COMPOSE) pull $(APP_SVCS)
-	$(COMPOSE) up -d --no-recreate --remove-orphans $(INFRA_SVCS) $(APP_SVCS)
+	$(COMPOSE) up -d --remove-orphans $(INFRA_SVCS) $(APP_SVCS)
 	@echo "Деплой завершён: $$(git log -1 --oneline)"
 
 deploy-backend:

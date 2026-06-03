@@ -13,6 +13,9 @@
 
 ENV ?= dev
 
+PLATFORM := $(if $(filter arm64 aarch64,$(shell uname -m)),linux/arm64,linux/amd64)
+export DOCKER_DEFAULT_PLATFORM = $(PLATFORM)
+
 COMPOSE_BASE = docker compose -f docker-compose.yml
 COMPOSE_PROD = $(COMPOSE_BASE) -f docker-compose.prod.yml
 
