@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 
 from asgiref.sync import sync_to_async
+from django.db import close_old_connections
 
 from core.management.mq.get_device import get_sub_device
 from core.utils.cache import invalidate_quick_cache
@@ -33,6 +34,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
     if not batch:
         return
 
+    close_old_connections()
     logger.debug(f"[state_device_batch_async] Processing batch: {len(batch)} messages")
 
     ts_now = get_mil_sec()
