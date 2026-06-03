@@ -16,11 +16,12 @@ sys.path.insert(0, str(backend_dir))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-# ruff: disable[E402]
+# ruff: noqa: E402
 import aio_pika
 import redis.asyncio as aioredis
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.db import close_old_connections
 
 from core.management.mq.attributes import sync_attributes_batch
 from core.management.mq.device_cache import (
@@ -39,9 +40,6 @@ from core.utils.get_time import get_mil_sec
 from main.models import Device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
-
-# ruff: enable[E402]
-
 
 # Queue Names
 QUEUE_TO_GRMS = "toGRMS"
@@ -165,17 +163,35 @@ async def validate_body(body: bytes):
     return device, msg
 
 
+def _db_safe(func):
+    """Ensure stale thread-local DB connections are closed before/after each sync call.
+
+    Thread pool threads are reused between batches. Without this, a connection
+    closed by PgBouncer's SERVER_IDLE_TIMEOUT stays in the thread-local and
+    raises InterfaceError on next use. close_old_connections() detects and drops it.
+    """
+
+    def wrapper(*args, **kwargs):
+        close_old_connections()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            close_old_connections()
+
+    return wrapper
+
+
 # Wrap sync batch functions (thread_sensitive=False allows parallel execution in thread pool)
-sync_telemetry_batch_async = sync_to_async(sync_telemetry_batch, thread_sensitive=False)
-sync_attributes_batch_async = sync_to_async(sync_attributes_batch, thread_sensitive=False)
+sync_telemetry_batch_async = sync_to_async(_db_safe(sync_telemetry_batch), thread_sensitive=False)
+sync_attributes_batch_async = sync_to_async(_db_safe(sync_attributes_batch), thread_sensitive=False)
 # sync_state_device_batch_async is already async, imported directly
 
 # Wrap individual handlers
-handle_rpc_async = sync_to_async(handle_rpc, thread_sensitive=False)
-handle_connect_disconnect_async = sync_to_async(handle_connect_disconnect, thread_sensitive=False)
+handle_rpc_async = sync_to_async(_db_safe(handle_rpc), thread_sensitive=False)
+handle_connect_disconnect_async = sync_to_async(_db_safe(handle_connect_disconnect), thread_sensitive=False)
 
 # Wrap helper functions for attribute request
-get_sub_device_async = sync_to_async(get_sub_device, thread_sensitive=False)
+get_sub_device_async = sync_to_async(_db_safe(get_sub_device), thread_sensitive=False)
 
 
 async def get_attribute_response(device: DeviceType, data: dict, topic: str):
