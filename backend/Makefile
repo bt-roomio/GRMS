@@ -9,9 +9,11 @@
 
 REGISTRY   = registry.gitlab.com/yroomio/grms
 TAG       ?= dev
-PLATFORM  ?= linux/amd64
+PLATFORM := $(if $(filter arm64 aarch64,$(shell uname -m)),linux/arm64,linux/amd64)
 BUILDER    = grms-builder
 DOCKERFILE = Dockerfile
+
+export DOCKER_DEFAULT_PLATFORM = $(PLATFORM)
 
 .PHONY: help login buildx-setup build push push-dev push-prod
 
@@ -31,7 +33,7 @@ help:
 	@echo ""
 	@echo "  Push в registry:"
 	@echo "    make push                          Push (TAG=dev, PLATFORM=linux/amd64)"
-	@echo "    make push PLATFORM=linux/arm64     Push под arm64"
+	@echo "    make push PLATFORM=linux/amd64     Push под amd64"
 	@echo "    make push-dev                      Push с тегом dev"
 	@echo "    make push-prod                     Push с тегом latest"
 	@echo ""
