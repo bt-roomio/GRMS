@@ -33,6 +33,13 @@ services:
           memory: 32M
 
   grafana:
+    environment:
+      - VIRTUAL_HOST=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - HTTPS_METHOD=noredirect
+      - HSTS=off
     deploy:
       resources:
         limits:

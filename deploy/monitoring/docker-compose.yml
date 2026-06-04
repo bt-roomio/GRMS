@@ -65,10 +65,6 @@ services:
     expose:
       - "3000"
     environment:
-      - VIRTUAL_HOST=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
-      - VIRTUAL_PORT=3000
-      - LETSENCRYPT_HOST=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
       - GF_SERVER_ROOT_URL=https://${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
       - GF_SERVER_DOMAIN=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
       - GF_SERVER_SERVE_FROM_SUB_PATH=false
