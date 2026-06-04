@@ -1,6 +1,8 @@
+import glob
 import os
 
 from celery import Celery
+from celery.signals import worker_process_shutdown
 from kombu import Queue
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -33,6 +35,18 @@ app.conf.task_routes = {
     "shuttle.tasks.delete_old_logs": {"queue": "low"},
     "users.tasks.flush_expired_tokens": {"queue": "low"},
 }
+
+@worker_process_shutdown.connect
+def on_worker_process_shutdown(pid, exitcode, **kwargs):
+    prom_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    if not prom_dir:
+        return
+    for path in glob.glob(os.path.join(prom_dir, f"*_{pid}.db")):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
 
 app.conf.update(
     task_soft_time_limit=300,

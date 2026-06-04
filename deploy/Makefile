@@ -164,9 +164,7 @@ deploy:
 	@echo "Деплой завершён: $$(git log -1 --oneline)"
 
 deploy-backend:
-	git pull
-	$(COMPOSE) pull backend
-	$(COMPOSE) up -d --no-deps backend celery-critical celery-default celery-low celery-beat mq-async
+	$(COMPOSE) up -d --no-deps $(APP_SVCS)
 
 # --- Node-RED (multi-tenant) ---
 
