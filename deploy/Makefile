@@ -47,7 +47,8 @@ NODERED         = docker compose -f docker-compose.nodered.yml
 NODERED_TENANTS ?= nines map olympic
 
 .PHONY: help up-infra up-app up-iot up-front up-proxy up-nodered up-all \
-        down down-v restart logs shell ps deploy deploy-backend \
+        down down-v down-infra down-app down-iot down-front down-proxy down-nodered \
+        restart logs shell ps deploy deploy-backend \
         migrate collectstatic \
         nodered-up-all nodered-down-all nodered-pull-all nodered-restart-all
 
@@ -72,6 +73,12 @@ help:
 	@echo ""
 	@echo "  Управление:"
 	@echo "    make down                  Остановить все сервисы"
+	@echo "    make down-infra            Остановить инфраструктуру"
+	@echo "    make down-app              Остановить backend + celery"
+	@echo "    make down-iot              Остановить MQTT"
+	@echo "    make down-front            Остановить Frontend"
+	@echo "    make down-proxy            Остановить Proxy + SSL"
+	@echo "    make down-nodered          Остановить Node-RED"
 	@echo "    make restart s=backend     Перезапустить сервис"
 	@echo "    make logs s=backend        Логи сервиса (Ctrl+C для выхода)"
 	@echo "    make shell s=backend       Bash в контейнер"
@@ -99,6 +106,24 @@ up-infra:
 
 up-app:
 	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS)
+
+down-infra:
+	$(COMPOSE) down $(INFRA_SVCS)
+
+down-app:
+	$(COMPOSE) down $(APP_SVCS)
+
+down-iot:
+	$(COMPOSE) down $(IOT_SVCS)
+
+down-front:
+	$(COMPOSE) down $(FRONT_SVCS)
+
+down-proxy:
+	$(COMPOSE) down $(PROXY_SVCS)
+
+down-nodered:
+	$(COMPOSE) down $(NODERED_SVCS)
 
 up-iot:
 	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS)

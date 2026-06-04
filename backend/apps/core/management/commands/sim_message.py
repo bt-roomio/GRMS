@@ -27,10 +27,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, **_):
-        tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        for msg in self.generate_msg_attributes(tenant_id):
-            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
-            self.send_msg(msg)
+        msg = {
+            "sourceDeviceUUID": "01efd4c4-0b84-49ee-be29-61b8fbb3d8ba",
+            "data": {"0C:38:3E:75:08:1B": {"online": True}},
+            "topic": "v1/gateway/attributes",
+        }
+        self.send_msg(msg)
 
     def send_msg(self, msg, routing_key="/attributes"):
         ch = connect_to_rabbitmq()
