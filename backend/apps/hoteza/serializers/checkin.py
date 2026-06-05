@@ -193,7 +193,6 @@ class CheckInSerializer(serializers.Serializer):
 
         pin = validated_data.get("pin")
         if pin:
-            pin += "34"
             context = get_guest_access_context(instance)
             for device in context.get("devices", []):
                 response = send_rpc_request(device.id, [pin], 1, guest_id=str(instance.id), is_pwd=True)
