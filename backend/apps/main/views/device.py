@@ -1,10 +1,9 @@
-from access_manager.models import NeedSyncDevice
-
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.models import NeedSyncDevice
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
 from main.models import Device, DevicePublicSpaces, Room

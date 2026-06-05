@@ -1,16 +1,35 @@
-from django.db.models import Prefetch, Q
+from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, Value, When
 
 from core.querysets.base_queryset import BaseQuerySet
 
 
 class PublicSpaceQuerySet(BaseQuerySet):
-    def list(self, tenant_id, sort_by=None, search_field=None, search_value=None, accessible_for_guest=None):
+    def with_status(self):
+        from main.models import DevicePublicSpaces
+
+        has_devices = Exists(DevicePublicSpaces.objects.filter(public_space=OuterRef("pk")))
+        has_offline_devices = Exists(
+            DevicePublicSpaces.objects.filter(public_space=OuterRef("pk"), device__status=False)
+        )
+        return self.annotate(
+            _has_devices=has_devices,
+            _has_offline_devices=has_offline_devices,
+        ).annotate(
+            status=Case(
+                When(_has_devices=True, _has_offline_devices=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            )
+        )
+
+    def list(self, tenant_id, sort_by=None, search_field=None, search_value=None, accessible_for_guest=None, status=None):
         from main.models import DevicePublicSpaces
 
         sort_by = sort_by or ["created_at"]
 
         query = (
-            self.select_related("created_by")
+            self.with_status()
+            .select_related("created_by")
             .prefetch_related(
                 Prefetch(
                     "device_public_spaces",
@@ -24,9 +43,14 @@ class PublicSpaceQuerySet(BaseQuerySet):
         )
 
         if accessible_for_guest is not None:
-            query = self.filter(accessible_for_guest=accessible_for_guest)
+            query = query.filter(accessible_for_guest=accessible_for_guest)
 
-        if search_field and search_value:
+        if status is not None:
+            query = query.filter(status=status)
+
+        if search_field == "device_name" and search_value:
+            query = query.filter(device_public_spaces__device__name__icontains=search_value).distinct()
+        elif search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
         elif search_value:
             query = query.filter(Q(name__istartswith=search_value))

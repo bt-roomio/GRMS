@@ -20,6 +20,7 @@ class PublicSpaceListView(APIView):
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
             accessible_for_guest=params.get("accessible_for_guest", None),
+            status=params.get("status", None),
         )
         serializer = PublicSpaceSerializer(queryset, many=True)
         try:
@@ -42,7 +43,8 @@ class PublicSpaceDetailView(APIView):
     @public_space_swagger()
     @check_perms(["main.view_publicspace"])
     def get(self, request, pk):
-        instance = get_object_or_404(PublicSpace, pk=pk, tenant_id=request.user.tenant_id)
+        queryset = PublicSpace.objects.with_status().filter(tenant_id=request.user.tenant_id)  # pyright: ignore
+        instance = get_object_or_404(queryset, pk=pk)
         serializer = PublicSpaceSerializer(instance)
         return Response(serializer.data)
 

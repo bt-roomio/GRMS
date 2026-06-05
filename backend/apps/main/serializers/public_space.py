@@ -20,6 +20,7 @@ class SimplePublicSpaceSerializer(serializers.ModelSerializer):
 
 class PublicSpaceSerializer(serializers.ModelSerializer):
     devices = serializers.SerializerMethodField(read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
     device_ids = serializers.PrimaryKeyRelatedField(
         queryset=Device.objects.all(), many=True, required=False, write_only=True
     )
@@ -36,6 +37,18 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             devices = Device.objects.filter(device_public_spaces__public_space=obj)
 
         return SimpleDeviceSerializer(devices, many=True).data
+
+    def get_status(self, obj):
+        annotated = getattr(obj, "status", None)
+        if annotated is not None:
+            return bool(annotated)
+        if hasattr(obj, "prefetched_devices"):
+            devices = [dps.device for dps in obj.prefetched_devices]
+        else:
+            devices = list(Device.objects.filter(device_public_spaces__public_space=obj))
+        if not devices:
+            return False
+        return all(device.status for device in devices)
 
     def update(self, instance, validated_data):
         device_objects = validated_data.pop("device_ids", None)
@@ -97,6 +110,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             "accessible_for_guest",
             "device_ids",
             "devices",
+            "status",
             "tenant",
             "dashboard",
             "additional_info",
@@ -108,9 +122,10 @@ class PublicSpaceFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=50)
-    search_field = serializers.ChoiceField(choices=(["name"]), required=False)
+    search_field = serializers.ChoiceField(choices=(["name", "device_name"]), required=False)
     search_value = serializers.CharField(required=False)
     accessible_for_guest = serializers.BooleanField(required=False, allow_null=True, default=None)
+    status = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
