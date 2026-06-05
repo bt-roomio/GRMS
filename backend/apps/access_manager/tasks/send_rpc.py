@@ -22,16 +22,7 @@ TIMEOUT = 10
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def send_rpc_request(
-    device_id,
-    cards,
-    access,
-    user=None,
-    guest_id=None,
-    staff_id=None,
-    sync=False,
-    is_pwd=False,
-):
+def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False, is_pwd=False):
     request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id, is_pwd=is_pwd)
 
     message = request_params.get("message")
@@ -44,6 +35,7 @@ def send_rpc_request(
     fail_response = request_params.get("fail_response")
 
     if not cards:
+        logger.info("Cards are not provided ! ")
         return {
             "success": True,
             "cards_empty": True,
@@ -53,6 +45,7 @@ def send_rpc_request(
     if device and not device.status:
         need_sync(cards, device, access, user=user, reason="Device is not connected")
         fail_response.update({"success": False, "message": "Device is not connected !"})
+        logger.info("Device is not connected ! ")
         return fail_response
 
     channel = connect_to_rabbitmq()
