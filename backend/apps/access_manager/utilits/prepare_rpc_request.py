@@ -27,7 +27,7 @@ def prepare_rpc_request(device_id, cards, access, guest_id=None, staff_id=None, 
 
     if is_pwd:
         method = "add_pwd" if access else "delete_pwd"
-        password_value = int(cards[0]) if cards else 0
+        password_value = cards[0] if cards else 0
         rpc_data = {
             "id": request_id,
             "method": method,
