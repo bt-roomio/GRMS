@@ -58,18 +58,46 @@ class GuestCardRequestSerializerPwdTest(TestCase):
 
     def test_is_pwd_true_truncates_to_first(self):
         s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["111", "222", "333"], "is_pwd": True}
+            data={"guest_id": "g", "cards": ["48291", "73826", "91527"], "is_pwd": True}
         )
         s.is_valid(raise_exception=True)
-        self.assertEqual(s.validated_data["cards"], ["111"])
+        self.assertEqual(s.validated_data["cards"], ["48291"])
         self.assertTrue(s.validated_data["is_pwd"])
 
     def test_is_pwd_true_with_single_card_unchanged(self):
         s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["12345"], "is_pwd": True}
+            data={"guest_id": "g", "cards": ["48291"], "is_pwd": True}
         )
         s.is_valid(raise_exception=True)
-        self.assertEqual(s.validated_data["cards"], ["12345"])
+        self.assertEqual(s.validated_data["cards"], ["48291"])
+
+    def test_is_pwd_true_rejects_repeated_digits(self):
+        s = GuestCardRequestSerializer(
+            data={"guest_id": "g", "cards": ["1111"], "is_pwd": True}
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("cards", s.errors)
+
+    def test_is_pwd_true_rejects_sequential_digits(self):
+        s = GuestCardRequestSerializer(
+            data={"guest_id": "g", "cards": ["1234"], "is_pwd": True}
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("cards", s.errors)
+
+    def test_is_pwd_true_rejects_short_pin(self):
+        s = GuestCardRequestSerializer(
+            data={"guest_id": "g", "cards": ["12"], "is_pwd": True}
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("cards", s.errors)
+
+    def test_is_pwd_true_rejects_non_numeric(self):
+        s = GuestCardRequestSerializer(
+            data={"guest_id": "g", "cards": ["12ab5"], "is_pwd": True}
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("cards", s.errors)
 
 
 class PrepareRpcRequestPwdTest(TestCase):
