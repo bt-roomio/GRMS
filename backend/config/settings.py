@@ -501,7 +501,7 @@ LOGGING = {
             "backupCount": 3,
         },
         "file_hoteza_app": {
-            "level": "WARNING",
+            "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "hoteza.log",
             "formatter": "verbose",

@@ -4,6 +4,7 @@ from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
+from access_manager.tasks.send_rpc import send_rpc_request
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
 from services.utils.const import HOTEZA
@@ -26,6 +27,7 @@ class CheckInSerializer(serializers.Serializer):
     swapFlag = serializers.CharField()
     nopost = serializers.CharField()
     profileNum = serializers.CharField(allow_null=True, allow_blank=True)
+    pin = serializers.CharField(allow_null=True, allow_blank=True)
 
     def validate_arrivalDateTS(self, value):
         try:
@@ -58,6 +60,7 @@ class CheckInSerializer(serializers.Serializer):
             "swapFlag": "swap_flag",
             "nopost": "no_post",
             "profileNum": "profile_num",
+            "pin": "pin",
         }
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
@@ -182,5 +185,11 @@ class CheckInSerializer(serializers.Serializer):
             except Exception as e:
                 logger.error(f"Error creating guest: {e}")
                 raise JsonValidationError({"result": 9, "message": "Failed to create guest."})
+
         logger.info(f"Guest check-in processed: {instance.name}")  # pyright: ignore
+
+        if validated_data.get("pin"):
+            device = instance.room.devices.first()
+            if device and device.id:
+                send_rpc_request.delay(device.id, [validated_data.get("pin")], 1, guest_id=str(instance.id))
         return instance
