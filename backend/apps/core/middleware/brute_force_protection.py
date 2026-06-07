@@ -71,6 +71,10 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         self.captcha_enabled = self.config.get("captcha_enabled", False)
         self.captcha_threshold = self.config.get("captcha_threshold", 3)
 
+        # Whitelist / blacklist из конфига
+        self.whitelist_ips = set(self.config.get("whitelist_ips", []))
+        self.blacklist_ips = set(self.config.get("blacklist_ips", []))
+
     def process_request(self, request):
         """Проверить перед обработкой запроса"""
 
@@ -80,6 +84,16 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         # Получить идентификаторы
         ip = self._get_client_ip(request)
+
+        # Whitelist — доверенные IP не проходят защиту (тесты, внутренние сервисы)
+        if ip in self.whitelist_ips:
+            return None
+
+        # Blacklist — заблокированные IP отклоняются немедленно
+        if ip in self.blacklist_ips:
+            logger.warning(f"Blacklisted IP blocked: {ip} (path: {request.path})")
+            return self._blocked_response("IP blacklisted")
+
         body_data = self._parse_request_body(request)
         email = body_data.get("email", "anonymous")
 
@@ -126,9 +140,11 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         if not ip or not email:
             return response
 
-        # Определить успех/неудачу по статус коду
+        # Определить успех/неудачу по статус коду.
+        # 429 (throttle) тоже считается неудачной попыткой — иначе атакующий
+        # остаётся ниже порога lockout, чередуя throttled-запросы.
         is_success = response.status_code in [200, 201]
-        is_failure = response.status_code in [401, 403]
+        is_failure = response.status_code in [401, 403, 429]
 
         if is_failure:
             # Записать неудачную попытку

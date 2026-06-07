@@ -309,6 +309,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "core.utils.pagination.PageSizePagination",
     "PAGE_SIZE": 15,
+    "DEFAULT_THROTTLE_RATES": {
+        "auth_token": "20/min",
+    },
 }
 
 SIMPLE_JWT = {
