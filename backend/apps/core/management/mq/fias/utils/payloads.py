@@ -18,6 +18,7 @@ def build_reservation_payload(command, data, device):
         "swapFlag": data.get("swapFlag", 0),
         "nopost": data.get("nopost", "nopost"),
         "profileNum": data.get("profileNum", "profileNum"),
+        "pin": data.get("pin"),
     }
 
 

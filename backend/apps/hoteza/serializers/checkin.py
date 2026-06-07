@@ -30,7 +30,7 @@ class CheckInSerializer(serializers.Serializer):
     swapFlag = serializers.CharField()
     nopost = serializers.CharField()
     profileNum = serializers.CharField(allow_null=True, allow_blank=True)
-    pin = serializers.CharField(allow_null=True, allow_blank=True)
+    pin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     def validate_arrivalDateTS(self, value):
         try:
@@ -169,7 +169,6 @@ class CheckInSerializer(serializers.Serializer):
                 raise JsonValidationError({"result": 9, "message": "Failed to update guest."})
         else:
             logger.info("Creating new guest with data: %s", validated_data)
-            # Create new guest
             try:
                 instance = guest_serializer.create(
                     {
@@ -191,7 +190,7 @@ class CheckInSerializer(serializers.Serializer):
 
         logger.info(f"Guest check-in processed: {instance.name}")  # pyright: ignore
 
-        pin = validated_data.get("pin")
+        pin = validated_data.get("pin") or None
         if pin:
             context = get_guest_access_context(instance)
             for device in context.get("devices", []):
