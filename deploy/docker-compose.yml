@@ -7,7 +7,6 @@
 #   iot       — mqtt
 #   front     — frontend, frontend-nginx
 #   proxy     — proxy, letsencrypt
-#   nodered   — nodered
 #
 # Запуск:
 #   make up-infra       # только инфраструктура
@@ -79,8 +78,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    expose:
-      - "5432"
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
@@ -137,8 +136,6 @@ services:
       - --save ""
       - --maxmemory 512mb
       - --maxmemory-policy allkeys-lru
-    ports:
-      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
     networks:
       - roomio_net
     logging: *default-logging
@@ -157,8 +154,6 @@ services:
       - --appendonly yes
       - --maxmemory 512mb
       - --maxmemory-policy noeviction
-    ports:
-      - "${REDIS_BROKER_EXTERNAL_PORT:-6380}:6379"
     volumes:
       - redis_broker_data:/data
     networks:
@@ -273,6 +268,8 @@ services:
       - POSTGRES_HOST=pgbouncer
       - PGAPPNAME=grms-mq-async
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
     command: python apps/core/management/commands/mq_async.py
     volumes: *celery-volumes
     deploy:
@@ -407,7 +404,7 @@ services:
       - roomio_net
       - proxy_net
     healthcheck:
-      test: ["CMD-SHELL", "nginx -t 2>/dev/null && pgrep nginx > /dev/null"]
+      test: ["CMD-SHELL", "nginx -t 2>/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -434,31 +431,6 @@ services:
       - roomio_net
       - proxy_net
 
-  # ---------------------------------------------------------------------------
-  # NODE-RED
-  # ---------------------------------------------------------------------------
-
-  nodered:
-    image: registry.gitlab.com/grms1/node-red-nodes:latest
-    container_name: nodered
-    restart: always
-    logging: *default-logging
-    init: true
-    stop_signal: SIGTERM
-    stop_grace_period: 30s
-    ports:
-      - "${NODERED_EXTERNAL_PORT:-1880}:1880"
-    environment:
-      - VIRTUAL_HOST=${NODERED_VIRTUAL_HOST}
-      - VIRTUAL_PORT=1880
-      - LETSENCRYPT_HOST=${NODERED_VIRTUAL_HOST}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-      - API_URL=http://django:8000
-      - TENANT_ID=${NODERED_TENANT_ID}
-    volumes:
-      - nodered_data:/data
-    networks:
-      - roomio_net
 
 # =============================================================================
 # VOLUMES
@@ -472,7 +444,6 @@ volumes:
   media_volume:
   frontend_dist:
   mqtt_logs:
-  nodered_data:
   prom_mp:
   backend_venv:
   # nginx-proxy volumes

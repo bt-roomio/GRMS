@@ -124,14 +124,5 @@ services:
     deploy:
       replicas: 0   # не нужен в dev — Vite раздаёт напрямую
 
-  # --- Node-RED: открытый порт без proxy ---
-  nodered:
-    ports:
-      - "1880:1880"
-    environment:
-      - API_URL=http://django:8000
-      - TENANT_ID=${NODERED_TENANT_ID}
-      # Без VIRTUAL_HOST — в dev proxy не нужен
-
 volumes:
   backend_venv:

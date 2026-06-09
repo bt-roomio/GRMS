@@ -39,17 +39,20 @@ APP_SVCS     = backend celery-critical celery-default celery-low celery-beat mq-
 IOT_SVCS     = mqtt
 FRONT_SVCS   = frontend frontend-nginx
 PROXY_SVCS   = proxy letsencrypt
-NODERED_SVCS = nodered
-ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS) $(NODERED_SVCS)
+ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS)
 
 # Node-RED multi-tenant
 NODERED         = docker compose -f docker-compose.nodered.yml
 NODERED_TENANTS ?= nines map olympic
 
-.PHONY: help up-infra up-app up-iot up-front up-proxy up-nodered up-all \
+PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
+
+.PHONY: help up-infra up-app up-iot up-front up-proxy up-all \
+        down down-v down-infra down-app down-iot down-front down-proxy down-nodered \
+        restart logs shell ps deploy deploy-backend \
         down down-v restart logs shell ps deploy deploy-backend \
         migrate collectstatic \
-        nodered-up-all nodered-down-all nodered-pull-all nodered-restart-all
+        nodered-up-all nodered-down-all nodered-pull-all nodered-restart-all nodered-ps-all
 
 # --- Help ---
 
@@ -63,7 +66,7 @@ help:
 	@echo "    make up-iot                Добавить MQTT"
 	@echo "    make up-front              Добавить Frontend"
 	@echo "    make up-proxy              Добавить Proxy + SSL"
-	@echo "    make up-all                Всё вместе"
+	@echo "    make up-all                Всё вместе (без Node-RED)"
 	@echo "    make up-all ENV=prod       Всё в продакшн-режиме (лимиты ресурсов)"
 	@echo ""
 	@echo "  Деплой:"
@@ -72,6 +75,12 @@ help:
 	@echo ""
 	@echo "  Управление:"
 	@echo "    make down                  Остановить все сервисы"
+	@echo "    make down-infra            Остановить инфраструктуру"
+	@echo "    make down-app              Остановить backend + celery"
+	@echo "    make down-iot              Остановить MQTT"
+	@echo "    make down-front            Остановить Frontend"
+	@echo "    make down-proxy            Остановить Proxy + SSL"
+	@echo "    make down-nodered          Остановить Node-RED"
 	@echo "    make restart s=backend     Перезапустить сервис"
 	@echo "    make logs s=backend        Логи сервиса (Ctrl+C для выхода)"
 	@echo "    make shell s=backend       Bash в контейнер"
@@ -90,6 +99,8 @@ help:
 	@echo "    make nodered-up-all        Поднять всех  (NODERED_TENANTS=$(NODERED_TENANTS))"
 	@echo "    make nodered-down-all      Остановить всех"
 	@echo "    make nodered-pull-all      Обновить образы всех"
+	@echo "    make nodered-ps-<name>     Статус тенанта"
+	@echo "    make nodered-ps-all        Статус всех тенантов"
 	@echo ""
 
 # --- Запуск по уровням ---
@@ -109,11 +120,15 @@ up-front:
 up-proxy:
 	$(COMPOSE) up -d  $(PROXY_SVCS)
 
-up-nodered:
-	$(COMPOSE) up -d  $(INFRA_SVCS) $(APP_SVCS) $(NODERED_SVCS)
-
 up-all:
 	$(COMPOSE) up -d $(ALL_SVCS)
+
+up:
+ifndef s
+	$(error Укажи сервис: make restart s=backend)
+endif
+	$(COMPOSE) up -d --no-deps $(s)
+
 
 # --- Остановка ---
 
@@ -122,6 +137,24 @@ down:
 
 down-v:  ## Остановить и удалить volumes (ОСТОРОЖНО: удалит данные!)
 	$(COMPOSE) down -v
+
+down-infra:
+	$(COMPOSE) down $(INFRA_SVCS)
+
+down-app:
+	$(COMPOSE) down $(APP_SVCS)
+
+down-iot:
+	$(COMPOSE) down $(IOT_SVCS)
+
+down-front:
+	$(COMPOSE) down $(FRONT_SVCS)
+
+down-proxy:
+	$(COMPOSE) down $(PROXY_SVCS)
+
+down-nodered:
+	$(COMPOSE) down $(NODERED_SVCS)
 
 # --- Управление сервисами ---
 
@@ -145,7 +178,7 @@ endif
 	$(COMPOSE) exec $(s) bash
 
 ps:
-	$(COMPOSE) ps --format "table {{.Name}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}"
+	$(COMPOSE) ps --format "$(PS_FORMAT)"
 
 # --- Django ---
 
@@ -165,7 +198,6 @@ deploy:
 
 deploy-backend:
 	git pull
-	$(COMPOSE) pull backend
 	$(COMPOSE) up -d --no-deps backend celery-critical celery-default celery-low celery-beat mq-async
 
 # --- Node-RED (multi-tenant) ---
@@ -185,15 +217,11 @@ nodered-logs-%:
 nodered-pull-%:
 	$(NODERED) --project-name nodered-$* --env-file .env.nodered.$* pull
 
+nodered-ps-%:
+	$(NODERED) --project-name nodered-$* --env-file .env.nodered.$* ps --format "$(PS_FORMAT)"
+
 nodered-up-all:      $(addprefix nodered-up-,      $(NODERED_TENANTS))
 nodered-down-all:    $(addprefix nodered-down-,    $(NODERED_TENANTS))
 nodered-pull-all:    $(addprefix nodered-pull-,    $(NODERED_TENANTS))
 nodered-restart-all: $(addprefix nodered-restart-, $(NODERED_TENANTS))
-
-# --- Первый запуск ---
-
-init: up-infra
-	@echo "Ожидаем готовности БД..."
-	@sleep 5
-	$(COMPOSE) exec postgres pg_isready -U $(shell grep POSTGRES_USER .env | cut -d= -f2)
-	@echo "Инфраструктура готова. Запусти: make up-app"
+nodered-ps-all:      $(addprefix nodered-ps-,      $(NODERED_TENANTS))
