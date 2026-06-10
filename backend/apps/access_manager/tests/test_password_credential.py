@@ -54,13 +54,13 @@ class GuestCardRequestSerializerPwdTest(TestCase):
         self.assertFalse(s.validated_data["is_pwd"])
 
     def test_is_pwd_true_truncates_to_first(self):
-        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["111", "222", "333"], "is_pwd": True})
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["48291", "73826", "91527"], "is_pwd": True})
         s.is_valid(raise_exception=True)
         self.assertEqual(s.validated_data["cards"], ["48291"])
         self.assertTrue(s.validated_data["is_pwd"])
 
     def test_is_pwd_true_with_single_card_unchanged(self):
-        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["12345"], "is_pwd": True})
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["48291"], "is_pwd": True})
         s.is_valid(raise_exception=True)
         self.assertEqual(s.validated_data["cards"], ["48291"])
 
@@ -123,7 +123,7 @@ class PrepareRpcRequestPwdTest(TestCase):
         )
         rpc_data = result["message"]["data"]["data"]
         self.assertEqual(rpc_data["method"], "add_pwd")
-        self.assertEqual(rpc_data["params"], {"password": 12345})
+        self.assertEqual(rpc_data["params"], {"password": "12345"})
         self.assertEqual(rpc_data["timeout"], 10000)
 
     def test_pwd_envelope_uses_remove_pwd_when_access_0(self):
@@ -136,7 +136,7 @@ class PrepareRpcRequestPwdTest(TestCase):
         )
         rpc_data = result["message"]["data"]["data"]
         self.assertEqual(rpc_data["method"], "delete_pwd")
-        self.assertEqual(rpc_data["params"], {"password": 67890})
+        self.assertEqual(rpc_data["params"], {"password": "67890"})
 
     def test_pwd_envelope_keeps_top_level_shape(self):
         result = prepare_rpc_request(
