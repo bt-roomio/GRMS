@@ -51,11 +51,8 @@ services:
       - "8000:8000"
     environment:
       - UV_NO_SYNC=1
-      - POSTGRES_HOST=pgbouncer
       - PGAPPNAME=grms-backend-dev
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
-      - DJANGO_DEBUG=True
-      - LOG_LEVEL=DEBUG
     command: python manage.py runserver 0.0.0.0:8000
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8000), timeout=3); s.close()"]
