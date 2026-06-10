@@ -48,23 +48,24 @@ class MewsConfigAdapter:
         }.get(self.environment, "wss://ws.mews.com/ws/connector")
 
 
+RETRY_INTERVAL = 60
+
+
 class Command(BaseCommand):
     help = "Run Mews WebSocket listener for real-time reservation sync"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._shutdown = False
 
     def handle(self, **_):
         self.stdout.write(self.style.SUCCESS("Starting Mews WebSocket Listener..."))
 
-        active_integrations = Integration.objects.filter(
-            integrator__name__iexact=MEWS,
-            integrator__client_id__isnull=False,
-            enable=True,
-            is_active=True,
-        ).select_related("tenant")
+        signal.signal(signal.SIGINT, self._handle_signal)
+        signal.signal(signal.SIGTERM, self._handle_signal)
 
-        if not active_integrations:
-            self.stdout.write(
-                self.style.ERROR("No active Mews configurations found. Please configure Mews integration first.")
-            )
+        active_integrations = self._wait_for_config()
+        if active_integrations is None:
             return
 
         clients = []
@@ -77,11 +78,9 @@ class Command(BaseCommand):
 
                 config_adapter = MewsConfigAdapter(integration)
 
-                # Create event handler with adapter
                 handler = ReservationEventHandler(config_adapter)
                 handlers.append(handler)
 
-                # Create WebSocket client
                 client = MewsWebSocketClient(
                     client_token=config_adapter.client_token,
                     access_token=config_adapter.access_token,
@@ -102,8 +101,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("No WebSocket clients initialized"))
             return
 
-        # Setup signal handlers for graceful shutdown
-        def signal_handler(sig, frame):
+        # Override signal handlers to disconnect clients on shutdown
+        def shutdown_handler(sig, frame):
             self.stdout.write(self.style.WARNING("\nShutting down Mews WebSocket listeners..."))
             for client in clients:
                 try:
@@ -113,20 +112,17 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Shutdown complete"))
             sys.exit(0)
 
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)
 
-        # Connect all clients
         for client in clients:
             try:
                 client.connect()
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to connect client: {e}"))
 
-        # Wait for connections
         time.sleep(2)
 
-        # Check connection status
         connected_count = sum(1 for client in clients if client.is_connected())
         self.stdout.write(
             self.style.SUCCESS(
@@ -140,12 +136,39 @@ class Command(BaseCommand):
             )
         )
 
-        # Keep running
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
             pass
+
+    def _wait_for_config(self):
+        """Poll until active Mews integrations appear. Returns queryset or None on shutdown."""
+        while not self._shutdown:
+            integrations = list(
+                Integration.objects.filter(
+                    integrator__name__iexact=MEWS,
+                    integrator__client_id__isnull=False,
+                    enable=True,
+                    is_active=True,
+                ).select_related("tenant")
+            )
+            if integrations:
+                return integrations
+
+            self.stdout.write(
+                self.style.WARNING(f"No active Mews configurations found. Retrying in {RETRY_INTERVAL}s...")
+            )
+            for _ in range(RETRY_INTERVAL):
+                if self._shutdown:
+                    return None
+                time.sleep(1)
+
+        return None
+
+    def _handle_signal(self, sig, frame):
+        self.stdout.write(self.style.WARNING("Shutdown requested, stopping..."))
+        self._shutdown = True
 
     def _on_connected(self, tenant_name: str):
         self.stdout.write(self.style.SUCCESS(f"✓ Connected to Mews for tenant: {tenant_name}"))

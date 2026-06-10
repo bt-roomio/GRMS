@@ -51,7 +51,6 @@ x-worker-depends: &worker-depends
     condition: service_healthy
 
 x-celery-env: &celery-env
-  POSTGRES_HOST: pgbouncer
   PROMETHEUS_MULTIPROC_DIR: /prom_mp
   IS_CELERY: "1"
   CELERY_BROKER_URL: redis://redis-broker:6379/0
@@ -202,7 +201,6 @@ services:
       - "8000"
     environment:
       - UV_NO_SYNC=1
-      - POSTGRES_HOST=pgbouncer
       - PGAPPNAME=grms-backend
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - VIRTUAL_HOST=${API_VIRTUAL_HOST}
@@ -265,7 +263,6 @@ services:
     depends_on: *worker-depends
     environment:
       - UV_NO_SYNC=1
-      - POSTGRES_HOST=pgbouncer
       - PGAPPNAME=grms-mq-async
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - CELERY_BROKER_URL=redis://redis-broker:6379/0
@@ -281,7 +278,6 @@ services:
     depends_on: *worker-depends
     environment:
       - UV_NO_SYNC=1
-      - POSTGRES_HOST=pgbouncer
       - PGAPPNAME=grms-mews-websocket
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python manage.py mews_websocket
@@ -293,7 +289,6 @@ services:
     depends_on: *worker-depends
     environment:
       - UV_NO_SYNC=1
-      - POSTGRES_HOST=pgbouncer
       - PGAPPNAME=grms-pms-handler
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python manage.py pms_handler
