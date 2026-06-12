@@ -43,7 +43,7 @@ ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS)
 
 # Node-RED multi-tenant
 NODERED         = docker compose -f docker-compose.nodered.yml
-NODERED_TENANTS ?= nines map olympic
+NODERED_TENANTS ?= nines map ol fl
 
 PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
 
