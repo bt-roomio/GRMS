@@ -21,6 +21,8 @@ redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, d
 
 logger = logging.getLogger(__name__)
 
+_STR_V_MAX_LEN = 10000
+
 # Increased from 3600s (1h) to 7200s (2h) - TsKvDictionary rarely changes
 EXPIRY_TIME = 7200
 
@@ -112,6 +114,9 @@ def sync_telemetry(device, topic, payload):
                 if card_log:
                     card_logs.append(card_log)
                 continue
+            if field == "str_v" and isinstance(value, str) and len(value) > _STR_V_MAX_LEN:
+                logger.warning("str_v truncated: key=%s device=%s original_len=%d", key, device_id, len(value))
+                value = value[:_STR_V_MAX_LEN]
             dict_obj = get_tskv_dict(key)
             historical_objs.append(TsKv(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_dt, **{field: value}))
             latest_objs.append(
@@ -274,7 +279,9 @@ def _process_telemetry_entries(device, payload, ts_now, historical_objs, latest_
                 if card_log:
                     card_logs.append(card_log)
                 continue
-
+            if field == "str_v" and isinstance(value, str) and len(value) > _STR_V_MAX_LEN:
+                logger.warning("str_v truncated: key=%s device=%s original_len=%d", key, device_id, len(value))
+                value = value[:_STR_V_MAX_LEN]
             dict_obj = get_tskv_dict(key)
             historical_objs.append(TsKv(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_dt, **{field: value}))
             latest_objs.append(
