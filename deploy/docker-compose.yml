@@ -379,7 +379,7 @@ services:
   # ---------------------------------------------------------------------------
 
   proxy:
-    image: jwilder/nginx-proxy:latest
+    image: nginxproxy/nginx-proxy:1.11.0
     container_name: proxy
     restart: always
     logging: *default-logging
@@ -406,7 +406,7 @@ services:
       start_period: 15s
 
   letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    image: nginxproxy/acme-companion:2.5.2
     container_name: letsencrypt
     restart: always
     logging: *default-logging
@@ -419,6 +419,7 @@ services:
       - vhost:/etc/nginx/vhost.d
       - certs:/etc/nginx/certs
       - /run/docker.sock:/var/run/docker.sock:ro
+      - acme_sh_data:/etc/acme.sh
     depends_on:
       proxy:
         condition: service_healthy
@@ -442,6 +443,7 @@ volumes:
   prom_mp:
   backend_venv:
   # nginx-proxy volumes
+  acme_sh_data:
   certs:
   dhparam:
   vhost:
