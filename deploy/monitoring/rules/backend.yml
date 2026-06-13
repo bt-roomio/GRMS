@@ -3,7 +3,7 @@ groups:
     interval: 30s
     rules:
       - alert: TenantGatewaysOffline
-        expr: offline_gateway_devices_total > 0
+        expr: devices_offline_total == 1
         for: 2m
         labels:
           severity: critical
@@ -11,7 +11,6 @@ groups:
           summary: "Tenant {{ $labels.tenant_name }} has offline gateway"
           description: |
             Gateway device offline:
-            - Device:    {{ $labels.device_name }}
             - Device ID: {{ $labels.device_id }}
             - Tenant:    {{ $labels.tenant_name }}
             - Tenant ID: {{ $labels.tenant_id }}

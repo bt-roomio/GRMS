@@ -111,7 +111,11 @@ async def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
     if "&" in device_id:
         filters = {"name": device_id.split("&")[1], "tenant_id": tenant_id, "is_active": True}
 
-    device = await Device.objects.filter(**filters).afirst()
+    def _get_device_from_db(_f=filters):
+        close_old_connections()
+        return Device.objects.filter(**_f).first()
+
+    device = await sync_to_async(_get_device_from_db, thread_sensitive=False)()
 
     if not device:
         return None

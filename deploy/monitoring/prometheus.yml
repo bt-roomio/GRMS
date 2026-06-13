@@ -32,7 +32,7 @@ scrape_configs:
       - targets: [django:8000]
     metric_relabel_configs:
       - source_labels: [__name__]
-        regex: (offline_gateway_.*|django_.*|python_.*|mq_.*|up)
+        regex: (offline_gateway_.*|devices_offline_total|django_.*|python_.*|mq_.*|up)
         action: keep
 
   - job_name: blackbox-login
