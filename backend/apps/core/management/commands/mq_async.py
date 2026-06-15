@@ -224,7 +224,7 @@ async def get_attribute_response(device: DeviceType, data: dict, topic: str):
                 "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
             }
 
-    return await sync_to_async(_get_attributes_sync, thread_sensitive=False)()
+    return await sync_to_async(_db_safe(_get_attributes_sync), thread_sensitive=False)()
 
 
 async def handle_attribute_request_async(topic: str, device: DeviceType, data: dict, publish_channel):

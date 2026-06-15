@@ -5,9 +5,14 @@ import redis
 from django.conf import settings
 
 from core.management.mq.get_device import get_sub_device
+from core.management.mq.state_device import update_activity_device
 from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv
-from shuttle.tasks import publish_updates_attribute_batch_task, update_activity_devices_batch_task
+from shuttle.tasks import (
+    publish_updates_attribute_batch_task,
+    update_activity_device_task,
+    update_activity_devices_batch_task,
+)
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -227,11 +232,12 @@ def _update_attribute_store_batch(device_updates, device_info):
                     entity_id=attr.entity_id,
                     json_v=attr.json_v,
                     entity_type="DEVICE",
+                    last_update_ts=ts_now,
                 )
                 for attr in scanned
             ],
             update_conflicts=True,
-            update_fields=["json_v"],
+            update_fields=["json_v", "last_update_ts"],
             unique_fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
         )
 

@@ -370,7 +370,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
     for device in devices_for_room_status:
         try:
             await publish_room_status_async(device)
-            await sync_to_async(publish_device, thread_sensitive=False)(device)
+            await sync_to_async(publish_device, thread_sensitive=True)(device)
             tenant_ids_to_invalidate.add(device.tenant_id)
         except Exception as e:
             logger.warning(f"Failed to publish room status for device {device.id}: {e}")
