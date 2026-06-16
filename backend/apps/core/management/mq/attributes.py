@@ -1,8 +1,11 @@
 import logging
+import random
+import time
 from collections import defaultdict
 
 import redis
 from django.conf import settings
+from django.db import OperationalError
 
 from core.management.mq.get_device import get_sub_device
 from core.management.mq.state_device import update_activity_device
@@ -22,6 +25,26 @@ logger.setLevel(logging.WARNING)
 
 # Increased cache TTL from 3600s (1h) to 7200s (2h) for consistency with telemetry.py
 EXPIRY_TIME = 7200
+
+_MAX_DEADLOCK_RETRIES = 3
+
+
+def _bulk_upsert(objects, update_fields, unique_fields):
+    """INSERT ... ON CONFLICT DO UPDATE with exponential-backoff retry on deadlock."""
+    for attempt in range(_MAX_DEADLOCK_RETRIES):
+        try:
+            AttributeKv.objects.bulk_create(
+                objects,
+                update_conflicts=True,
+                update_fields=update_fields,
+                unique_fields=unique_fields,
+            )
+            return
+        except OperationalError as exc:
+            if "deadlock" in str(exc).lower() and attempt < _MAX_DEADLOCK_RETRIES - 1:
+                time.sleep(0.05 * (2**attempt) + random.uniform(0, 0.02))
+            else:
+                raise
 
 
 def sync_attributes(device, topic, payload):
@@ -213,10 +236,12 @@ def _update_attribute_store_batch(device_updates, device_info):
         logger.debug("No attribute updates in batch")
         return
 
-    # Single upsert matching the DB constraint: unique_attrkv_type_scope_entity_key
-    AttributeKv.objects.bulk_create(
+    # Sort by unique constraint fields so concurrent instances always acquire index locks
+    # in the same order, preventing circular waits (deadlocks) between mq-async replicas.
+    all_objects.sort(key=lambda x: (x.entity_type, x.attribute_type, str(x.entity_id), x.attribute_key))
+
+    _bulk_upsert(
         all_objects,
-        update_conflicts=True,
         update_fields=["bool_v", "str_v", "long_v", "dbl_v", "json_v", "last_update_ts"],
         unique_fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
     )
@@ -224,20 +249,20 @@ def _update_attribute_store_batch(device_updates, device_info):
     # Mirror scanned_devices CLIENT_SCOPE → SHARED_SCOPE in a single bulk upsert
     scanned = [attr for attr in all_objects if attr.attribute_key == "scanned_devices"]
     if scanned:
-        AttributeKv.objects.bulk_create(
-            [
-                AttributeKv(
-                    attribute_key="scanned_devices",
-                    attribute_type=AttributeKv.SHARED_SCOPE,
-                    entity_id=attr.entity_id,
-                    json_v=attr.json_v,
-                    entity_type="DEVICE",
-                    last_update_ts=ts_now,
-                )
-                for attr in scanned
-            ],
-            update_conflicts=True,
-            update_fields=["json_v", "last_update_ts"],
+        scanned_mirror = [
+            AttributeKv(
+                attribute_key="scanned_devices",
+                attribute_type=AttributeKv.SHARED_SCOPE,
+                entity_id=attr.entity_id,
+                json_v=attr.json_v,
+                entity_type="DEVICE",
+            )
+            for attr in scanned
+        ]
+        scanned_mirror.sort(key=lambda x: str(x.entity_id))
+        _bulk_upsert(
+            scanned_mirror,
+            update_fields=["json_v"],
             unique_fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
         )
 

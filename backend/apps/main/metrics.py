@@ -47,16 +47,15 @@ def _clear_metrics():
     if excluded_gateways:
         logger.info(f"Исключено gateway устройств из мониторинга: {len(excluded_gateways)} ({excluded_gateways})")
 
-    # Получаем все уникальные комбинации tenant/type для активных gateway устройств
-    query = Device.objects.filter(is_active=True, additional_info__gateway=True)
+    # Получаем все активные gateway устройства (включая excluded — чтобы сбросить stale данные)
+    all_combinations = (
+        Device.objects.filter(is_active=True, additional_info__gateway=True)
+        .select_related("tenant")
+        .values("tenant_id", "tenant__title", "id")
+        .distinct()
+    )
 
-    # Исключаем gateway из списка исключений (если список не пустой)
-    if excluded_gateways:
-        query = query.exclude(id__in=excluded_gateways)
-
-    all_combinations = query.select_related("tenant").values("tenant_id", "tenant__title", "id").distinct()
-
-    # Явно обнуляем все известные метрики
+    # Явно обнуляем все известные метрики (включая excluded, чтобы stale значения не оставались)
     for combo in all_combinations:
         tenant_id = str(combo["tenant_id"])
         tenant_name = combo["tenant__title"] or "Unknown"

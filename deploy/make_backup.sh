@@ -39,6 +39,15 @@ DUMP_PATH="${BACKUP_DIR}/grms_${TS}.backup"
 EXCLUDE_ARGS=()
 for tbl in "${EXCLUDE_DATA_TABLES[@]}"; do
   EXCLUDE_ARGS+=(--exclude-table-data="${tbl}")
+  # TimescaleDB stores hypertable data in internal chunks; exclude those too
+  while IFS= read -r chunk; do
+    [[ -n "${chunk}" ]] && EXCLUDE_ARGS+=(--exclude-table-data="${chunk}")
+  done < <(docker exec -e PGPASSWORD="${DB_PASSWORD}" "${CONTAINER}" \
+    psql -U "${DB_USER}" -d "${DB_NAME}" -At -c \
+    "SELECT chunk_schema || '.' || chunk_name
+       FROM timescaledb_information.chunks
+      WHERE hypertable_schema = 'public'
+        AND hypertable_name = '${tbl}';" 2>/dev/null)
 done
 
 echo "[INFO] Dumping '${DB_NAME}' from container '${CONTAINER}' -> ${DUMP_PATH}"
