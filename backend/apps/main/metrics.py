@@ -1,4 +1,5 @@
 import logging
+import re
 
 from django.conf import settings
 from prometheus_client import Gauge
@@ -6,6 +7,13 @@ from prometheus_client import Gauge
 from main.models import Device
 
 logger = logging.getLogger(__name__)
+
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _sanitize_label(value: str) -> str:
+    return _CONTROL_CHARS_RE.sub("", value)
+
 
 devices_offline_total = Gauge(
     "devices_offline_total",
@@ -58,7 +66,7 @@ def _clear_metrics():
     # Явно обнуляем все известные метрики (включая excluded, чтобы stale значения не оставались)
     for combo in all_combinations:
         tenant_id = str(combo["tenant_id"])
-        tenant_name = combo["tenant__title"] or "Unknown"
+        tenant_name = _sanitize_label(combo["tenant__title"] or "Unknown")
         device_id = str(combo["id"])
 
         devices_offline_total.labels(tenant_id=tenant_id, tenant_name=tenant_name, device_id=device_id).set(0)
@@ -83,7 +91,7 @@ def _update_device_status_metrics():
 
     for device in offline_devices:
         tenant_id = str(device["tenant_id"])
-        tenant_name = device["tenant__title"] or "Unknown"
+        tenant_name = _sanitize_label(device["tenant__title"] or "Unknown")
         device_id = str(device["id"])
 
         # Устанавливаем метрику в 1 для offline устройства
