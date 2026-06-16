@@ -57,7 +57,7 @@ x-celery-env: &celery-env
   CELERY_RESULT_BACKEND: redis://redis-broker:6379/1
 
 x-celery-volumes: &celery-volumes
-  - prom_mp:/prom_mp
+  []
 
 # =============================================================================
 # SERVICES
@@ -78,7 +78,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
@@ -226,7 +226,8 @@ services:
       <<: *celery-env
       PGAPPNAME: grms-celery-critical
     command: celery -A config worker -Q critical -l warning -c 2 --max-tasks-per-child=50
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
 
   celery-default:
     <<: *django-common
@@ -236,7 +237,8 @@ services:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
     command: celery -A config worker -Q default -l warning -c 4 --max-tasks-per-child=100
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
 
   celery-low:
     <<: *django-common
@@ -246,7 +248,8 @@ services:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
     command: celery -A config worker -Q low -l warning -c 1 --max-tasks-per-child=50
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
 
   celery-beat:
     <<: *django-common
@@ -256,7 +259,8 @@ services:
       <<: *celery-env
       PGAPPNAME: grms-celery-beat
     command: celery -A config beat --loglevel=warning
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
 
   mq-async:
     <<: *django-common
@@ -267,10 +271,14 @@ services:
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
       - CELERY_BROKER_URL=redis://redis-broker:6379/0
       - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
+      # Bypass pgbouncer: transaction pool mode is incompatible with async long-lived connections
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     command: python apps/core/management/commands/mq_async.py
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
     deploy:
-      replicas: 4
+      replicas: 2
 
   mews-websocket:
     <<: *django-common
@@ -281,7 +289,8 @@ services:
       - PGAPPNAME=grms-mews-websocket
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python manage.py mews_websocket
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
 
   pms-handler:
     <<: *django-common
@@ -292,7 +301,8 @@ services:
       - PGAPPNAME=grms-pms-handler
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
     command: python manage.py pms_handler
-    volumes: *celery-volumes
+    tmpfs:
+      - /prom_mp
 
   # ---------------------------------------------------------------------------
   # IOT
@@ -362,6 +372,8 @@ services:
       - VIRTUAL_HOST=${FRONTEND_VIRTUAL_HOST}
       - LETSENCRYPT_HOST=${FRONTEND_VIRTUAL_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - HTTPS_METHOD=noredirect
+      - HSTS=off
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1/healthz || exit 1"]
       interval: 30s
@@ -456,5 +468,7 @@ volumes:
 networks:
   roomio_net:
     name: roomio_net
+    external: true
   proxy_net:
     name: proxy_net
+    external: true

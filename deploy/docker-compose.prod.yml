@@ -131,7 +131,7 @@ services:
 
   mq-async:
     deploy:
-      replicas: 4
+      replicas: 2
       resources:
         limits:
           cpus: "1.0"

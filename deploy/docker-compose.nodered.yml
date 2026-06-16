@@ -17,7 +17,7 @@ x-logging: &default-logging
 
 services:
   nodered:
-    image: registry.gitlab.com/grms1/node-red-nodes:latest
+    image: registry.gitlab.com/grms1/node-red-nodes:new
     container_name: nodered-${TENANT_NAME}
     hostname: nodered-${TENANT_NAME}
     restart: always

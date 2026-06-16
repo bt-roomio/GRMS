@@ -5,6 +5,7 @@ from django.db.models import (
     CharField,
     Count,
     DateTimeField,
+    DecimalField,
     ExpressionWrapper,
     F,
     FloatField,
@@ -16,7 +17,27 @@ from django.db.models import (
     Value,
     Window,
 )
-from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
+from django.db.models.functions import Cast, Coalesce, Floor, Lag
+from django.db.models.functions import Round as _DjangoRound
+
+
+class Round(_DjangoRound):
+    """Override Django's Round to avoid numeric(1000,15) cast on PostgreSQL.
+
+    Django's built-in Round.as_postgresql casts to numeric(1000,15) when rounding
+    a float with precision, which causes OOM on large aggregations (e.g. year-long
+    time-series queries). We use numeric(15,4) instead — sufficient for sensor data.
+    """
+
+    def as_postgresql(self, compiler, connection, **extra_context):
+        if len(self.source_expressions) == 1:
+            return super().as_postgresql(compiler, connection, **extra_context)
+        copy = self.copy()
+        copy.set_source_expressions(
+            [Cast(self.source_expressions[0], output_field=DecimalField(max_digits=15, decimal_places=4))]
+            + list(self.source_expressions[1:])
+        )
+        return copy.as_sql(compiler, connection, **extra_context)
 from django.utils import timezone
 
 from core.querysets.base_queryset import BaseQuerySet

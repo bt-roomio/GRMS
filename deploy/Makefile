@@ -43,7 +43,7 @@ ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS)
 
 # Node-RED multi-tenant
 NODERED         = docker compose -f docker-compose.nodered.yml
-NODERED_TENANTS ?= nines map olympic
+NODERED_TENANTS ?= nines map ol fl
 
 PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
 
@@ -197,8 +197,7 @@ deploy:
 	@echo "Деплой завершён: $$(git log -1 --oneline)"
 
 deploy-backend:
-	git pull
-	$(COMPOSE) up -d --no-deps backend celery-critical celery-default celery-low celery-beat mq-async
+	$(COMPOSE) up -d --no-deps $(APP_SVCS)
 
 # --- Node-RED (multi-tenant) ---
 

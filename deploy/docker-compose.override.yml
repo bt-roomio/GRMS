@@ -66,35 +66,30 @@ services:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
     command: celery -A config worker -Q critical -l debug -c 1
 
   celery-default:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
     command: celery -A config worker -Q default -l debug -c 2
 
   celery-low:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
     command: celery -A config worker -Q low -l debug -c 1
 
   celery-beat:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
     command: celery -A config beat --loglevel=debug
 
   mq-async:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
     deploy:
       replicas: 1   # в dev достаточно одной реплики
 
@@ -102,13 +97,11 @@ services:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
 
   pms-handler:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-      - prom_mp:/prom_mp
 
   # --- Frontend: dev-сервер с hot-reload вместо сборки ---
   frontend:

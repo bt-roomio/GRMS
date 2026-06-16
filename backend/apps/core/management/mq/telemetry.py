@@ -1,10 +1,12 @@
 import json
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import DefaultDict
 
 import redis
 from django.conf import settings
+from psycopg2 import errorcodes as pg_errorcodes
 
 from access_manager.models import CardLog
 from core.management.mq.fias import handle_fias
@@ -20,6 +22,51 @@ from shuttle.utils.find_compatible_field import find_compatible_field
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
 logger = logging.getLogger(__name__)
+
+_MAX_DEADLOCK_RETRIES = 3
+
+
+def _upsert_latest(objects):
+    """Upsert TsKvLatest with sort-before-insert and deadlock retry (pgcode 40P01)."""
+    sorted_objs = sorted(objects, key=lambda o: (str(o.entity_id), str(o.key_id)))
+    for attempt in range(_MAX_DEADLOCK_RETRIES):
+        try:
+            TsKvLatest.objects.bulk_create(
+                sorted_objs,
+                update_conflicts=True,
+                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
+                unique_fields=["entity_id", "key_id"],
+                batch_size=1000,
+            )
+            return
+        except Exception as exc:
+            pgcode = getattr(getattr(exc, "__cause__", None), "pgcode", None)
+            if pgcode == pg_errorcodes.DEADLOCK_DETECTED and attempt < _MAX_DEADLOCK_RETRIES - 1:
+                time.sleep(0.05 * (2**attempt))
+                continue
+            raise
+
+
+def _upsert_card_logs(card_logs):
+    """Upsert CardLog with sort-before-insert and deadlock retry (pgcode 40P01)."""
+    sorted_logs = sorted(card_logs, key=lambda o: (str(o.created_at), str(o.number), str(o.device_id)))
+    for attempt in range(_MAX_DEADLOCK_RETRIES):
+        try:
+            CardLog.objects.bulk_create(
+                sorted_logs,
+                update_conflicts=True,
+                batch_size=500,
+                update_fields=["access_group", "staff", "guest", "additional_info"],
+                unique_fields=["created_at", "number", "device_id"],
+            )
+            return
+        except Exception as exc:
+            pgcode = getattr(getattr(exc, "__cause__", None), "pgcode", None)
+            if pgcode == pg_errorcodes.DEADLOCK_DETECTED and attempt < _MAX_DEADLOCK_RETRIES - 1:
+                time.sleep(0.05 * (2**attempt))
+                continue
+            raise
+
 
 # Increased from 3600s (1h) to 7200s (2h) - TsKvDictionary rarely changes
 EXPIRY_TIME = 7200
@@ -139,25 +186,13 @@ def sync_telemetry(device, topic, payload):
     if latest_objs:
         try:
             unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
-            TsKvLatest.objects.bulk_create(
-                list(unique.values()),
-                update_conflicts=True,
-                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
-                unique_fields=["entity_id", "key_id"],
-                batch_size=1000,
-            )
+            _upsert_latest(list(unique.values()))
         except Exception as e:
             logger.exception("Failed to upsert TsKvLatest: %s", e)
 
     if card_logs:
         try:
-            CardLog.objects.bulk_create(
-                card_logs,
-                update_conflicts=True,
-                batch_size=500,
-                update_fields=["access_group", "staff", "guest", "additional_info"],
-                unique_fields=["created_at", "number", "device_id"],
-            )
+            _upsert_card_logs(card_logs)
             publish_card_log_updates_batch(card_logs)
         except Exception as e:
             logger.exception("Failed to create CardLog entries: %s", e)
@@ -213,25 +248,13 @@ def sync_telemetry_batch(batch: list[tuple]):
     if latest_objs:
         try:
             unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
-            TsKvLatest.objects.bulk_create(
-                list(unique.values()),
-                update_conflicts=True,
-                update_fields=["ts", "bool_v", "str_v", "long_v", "dbl_v", "json_v"],
-                unique_fields=["entity_id", "key_id"],
-                batch_size=1000,
-            )
+            _upsert_latest(list(unique.values()))
         except Exception as e:
             logger.exception("Failed to upsert TsKvLatest in batch: %s", e)
 
     if card_logs:
         try:
-            CardLog.objects.bulk_create(
-                card_logs,
-                update_conflicts=True,
-                batch_size=500,
-                update_fields=["access_group", "staff", "guest", "additional_info"],
-                unique_fields=["created_at", "number", "device_id"],
-            )
+            _upsert_card_logs(card_logs)
             publish_card_log_updates_batch(card_logs)
         except Exception as e:
             logger.exception("Failed to create CardLog entries in batch: %s", e)
@@ -274,7 +297,6 @@ def _process_telemetry_entries(device, payload, ts_now, historical_objs, latest_
                 if card_log:
                     card_logs.append(card_log)
                 continue
-
             dict_obj = get_tskv_dict(key)
             historical_objs.append(TsKv(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_dt, **{field: value}))
             latest_objs.append(

@@ -12,6 +12,7 @@ import time
 import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import close_old_connections
 from django.db.models import Prefetch
 from pika.adapters.blocking_connection import BlockingChannel
 
@@ -75,6 +76,7 @@ class Command(BaseCommand):
                     _: pika.BasicProperties,
                     body: bytes,
                 ):
+                    close_old_connections()
                     try:
                         self.process_pms_message(body)
                         if method.delivery_tag:
