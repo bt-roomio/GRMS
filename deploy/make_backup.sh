@@ -25,7 +25,7 @@ DB_PASSWORD="$(get_env POSTGRES_PASSWORD)"
 # Tables to exclude data from (schema only):
 EXCLUDE_DATA_TABLES=(
   main_room_history
-  shuttle_ts_kv
+#  shuttle_ts_kv
 )
 
 # === 1) Prepare backup directory ===
