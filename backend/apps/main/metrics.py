@@ -2,6 +2,7 @@ import logging
 import re
 
 from django.conf import settings
+from django.core.cache import caches
 from prometheus_client import Gauge
 
 from main.models import Device
@@ -14,6 +15,8 @@ _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 def _sanitize_label(value: str) -> str:
     return _CONTROL_CHARS_RE.sub("", value)
 
+
+KNOWN_GATEWAY_IDS_CACHE_KEY = "monitoring:known_gateway_device_ids"
 
 devices_offline_total = Gauge(
     "devices_offline_total",
@@ -39,8 +42,9 @@ def update_device_metrics() -> None:
         return
 
     try:
-        _clear_metrics()
+        all_combinations = _clear_metrics()
         _update_device_status_metrics()
+        _zero_stale_metrics(all_combinations)
     except Exception as e:
         logger.error(f"Ошибка при обновлении метрик: {e}", exc_info=True)
 
@@ -56,7 +60,7 @@ def _clear_metrics():
         logger.info(f"Исключено gateway устройств из мониторинга: {len(excluded_gateways)} ({excluded_gateways})")
 
     # Получаем все активные gateway устройства (включая excluded — чтобы сбросить stale данные)
-    all_combinations = (
+    all_combinations = list(
         Device.objects.filter(is_active=True, additional_info__gateway=True)
         .select_related("tenant")
         .values("tenant_id", "tenant__title", "id")
@@ -73,6 +77,42 @@ def _clear_metrics():
 
     # Обнуляем агрегированную метрику
     offline_gateway_devices_count.set(0)
+
+    return all_combinations
+
+
+def _zero_stale_metrics(current_combinations) -> None:
+    """
+    Обнуляет devices_offline_total для gateway устройств, которые были удалены
+    или деактивированы с прошлого обновления.
+
+    prometheus_client в multiprocess-режиме не умеет удалять лейблсеты
+    (.remove() — no-op), поэтому метрика устройства, которое было offline,
+    после удаления из БД навсегда "застревает" со значением 1 в gauge_*.db.
+    Здесь мы помним предыдущий набор gateway устройств в Redis и при исчезновении
+    устройства явно перезаписываем его метрику в 0 — это перекрывает stale-запись
+    благодаря multiprocess_mode="mostrecent" (выигрывает запись с более новым timestamp).
+    """
+    cache = caches["default"]
+
+    current_known = {
+        str(combo["id"]): {
+            "tenant_id": str(combo["tenant_id"]),
+            "tenant_name": _sanitize_label(combo["tenant__title"] or "Unknown"),
+        }
+        for combo in current_combinations
+    }
+    previous_known = cache.get(KNOWN_GATEWAY_IDS_CACHE_KEY) or {}
+
+    stale_device_ids = previous_known.keys() - current_known.keys()
+    for device_id in stale_device_ids:
+        info = previous_known[device_id]
+        devices_offline_total.labels(
+            tenant_id=info["tenant_id"], tenant_name=info["tenant_name"], device_id=device_id
+        ).set(0)
+        logger.info(f"Обнулена устаревшая метрика для удалённого/деактивированного gateway устройства {device_id}")
+
+    cache.set(KNOWN_GATEWAY_IDS_CACHE_KEY, current_known, timeout=None)
 
 
 def _update_device_status_metrics():

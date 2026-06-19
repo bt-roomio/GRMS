@@ -22,11 +22,19 @@ services:
   # ---------------------------------------------------------------------------
 
   postgres:
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - maintenance_work_mem=256MB
     deploy:
       resources:
         limits:
           cpus: "2.0"
-          memory: 2G
+          memory: 4G
         reservations:
           cpus: "0.5"
           memory: 512M
