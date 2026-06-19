@@ -7,14 +7,13 @@ def deactivate_guest_card(cards, device, sync):
     error_cards = []
     for card in cards:
         try:
-            instance = GuestCard.objects.get(
-                Q(guest__room__door_lock_device=device) | Q(guest__room=device.room),
-                card__number=card,
-                is_active=True,
-            )
-            instance.is_active = False
-            instance.is_blocked = False
-            instance.save(update_fields=["is_active", "is_blocked"])
+            instance = GuestCard.objects.filter(
+                Q(guest__room__door_lock_device=device) | Q(guest__room=device.room), card__number=card, is_active=True
+            ).first()
+            if instance:
+                instance.is_active = False
+                instance.is_blocked = False
+                instance.save(update_fields=["is_active", "is_blocked"])
             CardDeviceSlot.objects.filter(card_number=card, device=device).delete()
             NeedSyncDevice.objects.filter(card__number=card, device=device).update(need_sync=False)
         except Exception:

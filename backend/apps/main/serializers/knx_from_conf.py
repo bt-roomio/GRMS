@@ -73,8 +73,6 @@ class KnxDeviceFromConfSerializer(serializers.Serializer):
         return super().to_internal_value(to_snake_case_data(data))
 
     def to_representation(self, instance):
-        # `instance` is the summary returned by create(); echo it as-is rather
-        # than reflecting it back through the (large) declared input fields.
         return instance
 
     def create(self, validated_data):
