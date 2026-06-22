@@ -5,7 +5,7 @@ from core.utils.serializers import ValidatorSerializer
 from main.models import Device
 from main.serializers.device import SimpleDeviceSerializer
 from shuttle.models import AttributeKv
-from shuttle.utils.get_non_null_field import get_non_null_field
+from shuttle.utils.get_non_null_field import get_non_null_column, get_non_null_field
 
 
 class SimpleAttributeSerializer(serializers.ModelSerializer):
@@ -51,6 +51,19 @@ class AttributeSerializer(serializers.Serializer):
     last_update_ts = serializers.IntegerField()
     key_name = serializers.CharField()
     value = DynamicField()
+
+
+class RoomAttributeSerializer(serializers.Serializer):
+    """Shapes a ``get_attributes_by_room`` ``.values()`` row: renames the entity/key
+    columns and picks the first non-null typed value, preserving its native type."""
+
+    id = serializers.UUIDField()
+    key_name = serializers.CharField(source="attribute_key")
+    last_update_ts = serializers.IntegerField()
+    value = serializers.SerializerMethodField()
+
+    def get_value(self, obj):
+        return get_non_null_column(obj)[1]
 
 
 class AttributeFilterParams(ValidatorSerializer):

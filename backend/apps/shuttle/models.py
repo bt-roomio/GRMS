@@ -1,3 +1,4 @@
+from typing import ClassVar, cast
 from uuid import UUID
 
 from django.db import models
@@ -47,7 +48,7 @@ class TsKvDictionary(models.Model):
     key = models.CharField(max_length=255, unique=True)
     key_id = models.AutoField(unique=True, primary_key=True)
 
-    objects = TsKvDictionaryQuerySet.as_manager()
+    objects: ClassVar[TsKvDictionaryQuerySet] = cast(TsKvDictionaryQuerySet, TsKvDictionaryQuerySet.as_manager())
 
     class Meta:
         db_table = "shuttle_ts_kv_dictionary"
@@ -63,7 +64,7 @@ class TsKvLatest(BaseModelTs):
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.JSONField(blank=True, null=True)
 
-    objects = TsKvLatestQuerySet.as_manager()
+    objects: ClassVar[TsKvLatestQuerySet] = cast(TsKvLatestQuerySet, TsKvLatestQuerySet.as_manager())
 
     @property
     def get_value(self):
@@ -100,7 +101,7 @@ class AttributeKv(BaseModel):
     json_v = models.JSONField(blank=True, null=True)
     last_update_ts = UnixTimeStampField(default=get_mil_sec)
 
-    objects = AttributeKvQuerySet.as_manager()
+    objects: ClassVar[AttributeKvQuerySet] = cast(AttributeKvQuerySet, AttributeKvQuerySet.as_manager())
 
     @property
     def get_value(self):

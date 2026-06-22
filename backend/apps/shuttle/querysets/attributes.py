@@ -4,32 +4,33 @@ from core.querysets.base_queryset import BaseQuerySet
 
 
 class AttributeKvQuerySet(BaseQuerySet):
+    VALUE_FIELDS = ("str_v", "bool_v", "json_v", "long_v", "dbl_v")
+
+    @classmethod
+    def _first_value(cls, row):
+        return next((row[field] for field in cls.VALUE_FIELDS if row[field] is not None), None)
+
     def get_attributes(self, device, scope, sort_by=[]):
-        query = (
+        rows = (
             self.filter(entity=device, attribute_type=scope)
             .annotate(key_name=F("attribute_key"))
-            .values("last_update_ts", "str_v", "bool_v", "json_v", "long_v", "dbl_v", "key_name")
+            .values("last_update_ts", "key_name", *self.VALUE_FIELDS)
             .order_by(*sort_by)
         )
-        cleaned_data = []
-        for record in query:
-            # First rename fields, then filter out None values except for value field
-            renamed = {}
-            value_field = None
-            for k, v in record.items():
-                if k in ["last_update_ts", "key_name"]:
-                    if v is not None:
-                        renamed[k] = v
-                else:
-                    # This is one of the value fields (str_v, bool_v, etc.)
-                    if v is not None:
-                        value_field = v
+        return [
+            {
+                **{k: row[k] for k in ("last_update_ts", "key_name") if row[k] is not None},
+                "value": self._first_value(row),
+            }
+            for row in rows
+        ]
 
-            # Always include 'value' field, even if None
-            renamed["value"] = value_field
-            cleaned_data.append(renamed)
-
-        return cleaned_data
+    def get_attributes_by_room(self, room, scope, sort_by=()):
+        return (
+            self.filter(entity__room=room, attribute_type=scope)
+            .values("id", "attribute_key", "last_update_ts", *self.VALUE_FIELDS)
+            .order_by(*sort_by)
+        )
 
     def unique_keys_by_tenant(self, tenant_id, scope, tag_name: str | None = None):
         query = self.filter(attribute_key__icontains=tag_name) if tag_name else self
