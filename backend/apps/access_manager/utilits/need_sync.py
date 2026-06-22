@@ -16,18 +16,12 @@ def need_sync(cards: List[str], device, access, user=None, reason=""):
 
     assignments = get_card_assignments(cards, device.tenant_id)
     cards_with_assignment = [c for c in cards if c in assignments]
-    skipped_cards = [c for c in cards if c not in assignments]
+    target_cards = cards_with_assignment if access else cards
 
-    if skipped_cards:
-        logger.info(
-            "Skipping need_sync for cards without GuestCard/StaffCard assignment: %s",
-            skipped_cards,
-        )
-
-    if not cards_with_assignment:
+    if not target_cards:
         return
 
-    for card_num in cards_with_assignment:
+    for card_num in target_cards:
         try:
             card = Card.objects.get(number=card_num, tenant=device.tenant)
 

@@ -27,6 +27,7 @@ app.conf.task_default_routing_key = "default"
 
 app.conf.task_routes = {
     "access_manager.tasks.sync_device.sync_devices_task": {"queue": "critical"},
+    "access_manager.tasks.sync_device.sync_device_card_group": {"queue": "critical"},
     "main.tasks.auto_check_out": {"queue": "critical"},
     "main.tasks.auto_block": {"queue": "critical"},
     "shuttle.tasks.aggregate_table_ts_kv": {"queue": "low"},

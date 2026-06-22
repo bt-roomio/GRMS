@@ -42,6 +42,14 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
             "message": "Cards are not provided ! ",
         }
 
+    if is_pwd and device and device.device_profile.name.lower() == "default":
+        logger.info(f"PIN codes are not assigned to Default-profile device {device.id}; skipping.")
+        return {
+            "success": True,
+            "skipped_default_profile": True,
+            "message": "PIN codes are not assigned to Default-profile devices.",
+        }
+
     if device and not device.status:
         need_sync(cards, device, access, user=user, reason="Device is not connected")
         fail_response.update({"success": False, "message": "Device is not connected !"})

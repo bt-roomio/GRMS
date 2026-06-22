@@ -182,11 +182,15 @@ class SendRpcRequestPwdTest(TestCase):
         self.guest = Guest.objects.get(id=self.guest_id)
         self.device = Device.objects.get(id=self.device_id)
 
+    # A non-"default" device profile, so the Default-profile PIN guard does not short-circuit.
+    NON_DEFAULT_PROFILE_ID = "be17d30b-9785-4415-bfa5-e7fdaf19e57c"  # name: "test_default"
+
     @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
     @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
     def test_pwd_card_offline_creates_need_sync_with_pwd_flag(self, mock_send_rabbitmq, mock_connect_rabbitmq):
         card = Card.objects.create(number="55555", tenant_id=self.device.tenant_id, is_pwd=True)
         GuestCard.objects.create(guest=self.guest, card=card, is_active=True)
+        self.device.device_profile_id = self.NON_DEFAULT_PROFILE_ID
         self.device.status = False
         self.device.save()
 
@@ -203,6 +207,57 @@ class SendRpcRequestPwdTest(TestCase):
         self.assertIsNotNone(sync_row)
         self.assertTrue(sync_row.card.is_pwd)
 
+    @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
+    @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
+    def test_pwd_skipped_on_default_profile_device(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        # Device 47aef21b uses the "default" device profile in the fixtures.
+        self.assertEqual(self.device.device_profile.name.lower(), "default")
+
+        result = send_rpc_request(
+            device_id=self.device_id,
+            cards=["55555"],
+            access=1,
+            guest_id=self.guest_id,
+            is_pwd=True,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["skipped_default_profile"])
+        mock_connect_rabbitmq.assert_not_called()
+        mock_send_rabbitmq.assert_not_called()
+        self.assertFalse(GuestCard.objects.filter(card__number="55555").exists())
+        self.assertFalse(NeedSyncDevice.objects.filter(card__number="55555", device=self.device).exists())
+
+    @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
+    @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
+    def test_pwd_deactivation_skipped_on_default_profile_device(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        result = send_rpc_request(
+            device_id=self.device_id,
+            cards=["55555"],
+            access=0,
+            guest_id=self.guest_id,
+            is_pwd=True,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["skipped_default_profile"])
+        mock_send_rabbitmq.assert_not_called()
+
+    @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
+    @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
+    def test_rfid_not_skipped_on_default_profile_device(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        # RFID (is_pwd=False) on a Default-profile device must keep its existing behaviour.
+        result = send_rpc_request(
+            device_id=self.device_id,
+            cards=["65 28 23 12"],
+            access=1,
+            guest_id=self.guest_id,
+            is_pwd=False,
+        )
+
+        self.assertNotIn("skipped_default_profile", result)
+        mock_send_rabbitmq.assert_called_once()
+
 
 class SyncDevicesTaskPwdGroupingTest(TestCase):
     fixtures = FIXTURES
@@ -212,11 +267,10 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
         self.device = Device.objects.get(id=self.device_id)
         self.tenant_id = self.device.tenant_id
 
-    @patch("access_manager.tasks.sync_device.send_rpc_request")
-    def test_pwd_rows_dispatch_with_is_pwd_true(self, mock_send_rpc):
+    @patch("access_manager.tasks.sync_device.sync_device_card_group.delay")
+    def test_pwd_rows_dispatch_with_is_pwd_true(self, mock_dispatch):
         from access_manager.tasks.sync_device import sync_devices_task
 
-        mock_send_rpc.return_value = {"success": True}
         pwd_card = Card.objects.create(number="77777", tenant_id=self.tenant_id, is_pwd=True)
         rfid_card = Card.objects.create(number="11 22 33 44", tenant_id=self.tenant_id, is_pwd=False)
 
@@ -235,9 +289,9 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
 
         sync_devices_task(tenant_id=self.tenant_id)
 
-        calls = mock_send_rpc.call_args_list
-        pwd_calls = [c for c in calls if c.kwargs.get("is_pwd")]
-        rfid_calls = [c for c in calls if not c.kwargs.get("is_pwd")]
+        calls = mock_dispatch.call_args_list
+        pwd_calls = [c for c in calls if c.args[3]]
+        rfid_calls = [c for c in calls if not c.args[3]]
 
         self.assertEqual(len(pwd_calls), 1)
         self.assertEqual(pwd_calls[0].args[1], ["77777"])
