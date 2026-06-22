@@ -267,11 +267,10 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
         self.device = Device.objects.get(id=self.device_id)
         self.tenant_id = self.device.tenant_id
 
-    @patch("access_manager.tasks.sync_device.send_rpc_request")
-    def test_pwd_rows_dispatch_with_is_pwd_true(self, mock_send_rpc):
+    @patch("access_manager.tasks.sync_device.sync_device_card_group.delay")
+    def test_pwd_rows_dispatch_with_is_pwd_true(self, mock_dispatch):
         from access_manager.tasks.sync_device import sync_devices_task
 
-        mock_send_rpc.return_value = {"success": True}
         pwd_card = Card.objects.create(number="77777", tenant_id=self.tenant_id, is_pwd=True)
         rfid_card = Card.objects.create(number="11 22 33 44", tenant_id=self.tenant_id, is_pwd=False)
 
@@ -290,9 +289,9 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
 
         sync_devices_task(tenant_id=self.tenant_id)
 
-        calls = mock_send_rpc.call_args_list
-        pwd_calls = [c for c in calls if c.kwargs.get("is_pwd")]
-        rfid_calls = [c for c in calls if not c.kwargs.get("is_pwd")]
+        calls = mock_dispatch.call_args_list
+        pwd_calls = [c for c in calls if c.args[3]]
+        rfid_calls = [c for c in calls if not c.args[3]]
 
         self.assertEqual(len(pwd_calls), 1)
         self.assertEqual(pwd_calls[0].args[1], ["77777"])
