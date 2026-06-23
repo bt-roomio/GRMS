@@ -18,7 +18,7 @@ class RoomFilterParams(PaginationParams):
 
 
 class RoomFilterSerializer(PaginationSerializer[RoomFilterParams]):
-    SORT_CHOICES = ["number", "floor", "block", "-number", "-floor", "-block"]
+    SORT_CHOICES = ["number", "-number"]
     params_class = RoomFilterParams
 
     sort_by = serializers.ChoiceField(choices=SORT_CHOICES, default="number")

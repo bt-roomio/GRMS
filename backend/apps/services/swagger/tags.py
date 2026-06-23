@@ -10,26 +10,24 @@ _auth_error_response = openapi.Response(
     ),
 )
 
+_tag_object_schema = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
+        "key_name": openapi.Schema(type=openapi.TYPE_STRING),
+        "value": openapi.Schema(type=openapi.TYPE_STRING),
+    },
+)
+
+
 _tags_list_response = openapi.Response(
-    description="Room info with its CLIENT_SCOPE attributes and latest telemetry.",
+    description="Room info with its CLIENT_SCOPE attributes and latest telemetry as a unified tag list.",
     examples={
         "application/json": {
             "room": {"id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f", "number": "101"},
-            "attributes": [
-                {
-                    "device": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-                    "key_name": "targetTemperature",
-                    "last_update_ts": 1718000000000,
-                    "value": 22.5,
-                }
-            ],
-            "telemetry": [
-                {
-                    "device": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-                    "key_name": "temperature",
-                    "value": 21.8,
-                    "ts": 1718000000000,
-                }
+            "tags": [
+                {"id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", "key_name": "targetTemperature", "value": 22.5},
+                {"id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e", "key_name": "temperature", "value": 21.8},
             ],
         }
     },
@@ -43,45 +41,9 @@ _tags_list_response = openapi.Response(
                     "number": openapi.Schema(type=openapi.TYPE_STRING),
                 },
             ),
-            "attributes": openapi.Schema(
-                type=openapi.TYPE_ARRAY,
-                items=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "device": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                        "key_name": openapi.Schema(type=openapi.TYPE_STRING),
-                        "last_update_ts": openapi.Schema(type=openapi.TYPE_INTEGER),
-                        "value": openapi.Schema(type=openapi.TYPE_STRING),
-                    },
-                ),
-            ),
-            "telemetry": openapi.Schema(
-                type=openapi.TYPE_ARRAY,
-                items=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "device": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                        "key_name": openapi.Schema(type=openapi.TYPE_STRING),
-                        "value": openapi.Schema(type=openapi.TYPE_STRING),
-                        "ts": openapi.Schema(type=openapi.TYPE_INTEGER),
-                    },
-                ),
-            ),
+            "tags": openapi.Schema(type=openapi.TYPE_ARRAY, items=_tag_object_schema),
         },
     ),
-)
-
-
-_tag_object_schema = openapi.Schema(
-    type=openapi.TYPE_OBJECT,
-    properties={
-        "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-        "device": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-        "key_name": openapi.Schema(type=openapi.TYPE_STRING),
-        "type": openapi.Schema(type=openapi.TYPE_STRING, enum=["ATTRIBUTE", "TELEMETRY"]),
-        "last_update_ts": openapi.Schema(type=openapi.TYPE_INTEGER),
-        "value": openapi.Schema(type=openapi.TYPE_STRING),
-    },
 )
 
 
@@ -105,8 +67,9 @@ def tag_detail_put_swagger(**kwargs):
     return swagger_auto_schema(
         operation_summary="Update Tag Value",
         operation_description=(
-            "Update the tag value (persisted to the type-compatible column) and push the new value "
-            "to the device via MQTT RPC: setAttribute for attributes, setTelemetry for telemetry."
+            "Push the new value to the device first via MQTT RPC (setAttribute for attributes, "
+            "setTelemetry for telemetry). Only if the device accepts the change is it persisted to "
+            "the type-compatible column; otherwise the stored value is left unchanged and 502 is returned."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -120,7 +83,7 @@ def tag_detail_put_swagger(**kwargs):
         ),
         responses={
             200: openapi.Response(
-                description="Updated tag together with the device RPC result.",
+                description="Device accepted the change; the persisted tag and the device RPC result.",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={"tag": _tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
@@ -129,6 +92,13 @@ def tag_detail_put_swagger(**kwargs):
             400: openapi.Response(description="Invalid request body."),
             401: _auth_error_response,
             404: openapi.Response(description="Tag not found for the current tenant."),
+            502: openapi.Response(
+                description="Device rejected the change or did not respond; the stored value is unchanged.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={"tag": _tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
+                ),
+            ),
         },
         tags=["Services, Tags"],
     )

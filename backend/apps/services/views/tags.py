@@ -7,16 +7,31 @@ from rest_framework.views import APIView
 from core.utils.get_time import get_mil_sec
 from main.models import Room
 from services.serializers.room import RoomSerializer
-from services.serializers.tag import TagSerializer, TagUpdateSerializer
+from services.serializers.tag import (
+    RoomAttributeTagSerializer,
+    RoomTelemetryTagSerializer,
+    TagSerializer,
+    TagUpdateSerializer,
+)
 from services.swagger.tags import tag_detail_get_swagger, tag_detail_put_swagger, tags_by_room_get_swagger
 from services.utils.permissions import DoorLockPermission
 from shuttle.models import AttributeKv, TsKvLatest
-from shuttle.serializers.attributes import RoomAttributeSerializer
-from shuttle.serializers.ts_kv_latest import RoomTsKvLatestSerializer
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.views.json_rpc import prepare_mqtt_request
 
 VALUE_COLUMNS = ("bool_v", "str_v", "long_v", "dbl_v", "json_v")
+
+
+def _rpc_succeeded(rpc) -> bool:
+    """Whether a ``prepare_mqtt_request`` result means the device accepted the change.
+    A real device response carries a top-level ``success`` flag (see access_manager
+    send_rpc), while the timeout sentinel nests ``success: False`` under ``data``."""
+    if not isinstance(rpc, dict) or "error" in rpc:
+        return False
+    data = rpc.get("data")
+    if isinstance(data, dict) and "success" in data:
+        return bool(data["success"])
+    return bool(rpc.get("success"))
 
 
 class TagsByRoomListView(APIView):
@@ -28,12 +43,14 @@ class TagsByRoomListView(APIView):
         room = get_object_or_404(Room.objects.by_tenant(request.tenant), pk=room_id)
         attributes = AttributeKv.objects.get_attributes_by_room(room, AttributeKv.CLIENT_SCOPE)
         telemetry = TsKvLatest.objects.get_ts_kv_latest_by_room(room, request.tenant)
-        print(attributes.values())
+        tags = [
+            *RoomAttributeTagSerializer(attributes, many=True).data,
+            *RoomTelemetryTagSerializer(telemetry, many=True).data,
+        ]
         return Response(
             {
                 "room": RoomSerializer(room).data,
-                "attributes": RoomAttributeSerializer(attributes, many=True).data,
-                "telemetry": RoomTsKvLatestSerializer(telemetry, many=True).data,
+                "tags": tags,
             }
         )
 
@@ -75,6 +92,15 @@ class TagDetailView(APIView):
         if key not in mapping:
             raise ValidationError({"value": f"Unsupported value type: {type(value).__name__}."})
 
+        # 1. Push to the device first; persist only if it accepts the change.
+        method = "setAttribute" if is_attribute else "setTelemetry"
+        rpc = prepare_mqtt_request(tag.entity, method, {key: value}, 5)
+
+        if not _rpc_succeeded(rpc):
+            # Device rejected or did not respond — keep the stored value unchanged.
+            return Response({"tag": TagSerializer(tag).data, "rpc": rpc}, status=502)
+
+        # 2. Device accepted — persist the new value.
         field, val = mapping[key]
         for column in VALUE_COLUMNS:
             setattr(tag, column, None)
@@ -83,6 +109,4 @@ class TagDetailView(APIView):
             tag.ts = get_mil_sec()  # TsKvLatest.save() does not refresh ts; AttributeKv.save() does
         tag.save()
 
-        method = "setAttribute" if is_attribute else "setTelemetry"
-        rpc = prepare_mqtt_request(tag.entity, method, {key: value}, 5)
         return Response({"tag": TagSerializer(tag).data, "rpc": rpc})
