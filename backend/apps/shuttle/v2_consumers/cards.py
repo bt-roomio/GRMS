@@ -23,7 +23,7 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = CardFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(  # pyright: ignore
+        query = query.list(  # ty: ignore
             tenant_id=self.tenant_id,
             sort_by=params.get("sort_by", []),
             search_field="number",
