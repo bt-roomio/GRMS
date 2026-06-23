@@ -35,7 +35,7 @@ TESTING = _test_arg_check or _env_check
 # For pytest
 TEST_RUNNER = "config.pytest_runner.PytestTestRunner"
 
-DEBUG = os.getenv("DJANGO_DEBUG")
+DEBUG = os.getenv("DJANGO_DEBUG", "").lower() in ("1", "true", "yes")
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
