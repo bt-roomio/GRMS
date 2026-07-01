@@ -7,6 +7,16 @@ from core.querysets.base_queryset import BaseQuerySet
 
 
 class TsKvLatestQuerySet(BaseQuerySet):
+    VALUE_FIELDS = ("bool_v", "str_v", "long_v", "dbl_v", "json_v")
+
+    @classmethod
+    def _value_expr(cls):
+        """First non-null typed column, cast to text (matches telemetry's string contract)."""
+        return Coalesce(
+            *(Cast(field, output_field=CharField()) for field in cls.VALUE_FIELDS),
+            output_field=CharField(),
+        )
+
     def by_tenant(self, tenant):
         return self.filter(entity__tenant=tenant)
 
@@ -19,7 +29,7 @@ class TsKvLatestQuerySet(BaseQuerySet):
     def get_by_keys(self, keys=List[str]):
         from shuttle.models import TsKvDictionary
 
-        key_ids = TsKvDictionary.objects.get_key_ids(keys)  # pyright: ignore
+        key_ids = TsKvDictionary.objects.get_key_ids(keys)
         return self.filter(key__in=key_ids)
 
     def get_ts_kv_latest(self, entity, tenant, sort_by=[]):
@@ -27,21 +37,18 @@ class TsKvLatestQuerySet(BaseQuerySet):
             self.select_related("key")
             .by_tenant(tenant)
             .by_device(entity)
-            .annotate(
-                key_name=F("key__key"),
-                value=Coalesce(
-                    Cast("bool_v", output_field=CharField()),
-                    Cast("str_v", output_field=CharField()),
-                    Cast("long_v", output_field=CharField()),
-                    Cast("dbl_v", output_field=CharField()),
-                    Cast("json_v", output_field=CharField()),
-                    output_field=CharField(),
-                ),
-            )
+            .annotate(key_name=F("key__key"), value=self._value_expr())
             .values("ts", "key_name", "value")
             .order_by(*sort_by)
         )
         return query
+
+    def get_ts_kv_latest_by_room(self, room, tenant, sort_by=()):
+        return (
+            self.filter(entity__room=room, entity__tenant=tenant)
+            .values("ts", "id", "key__key", *self.VALUE_FIELDS)
+            .order_by(*sort_by)
+        )
 
     def unique_keys_by_tenant(self, tenant_id, tag_name: str | None = None):
         query = self.filter(key__key__icontains=tag_name) if tag_name else self

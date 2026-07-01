@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, Union
+from typing import Any, ClassVar, Dict, Iterable, Union, cast
 from uuid import UUID
 
 from django.contrib.postgres.fields import ArrayField
@@ -131,7 +131,7 @@ class Room(BaseModel, UpdateByModel):
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
     additional_info = models.JSONField(null=True, blank=True)
 
-    objects = RoomQuerySet.as_manager()
+    objects: ClassVar[RoomQuerySet] = cast(RoomQuerySet, RoomQuerySet.as_manager())
 
     def __str__(self):
         return self.number
