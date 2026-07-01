@@ -7,7 +7,7 @@ from rest_framework.views import APIView, Response
 from access_manager.models import Card
 from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
 from access_manager.swagger.card import card_swagger, swagger_card_disconnect
-from access_manager.utilits.unplug_card import unplug
+from access_manager.tasks.unplug_card import unplug
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms
@@ -66,12 +66,8 @@ class CardDetailView(APIView):
     @check_perms(["access_manager.delete_card"])
     def delete(self, request, pk):
         instance = get_object_or_404(Card, id=pk, tenant_id=request.user.tenant_id)
-        result = unplug(instance)
-        if result:
-            instance.is_active = False
-            instance.save()
-            return Response({}, 204)
-        return Response({}, 204)
+        unplug.delay(str(instance.id))
+        return Response({"message": "Card deletion started."}, 202)
 
 
 class DisconnectCardView(APIView):
