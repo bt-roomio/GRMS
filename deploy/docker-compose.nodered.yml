@@ -28,7 +28,7 @@ services:
     expose:
       - "1880"
     environment:
-      API_URL: "http://django:8000"
+      API_URL: "http://django:8000/api/v1"
       TENANT_ID: ${NODERED_TENANT_ID}
       LOG_LEVEL: ${NODERED_LOG_LEVEL:-warn}
       VIRTUAL_HOST: ${NODERED_VIRTUAL_HOST}
