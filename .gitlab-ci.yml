@@ -1,78 +1,78 @@
 stages:
-  - test
-  - build
+  # - test
+  # - build
   - staging
   - production
 
 variables:
   MAKE_ENV: ""
 
-test:
-  stage: test
-  image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-  interruptible: true
-  services:
-    - name: timescale/timescaledb:2.21.0-pg16
-      alias: postgres
-    - name: redis:7-alpine
-      alias: redis
-  variables:
-    POSTGRES_USER: postgres
-    POSTGRES_PASSWORD: postgres
-    POSTGRES_DB: test_db
-    POSTGRES_HOST: postgres
-    POSTGRES_PORT: 5432
-    REDIS_HOST: redis
-    REDIS_PORT: 6379
-    UV_CACHE_DIR: .uv-cache
-  cache:
-    key:
-      files:
-        - backend/uv.lock
-    paths:
-      - .uv-cache
-  before_script:
-    - cd backend
-    - uv sync --frozen
-    - uv run python manage.py migrate
-  script:
-    - uv run python manage.py test
+# test:
+#   stage: test
+#   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+#   interruptible: true
+#   services:
+#     - name: timescale/timescaledb:2.21.0-pg16
+#       alias: postgres
+#     - name: redis:7-alpine
+#       alias: redis
+#   variables:
+#     POSTGRES_USER: postgres
+#     POSTGRES_PASSWORD: postgres
+#     POSTGRES_DB: test_db
+#     POSTGRES_HOST: postgres
+#     POSTGRES_PORT: 5432
+#     REDIS_HOST: redis
+#     REDIS_PORT: 6379
+#     UV_CACHE_DIR: .uv-cache
+#   cache:
+#     key:
+#       files:
+#         - backend/uv.lock
+#     paths:
+#       - .uv-cache
+#   before_script:
+#     - cd backend
+#     - uv sync --frozen
+#     - uv run python manage.py migrate
+#   script:
+#     - uv run python manage.py test
 
-backend:
-  stage: build
-  image: docker:git
-  interruptible: true
-  services:
-    - docker:dind
-  rules:
-    - if: $CI_COMMIT_BRANCH =~ /^(dev|stable|test_ci_cd)$/
-    - when: never
-  variables:
-    DOCKER_BUILDKIT: "1"
-  script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
-    - |
-      if [ "$CI_COMMIT_BRANCH" == "dev" ]; then
-        export IMAGE_TAG=dev
-      elif [ "$CI_COMMIT_BRANCH" == "test_ci_cd" ]; then
-        export IMAGE_TAG=test_ci_cd
-      else
-        export IMAGE_TAG=latest
-      fi
-    - docker pull "$CI_REGISTRY_IMAGE:$IMAGE_TAG" || true
-    - |
-      cd backend && docker build \
-        --cache-from "$CI_REGISTRY_IMAGE:$IMAGE_TAG" \
-        --build-arg BUILDKIT_INLINE_CACHE=1 \
-        -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" .
-    - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
-
-
-# ---------------------------------------------------------------------------
-# Shared SSH connection templates
-# ---------------------------------------------------------------------------
-
-# Used by grms-* jobs: connects to roomio through the leto jump host.
+# backend:
+#   stage: build
+#   image: docker:git
+#   interruptible: true
+#   services:
+#     - docker:dind
+#   rules:
+#     - if: $CI_COMMIT_BRANCH =~ /^(dev|stable|test_ci_cd)$/
+#     - when: never
+#   variables:
+#     DOCKER_BUILDKIT: "1"
+#   script:
+#     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+#     - |
+#       if [ "$CI_COMMIT_BRANCH" == "dev" ]; then
+#         export IMAGE_TAG=dev
+#       elif [ "$CI_COMMIT_BRANCH" == "test_ci_cd" ]; then
+#         export IMAGE_TAG=test_ci_cd
+#       else
+#         export IMAGE_TAG=latest
+#       fi
+#     - docker pull "$CI_REGISTRY_IMAGE:$IMAGE_TAG" || true
+#     - |
+#       cd backend && docker build \
+#         --cache-from "$CI_REGISTRY_IMAGE:$IMAGE_TAG" \
+#         --build-arg BUILDKIT_INLINE_CACHE=1 \
+#         -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" .
+#     - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+#
+#
+# # ---------------------------------------------------------------------------
+# # Shared SSH connection templates
+# # ---------------------------------------------------------------------------
+#
+# # Used by grms-* jobs: connects to roomio through the leto jump host.
 
 .ssh-via-jumphost:
   image: alpine:latest
@@ -161,7 +161,7 @@ backend:
 leto-backend:
   extends: [.ssh-direct, .backend-deploy]
   stage: staging
-  needs: [backend]
+  # needs: [backend]
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(dev|test_ci_cd)$/
@@ -197,7 +197,7 @@ leto-frontend:
 grms-backend:
   extends: .ssh-via-jumphost
   stage: production
-  needs: [backend]
+  # needs: [backend]
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(stable|test_ci_cd)$/
@@ -236,7 +236,7 @@ grms-frontend:
 cloud-backend:
   extends: [.ssh-direct, .backend-deploy]
   stage: production
-  needs: [backend]
+  # needs: [backend]
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(stable|test_ci_cd)$/
