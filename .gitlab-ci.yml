@@ -188,6 +188,7 @@ leto-frontend:
     SSH_PORT: $LETO_PORT
     SSH_USER: $LETO_USER
     REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
 
 # ---------------------------------------------------------------------------
 # Production (roomio, via leto jump host)
