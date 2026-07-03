@@ -14,7 +14,6 @@ deploy/
 ├── env.example                 # Шаблон переменных окружения
 ├── .env.nodered.example        # Шаблон для Node-RED тенанта
 ├── nginx/
-│   ├── frontend.conf           # Конфиг nginx для фронтенда
 │   └── vhost.d/                # Конфиги nginx-proxy (per-vhost)
 └── monitoring/                 # Prometheus + Grafana + Alertmanager
 ```
@@ -26,7 +25,7 @@ deploy/
 | `infra`   | postgres, pgbouncer, redis, redis-broker, rabbitmq                 |
 | `app`     | backend (django), celery-\*, mq-async, mews-websocket, pms-handler |
 | `iot`     | mqtt                                                               |
-| `front`   | frontend, frontend-nginx                                           |
+| `front`   | frontend                                                           |
 | `proxy`   | nginx-proxy, letsencrypt                                           |
 | `nodered` | nodered (single-tenant, через основной compose)                    |
 

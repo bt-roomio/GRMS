@@ -37,7 +37,7 @@ endif
 INFRA_SVCS   = postgres pgbouncer redis redis-broker rabbitmq
 APP_SVCS     = backend celery-critical celery-default celery-low celery-beat mq-async mews-websocket pms-handler
 IOT_SVCS     = mqtt
-FRONT_SVCS   = frontend frontend-nginx
+FRONT_SVCS   = frontend
 PROXY_SVCS   = proxy letsencrypt
 ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS)
 
@@ -49,8 +49,8 @@ PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
 
 .PHONY: help up-infra up-app up-iot up-front up-proxy up-all \
         down down-v down-infra down-app down-iot down-front down-proxy down-nodered \
-        restart logs shell ps deploy deploy-backend \
-        down down-v restart logs shell ps deploy deploy-backend \
+        restart logs shell ps deploy deploy-backend deploy-frontend \
+        down down-v restart logs shell ps deploy deploy-backend deploy-frontend \
         migrate collectstatic \
         nodered-up-all nodered-down-all nodered-pull-all nodered-restart-all nodered-ps-all
 
@@ -72,6 +72,7 @@ help:
 	@echo "  Деплой:"
 	@echo "    make deploy                git pull + docker pull + restart app"
 	@echo "    make deploy-backend        Обновить только backend + celery"
+	@echo "    make deploy-frontend       Обновить только frontend"
 	@echo ""
 	@echo "  Управление:"
 	@echo "    make down                  Остановить все сервисы"
@@ -190,14 +191,13 @@ collectstatic:
 
 # --- Деплой ---
 
-deploy:
-	git pull
-	$(COMPOSE) pull $(APP_SVCS)
-	$(COMPOSE) up -d --remove-orphans $(INFRA_SVCS) $(APP_SVCS)
-	@echo "Деплой завершён: $$(git log -1 --oneline)"
-
 deploy-backend:
+	$(COMPOSE) pull $(APP_SVCS)
 	$(COMPOSE) up -d --no-deps $(APP_SVCS)
+
+deploy-frontend:
+	$(COMPOSE) pull $(FRONT_SVCS)
+	$(COMPOSE) up -d --no-deps $(FRONT_SVCS)
 
 # --- Node-RED (multi-tenant) ---
 

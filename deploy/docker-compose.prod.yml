@@ -184,7 +184,7 @@ services:
   # FRONTEND
   # ---------------------------------------------------------------------------
 
-  frontend-nginx:
+  frontend:
     deploy:
       resources:
         limits:

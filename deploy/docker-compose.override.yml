@@ -108,11 +108,10 @@ services:
     command: sh -c "yarn && yarn dev --host 0.0.0.0 --port 5173"
     ports:
       - "5173:5173"
-    # frontend-nginx не нужен в dev — Vite сам раздаёт
-
-  frontend-nginx:
-    deploy:
-      replicas: 0   # не нужен в dev — Vite раздаёт напрямую
+    # healthcheck из docker-compose.yml проверяет :80/healthz — Vite dev-сервер
+    # слушает :5173 и не отдаёт /healthz, поэтому в dev он отключён
+    healthcheck:
+      test: ["NONE"]
 
 volumes:
   backend_venv:
