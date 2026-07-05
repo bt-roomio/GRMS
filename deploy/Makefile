@@ -136,9 +136,6 @@ endif
 down:
 	$(COMPOSE) down
 
-down-v:  ## Остановить и удалить volumes (ОСТОРОЖНО: удалит данные!)
-	$(COMPOSE) down -v
-
 down-infra:
 	$(COMPOSE) down $(INFRA_SVCS)
 
@@ -153,9 +150,6 @@ down-front:
 
 down-proxy:
 	$(COMPOSE) down $(PROXY_SVCS)
-
-down-nodered:
-	$(COMPOSE) down $(NODERED_SVCS)
 
 # --- Управление сервисами ---
 
@@ -172,22 +166,8 @@ else
 	$(COMPOSE) logs -f --tail=100 $(s)
 endif
 
-shell:
-ifndef s
-	$(error Укажи сервис: make shell s=backend)
-endif
-	$(COMPOSE) exec $(s) bash
-
 ps:
 	$(COMPOSE) ps --format "$(PS_FORMAT)"
-
-# --- Django ---
-
-migrate:
-	$(COMPOSE) exec backend python manage.py migrate
-
-collectstatic:
-	$(COMPOSE) exec backend python manage.py collectstatic --noinput
 
 # --- Деплой ---
 
