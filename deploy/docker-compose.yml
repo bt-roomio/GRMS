@@ -151,7 +151,7 @@ services:
     command:
       - redis-server
       - --appendonly yes
-      - --maxmemory 512mb
+      - --maxmemory 1G
       - --maxmemory-policy noeviction
     volumes:
       - redis_broker_data:/data
