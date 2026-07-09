@@ -16,7 +16,7 @@ class GuestChangeSerializer(serializers.Serializer):
     guestTitle = serializers.CharField(allow_null=True, allow_blank=True)
     pmsRegNum = serializers.CharField()
     departureDateTS = serializers.CharField()
-    guestLanguage = serializers.CharField()
+    guestLanguage = serializers.CharField(required=False)
     roomShare = serializers.CharField()
     swapFlag = serializers.CharField()
     profileNum = serializers.CharField(allow_null=True, allow_blank=True)

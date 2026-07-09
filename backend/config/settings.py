@@ -420,7 +420,7 @@ CELERY_ENABLE_UTC = True
 CELERY_BEAT_SCHEDULE = {
     "auto-checkout": {
         "task": "main.tasks.auto_check_out",
-        "schedule": crontab(hour=12, minute=0),
+        "schedule": crontab(minute="*/5"),
     },
     "auto-block–guest": {
         "task": "main.tasks.auto_block",

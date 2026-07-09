@@ -25,7 +25,7 @@ class CheckInSerializer(serializers.Serializer):
     pmsRegNum = serializers.CharField()
     arrivalDateTS = serializers.CharField()
     departureDateTS = serializers.CharField()
-    guestLanguage = serializers.CharField()
+    guestLanguage = serializers.CharField(required=False)
     roomShare = serializers.CharField()
     swapFlag = serializers.CharField()
     nopost = serializers.CharField()
