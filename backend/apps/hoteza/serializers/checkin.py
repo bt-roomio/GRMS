@@ -176,7 +176,7 @@ class CheckInSerializer(serializers.Serializer):
                         "name": validated_data.pop("name"),
                         "check_in": validated_data.pop("check_in"),
                         "check_out": validated_data.pop("check_out"),
-                        "auto_check_out": True,
+                        "auto_check_out": False,
                         "room": validated_data.pop("room"),
                         "language": validated_data.pop("language"),
                         "title": validated_data.pop("title"),

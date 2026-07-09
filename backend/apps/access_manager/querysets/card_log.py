@@ -39,9 +39,9 @@ class CardLogQuerySet(BaseQuerySet):
         if tenant_id:
             query = query.filter(tenant__id=tenant_id)
         if from_date:
-            query = query.filter(event_ts__gte=from_date)
+            query = query.filter(created_at__gte=from_date)
         if to_date:
-            query = query.filter(event_ts__lte=to_date)
+            query = query.filter(created_at__lte=to_date)
 
         if device_ids:
             query = query.filter(device_id__in=device_ids)
