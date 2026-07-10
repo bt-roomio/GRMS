@@ -192,7 +192,6 @@ collectstatic:
 # --- Деплой ---
 
 deploy-backend:
-	$(COMPOSE) pull $(APP_SVCS)
 	$(COMPOSE) up -d --no-deps $(APP_SVCS)
 
 deploy-frontend:

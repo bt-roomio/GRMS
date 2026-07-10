@@ -6,7 +6,7 @@ from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 
-from core.management.mq.state_device import update_activity_device
+from core.management.mq.state_device import update_activity_device, update_activity_devices_batch
 from shuttle.models import TsKv, TsKvDictionary
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
@@ -132,8 +132,7 @@ def update_activity_device_task(device_id, connected=True):
 
 @shared_task
 def update_activity_devices_batch_task(device_ids: list, connected=True):
-    for device_id in device_ids:
-        update_activity_device(device_id, connected)
+    update_activity_devices_batch(device_ids, connected)
 
 
 @shared_task

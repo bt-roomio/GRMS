@@ -236,7 +236,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
-    command: celery -A config worker -Q default -l warning -c 4 --max-tasks-per-child=100
+    command: celery -A config worker -Q default -l warning -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
 
