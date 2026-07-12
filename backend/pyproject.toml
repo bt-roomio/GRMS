@@ -103,6 +103,7 @@ dependencies = [
   "num2words==0.5.14",
   "django-allauth==65.12.1",
   "django-countries==8.1.1",
+  "flower>=2.0.1",
 ]
 
 [dependency-groups]

@@ -16,7 +16,7 @@ from core.utils.get_time import get_mil_sec
 from core.utils.handle_card_event import handle_card_event
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
-from shuttle.tasks import publish_updates_batch_task, update_activity_device_task, update_activity_devices_batch_task
+from shuttle.tasks import publish_updates_batch_task, update_activity_devices_batch_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
@@ -120,99 +120,6 @@ def get_tskv_dict(key):
 
 
 executor = ThreadPoolExecutor(max_workers=4)  # для handle_fias
-
-
-def sync_telemetry(device, topic, payload):
-    if topic.startswith("v1/gateway/") and isinstance(payload, dict):
-        for sub_name, telemetry_list in payload.items():
-            device = get_sub_device(device, name=sub_name)
-            payload = telemetry_list
-
-    device_id = device.get("id")
-    entries = []
-    logger.info(
-        "Sync telemetry: device=%s topic=%s entries=%s",
-        device_id,
-        topic,
-        len(payload) if hasattr(payload, "__len__") else 1,
-    )
-
-    if isinstance(payload, dict) and "ts" in payload and "values" in payload:
-        entries.append((payload["ts"], payload["values"]))
-    elif isinstance(payload, list):
-        entries.extend((d["ts"], d["values"]) for d in payload if isinstance(d, dict) and "ts" in d and "values" in d)
-    if not entries:
-        logger.warning("No valid telemetry entries found for device %s", device_id)
-        return
-
-    ts_now = get_mil_sec()
-    historical_objs = []
-    latest_objs = []
-    card_logs = []
-    updates_by_device: dict[str, list[dict]] = DefaultDict(list)
-
-    for ts_ms, vals in entries:
-        ts_dt = unix_to_datetime(ts_ms)
-        for key, (field, value) in find_compatible_field(vals).items():
-            if key == "rfid_card_event":
-                card_log = handle_card_event(device, value, ts_dt)
-                if card_log:
-                    card_logs.append(card_log)
-                continue
-            dict_obj = get_tskv_dict(key)
-            historical_objs.append(TsKv(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_dt, **{field: value}))
-            latest_objs.append(
-                TsKvLatest(entity_id=device_id, key_id=dict_obj.get("key_id"), ts=ts_now, **{field: value})
-            )
-            # пакетное сообщение в Redis
-            updates_by_device[f"{device_id}_{device.get('tenant_id')}"].append(
-                {
-                    "entity": str(device_id),
-                    "key": key,
-                    "ts": ts_now,
-                    "bool_v": value if field == "bool_v" else None,
-                    "str_v": value if field == "str_v" else None,
-                    "long_v": value if field == "long_v" else None,
-                    "dbl_v": value if field == "dbl_v" else None,
-                    "json_v": value if field == "json_v" else None,
-                    "value": value,
-                }
-            )
-            if key == "messageFromFIAS":
-                executor.submit(handle_fias, value, device)
-
-    TsKv.objects.bulk_create(historical_objs, batch_size=1000, ignore_conflicts=True)
-
-    if latest_objs:
-        try:
-            unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
-            _upsert_latest(list(unique.values()))
-        except Exception as e:
-            logger.exception("Failed to upsert TsKvLatest: %s", e)
-
-    if card_logs:
-        try:
-            _upsert_card_logs(card_logs)
-            publish_card_log_updates_batch(card_logs)
-        except Exception as e:
-            logger.exception("Failed to create CardLog entries: %s", e)
-
-    logger.info(
-        "sync_telemetry done: device=%s historical=%d latest=%d updates_keys=%s",
-        device_id,
-        len(historical_objs),
-        len(latest_objs),
-        list(updates_by_device.keys()),
-    )
-
-    update_activity_device_task.delay(device_id)
-
-    # Пакетная отправка всем подписанным WebSocket-клиентам
-    if updates_by_device:
-        logger.info("Dispatching publish_updates_batch_task for device=%s", device_id)
-        publish_updates_batch_task.delay(updates_by_device)
-    else:
-        logger.info("No updates to publish for device=%s", device_id)
 
 
 def sync_telemetry_batch(batch: list[tuple]):
