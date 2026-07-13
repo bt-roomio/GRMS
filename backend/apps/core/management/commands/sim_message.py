@@ -29,11 +29,13 @@ class Command(BaseCommand):
 
     def handle(self, **_):
         tenant_id = "78061956-4619-4da6-b18a-eb9f39daa500"
-        # for msg in self.generate_msg_attributes(tenant_id):
         for msg in self.generate_msg_telemetry(tenant_id):
-            self.send_msg(msg)
+            self.send_msg(msg, "/telemetry")
 
-    def send_msg(self, msg, routing_key="/attributes"):
+        for msg in self.generate_msg_attributes(tenant_id):
+            self.send_msg(msg, "/attributes")
+
+    def send_msg(self, msg, routing_key):
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, routing_key)
 
