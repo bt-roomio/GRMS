@@ -141,7 +141,6 @@ CSRF_COOKIE_SECURE = True
 
 
 FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:5173")
-FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 
 # allauth account configuration for email-only user model (no username field)
 SITE_ID = 1
@@ -300,8 +299,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost")
-FRONTEND_PORT = os.getenv("FRONTEND_PORT")
 
 
 # Rest Framework
@@ -415,6 +412,9 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = True
+# Task events для мониторинга через Flower (иначе вкладка Tasks пустая)
+CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
 
 
 CELERY_BEAT_SCHEDULE = {
