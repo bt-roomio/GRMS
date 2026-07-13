@@ -143,7 +143,7 @@ backend:
     - ssh $SSH_TARGET "
       cd $REMOTE_DIR;
       echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
-      make deploy-backend
+      make $MAKE_ENV deploy-backend
       "
 
 .frontend-deploy:
@@ -151,7 +151,7 @@ backend:
     - ssh $SSH_TARGET "
       cd $REMOTE_DIR;
       echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
-      make deploy-frontend
+      make $MAKE_ENV deploy-frontend
       "
 
 # ---------------------------------------------------------------------------
@@ -188,6 +188,7 @@ leto-frontend:
     SSH_PORT: $LETO_PORT
     SSH_USER: $LETO_USER
     REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
 
 # ---------------------------------------------------------------------------
 # Production (roomio, via leto jump host)
