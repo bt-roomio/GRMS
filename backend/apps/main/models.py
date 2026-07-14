@@ -40,6 +40,7 @@ class Tenant(ServiceBaseModel):
     state = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
+    has_access_ai = models.BooleanField(default=False)
 
     objects = TenantQuerySet.as_manager()
 

@@ -151,7 +151,7 @@ services:
     command:
       - redis-server
       - --appendonly yes
-      - --maxmemory 1G
+      - --maxmemory 3G
       - --maxmemory-policy noeviction
     volumes:
       - redis_broker_data:/data
@@ -261,6 +261,19 @@ services:
       <<: *celery-env
       PGAPPNAME: grms-celery-beat
     command: celery -A config beat --loglevel=warning
+    tmpfs:
+      - /prom_mp
+
+  celery-flower:
+    <<: *django-common
+    container_name: celery-flower
+    depends_on: *worker-depends
+    environment:
+      <<: *celery-env
+      PGAPPNAME: grms-celery-flower
+    command: celery -A config flower --port=5555 --url_prefix=flower --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
+    ports:
+      - "127.0.0.1:5555:5555"
     tmpfs:
       - /prom_mp
 

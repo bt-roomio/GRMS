@@ -27,11 +27,11 @@ services:
   # --- Redis: открыт для redis-insight / redis-cli ---
   redis:
     ports:
-      - "6379:6379"
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
 
   redis-broker:
     ports:
-      - "6380:6379"
+      - "${REDIS_BROKER_EXTERNAL_PORT:-6380}:6379"
 
   # --- RabbitMQ management UI ---
   rabbitmq:
@@ -87,6 +87,11 @@ services:
       - ../backend:/app
       - backend_venv:/app/.venv
     command: celery -A config beat --loglevel=debug
+
+  celery-flower:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
 
   mq-async:
     volumes:

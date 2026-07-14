@@ -29,11 +29,14 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         return serializer.data
 
     async def get_latest_activity(self, message):
+        if not self.subscribers:
+            return
+        data = await self.response()
         for request_id, params in self.subscribers.items():
-            data = await self.response()
             if data == params.get("response"):
-                return
+                continue
             await self.reply(data=data, action=params.get("action"), request_id=request_id)
+            params["response"] = data
 
     @action()
     async def list_subscribe(self, request_id, action, query_params):

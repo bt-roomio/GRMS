@@ -1,5 +1,6 @@
 import json
 import random
+import time
 
 import redis
 from django.conf import settings
@@ -27,12 +28,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, **_):
-        tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        for msg in self.generate_msg_attributes(tenant_id):
-            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
-            self.send_msg(msg)
+        tenant_id = "78061956-4619-4da6-b18a-eb9f39daa500"
+        for msg in self.generate_msg_telemetry(tenant_id):
+            self.send_msg(msg, "/telemetry")
 
-    def send_msg(self, msg, routing_key="/attributes"):
+        for msg in self.generate_msg_attributes(tenant_id):
+            self.send_msg(msg, "/attributes")
+
+    def send_msg(self, msg, routing_key):
         ch = connect_to_rabbitmq()
         send_to_rabbitmq(ch, msg, routing_key)
 
@@ -62,6 +65,40 @@ class Command(BaseCommand):
                 "data": {"gatewayOnline": True},
                 "topic": "v1/devices/me/attributes",
             }
+            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
+            yield msg
+
+    def generate_msg_telemetry(self, tenant_id):
+        devices = self.get_devices(tenant_id)
+
+        for d in devices:
+            if not d.relations:
+                continue
+
+            msg = {
+                "sourceDeviceUUID": str(d.relations[0].from_id_id),
+                "data": {
+                    f"{d.name}": [
+                        {
+                            "ts": time.time(),
+                            "values": {
+                                # "DND Relay": 0,
+                                "MUR Relay": random.randint(0, 1),
+                                "Room Temperature": random.randint(0, 100),
+                                "AC ON OFF": random.randint(0, 1),
+                                "Occupancy State": random.randint(0, 1),
+                                # "Entrance Trap": 1,
+                                # "Balcony Trap": 1,
+                                # "Vip AC": 0,
+                                # "Balcony Central": 0,
+                                # "Vip Vacancy": 0,
+                            },
+                        }
+                    ]
+                },
+                "topic": "v1/gateway/telemetry",
+            }
+            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
             yield msg
 
     def fias_message(self, *args, **options):
