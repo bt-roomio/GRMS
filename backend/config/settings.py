@@ -35,7 +35,7 @@ TESTING = _test_arg_check or _env_check
 # For pytest
 TEST_RUNNER = "config.pytest_runner.PytestTestRunner"
 
-DEBUG = os.getenv("DJANGO_DEBUG")
+DEBUG = os.getenv("DJANGO_DEBUG", "").lower() in ("1", "true", "yes")
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
@@ -141,7 +141,6 @@ CSRF_COOKIE_SECURE = True
 
 
 FRONTEND_DOMAIN = os.getenv("FRONTEND_DOMAIN", "http://localhost:5173")
-FRONTEND_ACTIVATION_URL = os.getenv("FRONTEND_ACTIVATION_URL", f"{FRONTEND_DOMAIN}/activate")
 
 # allauth account configuration for email-only user model (no username field)
 SITE_ID = 1
@@ -243,7 +242,9 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", 5432),
-        "CONN_MAX_AGE": 0 if (IS_CELERY or TESTING) else 60,
+        "CONN_MAX_AGE": 0,
+        "CONN_HEALTH_CHECKS": True,
+        "DISABLE_SERVER_SIDE_CURSORS": True,
         "OPTIONS": {"application_name": os.getenv("PGAPPNAME", "grms-web")},
     }
 }
@@ -298,9 +299,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-COMPANY_NAME = os.getenv("COMPANY_NAME", "Roomio")
-FRONTEND_HOST = os.getenv("FRONTEND_HOST", "http://localhost")
-FRONTEND_PORT = os.getenv("FRONTEND_PORT")
 
 
 # Rest Framework
@@ -309,6 +307,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "core.utils.pagination.PageSizePagination",
     "PAGE_SIZE": 15,
+    "DEFAULT_THROTTLE_RATES": {
+        "auth_token": "20/min",
+    },
 }
 
 SIMPLE_JWT = {
@@ -329,14 +330,20 @@ COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [(REDIS_HOST, REDIS_PORT)],
-            "serializer_format": "uuidjson",  #  Registered in core.apps
-            "capacity": 500,
-            "expiry": 10,
+            "serializer_format": "uuidjson",
+            "capacity": 5000,
+            "expiry": 30,
+            "group_expiry": 86400,
+            "channel_capacity": {
+                "http.request": 200,
+                "websocket.send*": 100,
+            },
         },
     },
 }
@@ -352,8 +359,20 @@ WS_INTERVAL = os.getenv("WS_INTERVAL", 5)
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": os.getenv("CACHE_LOCATION", "cache_table"),
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/4",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 100,
+                "retry_on_timeout": True,
+            },
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+        },
+        "KEY_PREFIX": "grms",
+        "TIMEOUT": 300,
     },
     "security": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -393,12 +412,15 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = True
+# Task events для мониторинга через Flower (иначе вкладка Tasks пустая)
+CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
 
 
 CELERY_BEAT_SCHEDULE = {
     "auto-checkout": {
         "task": "main.tasks.auto_check_out",
-        "schedule": crontab(hour=12, minute=0),
+        "schedule": crontab(minute="*/5"),
     },
     "auto-block–guest": {
         "task": "main.tasks.auto_block",
@@ -420,10 +442,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "mews.tasks.sync_reservations",
         "schedule": 60.0,
     },
-    "mews-access-tokens": {
-        "task": "mews.tasks.sync_access_tokens",
-        "schedule": 60.0,
-    },
+    # "mews-access-tokens": { # TODO: comand not working, bacause need ServiceOrderIds
+    #     "task": "mews.tasks.sync_access_tokens",
+    #     "schedule": 60.0,
+    # },
     "active-attribute-server-scope": {
         "task": "core.tasks.active_attribute_server_scope_task",
         "schedule": 10.0,  # Every 10 seconds
@@ -439,6 +461,8 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
+
+CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")
 
 _LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "WARNING").upper()
 _LOG_FORMATTER = os.getenv("DJANGO_LOG_FORMATTER", "simple")
@@ -481,7 +505,7 @@ LOGGING = {
             "backupCount": 3,
         },
         "file_hoteza_app": {
-            "level": "WARNING",
+            "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "hoteza.log",
             "formatter": "verbose",
@@ -537,6 +561,11 @@ LOGGING = {
         "security": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
+            "propagate": False,
+        },
+        "pika": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
         "django.request": {

@@ -1,14 +1,13 @@
 import logging
 import random
 
-from access_manager.models import Card
-from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
-from access_manager.swagger.card import card_swagger, swagger_card_disconnect
-from access_manager.utilits.unplug_card import unplug
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView, Response
 
+from access_manager.models import Card
+from access_manager.serializers.card import CardFilterParams, CardSerializer, DisconnectCardSerializer
+from access_manager.swagger.card import card_swagger, swagger_card_disconnect
+from access_manager.tasks.unplug_card import unplug
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms
@@ -27,6 +26,7 @@ class CardListView(APIView):
             search_field=params.get("search_field"),  # pyright: ignore
             search_value=params.get("search_value"),  # pyright: ignore
             staff_id=params.get("staff_id"),
+            is_pwd=params.get("is_pwd"),
         )
         serializer = CardSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
@@ -36,8 +36,8 @@ class CardListView(APIView):
     @check_perms(["access_manager.add_card"])
     def post(self, request):
         data = with_tenant(request)
-        card_number = random.randint(1, 99999999)
-        data["number"] = card_number
+        if not data.get("is_pwd"):
+            data["number"] = random.randint(1, 99999999)
         serializer = CardSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save(created_by=request.user)
@@ -66,12 +66,8 @@ class CardDetailView(APIView):
     @check_perms(["access_manager.delete_card"])
     def delete(self, request, pk):
         instance = get_object_or_404(Card, id=pk, tenant_id=request.user.tenant_id)
-        result = unplug(instance)
-        if result:
-            instance.is_active = False
-            instance.save()
-            return Response({}, 204)
-        return Response({}, 204)
+        unplug.delay(str(instance.id))
+        return Response({"message": "Card deletion started."}, 202)
 
 
 class DisconnectCardView(APIView):

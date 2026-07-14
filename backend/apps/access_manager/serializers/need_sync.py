@@ -1,7 +1,6 @@
-from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
-
 from rest_framework import serializers
 
+from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, PublicSpace
 from main.serializers.device import SimpleDeviceSerializer
@@ -10,6 +9,7 @@ from main.serializers.device import SimpleDeviceSerializer
 class NeedSyncDeviceSerializer(serializers.ModelSerializer):
     device_name = serializers.SerializerMethodField()
     card_number = serializers.SerializerMethodField()
+    is_pwd = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     user_type = serializers.SerializerMethodField()
     public_space = serializers.SerializerMethodField()
@@ -23,6 +23,7 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
             "created_at",
             "device_name",
             "card_number",
+            "is_pwd",
             "user_name",
             "user_type",
             "public_space",
@@ -42,6 +43,9 @@ class NeedSyncDeviceSerializer(serializers.ModelSerializer):
 
     def get_card_number(self, obj):
         return getattr(obj.card, "number", None)
+
+    def get_is_pwd(self, obj):
+        return getattr(obj.card, "is_pwd", False)
 
     def _get_active_staff_card(self, obj):
         if not obj.card_id:
@@ -110,20 +114,8 @@ class SyncDeviceSerializer(serializers.Serializer):
 
 class SimpleNeedSyncDeviceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data.update(SimpleDeviceSerializer(instance, context={**self.context, "exclude_room_obj": False}).data)
-
-        holder = self.context.get("holder", {})
-        data["staff_name"] = holder.get("name") if holder.get("type") == "staff" else None
-        data["guest_name"] = holder.get("name") if holder.get("type") == "guest" else None
-
-        card_id = self.context.get("card_id")
-        if card_id:
-            sync_obj = NeedSyncDevice.objects.filter(device=instance, card=card_id, need_sync=True).first()
-            data["message_params"] = (sync_obj.additional_info or {}).get("message_params", {}) if sync_obj else {}
-        else:
-            data["message_params"] = {}
-
+        data = SimpleDeviceSerializer(instance, context={**self.context, "exclude_room_obj": False}).data
+        data["message_params"] = self.context.get("message_params_map", {}).get(instance.id, {})
         return data
 
     class Meta:
@@ -135,8 +127,7 @@ class NeedSyncDeviceHttpFilterParams(ValidatorSerializer):
     card_id = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), required=True)
     need_sync = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(
-        child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at"),
-        required=False,
+        child=serializers.ChoiceField(choices=["-created_at", "created_at"], default="-created_at"), required=False
     )
     size = serializers.IntegerField(default=50, max_value=200)
     page = serializers.IntegerField(default=1, min_value=1)

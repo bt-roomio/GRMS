@@ -26,7 +26,7 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
             if params.get("room")
             else params.get("device")
         )
-        query = query.by_device(entity=params.get("device")).get_history_v2(  # pyright: ignore
+        query = query.by_device(entity=params.get("device")).get_history_v2(  # ty: ignore
             keys=params.get("keys"),
             start_ts=convert_datetime(params.get("start_ts")) if params.get("start_ts") else None,
             interval=params.get("interval"),

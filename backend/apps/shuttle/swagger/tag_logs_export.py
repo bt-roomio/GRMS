@@ -11,15 +11,13 @@ def swagger_export_tag_logs():
             200: openapi.Response(
                 description="Excel file containing tag logs. The response is a downloadable `.xlsx` file."
             ),
-            404: openapi.Response(
-                description="No tag logs found for given filters."
-            ),
+            404: openapi.Response(description="No tag logs found for given filters."),
         },
         tags=["Shuttle, Tag"],
         operation_description="""
         **This endpoint exports `tag log` records into an Excel (`.xlsx`) file.**
 
-        The response is a downloadable Excel file containing all filtered tag logs.  
+        The response is a downloadable Excel file containing all filtered tag logs.
 
         ### Excel File Format:
         The exported file will contain the following columns:
@@ -33,11 +31,11 @@ def swagger_export_tag_logs():
         ### Filtering Options:
         You can filter the logs by sending JSON in the request body:
 
-        - `device` (string): Device ID (UUID)  
-        - `keys` (list of strings): Filter by key names  
-        - `start_ts` (string, datetime): Start timestamp (format: `"YYYY-MM-DD HH:MM:SS"`)  
-        - `end_ts` (string, datetime): End timestamp (format: `"YYYY-MM-DD HH:MM:SS"`)  
-        - `sort_by` (list): Sorting options, e.g. `["-ts"]`  
+        - `device` (string): Device ID (UUID)
+        - `keys` (list of strings): Filter by key names
+        - `start_ts` (string, datetime): Start timestamp (format: `"YYYY-MM-DD HH:MM:SS"`)
+        - `end_ts` (string, datetime): End timestamp (format: `"YYYY-MM-DD HH:MM:SS"`)
+        - `sort_by` (list): Sorting options, e.g. `["-ts"]`
 
         ### Example Request Body:
         ```json
@@ -51,7 +49,7 @@ def swagger_export_tag_logs():
         ```
 
         ### Responses:
-        - **200**: Returns Excel file with tag logs.  
-        - **404**: No tag logs found for given filters.  
-        """
+        - **200**: Returns Excel file with tag logs.
+        - **404**: No tag logs found for given filters.
+        """,
     )

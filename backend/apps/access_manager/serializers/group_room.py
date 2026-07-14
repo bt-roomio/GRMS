@@ -1,6 +1,6 @@
-from access_manager.models import GroupPublicSpace, GroupRoom
-
 from rest_framework import serializers
+
+from access_manager.models import GroupPublicSpace, GroupRoom
 
 
 class SimpleGroupRoomSerializer(serializers.ModelSerializer):

@@ -36,8 +36,8 @@ class TsKvListView(APIView):
         queryset, _ = TsKv.objects.by_device(device).get_history(**params)  # pyright: ignore
         return Response(queryset)
 
-class ExportTsKvExcelView(APIView):
 
+class ExportTsKvExcelView(APIView):
     @swagger_export_tag_logs()
     def post(self, request, *args, **kwargs):
         params = TagLogsFilterParams.check(request.data)
@@ -88,28 +88,22 @@ class ExportTsKvExcelView(APIView):
         data_alignment = Alignment(horizontal="center", vertical="center")
 
         for record in queryset:
-            ts_kv_obj = TsKv.objects.filter(
-                ts=record.get("ts"),
-                key__key=record.get("key_name"),
-                entity=device
-            ).first()
+            ts_kv_obj = TsKv.objects.filter(ts=record.get("ts"), key__key=record.get("key_name"), entity=device).first()
 
             if ts_kv_obj:
                 data_dict = {
-                    'bool_v': ts_kv_obj.bool_v,
-                    'str_v': ts_kv_obj.str_v,
-                    'long_v': ts_kv_obj.long_v,
-                    'dbl_v': ts_kv_obj.dbl_v,
-                    'json_v': ts_kv_obj.json_v,
+                    "bool_v": ts_kv_obj.bool_v,
+                    "str_v": ts_kv_obj.str_v,
+                    "long_v": ts_kv_obj.long_v,
+                    "dbl_v": ts_kv_obj.dbl_v,
+                    "json_v": ts_kv_obj.json_v,
                 }
                 field_name, field_value = get_non_null_column(data_dict)
                 timestamp = record.get("ts").strftime("%Y-%m-%d %H:%M:%S")
                 value_str = str(field_value) if field_value is not None else ""
-                data_type = field_name.replace('_v', '') if field_name else "null"
+                data_type = field_name.replace("_v", "") if field_name else "null"
 
-                for col_num, value in enumerate(
-                    [timestamp, record.get("key_name", ""), value_str, data_type], 1
-                ):
+                for col_num, value in enumerate([timestamp, record.get("key_name", ""), value_str, data_type], 1):
                     cell = worksheet.cell(row=row_num, column=col_num)
                     cell.value = value
                     cell.alignment = data_alignment
@@ -132,9 +126,7 @@ class ExportTsKvExcelView(APIView):
             worksheet.column_dimensions[col_letter].width = adjusted_width
 
         # --- Return response ---
-        response = HttpResponse(
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = 'attachment; filename="tag_logs_export.xlsx"'
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = 'attachment; filename="tag_logs_export.xlsx"'
         workbook.save(response)
         return response

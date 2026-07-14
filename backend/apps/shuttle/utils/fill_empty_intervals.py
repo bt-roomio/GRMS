@@ -62,7 +62,7 @@ def fill_missing_intervals(data, interval_str, start_ts, limit, key_name):
                 }
             )
         if use_rd:
-            current = current + relativedelta(**delta_kwargs)  # pyright: ignore
+            current = current + relativedelta(**delta_kwargs)
         else:
             current = current + datetime.timedelta(**delta_kwargs)
 

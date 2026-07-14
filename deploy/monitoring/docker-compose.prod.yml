@@ -1,0 +1,63 @@
+# =============================================================================
+# docker-compose.prod.yml — продакшн-специфика
+# =============================================================================
+# Использование:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Или через Makefile: make up ENV=prod
+#
+# Что добавляет этот файл:
+#   - Resource limits (CPU, memory) для всех сервисов
+# =============================================================================
+
+services:
+
+  prometheus:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.1"
+          memory: 256M
+
+  node-exporter:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+  grafana:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  alertmanager:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+  blackbox:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+        reservations:
+          cpus: "0.05"
+          memory: 16M

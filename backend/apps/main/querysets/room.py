@@ -1,8 +1,8 @@
 import logging
 
-from access_manager.tasks.send_rpc import send_rpc_request
 from django.db.models import (
     Aggregate,
+    BooleanField,
     Case,
     Count,
     F,
@@ -19,6 +19,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Cast, Coalesce
 
+from access_manager.tasks.send_rpc import send_rpc_request
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
@@ -37,6 +38,9 @@ class JSONBObjectAgg(Aggregate):
 
 
 class RoomQuerySet(BaseQuerySet):
+    def by_tenant(self, tenant):
+        return self.filter(tenant=tenant, active=True)
+
     def list(self, tenant, state=None, status=None, search_field=None, search_value=None, sort_by=None, blocks=None):
         query = self.filter(active=True, tenant=tenant)
         query = query.prefetch_related("devices__ts_kvs_latest__key", "type")
@@ -225,7 +229,6 @@ class RoomQuerySet(BaseQuerySet):
 
         guests.update(is_active=False)
         for room in query:
-            room.state = [Room.Available]  # TODO: Check for multiple guests
             room.save(update_fields=["state"])
         return guests.count(), deactivate_result
 
@@ -263,6 +266,29 @@ class RoomQuerySet(BaseQuerySet):
         from main.models import Room
 
         return self.filter(active=True, tenant_id=tenant_id, state__contains=[Room.Available]).count()
+
+    def door_lock_devices(self):
+        from main.models import Device
+
+        first_device_id_subquery = (
+            Device.objects.filter(room=OuterRef("pk"), is_active=True).order_by("created_at").values("id")[:1]
+        )
+        first_device_status_subquery = (
+            Device.objects.filter(room=OuterRef("pk"), is_active=True).order_by("created_at").values("status")[:1]
+        )
+
+        return (
+            self.annotate(
+                effective_device_id=Coalesce(F("door_lock_device_id"), Subquery(first_device_id_subquery)),
+                effective_device_status=Coalesce(
+                    F("door_lock_device__status"),
+                    Subquery(first_device_status_subquery, output_field=BooleanField()),
+                    output_field=BooleanField(),
+                ),
+            )
+            .filter(effective_device_id__isnull=False)
+            .select_related("door_lock_device")
+        )
 
 
 def get_dnd_rooms(tenant):

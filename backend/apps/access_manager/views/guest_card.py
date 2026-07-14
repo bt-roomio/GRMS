@@ -1,25 +1,22 @@
 import logging
 
-from access_manager.models import GuestPublicSpace
-from access_manager.serializers.guest_card import GuestCardRequestSerializer
-from access_manager.swagger.guest_card import guest_card_swagger
-from access_manager.utilits.check_card_assignment import get_card_assignments
-
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.models import GuestPublicSpace
+from access_manager.serializers.guest_card import GuestCardRequestSerializer
+from access_manager.swagger.guest_card import guest_card_swagger
+from access_manager.utilits.check_card_assignment import get_card_assignments
 from main.models import Guest
 
 logger = logging.getLogger("main")
 
 
 class GuestCardView(APIView):
-
     @guest_card_swagger()
     def post(self, request):
         from access_manager.tasks.send_rpc import send_rpc_request
-
         from main.utils.access_context import get_guest_access_context
 
         serializer = GuestCardRequestSerializer(data=request.data)
@@ -37,13 +34,19 @@ class GuestCardView(APIView):
             guest_id = validated_data["guest_id"]
             public_spaces = validated_data["public_spaces"]
             cards = validated_data["cards"]
+            is_pwd = validated_data.get("is_pwd", False)
             user = str(request.user.id)
 
             assigned_cards = get_card_assignments(cards=cards, tenant_id=tenant_id, exclude_guest_id=guest_id)
 
             if assigned_cards:
                 return Response(
-                    {"success": False, "message": "Card is already assigned.", "assigned_cards": assigned_cards}, 403
+                    {
+                        "success": False,
+                        "message": "Card is already assigned.",
+                        "assigned_cards": assigned_cards,
+                    },
+                    403,
                 )
             guest = get_object_or_404(Guest, id=guest_id)
 
@@ -64,7 +67,7 @@ class GuestCardView(APIView):
             success = []
 
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id, user=user)
+                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id, user=user, is_pwd=is_pwd)
                 if not result.get("success", False):
                     errors.append(result)
                 else:
@@ -73,12 +76,14 @@ class GuestCardView(APIView):
             if not errors:
                 return Response({"success": True, "message": "Cards connected successfully!"}, 200)
             return Response(
-                {"message": "Couldn't synchronize the card with all devices!", "errors": errors, "success": success},
+                {
+                    "message": "Couldn't synchronize the card with all devices!",
+                    "errors": errors,
+                    "success": success,
+                },
                 400,
             )
 
         except Exception as e:
             logger.exception("Error in GuestCardView")
-            return Response(
-                {"message": "Server error!", "error": str(e)}, 500
-            )
+            return Response({"message": "Server error!", "error": str(e)}, 500)

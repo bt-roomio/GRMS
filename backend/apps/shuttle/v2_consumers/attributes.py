@@ -26,12 +26,45 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMi
 
     async def get_latest_activity(self, message):
         updates = message.get("updates", []) or []
-        for update in updates:
-            await self.handle_ts_kv_activity(update)
         if not updates:
             await self.handle_ts_kv_activity(message.get("update"))
+            return
+
+        # Build index of changed (entity, scope) pairs for fast lookup
+        changed: dict[tuple, dict] = {}
+        for update in updates:
+            key = (update.get("entity"), update.get("scope"))
+            changed[key] = update
+
+        # Group subscribers by query_params key to avoid redundant DB queries
+        list_subs: dict[tuple, list[str]] = {}  # (device, scope) -> [request_id, ...]
+        for request_id, params in self.subscribers.items():
+            action = params.get("action")
+            qp = params.get("query_params", {})
+            key = (qp.get("device"), qp.get("scope"))
+            if action == "list_subscribe" and key in changed:
+                list_subs.setdefault(key, []).append(request_id)
+            elif action == "subscribe" and key in changed:
+                update = changed[key]
+                await self.reply(
+                    data={
+                        "key_name": update.get("key_name"),
+                        "last_update_ts": update.get("last_update_ts"),
+                        "value": update.get("value"),
+                    },
+                    action="subscribe",
+                    request_id=request_id,
+                )
+
+        # One DB query per unique (device, scope) combination
+        for (device, scope), request_ids in list_subs.items():
+            data = await sync_to_async(self.get_data)(query_params={"device": device, "scope": scope})
+            for request_id in request_ids:
+                await self.reply(data=data, action="list_subscribe", request_id=request_id)
 
     async def handle_ts_kv_activity(self, payload):
+        if not payload:
+            return
         for request_id, params in self.subscribers.items():
             device = params.get("query_params").get("device")
             scope = params.get("query_params").get("scope")

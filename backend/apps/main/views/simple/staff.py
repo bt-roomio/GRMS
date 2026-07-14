@@ -1,11 +1,10 @@
-from access_manager.models import Staff
-from access_manager.serializers.staff import StaffQuickFilterParams
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from access_manager.models import Staff
+from access_manager.serializers.staff import StaffQuickFilterParams
 from core.utils.permission import check_perms
 from core.utils.views import TenantCachedMixin
 

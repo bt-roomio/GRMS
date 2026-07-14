@@ -16,16 +16,13 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
     serializer_class = RoomDetailWsSerializer
     lookup_field = "pk"
 
-    def get_device_id(self, request_id) -> str | None:
+    def get_device_ids(self, request_id) -> list[str]:
         data = self.subscribers.get(request_id)
         if not data:
             raise ValidationError("Incorrect request_id!")
 
         devices = data.get("response", {}).get("devices", []) or []
-        if not devices:
-            return None
-
-        return devices[0].get("id")
+        return [device_id for device in devices if (device_id := device.get("id"))]
 
     async def get_activity(self, message, **kwargs):
         for request_id, value in self.subscribers.items():
@@ -37,8 +34,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         body = RoomDetailWsFilterBodySerializer.check(data=kwargs)
         self.subscribers[request_id] = {**body, "action": kwargs.get("action")}
         await self.send_data(request_id=request_id, pk=body.get("pk"), keys=body.get("keys"))
-        device_id = self.get_device_id(request_id)
-        if device_id:
+        for device_id in self.get_device_ids(request_id):
             await self.add_group(f"tskv_latest_updates_{device_id}")
         await self.add_group(f"room_detail_{body.get('pk')}")
 
@@ -47,8 +43,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         data = self.subscribers.get(request_id)
         if not data:
             return await self.reply(data={"message": "Room not found!"}, action="unsubscribe", request_id=request_id)
-        device_id = self.get_device_id(request_id)
-        if device_id:
+        for device_id in self.get_device_ids(request_id):
             await self.remove_group(f"tskv_latest_updates_{device_id}")
         del self.subscribers[request_id]
 
@@ -76,20 +71,20 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         return serializer.data
 
     async def ts_kv_latest_activity(self, message, **kwargs):
-        for update in message.get("updates", []) or []:
-            await self.ts_kv_latest_activity({"update": update}, **kwargs)
-            continue
+        # Поддерживаем оба формата: батч ("updates": [...]) и одиночный ("update": {...}).
+        single = message.get("update")
+        updates = message.get("updates") or ([single] if single else [])
+        if not updates:
+            return
 
         for request_id, params in self.subscribers.items():
-            payload = message.get("update")
-            device_id = self.get_device_id(request_id)
+            device_ids = self.get_device_ids(request_id)
+            keys = params.get("keys") or ()
 
-            if (
-                payload
-                and device_id
-                and device_id == payload.get("entity")
-                and payload.get("key") in params.get("keys")
-            ):
-                _, value = get_non_null_column(payload)
-                params["response"]["telemetry"][payload.get("key")] = value
-                await self.reply(data=params["response"], action="subscribe", request_id=request_id)
+            for payload in updates:
+                if not payload:
+                    continue
+                if payload.get("entity") in device_ids and payload.get("key") in keys:
+                    _, value = get_non_null_column(payload)
+                    params["response"]["telemetry"][payload.get("key")] = value
+                    await self.reply(data=params["response"], action="subscribe", request_id=request_id)

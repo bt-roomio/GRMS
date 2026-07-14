@@ -12,15 +12,20 @@ import time
 import pika
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import close_old_connections
+from django.db.models import Prefetch
 from pika.adapters.blocking_connection import BlockingChannel
 
 from rest_framework.fields import ValidationError
 
+from access_manager.utilits.move_guest_cards import move_guest_cards, revoke_guest_cards
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.date import datetime_to_unix
 from main.models import Guest, Room, Tenant
 from main.observables.guest import publish_guest_changes
-from shuttle.utils.access_cards import access_cards
+from main.utils.access_context import get_guest_access_context
+from services.models import Integration
+from services.utils.const import MEWS
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +76,7 @@ class Command(BaseCommand):
                     _: pika.BasicProperties,
                     body: bytes,
                 ):
+                    close_old_connections()
                     try:
                         self.process_pms_message(body)
                         if method.delivery_tag:
@@ -136,10 +142,19 @@ class Command(BaseCommand):
             raise
 
     def _base_validate_data(self, data):
-        tenants = Tenant.objects.filter(
-            additional_info__integration_settings__mews__hotel_id=data.get("hotel_id"),
-            additional_info__integration_settings__mews__enable=True,
+        integrations = Integration.objects.filter(
+            integrator__name__iexact=MEWS,
+            integrator__client_id__isnull=False,
+            enable=True,
+            is_active=True,
+            hotel_id=data.get("hotel_id"),
         )
+        tenants = (
+            Tenant.objects.filter(integration__in=integrations)
+            .prefetch_related(Prefetch("integration", integrations))
+            .distinct()
+        )
+
         if tenants.count() > 1:
             logger.warning(f"Found multiple tenants for hotel_id: {data.get('hotel_id')}")
 
@@ -173,10 +188,6 @@ def checkup_guest(data):
     room = data.get("room")
     try:
         guest: Guest = Guest.objects.get(pms_id=data.get("pms_id"))
-        # if guest.is_reservation and guest.room == room:
-        #     return data
-        # if guest and guest.room == room:
-        #     raise ValidationError("This guest already exists!")
         if guest and guest.room != room:
             logger.info(f"→ Guest needs to be moved from room {guest.room.number} to {room.number}")
             handle_guest_move(guest, data)
@@ -241,12 +252,13 @@ def handle_reservation(data):
 def handle_checkin(validated_data):
     new_room: Room = validated_data.get("room")
 
-    # Remember old room before update to recalculate its state if guest moves
     old_room: Room | None = None
+    old_guest_context: dict | None = None
     try:
         existing = Guest.objects.get(pms_id=validated_data.get("pms_id"))
         if existing.room_id != new_room.id:
             old_room = existing.room
+            old_guest_context = get_guest_access_context(existing)
     except Guest.DoesNotExist:
         pass
 
@@ -278,6 +290,9 @@ def handle_checkin(validated_data):
         publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
         new_room.save(update_fields=["state"])
 
+        if old_guest_context is not None:
+            move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
+
         if old_room:
             logger.info(f"→ Guest moved from room {old_room.number} to {new_room.number}, recalculating old room state")
             old_room.refresh_from_db()
@@ -290,6 +305,8 @@ def handle_checkout(validated_data):
     logger.info("Processing check-out")
     try:
         guest: Guest = Guest.objects.get(pms_id=validated_data.get("pms_id"), is_active=True)
+        old_guest_context = get_guest_access_context(guest)
+
         guest.is_active = False
         guest.save()
         logger.info(
@@ -297,7 +314,7 @@ def handle_checkout(validated_data):
         )
         publish_guest_changes(guest)
         guest.room.save(update_fields=["state"])
-        access_cards([guest], guest.room, 0)
+        revoke_guest_cards(guest, old_guest_context)
     except Guest.DoesNotExist:
         logger.warning(f"⚠ No active guests found with pms_id: {validated_data.get('pms_id')}")
     return {"success": True}
@@ -332,7 +349,8 @@ def handle_guest_move(guest: Guest, data: dict):
     new_room: Room = data.get("room")  # pyright: ignore
 
     try:
-        # Update guest information
+        old_guest_context = get_guest_access_context(guest)
+
         guest.room = new_room
         guest.name = data.get("first_name", guest.name)
         guest.lastname = data.get("last_name", guest.lastname)
@@ -341,7 +359,6 @@ def handle_guest_move(guest: Guest, data: dict):
             datetime_to_unix(data.get("check_out_date")) if data.get("check_out_date") else guest.check_out
         )
 
-        # Update additional fields if provided
         if data.get("gender"):
             guest.gender = data.get("gender")
         if data.get("language"):
@@ -358,8 +375,7 @@ def handle_guest_move(guest: Guest, data: dict):
         )
 
         publish_guest_changes(guest)
-        access_cards([guest], old_room, 0)
-        access_cards([guest], new_room, 1)
+        move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
         new_room.save(update_fields=["state"])
         old_room.refresh_from_db()
         old_room.save(update_fields=["state"])

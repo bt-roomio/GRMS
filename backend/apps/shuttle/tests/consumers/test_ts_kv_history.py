@@ -40,7 +40,6 @@ def test_room():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestTsKvHistoryConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -527,7 +526,6 @@ class TestTsKvHistoryConsumer:
             assert isinstance(data, dict)
         finally:
             await comm.disconnect()
-
 
     async def test_list_subscribe_different_agg_functions(self, ws_connect, karina_token, test_device):
         agg_functions = ["Min", "Max", "Avg", "Sum", "Count"]

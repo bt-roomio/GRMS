@@ -71,4 +71,3 @@ The application supports a multi-tenant design, allowing isolation of data betwe
 
 ## Contact Information
 For any inquiries or further information, please contact the development team lead at [email@example.com].
-

@@ -1,5 +1,6 @@
 import json
 import random
+import time
 
 import redis
 from django.conf import settings
@@ -7,7 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 
-from core.management.mq.handle_fias import handle_fias
+from core.management.mq.fias import handle_fias
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from main.models import Device
 from shuttle.models import Relation
@@ -26,13 +27,17 @@ class Command(BaseCommand):
             default=1,
         )
 
-    def handle(self, **kwargs):
-        tenant_id = "28c81921-f78e-4864-87d2-cec674f19d1c"
-        self.fias_message()
+    def handle(self, **_):
+        tenant_id = "78061956-4619-4da6-b18a-eb9f39daa500"
+        for msg in self.generate_msg_telemetry(tenant_id):
+            self.send_msg(msg, "/telemetry")
 
-    def device_connectivity_simulation(self, msg):
+        for msg in self.generate_msg_attributes(tenant_id):
+            self.send_msg(msg, "/attributes")
+
+    def send_msg(self, msg, routing_key):
         ch = connect_to_rabbitmq()
-        send_to_rabbitmq(ch, msg, "/attributes")
+        send_to_rabbitmq(ch, msg, routing_key)
 
     @staticmethod
     def bulk_publish():
@@ -49,20 +54,51 @@ class Command(BaseCommand):
             send_to_rabbitmq(ch, msg, topic)
 
     def generate_msg_attributes(self, tenant_id):
-        print("Hello")
         devices = self.get_devices(tenant_id)
 
         for d in devices:
-            print(d, d.relations)
             if not d.relations:
                 continue
 
             msg = {
                 "sourceDeviceUUID": str(d.relations[0].from_id_id),
-                "data": {d.name: {"online": True}},
-                "topic": "v1/devices/connect",
+                "data": {"gatewayOnline": True},
+                "topic": "v1/devices/me/attributes",
             }
-            print(f"Generated message for device {d.name}: {str(msg)[:10]}")
+            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
+            yield msg
+
+    def generate_msg_telemetry(self, tenant_id):
+        devices = self.get_devices(tenant_id)
+
+        for d in devices:
+            if not d.relations:
+                continue
+
+            msg = {
+                "sourceDeviceUUID": str(d.relations[0].from_id_id),
+                "data": {
+                    f"{d.name}": [
+                        {
+                            "ts": time.time(),
+                            "values": {
+                                # "DND Relay": 0,
+                                "MUR Relay": random.randint(0, 1),
+                                "Room Temperature": random.randint(0, 100),
+                                "AC ON OFF": random.randint(0, 1),
+                                "Occupancy State": random.randint(0, 1),
+                                # "Entrance Trap": 1,
+                                # "Balcony Trap": 1,
+                                # "Vip AC": 0,
+                                # "Balcony Central": 0,
+                                # "Vip Vacancy": 0,
+                            },
+                        }
+                    ]
+                },
+                "topic": "v1/gateway/telemetry",
+            }
+            print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
             yield msg
 
     def fias_message(self, *args, **options):
@@ -93,19 +129,19 @@ class Command(BaseCommand):
             "reservationNumber": None,
         }
         data = {
-          "command": "keyrequest",
-          "keyType": "newKeyRequest",
-          "keyCoder": "MyWorkstation",
-          "roomName": "215",
-          "keyCount": "2",
-          "checkInDate": 1777507200000,
-          "messageDate": 1777574505000,
-          "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
-          "checkOutDate": 1773316800000,
-          "workstationId": "THEOVASQL",
-          "guestGroupNumber": None,
-          "reservationNumber": "701",
-          "requiresRpcConfirmation": True
+            "command": "keyrequest",
+            "keyType": "newKeyRequest",
+            "keyCoder": "MyWorkstation",
+            "roomName": "215",
+            "keyCount": "2",
+            "checkInDate": 1777507200000,
+            "messageDate": 1777574505000,
+            "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
+            "checkOutDate": 1773316800000,
+            "workstationId": "THEOVASQL",
+            "guestGroupNumber": None,
+            "reservationNumber": "701",
+            "requiresRpcConfirmation": True,
         }
 
         device = get_object_or_404(Device, pk="7778a61d-eefa-4933-b187-699f2baa3744")
@@ -170,7 +206,11 @@ class Command(BaseCommand):
     @staticmethod
     def get_devices(tenant_id=None) -> list[Device]:
         devices = Device.objects.prefetch_related(
-            Prefetch("to_relations", queryset=Relation.objects.select_related("from_id").all(), to_attr="relations")
+            Prefetch(
+                "to_relations",
+                queryset=Relation.objects.select_related("from_id").all(),
+                to_attr="relations",
+            )
         )
         devices = devices.filter(tenant_id=tenant_id) if tenant_id else devices
         return list(devices)

@@ -1,10 +1,10 @@
 from datetime import datetime
 
 import pytest
-from access_manager.models import CardLog
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
+from access_manager.models import CardLog
 from main.models import Device, Guest, PublicSpace, Room
 
 

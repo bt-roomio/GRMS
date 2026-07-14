@@ -4,7 +4,14 @@ from core.tests.base import BaseTestCase
 
 
 class SimpleStaffViewTest(BaseTestCase):
-    fixtures = ("tenant_profile.yaml", "tenant.yaml", "roles_permissions.yaml", "users.yaml", "group.yaml", "staff.yaml")
+    fixtures = (
+        "tenant_profile.yaml",
+        "tenant.yaml",
+        "roles_permissions.yaml",
+        "users.yaml",
+        "group.yaml",
+        "staff.yaml",
+    )
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)

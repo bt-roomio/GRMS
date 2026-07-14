@@ -2,14 +2,14 @@ from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
 from access_manager.utilits.need_sync import need_sync
 
 
-def activate_guest_card(cards, device, guest):
+def activate_guest_card(cards, device, guest, is_pwd=False):
     error_cards = []
     for card_number in cards:
         try:
             card, created = Card.objects.get_or_create(
                 number=card_number,
                 tenant_id=guest.tenant_id,
-                defaults={"is_active": True}
+                defaults={"is_active": True, "is_pwd": is_pwd},
             )
             if not created and not card.is_active:
                 card.is_active = True
@@ -33,9 +33,7 @@ def activate_guest_card(cards, device, guest):
 def activate_staff_card(cards, staff, device):
     for card_number in cards:
         card, created = Card.objects.get_or_create(
-            number=card_number,
-            tenant_id=staff.tenant_id,
-            defaults={"is_active": True}
+            number=card_number, tenant_id=staff.tenant_id, defaults={"is_active": True}
         )
         if not created and not card.is_active:
             card.is_active = True

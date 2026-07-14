@@ -1,8 +1,7 @@
-from access_manager.models import Card, Group, GuestCard, StaffCard
-from access_manager.serializers.staff import StaffSerializer
-
 from rest_framework import serializers
 
+from access_manager.models import Card, Group, GuestCard, StaffCard
+from access_manager.serializers.staff import StaffSerializer
 from core.utils.serializers import ValidatorSerializer
 from main.serializers.guest import GuestSerializer
 from main.serializers.room import SimpleRoomSerializer
@@ -29,11 +28,12 @@ class CardSerializer(serializers.Serializer):
     need_to_sync = serializers.SerializerMethodField()
     number = serializers.CharField()
     is_active = serializers.BooleanField()
+    is_pwd = serializers.BooleanField()
     card_user = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
-        fields = ["created_at", "card_id", "card_number", "need_to_sync", "is_active"]
+        fields = ["created_at", "card_id", "card_number", "need_to_sync", "is_active", "is_pwd"]
 
     def get_card_user(self, obj):
         try:
@@ -74,7 +74,5 @@ class CardFilterParams(ValidatorSerializer):
     size = serializers.IntegerField(default=20)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
     search_value = serializers.CharField(required=False, allow_null=True)
-    filters = serializers.DictField(
-        required=False,
-        child=serializers.BooleanField()
-    )
+    is_pwd = serializers.BooleanField(required=False, allow_null=True, default=None)
+    filters = serializers.DictField(required=False, child=serializers.BooleanField())

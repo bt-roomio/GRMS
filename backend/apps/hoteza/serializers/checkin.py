@@ -4,8 +4,13 @@ from hoteza.utils.exception import JsonValidationError
 
 from rest_framework import serializers
 
+from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.card_activate import activate_guest_card
+from access_manager.utilits.need_sync import need_sync
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
+from main.utils.access_context import get_guest_access_context
+from services.utils.const import HOTEZA
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +25,12 @@ class CheckInSerializer(serializers.Serializer):
     pmsRegNum = serializers.CharField()
     arrivalDateTS = serializers.CharField()
     departureDateTS = serializers.CharField()
-    guestLanguage = serializers.CharField()
+    guestLanguage = serializers.CharField(allow_null=True, allow_blank=True)
     roomShare = serializers.CharField()
     swapFlag = serializers.CharField()
     nopost = serializers.CharField()
     profileNum = serializers.CharField(allow_null=True, allow_blank=True)
+    pin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     def validate_arrivalDateTS(self, value):
         try:
@@ -57,17 +63,20 @@ class CheckInSerializer(serializers.Serializer):
             "swapFlag": "swap_flag",
             "nopost": "no_post",
             "profileNum": "profile_num",
+            "pin": "pin",
         }
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
     def validate(self, attrs):
-        logger.debug(f"CheckInSerializer validate called with attrs: {attrs}")
+        logger.info(f"CheckInSerializer validate called with attrs: {attrs}")
         attrs = self.convert_fields(attrs)
         tenant = None
         if attrs.get("hotel_id"):
             tenant = Tenant.objects.filter(
-                additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
-                additional_info__integration_settings__hoteza__enable=True,
+                integration__integrator=HOTEZA,
+                integration__hotel_id=attrs.get("hotel_id"),
+                integration__enable=True,
+                integration__is_active=True,
             ).first()
 
         if not tenant and attrs.get("tenant_id"):
@@ -84,7 +93,7 @@ class CheckInSerializer(serializers.Serializer):
             additional_info__pms_reg_num=attrs.get("pms_reg_num"),
             is_active=True,
         ).first()
-        logger.debug(f"Existing guest found: {guest}")
+        logger.info(f"Existing guest found: {guest}")
 
         if guest:
             # Check if any changes are needed, we need update existing guest
@@ -159,8 +168,7 @@ class CheckInSerializer(serializers.Serializer):
                 logger.error(f"Error updating guest: {e}")
                 raise JsonValidationError({"result": 9, "message": "Failed to update guest."})
         else:
-            logger.debug("Creating new guest with data: %s", validated_data)
-            # Create new guest
+            logger.info("Creating new guest with data: %s", validated_data)
             try:
                 instance = guest_serializer.create(
                     {
@@ -168,7 +176,7 @@ class CheckInSerializer(serializers.Serializer):
                         "name": validated_data.pop("name"),
                         "check_in": validated_data.pop("check_in"),
                         "check_out": validated_data.pop("check_out"),
-                        "auto_check_out": True,
+                        "auto_check_out": False,
                         "room": validated_data.pop("room"),
                         "language": validated_data.pop("language"),
                         "title": validated_data.pop("title"),
@@ -179,5 +187,16 @@ class CheckInSerializer(serializers.Serializer):
             except Exception as e:
                 logger.error(f"Error creating guest: {e}")
                 raise JsonValidationError({"result": 9, "message": "Failed to create guest."})
+
         logger.info(f"Guest check-in processed: {instance.name}")  # pyright: ignore
+
+        pin = validated_data.get("pin") or None
+        if pin:
+            context = get_guest_access_context(instance)
+            for device in context.get("devices", []):
+                response = send_rpc_request(device.id, [pin], 1, guest_id=str(instance.id), is_pwd=True)
+                if response and isinstance(response, dict) and not response.get("success"):
+                    activate_guest_card([pin], device, instance, is_pwd=True)
+                    need_sync(pin, device, 1, reason=response.get("message"))
+
         return instance

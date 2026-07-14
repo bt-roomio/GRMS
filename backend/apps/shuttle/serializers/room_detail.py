@@ -1,20 +1,7 @@
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-
-MUR = "MUR Relay"
-DND = "DND Relay"
-AC_ON_OFF = "AC ON OFF"
-Room_Temperature = "Room Temperature"
-Occupancy_State = "Occupancy State"
-
-STATIC_KEYS = {
-    MUR: "MUR Relay",
-    DND: "DND Relay",
-    AC_ON_OFF: "AC_ON_OFF",
-    Room_Temperature: "Room Temperature",
-    Occupancy_State: "Occupancy State",
-}
+from shuttle.constants import STATIC_KEYS
 
 
 class RoomDetailWsFilterBodySerializer(ValidatorSerializer):
@@ -23,7 +10,7 @@ class RoomDetailWsFilterBodySerializer(ValidatorSerializer):
         child=serializers.CharField(),
         required=False,
         help_text="List of keys to filter the room details",
-        default=list(STATIC_KEYS.keys()),
+        default=STATIC_KEYS,
     )
 
     def validate_keys(self, value):
@@ -32,4 +19,4 @@ class RoomDetailWsFilterBodySerializer(ValidatorSerializer):
         """
         if not value:
             value = []
-        return list(set(value + list(STATIC_KEYS.keys())))
+        return list(set(value + STATIC_KEYS))

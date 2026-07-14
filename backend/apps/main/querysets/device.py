@@ -1,7 +1,7 @@
-from access_manager.models import NeedSyncDevice
 from django.db.models import Case, Exists, OuterRef, Prefetch, Q, Value, When
 from django.db.models.fields import IntegerField
 
+from access_manager.models import NeedSyncDevice
 from core.querysets.base_queryset import BaseQuerySet
 
 
@@ -100,13 +100,84 @@ class DeviceQuerySet(BaseQuerySet):
         query = query.exclude(id__in=delisting_devices) if delisting_devices else query
         return query
 
-    def get_card_related_devices(self, card_id, need_sync=None):
-        from main.models import DevicePublicSpaces
+    def get_card_related_devices(self, card, need_sync=None):
+        from access_manager.models import GuestCard, StaffCard
+        from main.models import DevicePublicSpaces, PublicSpace, Room
 
-        no_door_lock = Q(room__door_lock_device__isnull=True)
+        card_id, tenant_id = card.id, card.tenant_id
+
+        staff_ids = list(
+            StaffCard.objects.filter(
+                card_id=card_id,
+                is_active=True,
+                staff__is_active=True,
+            ).values_list("staff_id", flat=True)
+        )
+        guest_ids = list(
+            GuestCard.objects.filter(
+                card_id=card_id,
+                is_active=True,
+                guest__is_active=True,
+            ).values_list("guest_id", flat=True)
+        )
+
+        room_q = Q()
+        if staff_ids:
+            room_q |= Q(
+                group_room__group__staff__id__in=staff_ids,
+                group_room__group__is_active=True,
+            )
+        if guest_ids:
+            room_q |= Q(guests__id__in=guest_ids)
+
+        door_lock_device_ids: set = set()
+        open_room_ids: set = set()
+        if room_q:
+            for rid, dlock in (
+                Room.objects.filter(room_q, tenant_id=tenant_id).values_list("id", "door_lock_device_id").distinct()
+            ):
+                if dlock:
+                    door_lock_device_ids.add(dlock)
+                else:
+                    open_room_ids.add(rid)
+
+        ps_q = Q()
+        if staff_ids:
+            ps_q |= Q(
+                group_public_space__group__staff__id__in=staff_ids,
+                group_public_space__group__is_active=True,
+            )
+        if guest_ids:
+            ps_q |= Q(guestpublicspace__guest_id__in=guest_ids) | Q(
+                room_type_public_spaces__room_type__room__guests__id__in=guest_ids
+            )
+
+        public_space_device_ids: set = set()
+        if ps_q:
+            public_space_ids = list(
+                PublicSpace.objects.filter(ps_q, tenant_id=tenant_id).values_list("id", flat=True).distinct()
+            )
+            if public_space_ids:
+                public_space_device_ids = set(
+                    DevicePublicSpaces.objects.filter(public_space_id__in=public_space_ids)
+                    .values_list("device_id", flat=True)
+                    .distinct()
+                )
+
+        queued_device_ids = set(
+            NeedSyncDevice.objects.filter(card_id=card_id, need_sync=True)
+            .values_list("device_id", flat=True)
+            .distinct()
+        )
+
+        matched_ids = door_lock_device_ids | public_space_device_ids | queued_device_ids
+        if not matched_ids and not open_room_ids:
+            return self.none()
 
         qs = (
-            self.select_related("tenant", "room")
+            self.filter(is_active=True, tenant_id=tenant_id)
+            .filter(Q(id__in=matched_ids) | Q(room_id__in=open_room_ids))
+            .select_related("room", "as_door_lock_room")
             .prefetch_related(
                 Prefetch(
                     "device_public_spaces",
@@ -114,60 +185,15 @@ class DeviceQuerySet(BaseQuerySet):
                     to_attr="prefetched_device_public_spaces",
                 )
             )
-            .filter(
-                is_active=True,
-            )
-            .filter(
-                Q(
-                    as_door_lock_room__group_room__group__staff__staffcard__card=card_id,
-                    as_door_lock_room__group_room__group__staff__staffcard__is_active=True,
-                    as_door_lock_room__group_room__group__is_active=True,
-                    as_door_lock_room__group_room__group__staff__is_active=True,
-                )
-                | (
-                    Q(
-                        room__group_room__group__staff__staffcard__card=card_id,
-                        room__group_room__group__staff__staffcard__is_active=True,
-                        room__group_room__group__is_active=True,
-                        room__group_room__group__staff__is_active=True,
-                    )
-                    & no_door_lock
-                )
-                | Q(
-                    as_door_lock_room__guests__guestcard__card=card_id,
-                    as_door_lock_room__guests__guestcard__is_active=True,
-                    as_door_lock_room__guests__is_active=True,
-                )
-                | (
-                    Q(
-                        room__guests__guestcard__card=card_id,
-                        room__guests__guestcard__is_active=True,
-                        room__guests__is_active=True,
-                    )
-                    & no_door_lock
-                )
-                | Q(
-                    device_public_spaces__public_space__group_public_space__group__staff__staffcard__card=card_id,
-                    device_public_spaces__public_space__group_public_space__group__staff__staffcard__is_active=True,
-                    device_public_spaces__public_space__group_public_space__group__is_active=True,
-                    device_public_spaces__public_space__group_public_space__group__staff__is_active=True,
-                )
-                | Q(
-                    device_public_spaces__public_space__guestpublicspace__guest__guestcard__card=card_id,
-                    device_public_spaces__public_space__guestpublicspace__guest__guestcard__is_active=True,
-                    device_public_spaces__public_space__guestpublicspace__guest__is_active=True,
-                )
-                | Q(
-                    device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__guestcard__card=card_id,
-                    device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__guestcard__is_active=True,
-                    device_public_spaces__public_space__room_type_public_spaces__room_type__room__guests__is_active=True,
-                )
-                | Q(needsyncdevice__card=card_id, needsyncdevice__need_sync=True)
-            )
             .annotate(
-                need_sync=Exists(NeedSyncDevice.objects.filter(device=OuterRef("pk"), card=card_id, need_sync=True))
+                need_sync=Exists(
+                    NeedSyncDevice.objects.filter(
+                        device=OuterRef("pk"),
+                        card_id=card_id,
+                        need_sync=True,
+                    )
+                )
             )
-            .distinct()
         )
 
         if need_sync is not None:

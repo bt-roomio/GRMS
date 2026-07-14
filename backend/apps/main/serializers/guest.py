@@ -1,9 +1,9 @@
 import logging
 
-from access_manager.tasks.send_rpc import send_rpc_request
-
 from rest_framework import serializers
 
+from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.move_guest_cards import move_guest_cards
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context
@@ -28,16 +28,20 @@ class GuestMoveRoomSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         from_room = validated_data.pop("from_room")
-        from_room.save(update_fields=["state"])
-
-        for guest in instance:
-            guest.room = validated_data.get("to_room")
-            guest.save()
-
         to_room = validated_data.pop("to_room")
+
+        guests = list(instance)
+        old_guest_context = get_guest_access_context(guests)
+
+        from_room.save(update_fields=["state"])
+        for guest in guests:
+            guest.room = to_room
+            guest.save()
         to_room.save(update_fields=["state"])
 
-        return instance
+        move_guest_cards(guests, old_guest_context, get_guest_access_context(guests))
+
+        return guests
 
 
 class GuestSerializer(serializers.ModelSerializer):

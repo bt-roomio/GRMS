@@ -18,6 +18,7 @@ class ShuttleJsonRpcApiTests(BaseTestCase):
         "room.yaml",
         "device_profile.yaml",
         "device.yaml",
+        "integrations.yaml",
     )
 
     def setUp(self):
@@ -131,6 +132,7 @@ class ShuttlePrepareMqttRequestTests(BaseTestCase):
                     if id == 123:
                         return SimpleNamespace(id=123, received=True, additional_info={"answer": "pong"})
                     return None
+
             return _QS()
 
         mock_rpc.objects.filter.side_effect = _filter_side_effect
@@ -168,6 +170,7 @@ class ShuttlePrepareMqttRequestTests(BaseTestCase):
                     if id == 777:
                         return SimpleNamespace(id=777, received=True, additional_info={"ok": True})
                     return None
+
             return _QS()
 
         mock_rpc.objects.filter.side_effect = _filter_side_effect
@@ -215,6 +218,7 @@ class ShuttlePrepareMqttRequestTests(BaseTestCase):
                     if id == 999:
                         return SimpleNamespace(id=999, received=True, additional_info={"done": True})
                     return None
+
             return _QS()
 
         mock_rpc.objects.filter.side_effect = _filter_side_effect
@@ -236,7 +240,7 @@ class ShuttlePrepareMqttRequestTests(BaseTestCase):
     @patch("shuttle.views.json_rpc.send_to_rabbitmq")
     @patch("shuttle.views.json_rpc.connect_to_rabbitmq")
     def test_prepare_mqtt_request_upload_configuration_file_not_found(
-            self, mock_connect, mock_send, mock_gateway_or_none, mock_rpc, mock_cf_filter
+        self, mock_connect, mock_send, mock_gateway_or_none, mock_rpc, mock_cf_filter
     ):
         from shuttle.views.json_rpc import prepare_mqtt_request
 
@@ -256,9 +260,7 @@ class ShuttlePrepareMqttRequestTests(BaseTestCase):
     @patch("shuttle.views.json_rpc.send_to_rabbitmq")
     @patch("shuttle.views.json_rpc.connect_to_rabbitmq")
     @patch("shuttle.views.json_rpc.time.sleep", return_value=None)
-    def test_prepare_mqtt_request_timeout(
-        self, mock_sleep, mock_connect, mock_send, mock_gateway_or_none, mock_rpc
-    ):
+    def test_prepare_mqtt_request_timeout(self, mock_sleep, mock_connect, mock_send, mock_gateway_or_none, mock_rpc):
         from shuttle.views.json_rpc import prepare_mqtt_request
 
         device = Device.objects.get(pk=self.dev_room_47)
@@ -271,6 +273,7 @@ class ShuttlePrepareMqttRequestTests(BaseTestCase):
             class _QS:
                 def first(self_inner):
                     return None
+
             return _QS()
 
         mock_rpc.objects.filter.side_effect = _filter_side_effect

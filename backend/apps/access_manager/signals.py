@@ -1,8 +1,9 @@
-from access_manager.models import Group, GuestCard, NeedSyncDevice, StaffCard
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+from access_manager.models import Group, GuestCard, NeedSyncDevice, StaffCard
 
 
 @receiver(post_save, sender=GuestCard)

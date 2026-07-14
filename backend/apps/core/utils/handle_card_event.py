@@ -1,8 +1,8 @@
 import logging
 
-from access_manager.models import AccessGroupChoices, Card, CardLog
 from django.utils import timezone
 
+from access_manager.models import AccessGroupChoices, Card, CardLog
 from core.utils.date import unix_to_datetime
 from core.utils.update_lock_last_log import update_lock_last_log_id
 
@@ -126,7 +126,7 @@ def handle_card_event(device, value, ts_dt):
             created_at=timezone.now(),
             additional_info=additional_info,
         )
-        print(f"card : {card_log}")
+        logger.info(f"card : {card_log}")
 
         return card_log
 

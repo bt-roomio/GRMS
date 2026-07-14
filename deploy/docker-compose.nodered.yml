@@ -1,0 +1,48 @@
+# =============================================================================
+# roomio GRMS — Node-RED (multi-tenant)
+# =============================================================================
+# Запуск через Makefile:
+#   make nodered-up-<tenant>       # поднять одного тенанта
+#   make nodered-up-all            # поднять всех тенантов
+#
+# Требует файл .env.nodered.<tenant> рядом с этим файлом.
+# Шаблон: .env.nodered.example
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-file: "5"
+    max-size: "50m"
+
+services:
+  nodered:
+    image: registry.gitlab.com/grms1/node-red-nodes:new
+    container_name: nodered-${TENANT_NAME}
+    hostname: nodered-${TENANT_NAME}
+    restart: always
+    logging: *default-logging
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    expose:
+      - "1880"
+    environment:
+      API_URL: "http://django:8000/api/v1"
+      TENANT_ID: ${NODERED_TENANT_ID}
+      LOG_LEVEL: ${NODERED_LOG_LEVEL:-warn}
+      VIRTUAL_HOST: ${NODERED_VIRTUAL_HOST}
+      VIRTUAL_PORT: 1880
+      LETSENCRYPT_HOST: ${NODERED_VIRTUAL_HOST}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    volumes:
+      - nodered_data:/data
+    networks:
+      - roomio_net
+
+volumes:
+  nodered_data:
+
+networks:
+  roomio_net:
+    external: true

@@ -25,10 +25,12 @@ class MewsConfiguration(BaseModel, UpdateByModel):
         help_text="Mews environment",
     )
     is_active = models.BooleanField(
-        default=True, help_text="Enable/disable Mews integration for this tenant"  # pyright: ignore
+        default=True,
+        help_text="Enable/disable Mews integration for this tenant",  # pyright: ignore
     )
     auto_sync = models.BooleanField(
-        default=True, help_text="Automatically sync reservations in real-time"  # pyright: ignore
+        default=True,
+        help_text="Automatically sync reservations in real-time",  # pyright: ignore
     )
     last_sync = models.DateTimeField(null=True, blank=True, help_text="Last successful sync timestamp")
 
@@ -41,12 +43,12 @@ class MewsConfiguration(BaseModel, UpdateByModel):
         return f"Mews Config for {self.tenant.title}"
 
     @property
-    def api_base_url(self):
+    def api_base_url(self) -> str:
         """Get API base URL based on environment"""
         return {
             "demo": "https://api.mews-demo.com/api/connector/v1",
             "production": "https://api.mews.com/api/connector/v1",
-        }.get(str(self.environment))
+        }.get(str(self.environment)) or "https://api.mews-demo.com/api/connector/v1"
 
     @property
     def ws_url(self):

@@ -1,0 +1,124 @@
+# =============================================================================
+# docker-compose.override.yml — локальная разработка
+# =============================================================================
+# Применяется АВТОМАТИЧЕСКИ при `docker compose up` (без флагов).
+# НЕ коммитить секреты — используй .env.local
+#
+# Что добавляет этот файл:
+#   - Открытые порты для прямого доступа к сервисам
+#   - Bind-mount кода для hot-reload
+#   - Отключение лишних сервисов (proxy, letsencrypt)
+#   - Упрощённые healthcheck (быстрее старт)
+#   - Более подробные логи
+# =============================================================================
+
+services:
+
+  # --- Postgres: открыт напрямую для локальных инструментов ---
+  postgres:
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT:-5433}:5432"
+
+  # --- PgBouncer: открыт для диагностики (слушает 5432 внутри) ---
+  pgbouncer:
+    ports:
+      - "${PGBOUNCER_EXTERNAL_PORT:-6432}:5432"
+
+  # --- Redis: открыт для redis-insight / redis-cli ---
+  redis:
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
+
+  redis-broker:
+    ports:
+      - "${REDIS_BROKER_EXTERNAL_PORT:-6380}:6379"
+
+  # --- RabbitMQ management UI ---
+  rabbitmq:
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+  # --- Django: bind-mount кода + verbose логи + dev-сервер ---
+  backend:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+      - static_volume:/app/static/
+      - media_volume:/app/media/
+      - prom_mp:/prom_mp
+    ports:
+      - "8000:8000"
+    environment:
+      - UV_NO_SYNC=1
+      - PGAPPNAME=grms-backend-dev
+      - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
+    command: python manage.py runserver 0.0.0.0:8000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8000), timeout=3); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # --- Celery: verbose логи в dev ---
+  celery-critical:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+    command: celery -A config worker -Q critical -l debug -c 1
+
+  celery-default:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+    command: celery -A config worker -Q default -l debug -c 2
+
+  celery-low:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+    command: celery -A config worker -Q low -l debug -c 1
+
+  celery-beat:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+    command: celery -A config beat --loglevel=debug
+
+  celery-flower:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+
+  mq-async:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+    deploy:
+      replicas: 1   # в dev достаточно одной реплики
+
+  mews-websocket:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+
+  pms-handler:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+
+  # --- Frontend: dev-сервер с hot-reload вместо сборки ---
+  frontend:
+    command: sh -c "yarn && yarn dev --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    # healthcheck из docker-compose.yml проверяет :80/healthz — Vite dev-сервер
+    # слушает :5173 и не отдаёт /healthz, поэтому в dev он отключён
+    healthcheck:
+      test: ["NONE"]
+
+volumes:
+  backend_venv:

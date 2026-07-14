@@ -2,6 +2,7 @@ from typing import List
 
 from celery.utils.log import get_task_logger
 
+from access_manager.utilits.check_card_assignment import get_card_assignments
 from shuttle.services.publish_updates import publish_updates
 
 logger = get_task_logger(__name__)
@@ -13,7 +14,14 @@ def need_sync(cards: List[str], device, access, user=None, reason=""):
     if not device:
         return
 
-    for card_num in cards:
+    assignments = get_card_assignments(cards, device.tenant_id)
+    cards_with_assignment = [c for c in cards if c in assignments]
+    target_cards = cards_with_assignment if access else cards
+
+    if not target_cards:
+        return
+
+    for card_num in target_cards:
         try:
             card = Card.objects.get(number=card_num, tenant=device.tenant)
 

@@ -1,0 +1,142 @@
+# =============================================================================
+# roomio GRMS — monitoring/docker-compose.yml
+# =============================================================================
+# Profiles: нет — все сервисы поднимаются вместе
+#
+# Запуск:
+#   make up              # dev (override применяется автоматически)
+#   make up ENV=prod     # prod (+ docker-compose.prod.yml)
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-file: "5"
+    max-size: "50m"
+
+services:
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    restart: always
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./rules:/etc/prometheus/rules:ro
+      - ./targets:/etc/prometheus/targets:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+    networks:
+      - roomio_net
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node-exporter
+    restart: always
+    logging: *default-logging
+    expose:
+      - "9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/rootfs
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    networks:
+      - roomio_net
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    restart: always
+    logging: *default-logging
+    expose:
+      - "3000"
+    environment:
+      - VIRTUAL_HOST=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - GF_SERVER_ROOT_URL=https://${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
+      - GF_SERVER_DOMAIN=${GRAFANA_VIRTUAL_HOST:-grafana.domain.com}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-change_me}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    networks:
+      - roomio_net
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: always
+    logging: *default-logging
+    expose:
+      - "9093"
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    entrypoint:
+      - sh
+      - -c
+      - |
+        awk -v tok="${TELEGRAM_BOT_TOKEN}" -v cid="${TELEGRAM_CHAT_ID}" \
+          '{gsub(/[$$][{]TELEGRAM_BOT_TOKEN[}]/, tok); gsub(/[$$][{]TELEGRAM_CHAT_ID[}]/, cid); print}' \
+          /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    networks:
+      - roomio_net
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox
+    restart: always
+    logging: *default-logging
+    expose:
+      - "9115"
+    environment:
+      - BLACKBOX_LOGIN_EMAIL=${BLACKBOX_LOGIN_EMAIL}
+      - BLACKBOX_LOGIN_PASSWORD=${BLACKBOX_LOGIN_PASSWORD}
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml.tmpl:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        awk -v email="${BLACKBOX_LOGIN_EMAIL}" -v pass="${BLACKBOX_LOGIN_PASSWORD}" \
+          '{gsub(/[$$][{]BLACKBOX_LOGIN_EMAIL[}]/, email); gsub(/[$$][{]BLACKBOX_LOGIN_PASSWORD[}]/, pass); print}' \
+          /etc/blackbox_exporter/config.yml.tmpl > /tmp/config.yml
+        exec /bin/blackbox_exporter --config.file=/tmp/config.yml
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9115"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - roomio_net
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  roomio_net:
+    name: roomio_net
+    external: true

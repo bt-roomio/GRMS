@@ -1,14 +1,45 @@
+# Git
 .git/
+.gitignore
+
+# IDE
 .idea/
+.vscode/
 .DS_Store
-.env
-prod.env
-venv/
-.venv/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
-*.log
-logs/
+.venv/
+venv/
+
+# Django runtime
 media/
 static/
+*.sqlite3
+*.db
+
+# Secrets
+.env
+*.env
+
+# Logs
+*.log
+logs/
+
+# Тесты и конфиги разработки
+conftest.py
+pytest.ini
+
+# Документация
+docs/
+*.md
+
+# Docker (не нужен внутри образа)
+docker/
+
+# Прочее
+Makefile
+requirements.txt
+.gitlab-ci.yml

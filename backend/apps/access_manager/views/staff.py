@@ -1,11 +1,10 @@
+from rest_framework.generics import get_object_or_404
+from rest_framework.views import APIView, Response
+
 from access_manager.models import Staff
 from access_manager.serializers.staff import StaffFilterParams, StaffSerializer
 from access_manager.swagger.staff import staff_swagger
 from access_manager.tasks.send_rpc import send_rpc_request
-
-from rest_framework.generics import get_object_or_404
-from rest_framework.views import APIView, Response
-
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms

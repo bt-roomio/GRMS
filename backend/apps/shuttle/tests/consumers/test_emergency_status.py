@@ -18,7 +18,6 @@ def test_devices():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestEmergencyStatusConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -63,7 +62,6 @@ class TestEmergencyStatusConsumer:
             assert isinstance(payload["data"], list)
         finally:
             await comm.disconnect()
-
 
     async def test_list_response_structure_telemetry(self, ws_connect, karina_token, test_devices):
         comm = await ws_connect(karina_token)
@@ -375,7 +373,6 @@ class TestEmergencyStatusConsumer:
             assert isinstance(payload["data"], list)
         finally:
             await comm.disconnect()
-
 
     async def test_list_validation_missing_data_type(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)

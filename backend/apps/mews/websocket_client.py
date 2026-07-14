@@ -33,6 +33,7 @@ class MewsWebSocketClient:
         on_disconnected: Optional[Callable[[str], None]] = None,
         auto_reconnect: bool = True,
         ping_interval: int = 300,  # 5 minutes
+        max_reconnect_attempts: Optional[int] = None,
     ):
         """
         Initialize Mews WebSocket Client
@@ -46,6 +47,7 @@ class MewsWebSocketClient:
             on_disconnected: Callback when connection lost
             auto_reconnect: Auto-reconnect on disconnect
             ping_interval: Seconds between pings
+            max_reconnect_attempts: Max reconnect attempts before giving up (None = unlimited)
         """
         self.client_token = client_token
         self.access_token = access_token
@@ -55,6 +57,7 @@ class MewsWebSocketClient:
         self.on_disconnected = on_disconnected
         self.auto_reconnect = auto_reconnect
         self.ping_interval = ping_interval
+        self.max_reconnect_attempts = max_reconnect_attempts
 
         # Connection state
         self.ws = None
@@ -62,6 +65,7 @@ class MewsWebSocketClient:
         self.running = False
         self.reconnect_count = 0
         self.last_pong_time = None
+        self.connection_start_time = None
 
         # Threading
         self.connection_thread = None
@@ -102,15 +106,17 @@ class MewsWebSocketClient:
     def _on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket connection close"""
         self.connected = False
-        logger.warning(f"WebSocket closed. Code: {close_status_code}, Message: {close_msg}")
+        logger.debug(f"WebSocket closed. Code: {close_status_code}, Message: {close_msg}")
 
-        # Interpret close codes
         if close_status_code == 1008:
             logger.error("Unauthorized - check your Mews tokens")
         elif close_status_code == 1013:
             logger.warning("Rate limiting - will retry later")
-        elif close_status_code == 1001:
-            logger.info("Server maintenance - going away")
+
+        # Reset backoff only if connection was stable (>= 30s)
+        connection_duration = time.time() - (self.connection_start_time or 0)
+        if connection_duration >= 30:
+            self.reconnect_count = 0
 
         # Notify user
         if self.on_disconnected:
@@ -126,9 +132,9 @@ class MewsWebSocketClient:
     def _on_open(self, ws):
         """Handle WebSocket connection open"""
         self.connected = True
-        self.reconnect_count = 0
-        self.last_pong_time = time.time()
-        logger.info("✓ WebSocket connection established")
+        self.connection_start_time = time.time()
+        self.last_pong_time = self.connection_start_time
+        logger.debug("WebSocket connection established")
 
         # Notify user
         if self.on_connected:
@@ -183,16 +189,29 @@ class MewsWebSocketClient:
         self.ping_thread.start()
 
     def _schedule_reconnect(self):
-        """Schedule reconnection with exponential backoff"""
+        """Schedule reconnection with exponential backoff in a separate thread"""
+        if self.max_reconnect_attempts is not None and self.reconnect_count >= self.max_reconnect_attempts:
+            logger.error(f"Max reconnect attempts ({self.max_reconnect_attempts}) reached. Giving up.")
+            self.running = False
+            return
+
         # Backoff: 5s, 10s, 20s, 40s, 60s, 120s (max)
         delay = min(5 * (2**self.reconnect_count), 120)
         self.reconnect_count += 1
 
-        logger.info(f"Reconnecting in {delay}s (attempt {self.reconnect_count})...")
-        time.sleep(delay)
+        attempts_info = (
+            f"{self.reconnect_count}/{self.max_reconnect_attempts}"
+            if self.max_reconnect_attempts is not None
+            else str(self.reconnect_count)
+        )
+        logger.info(f"Reconnecting in {delay}s (attempt {attempts_info})...")
 
-        if self.running:
-            self.connect()
+        def _reconnect_worker():
+            time.sleep(delay)
+            if self.running:
+                self.connect()
+
+        threading.Thread(target=_reconnect_worker, daemon=True).start()
 
     def connect(self):
         """Connect to Mews WebSocket server"""
@@ -201,7 +220,7 @@ class MewsWebSocketClient:
             return
 
         try:
-            logger.info(f"Connecting to {self.ws_url}...")
+            logger.debug(f"Connecting to {self.ws_url}...")
 
             # Create WebSocket connection
             self.ws = WebSocketApp(

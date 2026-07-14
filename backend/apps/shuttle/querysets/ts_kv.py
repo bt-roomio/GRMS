@@ -5,6 +5,7 @@ from django.db.models import (
     CharField,
     Count,
     DateTimeField,
+    DecimalField,
     ExpressionWrapper,
     F,
     FloatField,
@@ -16,13 +17,33 @@ from django.db.models import (
     Value,
     Window,
 )
-from django.db.models.functions import Cast, Coalesce, Floor, Lag, Round
+from django.db.models.functions import Cast, Coalesce, Floor, Lag
+from django.db.models.functions import Round as _DjangoRound
 from django.utils import timezone
 
 from core.querysets.base_queryset import BaseQuerySet
 from core.utils.aggregation_func import AGGREGATION_FUNCTIONS, make_interval
 from shuttle.utils.datetime_aware import to_datetime_aware
 from shuttle.utils.fill_empty_intervals import fill_missing_intervals
+
+
+class Round(_DjangoRound):
+    """Override Django's Round to avoid numeric(1000,15) cast on PostgreSQL.
+
+    Django's built-in Round.as_postgresql casts to numeric(1000,15) when rounding
+    a float with precision, which causes OOM on large aggregations (e.g. year-long
+    time-series queries). We use numeric(15,4) instead — sufficient for sensor data.
+    """
+
+    def as_postgresql(self, compiler, connection, **extra_context):
+        if len(self.source_expressions) == 1:
+            return super().as_postgresql(compiler, connection, **extra_context)  # ty: ignore
+        copy = self.copy()
+        copy.set_source_expressions(
+            [Cast(self.source_expressions[0], output_field=DecimalField(max_digits=15, decimal_places=4))]
+            + list(self.source_expressions[1:])
+        )
+        return copy.as_sql(compiler, connection, **extra_context)
 
 
 class TsKvQuerySet(BaseQuerySet):
@@ -103,10 +124,8 @@ class TsKvQuerySet(BaseQuerySet):
     def get_history_v2(self, keys, start_ts, interval, agg, limit, sort_by, auto_fill):
         origin_dt = Value(start_ts, output_field=DateTimeField())
         sort_by = ["interval_ts"] if sort_by is None else sort_by
-        agg_function = AGGREGATION_FUNCTIONS.get(agg, Avg)
         interval = make_interval(*interval.split(" ")) if interval and len(interval.split(" ")) > 1 else interval
         limit = limit or 100
-        agg_function = Avg if agg in ["Change", None] else agg_function
         sum_expr = Sum("avail_field", output_field=FloatField())
         count_expr = Count("interval_ts")
 
@@ -117,19 +136,12 @@ class TsKvQuerySet(BaseQuerySet):
         for key in keys:
             query = self.filter(key__key=key, **({"ts__gte": start_ts} if start_ts else {}))
 
-            last_known = None
-            if (
-                datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S").strftime("%H:%M:%S") == "00:00:00"
-                and limit == 720
-                and interval == "2 minute"
-            ):
-                st = to_datetime_aware(start_ts)
-                has_value = self.filter(key__key=key, ts__gte=st)
-                if not has_value:
-                    last_known = self.filter(key__key=key, ts__lt=start_ts).order_by("-ts").first()
-                    if last_known:
-                        query = self.filter(key__key=key, ts=last_known.ts)
-                        origin_dt = Value(last_known.ts, output_field=DateTimeField())
+            st = to_datetime_aware(start_ts)
+            if not self.filter(key__key=key, ts__gte=st).exists():
+                last_known = self.filter(key__key=key, ts__lt=start_ts).order_by("-ts").first()
+                if last_known:
+                    query = self.filter(key__key=key, ts=last_known.ts)
+                    origin_dt = Value(last_known.ts, output_field=DateTimeField())
 
             if interval in ["month", "year"]:
                 query = query.annotate(
@@ -185,7 +197,8 @@ class TsKvQuerySet(BaseQuerySet):
 
             if "-interval_ts" in sort_by:
                 data = sorted(data, key=lambda d: d["ts"], reverse=True)
-            data = [item for item in data if item["ts"] <= timezone.now()]
+            if not auto_fill:
+                data = [item for item in data if item["ts"] <= timezone.now()]
 
             result[key] = data
         return result
@@ -224,7 +237,9 @@ class TsKvQuerySet(BaseQuerySet):
                     .order_by("-key", "-interval_time")
                 )
                 if agg_function is not None:
-                    query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))
+                    query = query.annotate(
+                        aggreagted_field=Round(agg_function(F("avail_field")), precision=2)
+                    )  # ty: ignore
                     query = query.annotate(ts=F("interval_time"), value=F("aggreagted_field")).values("ts", "value")
                 else:
                     query = query.annotate(ts=F("interval_time"), value=F("avail_field")).values("ts", "value")

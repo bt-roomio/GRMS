@@ -1,16 +1,14 @@
-
 import pytest
-from access_manager.models import Card, NeedSyncDevice
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
+from access_manager.models import Card, NeedSyncDevice
 from main.models import Device
 
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestCardConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -434,8 +432,6 @@ class TestCardConsumer:
         finally:
             await comm.disconnect()
 
-
-
     async def test_list_validation_invalid_sort(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
@@ -663,7 +659,6 @@ class TestCardConsumer:
             assert payload["data"]["count"] >= len(payload["data"]["results"])
         finally:
             await comm.disconnect()
-
 
     async def test_list_null_search_value(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)

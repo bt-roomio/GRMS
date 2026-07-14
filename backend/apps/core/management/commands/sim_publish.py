@@ -79,7 +79,7 @@ def attributes(value):
     updates_by_device = {}
     device_id = "00136d0a-f59b-4049-a35d-01bf86b07d3e"
     device = {"id": device_id, "tenant_id": "28c81921-f78e-4864-87d2-cec674f19d1c"}
-    key = f"{device_id}_{device.get("tenant_id")}"
+    key = f"{device_id}_{device.get('tenant_id')}"
     updates_by_device[key] = []
     ts_now = get_mil_sec()
     fields = ["bool_v", "str_v", "dbl_v", "long_v", "json_v"]

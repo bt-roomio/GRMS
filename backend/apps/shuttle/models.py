@@ -1,3 +1,4 @@
+from typing import ClassVar, cast
 from uuid import UUID
 
 from django.db import models
@@ -8,7 +9,9 @@ from core.models import BaseModel, BaseModelTs, UpdateByModel
 from core.utils.files import controller_file
 from core.utils.get_time import get_mil_sec
 from core.utils.unix_timestamp import UnixTimeStampField
+from services.models import BaseModel as ServiceBaseModel
 from shuttle.querysets.attributes import AttributeKvQuerySet
+from shuttle.querysets.controller import ControllerQuerySet
 from shuttle.querysets.relation import RelationQuerySet
 from shuttle.querysets.ts_kv import TsKvQuerySet
 from shuttle.querysets.ts_kv_dictionary import TsKvDictionaryQuerySet
@@ -21,7 +24,7 @@ class TsKv(models.Model):
     entity_id = UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
-    str_v = models.CharField(max_length=10000, blank=True, null=True)
+    str_v = models.TextField(blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.JSONField(blank=True, null=True)
@@ -45,7 +48,7 @@ class TsKvDictionary(models.Model):
     key = models.CharField(max_length=255, unique=True)
     key_id = models.AutoField(unique=True, primary_key=True)
 
-    objects = TsKvDictionaryQuerySet.as_manager()
+    objects: ClassVar[TsKvDictionaryQuerySet] = cast(TsKvDictionaryQuerySet, TsKvDictionaryQuerySet.as_manager())
 
     class Meta:
         db_table = "shuttle_ts_kv_dictionary"
@@ -56,12 +59,12 @@ class TsKvLatest(BaseModelTs):
     entity = models.ForeignKey("main.Device", models.DO_NOTHING, "ts_kvs_latest")
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
-    str_v = models.CharField(max_length=10000, blank=True, null=True)
+    str_v = models.TextField(blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.JSONField(blank=True, null=True)
 
-    objects = TsKvLatestQuerySet.as_manager()
+    objects: ClassVar[TsKvLatestQuerySet] = cast(TsKvLatestQuerySet, TsKvLatestQuerySet.as_manager())
 
     @property
     def get_value(self):
@@ -98,7 +101,7 @@ class AttributeKv(BaseModel):
     json_v = models.JSONField(blank=True, null=True)
     last_update_ts = UnixTimeStampField(default=get_mil_sec)
 
-    objects = AttributeKvQuerySet.as_manager()
+    objects: ClassVar[AttributeKvQuerySet] = cast(AttributeKvQuerySet, AttributeKvQuerySet.as_manager())
 
     @property
     def get_value(self):
@@ -167,20 +170,22 @@ class RPCMessage(models.Model):
         ]
 
 
-class ControllerFile(BaseModel, UpdateByModel):
+class ControllerFile(ServiceBaseModel):
     content = models.FileField(upload_to=controller_file)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     file_type = models.CharField(max_length=255, default="firmware")
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+    class Meta:
         db_table = "shuttle_controller_file"
 
 
-class Controller(BaseModel, UpdateByModel):
+class Controller(ServiceBaseModel):
     name = models.CharField(max_length=255, blank=True, null=True)
     mac_address = models.CharField(max_length=255)
     file = models.ForeignKey(ControllerFile, CASCADE)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
 
-    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+    objects = ControllerQuerySet.as_manager()
+
+    class Meta:
         db_table = "shuttle_controller"

@@ -1,17 +1,17 @@
 from uuid import UUID
 
-from access_manager.querysets.card import CardQuerySet
-from access_manager.querysets.card_log import CardLogQuerySet
-from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
-from access_manager.querysets.guest_card import GuestCardQuerySet
-from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
-from access_manager.querysets.staff import StaffQuerySet
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
+from access_manager.querysets.card import CardQuerySet
+from access_manager.querysets.card_log import CardLogQuerySet
+from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
+from access_manager.querysets.guest_card import GuestCardQuerySet
+from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
+from access_manager.querysets.staff import StaffQuerySet
 from core.models import BaseModel, UpdateByModel
 
 
@@ -74,13 +74,18 @@ class Group(BaseModel, UpdateByModel):
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_groups"
         constraints = [
-            UniqueConstraint(fields=["name", "tenant"], condition=Q(is_active=True), name="unique_card_group")
+            UniqueConstraint(
+                fields=["name", "tenant"],
+                condition=Q(is_active=True),
+                name="unique_card_group",
+            )
         ]
 
 
 class Card(BaseModel, UpdateByModel):
     number = models.CharField(max_length=255)
     tenant = models.ForeignKey("main.Tenant", models.CASCADE)
+    is_pwd = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     KNX = models.IntegerField(null=True, blank=True)
@@ -108,7 +113,11 @@ class CardLog(models.Model):
 
     device = models.ForeignKey("main.Device", models.DO_NOTHING)
     staff = models.ForeignKey(
-        "access_manager.Staff", models.DO_NOTHING, null=True, blank=True, related_name="card_logs"
+        "access_manager.Staff",
+        models.DO_NOTHING,
+        null=True,
+        blank=True,
+        related_name="card_logs",
     )
     guest = models.ForeignKey("main.Guest", models.DO_NOTHING, null=True, blank=True, related_name="card_logs")
 
@@ -171,7 +180,9 @@ class Staff(BaseModel):
         db_table = "access_manager_staff"
         constraints = [
             UniqueConstraint(
-                fields=["tenant", "first_name", "last_name"], condition=Q(is_active=True), name="unique_staff"
+                fields=["tenant", "first_name", "last_name"],
+                condition=Q(is_active=True),
+                name="unique_staff",
             )
         ]
 
@@ -184,7 +195,11 @@ class StaffCard(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "access_manager_staff_cards"
         constraints = [
-            UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_active_staff_card"),
+            UniqueConstraint(
+                fields=["card"],
+                condition=Q(is_active=True),
+                name="unique_active_staff_card",
+            ),
         ]
 
 

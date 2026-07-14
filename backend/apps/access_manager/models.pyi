@@ -1,14 +1,14 @@
 from uuid import UUID
 
 from _typeshed import Incomplete
+from django.db import models
+
 from access_manager.querysets.card import CardQuerySet
 from access_manager.querysets.card_log import CardLogQuerySet
 from access_manager.querysets.group import GroupQuerySet, GroupRoomQuerySet
 from access_manager.querysets.guest_card import GuestCardQuerySet
 from access_manager.querysets.need_sync import NeedSyncDeviceQuerySet
 from access_manager.querysets.staff import StaffQuerySet
-from django.db import models
-
 from core.models import BaseModel, UpdateByModel
 
 class TypeChoices(models.IntegerChoices):
@@ -47,6 +47,7 @@ class Card(BaseModel, UpdateByModel):
     is_active: Incomplete
     KNX: Incomplete
     additional_info: Incomplete
+    is_pwd: Incomplete
     objects: CardQuerySet
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):

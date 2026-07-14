@@ -1,0 +1,11 @@
+groups:
+  - name: login.rules
+    rules:
+      - alert: LoginEndpointDown
+        expr: probe_success{job="blackbox-login"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Login check failed"
+          description: "POST users/access-token/ is failing for 2 minutes."

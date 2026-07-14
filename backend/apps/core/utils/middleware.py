@@ -6,7 +6,6 @@ class CheckForTenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-
         response = self.get_response(request)
         user = request.user
         if not user.is_superuser and user.is_authenticated and not user.tenant:

@@ -1,5 +1,6 @@
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.observer.generics import action
+from uvicorn.protocols.utils import ClientDisconnected
 
 from main.models import Device, Room
 from main.serializers.room_status import RoomLiveStatusSerializer
@@ -28,18 +29,24 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         return serializer.data
 
     async def get_latest_activity(self, message):
+        if not self.subscribers:
+            return
+        data = await self.response()
         for request_id, params in self.subscribers.items():
-            data = await self.response()
             if data == params.get("response"):
-                return
+                continue
             await self.reply(data=data, action=params.get("action"), request_id=request_id)
+            params["response"] = data
 
     @action()
     async def list_subscribe(self, request_id, action, query_params):
-        await self.add_group(f"room_status_{self.tenant_id}")
-        res = await self.response()
-        self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}
-        await self.reply(data=res, action=action, request_id=request_id)
+        try:
+            await self.add_group(f"room_status_{self.tenant_id}")
+            res = await self.response()
+            self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}
+            await self.reply(data=res, action=action, request_id=request_id)
+        except (ClientDisconnected, RuntimeError):
+            pass
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):

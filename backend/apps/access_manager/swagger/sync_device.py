@@ -1,4 +1,3 @@
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
@@ -30,67 +29,6 @@ def sync_device_delete_swagger():
 
         **Response codes:**
         """,
-    )
-
-def sync_device_get_swagger():
-    return swagger_auto_schema(
-        tags=["Access manager, Device Sync"],
-        operation_summary="Get list of devices that need syncing",
-        operation_description="""
-        Retrieve a list of devices that require synchronization.
-
-        This endpoint filters `NeedSyncDevice` objects by `card_id`. If there are matching records,
-        it returns detailed information about each device that is pending synchronization.
-
-        **Query Parameters:**
-        - `card_id` (UUID, required): Filter devices by card ID. Only devices linked to this card will be returned.
-
-        **Response:**
-        - `200 OK`: Returns a list of devices that need synchronization.
-        - `404 Not Found`: No devices found needing synchronization.
-
-        **Response Format:**
-        Each device includes details such as:
-        - Device info (ID, name, timestamps)
-        - Card info
-        - Related staff/guest name (if available)
-        """,
-        manual_parameters=[
-            openapi.Parameter(
-                name="card_id",
-                in_=openapi.IN_QUERY,
-                type=openapi.TYPE_STRING,
-                format=openapi.FORMAT_UUID,
-                required=True,
-                description="Filter devices by Card UUID",
-            )
-        ],
-        responses={
-            200: openapi.Response(
-                description="List of devices pending synchronization",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_ARRAY,
-                    items=openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                            "created_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
-                            "created_by_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                            "updated_at": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
-                            "updated_by": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                            "need_sync": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                            "device": openapi.Schema(type=openapi.TYPE_OBJECT),  # For brevity
-                            "card": openapi.Schema(type=openapi.TYPE_OBJECT),  # For brevity
-                            "staff_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                            "guest_name": openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                        }
-                    )
-                )
-            ),
-            404: openapi.Response(
-                description="No devices found needing synchronization",
-            ),
-        },
     )
 
 
@@ -170,7 +108,7 @@ def sync_device_get_swagger():
                 required=False,
                 default=None,
                 description="Filter devices by sync status. Defaults to True (devices needing sync)",
-            )
+            ),
         ],
         responses={
             200: openapi.Response(
@@ -183,50 +121,44 @@ def sync_device_get_swagger():
                             "id": openapi.Schema(
                                 type=openapi.TYPE_STRING,
                                 format=openapi.FORMAT_UUID,
-                                description="Unique device identifier"
+                                description="Unique device identifier",
                             ),
-                            "name": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                description="Device name"
-                            ),
+                            "name": openapi.Schema(type=openapi.TYPE_STRING, description="Device name"),
                             "need_sync": openapi.Schema(
-                                type=openapi.TYPE_BOOLEAN,
-                                description="Whether the device needs synchronization"
-                            ),
-                            "guest_name": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                description="Guest name card connected with"
-                            ),
-                            "staff_name": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                description="Staff name card connected with"
+                                type=openapi.TYPE_BOOLEAN, description="Whether the device needs synchronization"
                             ),
                             "room": openapi.Schema(
                                 type=openapi.TYPE_OBJECT,
                                 additional_properties=True,
-                                description="Room data card device connected with"
+                                description="Room data card device connected with",
+                            ),
+                            "message_params": openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                additional_properties=True,
+                                description="Pending sync message params (RPC payload context)",
                             ),
                             "public_spaces": openapi.Schema(
                                 type=openapi.TYPE_ARRAY,
                                 items={"public spaces names": openapi.Schema(type=openapi.TYPE_STRING)},
-                                description="Names of public spaces"
+                                description="Names of public spaces",
                             ),
-                            "device_type": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                description="Type of the device"
-                            ),
+                            "device_type": openapi.Schema(type=openapi.TYPE_STRING, description="Type of the device"),
                             "is_active": openapi.Schema(
+                                type=openapi.TYPE_BOOLEAN, description="Whether the device is active"
+                            ),
+                            "is_pwd": openapi.Schema(
                                 type=openapi.TYPE_BOOLEAN,
-                                description="Whether the device is active"
+                                description=(
+                                    "Whether the underlying card is a PIN/password credential. "
+                                    "PIN rows resync via `add_pwd`/`remove_pwd` instead of `writeRFID`."
+                                ),
                             ),
                             "created_at": openapi.Schema(
-                                type=openapi.TYPE_STRING,
-                                format="date-time",
-                                description="Device creation timestamp"
+                                type=openapi.TYPE_STRING, format="date-time", description="Device creation timestamp"
                             ),
-                        }
-                    )
-                )
+                        },
+                    ),
+                ),
             ),
         },
     )
@@ -245,22 +177,22 @@ def sync_device_swagger():
         },
         operation_description="""
         Synchronize devices that have pending sync operations.
-        
+
         This endpoint processes devices that need synchronization by:
         - Checking for NeedSyncDevice records with failed requests
         - Retrying failed RPC requests for card operations in batches of 10
         - Processing devices in parallel but batches sequentially per device
         - Updating sync status based on operation results
-        
+
         The sync operation runs as a background Celery task with automatic retries.
-        
+
         **Parameters:**
         - `ids` (optional): List of specific NeedSyncDevice UUIDs to sync
         - `device_ids` (optional): List of specific Device UUIDs to sync all their NeedSyncDevice records
-        
+
         **Note:** If both `ids` and `device_ids` are provided, only `ids` will be used.
         If neither is provided, all devices needing sync will be processed.
-        
+
         **Response codes:**
         - `200`: No devices need syncing
         - `202`: Sync task started successfully (async operation)

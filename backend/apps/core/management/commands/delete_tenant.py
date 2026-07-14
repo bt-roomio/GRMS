@@ -39,7 +39,6 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR("Invalid credentials"))
                 return
 
-
             try:
                 tenant = Tenant.objects.get(title=tenant_name)
             except Tenant.DoesNotExist:

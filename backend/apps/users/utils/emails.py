@@ -14,13 +14,10 @@ def send_reset_link_email(user, send_activation_mail=True):
 
     reset_key = ResetPassword.objects.create(user=user)
 
-    host = settings.FRONTEND_HOST or "localhost"
-    port = ""
-    if settings.FRONTEND_PORT:
-        port = ":" + str(settings.FRONTEND_PORT)
+    host = settings.FRONTEND_DOMAIN or "localhost"
 
     host = host.rstrip("/")
-    url = f"{host}{port}" + "/password/new/" + "?key=" + reset_key.key
+    url = f"{host}" + "/password/new/" + "?key=" + reset_key.key
 
     if not send_activation_mail:
         return bytes(url, encoding="utf-8")

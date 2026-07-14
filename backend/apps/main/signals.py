@@ -1,4 +1,5 @@
 import logging
+import time
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -190,10 +191,11 @@ def _update_room_devices_status(room: Room) -> None:
     logger.info(f"✓ Updating room attributes for room {room.number}")
     try:
         channel = connect_to_rabbitmq()
-        swap_flag = isinstance(room.additional_info, dict) and bool(room.additional_info.get("swap_flag"))
+        swap_flag = isinstance(room.additional_info, dict) and room.additional_info.get("swap_flag", "") or ""
+        is_swap_flag = swap_flag.isdigit() and bool(int(swap_flag))
 
         g_settings = _get_tenant_general_settings(room)
-        check_in_trigger_value = g_settings.get("check_in_trigger_value", 2)
+        check_in_trigger_value = g_settings.get("check_in_trigger_value", 1)
         check_out_trigger_value = g_settings.get("check_out_trigger_value", 1)
 
         if Room.CheckedIn in room.state:
@@ -211,17 +213,21 @@ def _update_room_devices_status(room: Room) -> None:
 
         logger.info(f"✓ Changing attributes: {attrs}")
         for attr_data, attr_type, device_id, device_name in update_room_device_attributes(room, attrs):
-            if attr_type == AttributeKv.SHARED_SCOPE or not swap_flag:
-                send_msg_status_room(channel, attr_data, device_id, device_name)
+            if not is_swap_flag:
+                send_msg_status_room(channel, attr_type, attr_data, device_id, device_name)
     except Exception as e:
         logger.error(f"✗ Failed to update room devices for room {room.number}: {e}")
 
 
-def send_msg_status_room(channel, attr, device_id, device_name):
+def send_msg_status_room(channel, attr_type, attr, device_id, device_name):
     message = {
         "targetDeviceUUID": device_id,
-        "topic": "v1/gateway/attributes",
-        "data": {"device": device_name, "data": attr},
+        "topic": "v1/gateway/rpc",
+        "data": {"device": device_name, "data": {"id": int(time.time()), "method": "setAttribute", "params": attr}},
     }
+    if attr_type == AttributeKv.SHARED_SCOPE:
+        message["topic"] = "v1/gateway/attributes"
+        message["data"]["data"] = attr
+
     logger.info(f"✓ Sending RPC: {message}")
     send_to_rabbitmq(channel, message, routing_key="fromGRMS")

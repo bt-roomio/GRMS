@@ -1,0 +1,39 @@
+global:
+  resolve_timeout: 30s
+
+route:
+  group_by: [alertname, tenant_id, device_id]
+  group_wait: 10s
+  group_interval: 2m
+  repeat_interval: 1h
+  receiver: telegram-default
+
+receivers:
+  - name: telegram-default
+    telegram_configs:
+      - bot_token: ${TELEGRAM_BOT_TOKEN}
+        chat_id: ${TELEGRAM_CHAT_ID}
+        send_resolved: true
+        parse_mode: HTML
+        message: |
+          {{ if .Alerts.Firing }}
+          <b>🔔 ALERT: {{ .GroupLabels.alertname }}</b>
+
+          {{ range .Alerts.Firing }}
+          <b>Summary:</b> {{ .Annotations.summary }}
+          <b>Description:</b> {{ .Annotations.description }}
+          <b>Started:</b> {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ if .Labels.instance }}<b>Instance:</b> {{ .Labels.instance }}{{ end }}
+          {{ if .Labels.device_name }}<b>Device:</b> {{ .Labels.device_name }}{{ end }}
+          {{ end }}
+          {{ end }}
+
+          {{ if .Alerts.Resolved }}
+          <b>✅ RESOLVED: {{ .GroupLabels.alertname }}</b>
+
+          {{ range .Alerts.Resolved }}
+          <b>Summary:</b> {{ .Annotations.summary }}
+          <b>Description:</b> {{ .Annotations.description }}
+          <b>Resolved At:</b> {{ .EndsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+          {{ end }}

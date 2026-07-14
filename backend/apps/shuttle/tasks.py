@@ -6,7 +6,7 @@ from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 
-from core.management.mq.state_device import update_activity_device
+from core.management.mq.state_device import update_activity_device, update_activity_devices_batch
 from shuttle.models import TsKv, TsKvDictionary
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.services.ts_kv_latest import publish_updates_batch
@@ -120,7 +120,7 @@ def delete_old_logs():
     keys = TsKvDictionary.objects.filter(
         Q(key__endswith="_LOGS") | Q(key__contains="Events") | Q(key__contains="ERRORS")
     )
-    logger.info(f"Keys: {", ".join(keys.values_list('key', flat=True))}")
+    logger.info(f"Keys: {', '.join(keys.values_list('key', flat=True))}")
     logs = TsKv.objects.filter(key__in=keys, ts__lte=(timezone.now() - timedelta(days=7)))
     logger.info(f" {logs.delete()[0]} log(s) deleted!")
 
@@ -128,6 +128,11 @@ def delete_old_logs():
 @shared_task
 def update_activity_device_task(device_id, connected=True):
     update_activity_device(device_id, connected)
+
+
+@shared_task
+def update_activity_devices_batch_task(device_ids: list, connected=True):
+    update_activity_devices_batch(device_ids, connected)
 
 
 @shared_task

@@ -102,9 +102,11 @@ class CaptchaProcessRequestTests(TestCase):
 
     @patch("core.middleware.brute_force_protection.security_cache")
     def test_process_request_blocks_without_captcha_token(self, mock_cache):
-        mock_cache.get.side_effect = lambda key, default=None: {
-            # _check_lockout checks
-        }.get(key, 3 if "bf:attempts:" in key else default)
+        mock_cache.get.side_effect = (
+            lambda key, default=None: {
+                # _check_lockout checks
+            }.get(key, 3 if "bf:attempts:" in key else default)
+        )
 
         request = self.factory.post(
             "/api/v1/users/access-token/",

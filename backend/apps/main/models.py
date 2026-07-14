@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, Union
+from typing import Any, ClassVar, Dict, Iterable, Union, cast
 from uuid import UUID
 
 from django.contrib.postgres.fields import ArrayField
@@ -40,6 +40,7 @@ class Tenant(ServiceBaseModel):
     state = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
+    has_access_ai = models.BooleanField(default=False)
 
     objects = TenantQuerySet.as_manager()
 
@@ -131,7 +132,7 @@ class Room(BaseModel, UpdateByModel):
     status = models.CharField(max_length=255, choices=STATUS, default=OFF)
     additional_info = models.JSONField(null=True, blank=True)
 
-    objects = RoomQuerySet.as_manager()
+    objects: ClassVar[RoomQuerySet] = cast(RoomQuerySet, RoomQuerySet.as_manager())
 
     def __str__(self):
         return self.number
@@ -237,7 +238,7 @@ class RoomHistory(BaseModel, UpdateByModel):
     public_area_id = models.IntegerField(null=True, blank=True)
     pan_id = models.CharField(max_length=255, null=True, blank=True)
     building = models.CharField(max_length=255, null=True, blank=True)
-    door_lock_device = models.OneToOneField(
+    door_lock_device = models.ForeignKey(
         "main.Device", SET_NULL, null=True, blank=True, related_name="as_door_lock_device_history"
     )
     room_type = models.ForeignKey("main.RoomType", CASCADE, null=True, blank=True)

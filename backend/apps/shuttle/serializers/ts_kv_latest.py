@@ -4,6 +4,7 @@ from core.serializers.dynamic import DynamicField
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device
 from shuttle.models import TsKvLatest
+from shuttle.utils.get_non_null_field import get_non_null_column
 
 
 class SimpleTsKvLatestSerializer(serializers.ModelSerializer):
@@ -22,6 +23,19 @@ class TsKvLatestSerializer(serializers.Serializer):
     ts = serializers.IntegerField()
     key_name = serializers.CharField()
     value = DynamicField()
+
+
+class RoomTsKvLatestSerializer(serializers.Serializer):
+    """Shapes a ``get_ts_kv_latest_by_room`` ``.values()`` row: renames the entity/key
+    columns and picks the first non-null typed value, preserving its native type."""
+
+    id = serializers.UUIDField()
+    key_name = serializers.CharField(source="key__key")
+    ts = serializers.IntegerField()
+    value = serializers.SerializerMethodField()
+
+    def get_value(self, obj):
+        return get_non_null_column(obj)[1]
 
 
 class TsKvLatestIntegrationSerializer(serializers.ModelSerializer):

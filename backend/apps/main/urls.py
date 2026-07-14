@@ -12,6 +12,7 @@ from main.views.general_settings import GeneralSettingsDetailView
 from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.integration_settings import IntegrationSettingsDetailView
+from main.views.knx_from_conf import KnxDeviceFromConfListView
 from main.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_from_conf import RoomFromConfListView
@@ -48,6 +49,7 @@ urlpatterns = [
     path("room-status/", RoomHistoryStatusView.as_view(), name="room-status-list"),
     path("blocks-floors/", BlockFloorsView.as_view(), name="block-floors-list"),
     path("devices-from-configuration/", DeviceFromConfListView.as_view(), name="device-from-conf-list"),
+    path("devices-from-configuration/knx/", KnxDeviceFromConfListView.as_view(), name="knx-device-from-conf-list"),
     path("rooms-from-configuration/", RoomFromConfListView.as_view(), name="room-from-conf-list"),
     path("rooms-from-file/", RoomFromFileListView.as_view(), name="room-from-file-list"),
     path("rooms-export/", RoomExportView.as_view(), name="room-export"),

@@ -1,23 +1,59 @@
-.idea
-.venv
-venv
+# Python
 *.pyc
-/static
-media
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+pip-wheel-metadata/
+
+# Django
+/static/
+media/
+uploads/
+files/
+data/
+*.sqlite3
+*.db
+*.csv
+
+# Secrets
+.env
+.env.*
+!.env.example
 config/settings_dev.py
 config/settings_prod.py
-__pycache__
-.DS_Store
-.vscode/settings.json
-.vscode/launch.json
-.vscode/tags
-pytest.ini
-data
-uploads
-.env
-vandelay-py.js
-.envrc
-files
-logs
+
+# Logs
 *.log
-*.json
+logs/
+mqtt_logs/
+
+# Tests & coverage
+pytest.ini
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Type checkers & linters
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+/services_*
+vandelay-py.js
+celerybeat-schedule

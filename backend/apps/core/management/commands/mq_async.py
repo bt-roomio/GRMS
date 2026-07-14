@@ -16,11 +16,12 @@ sys.path.insert(0, str(backend_dir))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-# ruff: disable[E402]
+# ruff: noqa: E402
 import aio_pika
 import redis.asyncio as aioredis
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.db import close_old_connections
 
 from core.management.mq.attributes import sync_attributes_batch
 from core.management.mq.device_cache import (
@@ -39,9 +40,6 @@ from core.utils.get_time import get_mil_sec
 from main.models import Device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
-
-# ruff: enable[E402]
-
 
 # Queue Names
 QUEUE_TO_GRMS = "toGRMS"
@@ -71,9 +69,9 @@ TOPIC_DEVICES_ATTRIBUTES_REQUEST = "v1/devices/me/attributes/request"
 TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
-BATCH_SIZE = 100
-BATCH_TIMEOUT = 0.15  # 200ms
-PREFETCH_COUNT = 600
+BATCH_SIZE = 200
+BATCH_TIMEOUT = 0.1  # 100ms
+PREFETCH_COUNT = 1000
 
 RB_LOGIN = settings.RABBIT_LOGIN
 RB_PASSWORD = settings.RABBIT_PASSWORD
@@ -113,7 +111,11 @@ async def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
     if "&" in device_id:
         filters = {"name": device_id.split("&")[1], "tenant_id": tenant_id, "is_active": True}
 
-    device = await Device.objects.filter(**filters).afirst()
+    def _get_device_from_db(_f=filters):
+        close_old_connections()
+        return Device.objects.filter(**_f).first()
+
+    device = await sync_to_async(_get_device_from_db, thread_sensitive=False)()
 
     if not device:
         return None
@@ -165,17 +167,35 @@ async def validate_body(body: bytes):
     return device, msg
 
 
+def _db_safe(func):
+    """Ensure stale thread-local DB connections are closed before/after each sync call.
+
+    Thread pool threads are reused between batches. Without this, a connection
+    closed by PgBouncer's SERVER_IDLE_TIMEOUT stays in the thread-local and
+    raises InterfaceError on next use. close_old_connections() detects and drops it.
+    """
+
+    def wrapper(*args, **kwargs):
+        close_old_connections()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            close_old_connections()
+
+    return wrapper
+
+
 # Wrap sync batch functions (thread_sensitive=False allows parallel execution in thread pool)
-sync_telemetry_batch_async = sync_to_async(sync_telemetry_batch, thread_sensitive=False)
-sync_attributes_batch_async = sync_to_async(sync_attributes_batch, thread_sensitive=False)
+sync_telemetry_batch_async = sync_to_async(_db_safe(sync_telemetry_batch), thread_sensitive=False)
+sync_attributes_batch_async = sync_to_async(_db_safe(sync_attributes_batch), thread_sensitive=False)
 # sync_state_device_batch_async is already async, imported directly
 
 # Wrap individual handlers
-handle_rpc_async = sync_to_async(handle_rpc, thread_sensitive=False)
-handle_connect_disconnect_async = sync_to_async(handle_connect_disconnect, thread_sensitive=False)
+handle_rpc_async = sync_to_async(_db_safe(handle_rpc), thread_sensitive=False)
+handle_connect_disconnect_async = sync_to_async(_db_safe(handle_connect_disconnect), thread_sensitive=False)
 
 # Wrap helper functions for attribute request
-get_sub_device_async = sync_to_async(get_sub_device, thread_sensitive=False)
+get_sub_device_async = sync_to_async(_db_safe(get_sub_device), thread_sensitive=False)
 
 
 async def get_attribute_response(device: DeviceType, data: dict, topic: str):
@@ -208,7 +228,7 @@ async def get_attribute_response(device: DeviceType, data: dict, topic: str):
                 "data": {a.attribute_key: get_non_null_field(a)[1] for a in attrs},
             }
 
-    return await sync_to_async(_get_attributes_sync, thread_sensitive=False)()
+    return await sync_to_async(_db_safe(_get_attributes_sync), thread_sensitive=False)()
 
 
 async def handle_attribute_request_async(topic: str, device: DeviceType, data: dict, publish_channel):
@@ -289,54 +309,57 @@ class BatchAccumulator:
         other_messages = []
         message_status = {}  # {delivery_tag: 'success'|'failure_requeue'|'failure_no_requeue'}
 
-        # Step 1: Validate and group messages
-        for message in batch:
-            logger.info(f"Message: {message.body}")
-            try:
-                device, msg = await validate_body(message.body)
-                topic = msg.get("topic", "")
-                data = msg.get("data")
+        # Step 1: Validate all messages in parallel (eliminates serial Redis latency)
+        validation_results = await asyncio.gather(
+            *[validate_body(message.body) for message in batch],
+            return_exceptions=True,
+        )
 
-                gateway_id = device.get("id", "unknown")
-                mq_messages_processed_total.labels(gateway_id=gateway_id, topic=topic).inc()
-                for key in _extract_keys(topic, data):
-                    mq_keys_processed_total.labels(gateway_id=gateway_id, key=key).inc()
-
-                if topic.endswith(TOPIC_TELEMETRY):
-                    telemetry_batch.append((device, topic, data, message))
-                elif topic.endswith(TOPIC_ATTRIBUTES):
-                    attributes_batch.append((device, topic, data, message))
-                elif topic in (TOPIC_GATEWAY_CONNECT, TOPIC_GATEWAY_DISCONNECT):
-                    device_connect_batch.append((device, topic, data, message))
-                else:
-                    other_messages.append((device, topic, data, message))
-
-            except Exception:
+        for message, result in zip(batch, validation_results):
+            if isinstance(result, Exception):
                 logger.warning(
-                    "[%s] Validation failed for message %s", self.queue_name, message.delivery_tag, exc_info=True
+                    "[%s] Validation failed for message %s", self.queue_name, message.delivery_tag, exc_info=result
                 )
                 message_status[message.delivery_tag] = "failure_no_requeue"
+                continue
 
-        # Step 2: Process telemetry batch
-        if telemetry_batch:
+            device, msg = result
+            topic = msg.get("topic", "")
+            data = msg.get("data")
+
+            gateway_id = device.get("id", "unknown")
+            mq_messages_processed_total.labels(gateway_id=gateway_id, topic=topic).inc()
+            for key in _extract_keys(topic, data):
+                mq_keys_processed_total.labels(gateway_id=gateway_id, key=key).inc()
+
+            if topic.endswith(TOPIC_TELEMETRY):
+                telemetry_batch.append((device, topic, data, message))
+            elif topic.endswith(TOPIC_ATTRIBUTES):
+                attributes_batch.append((device, topic, data, message))
+            elif topic in (TOPIC_GATEWAY_CONNECT, TOPIC_GATEWAY_DISCONNECT):
+                device_connect_batch.append((device, topic, data, message))
+            else:
+                other_messages.append((device, topic, data, message))
+
+        # Steps 2-4: Process telemetry, attributes, device states in parallel
+        async def _run_telemetry():
+            if not telemetry_batch:
+                return
             try:
-                data_only = [(d, t, data) for d, t, data, _ in telemetry_batch]
-                await sync_telemetry_batch_async(data_only)
-                # Mark all as success
+                await sync_telemetry_batch_async([(d, t, data) for d, t, data, _ in telemetry_batch])
                 for _, _, _, msg in telemetry_batch:
                     message_status[msg.delivery_tag] = "success"
                 logger.debug("[%s] Processed telemetry batch: %d messages", self.queue_name, len(telemetry_batch))
             except Exception:
                 logger.exception("[%s] Telemetry batch failed", self.queue_name)
-                # Mark all as failure with requeue
                 for _, _, _, msg in telemetry_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
-        # Step 3: Process attributes batch
-        if attributes_batch:
+        async def _run_attributes():
+            if not attributes_batch:
+                return
             try:
-                data_only = [(d, t, data) for d, t, data, _ in attributes_batch]
-                await sync_attributes_batch_async(data_only)
+                await sync_attributes_batch_async([(d, t, data) for d, t, data, _ in attributes_batch])
                 for _, _, _, msg in attributes_batch:
                     message_status[msg.delivery_tag] = "success"
                 logger.debug("[%s] Processed attributes batch: %d messages", self.queue_name, len(attributes_batch))
@@ -345,12 +368,11 @@ class BatchAccumulator:
                 for _, _, _, msg in attributes_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
-        # Step 4: Process device connect/disconnect batch
-        if device_connect_batch:
+        async def _run_device_states():
+            if not device_connect_batch:
+                return
             try:
-                data_only = [(d, t, data) for d, t, data, _ in device_connect_batch]
-                await sync_state_device_batch_async(data_only)
-                # Mark all as success
+                await sync_state_device_batch_async([(d, t, data) for d, t, data, _ in device_connect_batch])
                 for _, _, _, msg in device_connect_batch:
                     message_status[msg.delivery_tag] = "success"
                 logger.debug(
@@ -358,12 +380,13 @@ class BatchAccumulator:
                 )
             except Exception:
                 logger.exception("[%s] Device state batch failed", self.queue_name)
-                # Mark all as failure with requeue
                 for _, _, _, msg in device_connect_batch:
                     message_status[msg.delivery_tag] = "failure_requeue"
 
-        # Step 5: Process other messages individually
-        for device, topic, data, message in other_messages:
+        await asyncio.gather(_run_telemetry(), _run_attributes(), _run_device_states())
+
+        # Step 5: Process other messages concurrently
+        async def _handle_other(device, topic, data, message):
             try:
                 if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(
                     TOPIC_DEVICES_ATTRIBUTES_REQUEST
@@ -377,6 +400,9 @@ class BatchAccumulator:
             except Exception:
                 logger.exception("[%s] Individual message processing failed", self.queue_name)
                 message_status[message.delivery_tag] = "failure_requeue"
+
+        if other_messages:
+            await asyncio.gather(*[_handle_other(d, t, data, msg) for d, t, data, msg in other_messages])
 
         # Step 6: Acknowledge messages
         await self.acknowledge_messages(batch, message_status)

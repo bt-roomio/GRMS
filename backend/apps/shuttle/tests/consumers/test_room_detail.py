@@ -14,7 +14,6 @@ def test_room():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestRoomDetailConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:

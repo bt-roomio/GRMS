@@ -10,7 +10,6 @@ class BaseModel(models.Model):
         abstract: bool
         ordering: Incomplete
 
-
 class NewUpdateByModel(models.Model):
     updated_at: Incomplete
     updated_by: Incomplete
@@ -19,7 +18,6 @@ class NewUpdateByModel(models.Model):
         abstract: bool
         ordering: Incomplete
 
-
 class BaseModelTs(models.Model):
     id: Incomplete
     ts: Incomplete
@@ -27,7 +25,6 @@ class BaseModelTs(models.Model):
     class Meta:
         abstract: bool
         ordering: Incomplete
-
 
 class UpdateByModel(models.Model):
     updated_at: Incomplete

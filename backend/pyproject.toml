@@ -103,11 +103,11 @@ dependencies = [
   "num2words==0.5.14",
   "django-allauth==65.12.1",
   "django-countries==8.1.1",
+  "flower>=2.0.1",
 ]
 
 [dependency-groups]
 dev = [
-  "black==24.4.2",
   "django-stubs==5.1.1",
   "django-stubs-ext==5.1.1",
   "mypy-extensions==1.0.0",
@@ -118,6 +118,7 @@ dev = [
   "pytest==8.4.0",
   "pytest-asyncio==1.1.0",
   "pytest-django==4.11.1",
+  "pre-commit>=4.6.0",
 ]
 
 [tool.uv]
@@ -134,7 +135,14 @@ extend-exclude = ["migrations"]
 extend-select = ["I", "F401", "F841"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["main", "shuttle", "users", "core", "services"]
+known-first-party = [
+  "main",
+  "shuttle",
+  "users",
+  "core",
+  "services",
+  "access_manager",
+]
 section-order = [
   "future",
   "standard-library",

@@ -12,8 +12,8 @@ class PublicSpaceTest(BaseTestCase):
         "public_space.yaml",
         "customer.yaml",
         "device_profile.yaml",
-        "device.yaml",
         "room.yaml",
+        "device.yaml",
     )
 
     def setUp(self):

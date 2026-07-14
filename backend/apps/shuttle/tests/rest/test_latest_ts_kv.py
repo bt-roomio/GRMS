@@ -18,6 +18,7 @@ class ShuttleLatestTsKvApiTests(BaseTestCase):
         "device.yaml",
         "ts_dictionary.yaml",
         "ts_kv_latest.yaml",
+        "integrations.yaml",
     )
 
     def setUp(self):

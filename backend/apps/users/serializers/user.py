@@ -34,6 +34,8 @@ class UserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["created_at"] = instance.date_joined
+        data["tenant_name"] = instance.tenant.title
+        data["tenant_has_access_ai"] = instance.tenant.has_access_ai
         return data
 
     def validate_email(self, value):
@@ -80,6 +82,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["roles"] = RoleSimpleSerializer(instance.roles, many=True).data
         data["tenant_name"] = instance.tenant.title
+        data["tenant_has_access_ai"] = instance.tenant.has_access_ai
         return data
 
     class Meta:

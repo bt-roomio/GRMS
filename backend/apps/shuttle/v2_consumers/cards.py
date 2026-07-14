@@ -1,8 +1,8 @@
-from access_manager.models import Card
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import ListModelMixin
 from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
 
+from access_manager.models import Card
 from shuttle.serializers.cards import CardFilterParams, CardSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
@@ -23,12 +23,13 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = CardFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(  # pyright: ignore
+        query = query.list(  # ty: ignore
             tenant_id=self.tenant_id,
             sort_by=params.get("sort_by", []),
             search_field="number",
             search_value=params.get("search_value", None),
             filters=params.get("filters", {}),
+            is_pwd=params.get("is_pwd"),
         )
         return query
 

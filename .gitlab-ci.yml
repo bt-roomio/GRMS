@@ -4,6 +4,9 @@ stages:
   - staging
   - production
 
+variables:
+  MAKE_ENV: ""
+
 test:
   stage: test
   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
@@ -64,7 +67,13 @@ backend:
         -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" .
     - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
 
-# Shared SSH config for deployments through leto jump host
+
+# ---------------------------------------------------------------------------
+# Shared SSH connection templates
+# ---------------------------------------------------------------------------
+
+# Used by grms-* jobs: connects to roomio through the leto jump host.
+
 .ssh-via-jumphost:
   image: alpine:latest
   before_script:
@@ -96,44 +105,94 @@ backend:
       EOF
     - chmod 600 ~/.ssh/config
 
-leto-backend:
-  stage: staging
+# Used by leto-* and cloud-* jobs: connects directly to a single host via key.
+# Sets up an SSH config alias ("deploy-target") so the shared deploy script
+# fragments below can use the same `ssh $SSH_TARGET "..."` invocation that
+# the jump-host jobs use.
+
+.ssh-direct:
   image: alpine:latest
+  variables:
+    SSH_TARGET: deploy-target
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+    - |
+      cat > ~/.ssh/config <<EOF
+      Host deploy-target
+        HostName $SSH_HOST
+        User $SSH_USER
+        Port $SSH_PORT
+        IdentityFile ~/.ssh/deploy_key
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+      EOF
+    - chmod 600 ~/.ssh/config
+
+# ---------------------------------------------------------------------------
+# Shared deploy script fragments (reused via `extends` or `!reference`)
+#
+# Actual service management (which containers, pull/restart order, proxy
+# reload) lives in deploy/Makefile — CI only logs in to the registry and
+# invokes the relevant `make` target on the remote host.
+# ---------------------------------------------------------------------------
+
+.backend-deploy:
+  script:
+    - ssh $SSH_TARGET "
+      cd $REMOTE_DIR;
+      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
+      make $MAKE_ENV deploy-backend
+      "
+
+.frontend-deploy:
+  script:
+    - ssh $SSH_TARGET "
+      cd $REMOTE_DIR;
+      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
+      make $MAKE_ENV deploy-frontend
+      "
+
+# ---------------------------------------------------------------------------
+# Staging (leto / dev)
+# ---------------------------------------------------------------------------
+
+leto-backend:
+  extends: [.ssh-direct, .backend-deploy]
+  stage: staging
   needs: [backend]
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(dev|test_ci_cd)$/
       when: manual
     - when: never
-  script:
-    - apk add --no-cache openssh-client
-    - echo "$LETO_PRIVATE_KEY" > publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
-      cd ~/services;
-      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
-      docker compose pull backend celery celery-beat mq-async mews-websocket pms-handler &&
-      docker compose down backend celery celery-beat mq-async mews-websocket pms-handler proxy &&
-      docker compose up -d --no-deps backend celery celery-beat mq-async mews-websocket pms-handler proxy;
-      "
+  variables:
+    SSH_PRIVATE_KEY: $LETO_PRIVATE_KEY
+    SSH_HOST: $LETO_HOST
+    SSH_PORT: $LETO_PORT
+    SSH_USER: $LETO_USER
+    REMOTE_DIR: ~/GRMS/deploy
 
 leto-frontend:
+  extends: [.ssh-direct, .frontend-deploy]
   stage: staging
-  image: alpine:latest
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(dev|test_ci_cd)$/
       when: manual
     - when: never
-  script:
-    - apk add --no-cache openssh-client
-    - echo "$LETO_PRIVATE_KEY" > publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey $LETO_USER@$LETO_HOST -p $LETO_PORT "
-      cd ~/services;
-      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
-      docker compose pull frontend &&
-      docker compose up frontend &&
-      docker restart frontend-nginx;
-      "
+  variables:
+    SSH_PRIVATE_KEY: $LETO_PRIVATE_KEY
+    SSH_HOST: $LETO_HOST
+    SSH_PORT: $LETO_PORT
+    SSH_USER: $LETO_USER
+    REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
+
+# ---------------------------------------------------------------------------
+# Production (roomio, via leto jump host)
+# ---------------------------------------------------------------------------
 
 grms-backend:
   extends: .ssh-via-jumphost
@@ -144,16 +203,14 @@ grms-backend:
     - if: $CI_COMMIT_BRANCH =~ /^(stable|test_ci_cd)$/
       when: manual
     - when: never
+  variables:
+    SSH_TARGET: roomio
+    REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
   script:
     - ssh leto "echo 'Connected to leto successfully'"
     - ssh roomio "echo 'Connected to roomio through leto successfully'"
-    - ssh roomio "
-      cd ~/GRMS;
-      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
-      docker compose pull backend celery celery-beat mq-async mews-websocket pms-handler &&
-      docker compose down backend celery celery-beat mq-async mews-websocket pms-handler nginx-proxy &&
-      docker compose up -d --no-deps backend celery celery-beat mq-async mews-websocket pms-handler nginx-proxy;
-      "
+    - !reference [.backend-deploy, script]
 
 grms-frontend:
   extends: .ssh-via-jumphost
@@ -163,53 +220,48 @@ grms-frontend:
     - if: $CI_COMMIT_BRANCH =~ /^(stable|test_ci_cd)$/
       when: manual
     - when: never
+  variables:
+    SSH_TARGET: roomio
+    REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
   script:
     - ssh leto "echo 'Connected to leto successfully'"
     - ssh roomio "echo 'Connected to roomio through leto successfully'"
-    - ssh roomio "
-      cd ~/GRMS;
-      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
-      docker compose pull frontend &&
-      docker compose up frontend &&
-      docker restart frontend-nginx;
-      "
+    - !reference [.frontend-deploy, script]
+
+# ---------------------------------------------------------------------------
+# Production (cloud)
+# ---------------------------------------------------------------------------
 
 cloud-backend:
+  extends: [.ssh-direct, .backend-deploy]
   stage: production
-  image: alpine:latest
   needs: [backend]
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(stable|test_ci_cd)$/
       when: manual
     - when: never
-  script:
-    - apk add --no-cache openssh-client
-    - echo "$CLOUD_PRIVATE_KEY" > publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey $CLOUD_USER@$CLOUD_HOST -p $CLOUD_PORT "
-      mkdir -p ~/GRMS;
-      cd ~/GRMS;
-      echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
-      docker compose pull backend celery celery-beat mq-async mews-websocket pms-handler &&
-      docker compose down backend celery celery-beat mq-async mews-websocket pms-handler &&
-      docker compose up -d --no-deps backend celery celery-beat mq-async mews-websocket pms-handler;
-      "
+  variables:
+    SSH_PRIVATE_KEY: $CLOUD_PRIVATE_KEY
+    SSH_HOST: $CLOUD_HOST
+    SSH_PORT: $CLOUD_PORT
+    SSH_USER: $CLOUD_USER
+    REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
 
 cloud-frontend:
+  extends: [.ssh-direct, .frontend-deploy]
   stage: production
-  image: alpine:latest
   retry: 2
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^(stable|test_ci_cd)$/
       when: manual
     - when: never
-  script:
-    - apk add --no-cache openssh-client
-    - echo "$CLOUD_PRIVATE_KEY" > publickey && chmod 600 publickey
-    - ssh -o "StrictHostKeyChecking=no" -i publickey $CLOUD_USER@$CLOUD_HOST -p $CLOUD_PORT "
-      cd ~/GRMS;
-      echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin;
-      docker compose pull frontend &&
-      docker compose up frontend &&
-      docker restart frontend-nginx;
-      "
+  variables:
+    SSH_PRIVATE_KEY: $CLOUD_PRIVATE_KEY
+    SSH_HOST: $CLOUD_HOST
+    SSH_PORT: $CLOUD_PORT
+    SSH_USER: $CLOUD_USER
+    REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"

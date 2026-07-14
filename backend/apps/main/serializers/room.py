@@ -67,7 +67,6 @@ class RoomSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-
         for device in validated_data.get("devices", {}):
             if device.room_id and device.room_id != instance.id:
                 raise serializers.ValidationError({"devices": "Device already assigned to another room!"})
@@ -107,9 +106,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "devices",
             "additional_info",
         )
-        extra_kwargs = {
-            "state": {"help_text": "0=Available, 1=CheckedIn, 2=Occupied, 3=Reserved, 4=MakeUpRoom"},
-        }
+        extra_kwargs = {"state": {"help_text": [f"{state[0]} = {state[1]}" for state in Room.STATE]}}
 
 
 class SimpleRoomSerializer(serializers.ModelSerializer):
@@ -235,6 +232,9 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
 class RoomQuickFilterParams(RoomFilterParams):
     search_field = None
     search_value = serializers.CharField(required=False)
+
+    def validate(self, attrs):
+        return attrs
 
 
 class RoomQuickFilterParamsSwagger(serializers.Serializer):

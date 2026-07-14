@@ -1,9 +1,9 @@
 import logging
 from typing import List, Union
 
-from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, Staff, StaffCard
 from django.db.models import Q
 
+from access_manager.models import GroupPublicSpace, GroupRoom, GuestCard, Staff, StaffCard
 from main.models import Device, Guest, PublicSpace
 
 _logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ _logger = logging.getLogger(__name__)
 
 def get_guest_access_context(guests: Union[Guest, List[Guest]]) -> dict:
     """
-    Checking if door lock devices exist for guest rooms.
+    Checking if door lock devices exist for guest's spaces
     """
     if isinstance(guests, Guest):
         guests = [guests]

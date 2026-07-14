@@ -38,6 +38,7 @@ UI_PERMISSIONS = [
     "ri-guest-checkout",
     "ri-guest-edit",
     "ri-guest-move",
+    "ri-guest-add-pin",
     "ri-reservations",
     "ri-reservation-read",
     "ri-reservation-actions",

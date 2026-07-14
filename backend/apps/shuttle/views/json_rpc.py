@@ -11,6 +11,7 @@ from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.helpers import b_encode, compress_data, read_binary
 from core.utils.permission import check_perms
 from main.models import Device
+from services.utils.const import HOTEZA
 from shuttle.models import ControllerFile, Relation, RPCMessage
 from shuttle.swagger.rpc import json_rpc_swagger
 from shuttle.utils.parse_json import parse_json
@@ -44,7 +45,10 @@ class JsonRPCView(APIView):
     def handle_params(self, **kwargs):
         result = {}
         if kwargs.get("hotel_id") and kwargs.get("room_number"):
-            result["tenant__additional_info__integration_settings__hoteza__hotel_id"] = kwargs.get("hotel_id")
+            result["tenant__integration__integrator__name__iexact"] = HOTEZA
+            result["tenant__integration__hotel_id"] = kwargs.get("hotel_id")
+            result["tenant__integration__enable"] = True
+            result["tenant__integration__is_active"] = True
             result["room__number"] = kwargs.get("room_number")
             return result
         elif kwargs.get("device_id"):
@@ -60,7 +64,7 @@ class JsonRPCView(APIView):
 def prepare_mqtt_request(device, method, params, timeout):
     relation = Relation.objects.filter(to_id_id=device.id).order_by("updated_at").last()
     device_id = relation and relation.from_id.id
-    gateway_or_none = Device.objects.gateway_or_none(device.id)  # pyright: ignore
+    gateway_or_none = Device.objects.gateway_or_none(device.id)  # ty: ignore
     rpc_message = RPCMessage.objects.create(additional_info={})
     request_id = rpc_message.id
     message = {
@@ -81,7 +85,7 @@ def prepare_mqtt_request(device, method, params, timeout):
                 b_encode(compress_data(read_binary(os.path.join(settings.MEDIA_ROOT, str(file.content)))))
             )
 
-    logger.debug(message)
+    logger.info(message)
     channel = connect_to_rabbitmq()
     send_to_rabbitmq(channel, message)
     start_time = 0

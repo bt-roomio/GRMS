@@ -1,8 +1,8 @@
-from access_manager.models import CardLog
-from access_manager.serializers.card_log import CardLogFilterParams, CardLogSerializer
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import action
 
+from access_manager.models import CardLog
+from access_manager.serializers.card_log import CardLogFilterParams, CardLogSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 

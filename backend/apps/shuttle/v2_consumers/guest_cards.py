@@ -1,8 +1,8 @@
-from access_manager.models import GuestCard
 from asgiref.sync import sync_to_async
 from djangochannelsrestframework.mixins import ListModelMixin
 from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin, action
 
+from access_manager.models import GuestCard
 from shuttle.serializers.guest_cards import GuestCardFilterParams, GuestCardSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 

@@ -19,7 +19,6 @@ def test_devices():
 @pytest.mark.asyncio
 @pytest.mark.django_db(serialized_rollback=True)
 class TestAttributeConsumer:
-
     async def test_connect_success(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:

@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestMoveRoomSerializer
+from services.utils.const import HOTEZA
 
 
 class GuestChangeSerializer(serializers.Serializer):
@@ -15,7 +16,7 @@ class GuestChangeSerializer(serializers.Serializer):
     guestTitle = serializers.CharField(allow_null=True, allow_blank=True)
     pmsRegNum = serializers.CharField()
     departureDateTS = serializers.CharField()
-    guestLanguage = serializers.CharField()
+    guestLanguage = serializers.CharField(allow_null=True, allow_blank=True)
     roomShare = serializers.CharField()
     swapFlag = serializers.CharField()
     profileNum = serializers.CharField(allow_null=True, allow_blank=True)
@@ -44,8 +45,10 @@ class GuestChangeSerializer(serializers.Serializer):
 
         # Validate tenant
         tenant = Tenant.objects.filter(
-            additional_info__integration_settings__hoteza__hotel_id=attrs.get("hotel_id"),
-            additional_info__integration_settings__hoteza__enable=True,
+            integration__integrator=HOTEZA,
+            integration__hotel_id=attrs.get("hotel_id"),
+            integration__enable=True,
+            integration__is_active=True,
         ).first()
         if not tenant:
             raise JsonValidationError({"result": 9, "message": "Your hotelId not registered!"})
