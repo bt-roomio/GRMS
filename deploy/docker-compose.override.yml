@@ -53,6 +53,8 @@ services:
       - UV_NO_SYNC=1
       - PGAPPNAME=grms-backend-dev
       - PROMETHEUS_MULTIPROC_DIR=/prom_mp
+      - CELERY_BROKER_URL=redis://redis-broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis-broker:6379/1
     command: python manage.py runserver 0.0.0.0:8000
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8000), timeout=3); s.close()"]
