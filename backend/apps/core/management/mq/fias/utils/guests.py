@@ -1,20 +1,35 @@
 import logging
+from datetime import time as time_cls
 
 from core.management.mq.fias.constants import CARD_ON_READER_TIMEOUT
 from core.management.mq.fias.exceptions import LookupFailure
 from core.management.mq.fias.utils.readers import collect_unique_cards
-from main.models import Device, Guest, Room
+from main.models import Device, Guest, Room, Tenant
 
 logger = logging.getLogger(__name__)
 
+SECONDS_IN_DAY = 86400
 
-def apply_auto_checkout(guest):
-    g_settings = (guest.tenant.additional_info or {}).get("general_settings", {})
-    if not g_settings.get("auto_checkout", False):
-        return
 
-    guest.auto_check_out = True
-    guest.save(update_fields=["auto_check_out"])
+def override_checkout_time(tenant_id, departure_ts):
+    try:
+        ts = int(departure_ts)
+    except (TypeError, ValueError):
+        return departure_ts
+
+    if ts > 1e12:
+        ts //= 1000
+
+    tenant = Tenant.objects.filter(id=tenant_id).first()
+    if not tenant:
+        return departure_ts
+
+    g_settings = (tenant.additional_info or {}).get("general_settings", {})
+    checkout_time = time_cls.fromisoformat(str(g_settings.get("auto_checkout_time") or "12:00:00"))
+    day_start = ts - (ts % SECONDS_IN_DAY)
+    checkout_datetime = day_start + checkout_time.hour * 3600 + checkout_time.minute * 60 + checkout_time.second
+
+    return checkout_datetime
 
 
 def resolve_reader(tenant_id, key_coder):
