@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from hoteza.serializers.checkin import CheckInSerializer
 from hoteza.serializers.checkout import CheckOutSerializer
 
+from core.management.mq.fias.utils.guests import override_checkout_time
 from core.management.mq.fias.utils.payloads import build_reservation_payload
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,9 @@ def handle_reservation(command, data, device):
         raise ValidationError("Invalid command")
 
     mapped = build_reservation_payload(command, data, device)
+    if command == "checkin":
+        mapped["departureDateTS"] = override_checkout_time(mapped["tenantId"], mapped["departureDateTS"])
+
     serializer = serializer_cls(data=mapped)
 
     try:

@@ -509,8 +509,6 @@ class Guest(BaseModel):
     check_in = UnixTimeStampField(null=True, blank=True)
     check_out = UnixTimeStampField(null=True, blank=True)
     auto_check_out = models.BooleanField(default=False)
-    is_reservation = models.BooleanField(default=False)
-    reservation_number = models.CharField(max_length=255, null=True, blank=True)
     room = models.ForeignKey("main.Room", SET_NULL, "guests", null=True, blank=True)
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     pms_id = models.CharField(max_length=255, null=True, blank=True)

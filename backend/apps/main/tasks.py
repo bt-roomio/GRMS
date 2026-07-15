@@ -1,4 +1,5 @@
 import time
+from datetime import time as time_cls
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -42,12 +43,33 @@ def auto_check_out():
     logger.info("auto checkout task successfully finish.")
 
 
+def _block_time_reached(g_settings, now_epoch):
+    block_time = time_cls.fromisoformat(str(g_settings.get("guest_auto_block_time") or "12:00:00"))
+    block_seconds = block_time.hour * 3600 + block_time.minute * 60 + block_time.second
+    offset_hours = g_settings.get("timezone") or 0
+    now_seconds = (now_epoch + offset_hours * 3600) % 86400
+    return now_seconds >= block_seconds
+
+
 @shared_task
 def auto_block():
     logger.info("Auto block task run.")
-    guests = Guest.objects.filter(
-        tenant__additional_info__general_settings__guest_auto_block=True, is_active=True, check_out__lte=time.time()
-    )
+    now_epoch = int(time.time())
+    candidates = Guest.objects.filter(
+        tenant__additional_info__general_settings__guest_auto_block=True,
+        is_active=True,
+        check_out__lte=time.time(),
+        auto_check_out=False,
+    ).select_related("tenant")
+    print("guests selected: ", candidates)
+
+    guest_ids = [
+        guest.id
+        for guest in candidates
+        if _block_time_reached((guest.tenant.additional_info or {}).get("general_settings", {}), now_epoch)
+    ]
+
+    guests = Guest.objects.filter(id__in=guest_ids)
     access_context = get_guest_access_context(guests)  # ty: ignore
     guest_cards = access_context.get("guest_cards")
     cards = access_context.get("cards")
