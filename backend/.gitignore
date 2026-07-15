@@ -57,3 +57,5 @@ coverage.xml
 /services_*
 vandelay-py.js
 celerybeat-schedule
+
+Icon*

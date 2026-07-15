@@ -19,8 +19,9 @@ logger = get_task_logger(__name__)
 
 def process_devices_parallel(devices, cards: List[str], group: Group, action: str) -> List[Dict[str, Any]]:
     results = []
+    device_count = len(devices)
 
-    with ThreadPoolExecutor(max_workers=min(len(devices), 10)) as executor:
+    with ThreadPoolExecutor(max_workers=min(device_count, 10)) as executor:
         future_to_device = {
             executor.submit(process_device_all_cards, device, cards, group, action): device for device in devices
         }
@@ -39,6 +40,7 @@ def process_devices_parallel(devices, cards: List[str], group: Group, action: st
                     }
                 )
 
+    logger.info("%s cards on: action=%s", len(cards), action)
     return results
 
 
@@ -81,6 +83,7 @@ def send_card_rpc_request(device: Device, request_params: dict, cards: List[str]
                         "message": f"Successfully {action}ed {len(cards)} cards to/from device {device.name}",
                     }
                 else:
+                    logger.warning("Device %s rejected %s request - queued for sync", device.name, action)
                     need_sync(cards, device, access, reason=f"Device {device.name} rejected card {action} request")
                     return {
                         "success": False,
@@ -88,6 +91,7 @@ def send_card_rpc_request(device: Device, request_params: dict, cards: List[str]
                     }
             time.sleep(0.5)
 
+        logger.warning("Timeout on %s response from device %s - queued for sync", action, device.name)
         need_sync(cards, device, access, reason=f"Timeout waiting for response from device {device.name}")
         return {
             "success": False,
@@ -95,6 +99,7 @@ def send_card_rpc_request(device: Device, request_params: dict, cards: List[str]
         }
 
     except Exception as e:
+        logger.exception("Error sending %s request to device %s", action, device.name)
         need_sync(cards, device, access, reason=f"Error sending RPC to device {device.name}: {e}")
         return {
             "success": False,
