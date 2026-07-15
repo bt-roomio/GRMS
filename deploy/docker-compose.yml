@@ -227,7 +227,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-critical
-    command: celery -A config worker -Q critical -l warning -c 2 --max-tasks-per-child=50
+    command: celery -A config worker -Q critical -n critical@%h -l warning -c 2 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
 
@@ -238,7 +238,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
-    command: celery -A config worker -Q default -l warning -c 8 --max-tasks-per-child=100
+    command: celery -A config worker -Q default -n default@%h -l warning -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
 
@@ -249,7 +249,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
-    command: celery -A config worker -Q low -l warning -c 1 --max-tasks-per-child=50
+    command: celery -A config worker -Q low -n low@%h -l warning -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
 
@@ -271,7 +271,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-flower
-    command: celery -A config flower --port=5555 --url_prefix=flower --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
+    command: celery -A config flower --port=5555 --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
     ports:
       - "127.0.0.1:5555:5555"
     tmpfs:

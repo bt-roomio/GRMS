@@ -68,19 +68,19 @@ services:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-    command: celery -A config worker -Q critical -l debug -c 1
+    command: celery -A config worker -Q critical -n critical@%h -l debug -c 1
 
   celery-default:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-    command: celery -A config worker -Q default -l debug -c 2
+    command: celery -A config worker -Q default -n default@%h -l debug -c 2
 
   celery-low:
     volumes:
       - ../backend:/app
       - backend_venv:/app/.venv
-    command: celery -A config worker -Q low -l debug -c 1
+    command: celery -A config worker -Q low -n low@%h -l debug -c 1
 
   celery-beat:
     volumes:

@@ -60,10 +60,16 @@ class RoomSerializer(serializers.ModelSerializer):
                 if instance.count_online_devices == instance.count_devices and instance.count_devices > 0
                 else "OFF"
             )
+        try:
+            room_type = instance.type
+        except RoomType.DoesNotExist:
+            # RoomType may already be deleted during a cascade (e.g. Dashboard -> RoomType -> Room)
+            # while the Room post_delete observer serializes this instance.
+            room_type = None
         if self.context.get("detail"):
-            data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
+            data["type"] = RoomTypeSerializer(room_type).data if room_type else None
         else:
-            data["type"] = instance.type and instance.type.title
+            data["type"] = room_type and room_type.title
         return data
 
     def update(self, instance, validated_data):
@@ -213,10 +219,14 @@ class RoomDetailWsSerializer(serializers.ModelSerializer):
                 if instance.count_online_devices == instance.count_devices and instance.count_devices > 0
                 else "OFF"
             )
+        try:
+            room_type = instance.type
+        except RoomType.DoesNotExist:
+            room_type = None
         if self.context.get("detail"):
-            data["type"] = RoomTypeSerializer(instance.type).data if instance.type else None
+            data["type"] = RoomTypeSerializer(room_type).data if room_type else None
         else:
-            data["type"] = instance.type and instance.type.title
+            data["type"] = room_type and room_type.title
         data["guest"] = (
             SimpleGuestSerializer(instance.last_guests[0]).data
             if hasattr(instance, "last_guests") and instance.last_guests
