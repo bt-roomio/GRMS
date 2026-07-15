@@ -1,3 +1,5 @@
+from datetime import time
+
 from rest_framework import serializers
 
 from main.models import Dashboard
@@ -42,6 +44,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     timezone = serializers.IntegerField(default=0)
     controllers_sync = serializers.BooleanField(default=False)
     guest_auto_block = serializers.BooleanField(default=False)
+    guest_auto_block_time = serializers.TimeField(default=time(hour=12))
     check_in_out = serializers.BooleanField(default=False)
     vip_status = serializers.BooleanField(default=False)
     suite_rooms_controls_sync = serializers.BooleanField(default=False)
@@ -52,6 +55,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     aperio_locks = serializers.BooleanField(default=False)
     door_lock = DoorLockSerializer(required=False)
     auto_checkout = serializers.BooleanField(default=False)
+    auto_checkout_time = serializers.TimeField(default=time(hour=12))
     aggregate_db = serializers.BooleanField(default=False)
     check_in_trigger_value = serializers.IntegerField(default=2, min_value=0)
     check_out_trigger_value = serializers.IntegerField(default=1, min_value=0)
@@ -71,6 +75,9 @@ class GeneralSettingsSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         updated_by = validated_data.pop("updated_by", None)
+        for key, value in validated_data.items():
+            if isinstance(value, time):
+                validated_data[key] = value.isoformat()
         additional_info = instance.additional_info or {}
         g_settings = additional_info.get("general_settings", {})
         g_settings.update(validated_data)

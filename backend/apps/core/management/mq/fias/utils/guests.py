@@ -8,6 +8,15 @@ from main.models import Device, Guest, Room
 logger = logging.getLogger(__name__)
 
 
+def apply_auto_checkout(guest):
+    g_settings = (guest.tenant.additional_info or {}).get("general_settings", {})
+    if not g_settings.get("auto_checkout", False):
+        return
+
+    guest.auto_check_out = True
+    guest.save(update_fields=["auto_check_out"])
+
+
 def resolve_reader(tenant_id, key_coder):
     if not key_coder:
         raise LookupFailure("Missing required field: keyCoder")

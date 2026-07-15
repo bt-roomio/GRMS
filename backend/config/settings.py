@@ -424,7 +424,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "auto-block–guest": {
         "task": "main.tasks.auto_block",
-        "schedule": 60.0,
+        "schedule": 1800.0,
     },
     "sync_device": {
         "task": "access_manager.tasks.sync_device.sync_devices_task",
