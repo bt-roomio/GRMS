@@ -1,4 +1,4 @@
-from django.db.models import F
+from django.db.models import F, Q
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import ValidationError
@@ -7,7 +7,7 @@ from rest_framework.views import APIView, Response
 
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
-from main.models import Dashboard, Tenant
+from main.models import Dashboard, RoomType, Tenant
 from main.serializers.dashboard import DashboardFilterParams, DashboardSerializer, DashboardTypeSerializer
 from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 
@@ -57,6 +57,16 @@ class DashboardDetailView(APIView):
     @check_perms(["main.delete_dashboard"])
     def delete(self, request, pk):
         instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
+        linked_room_types = RoomType.objects.filter(
+            Q(dashboard=instance) | Q(engineering_dashboard=instance)
+        ).values_list("title", flat=True)
+        if linked_room_types:
+            raise ValidationError(
+                {
+                    "detail": "Dashboard is linked to room type(s) and cannot be deleted: "
+                    f"{', '.join(linked_room_types)}. Unassign it from these room types first."
+                }
+            )
         instance.delete()
         return Response({}, 204)
 
