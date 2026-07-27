@@ -36,7 +36,7 @@ def resolve_reader(tenant_id, key_coder):
     if not key_coder:
         raise LookupFailure("Missing required field: keyCoder")
 
-    logger.debug(f"Reading key from tenant {tenant_id}, key coder {key_coder}")
+    logger.debug("Reading key from tenant %s, key coder %s", tenant_id, key_coder)
     reader = Device.objects.filter(name=key_coder, tenant_id=tenant_id, is_active=True).first()
     if not reader:
         raise LookupFailure(f"Card reader is unavailable: {key_coder}")

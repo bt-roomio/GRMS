@@ -365,7 +365,7 @@ class DeviceProfile(BaseModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     active = models.BooleanField(default=True)
     state = models.BooleanField(default=True)
-    image = models.CharField(max_length=1000000, blank=True, null=True)
+    image = models.TextField(blank=True, null=True)
     transport_type = models.CharField(max_length=255, blank=True, null=True)
     provision_type = models.CharField(max_length=255, blank=True, null=True)
     profile_data = models.JSONField(blank=True, null=True)

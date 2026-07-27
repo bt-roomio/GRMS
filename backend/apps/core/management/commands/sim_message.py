@@ -28,12 +28,19 @@ class Command(BaseCommand):
         )
 
     def handle(self, **_):
-        tenant_id = "78061956-4619-4da6-b18a-eb9f39daa500"
-        for msg in self.generate_msg_telemetry(tenant_id):
-            self.send_msg(msg, "/telemetry")
+        nines_gateway_id = "48aedc23-1f2f-49ba-ab36-20ba650af5c7"
 
-        for msg in self.generate_msg_attributes(tenant_id):
-            self.send_msg(msg, "/attributes")
+        msg1 = self.single_telemetry(nines_gateway_id, "0c:2e:e4:6a:f6:45")
+        msg2 = self.single_telemetry(nines_gateway_id, "08:b0:bb:1f:a2:37")
+        msg3 = self.single_telemetry(nines_gateway_id, "18:a0:6e:41:02:80")
+        self.send_msg(msg1, "/telemetry")
+        self.send_msg(msg2, "/telemetry")
+        self.send_msg(msg3, "/telemetry")
+        # for msg in self.generate_msg_telemetry(tenant_id):
+        #     self.send_msg(msg, "/telemetry")
+
+        # for msg in self.generate_msg_attributes(tenant_id):
+        #     self.send_msg(msg, "/attributes")
 
     def send_msg(self, msg, routing_key):
         ch = connect_to_rabbitmq()
@@ -62,7 +69,7 @@ class Command(BaseCommand):
 
             msg = {
                 "sourceDeviceUUID": str(d.relations[0].from_id_id),
-                "data": {"gatewayOnline": True},
+                "data": {"gatewayOnline": random.choice([True, False])},
                 "topic": "v1/devices/me/attributes",
             }
             print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
@@ -75,29 +82,7 @@ class Command(BaseCommand):
             if not d.relations:
                 continue
 
-            msg = {
-                "sourceDeviceUUID": str(d.relations[0].from_id_id),
-                "data": {
-                    f"{d.name}": [
-                        {
-                            "ts": time.time(),
-                            "values": {
-                                # "DND Relay": 0,
-                                "MUR Relay": random.randint(0, 1),
-                                "Room Temperature": random.randint(0, 100),
-                                "AC ON OFF": random.randint(0, 1),
-                                "Occupancy State": random.randint(0, 1),
-                                # "Entrance Trap": 1,
-                                # "Balcony Trap": 1,
-                                # "Vip AC": 0,
-                                # "Balcony Central": 0,
-                                # "Vip Vacancy": 0,
-                            },
-                        }
-                    ]
-                },
-                "topic": "v1/gateway/telemetry",
-            }
+            msg = self.single_telemetry(str(d.relations[0].from_id_id), d.name)
             print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
             yield msg
 
@@ -214,3 +199,23 @@ class Command(BaseCommand):
         )
         devices = devices.filter(tenant_id=tenant_id) if tenant_id else devices
         return list(devices)
+
+    def single_telemetry(self, parent_id: str, device_name: str):
+        return {
+            "sourceDeviceUUID": parent_id,
+            "data": {
+                f"{device_name}": [
+                    {
+                        "ts": time.time(),
+                        "values": {
+                            "Wifi Relay": random.randint(0, 100),
+                            # "MUR Relay": random.randint(0, 100),
+                            # "Room Temperature": random.randint(0, 100),
+                            # "AC ON OFF": random.randint(0, 1),
+                            # "Occupancy State": random.randint(0, 1),
+                        },
+                    }
+                ]
+            },
+            "topic": "v1/gateway/telemetry",
+        }

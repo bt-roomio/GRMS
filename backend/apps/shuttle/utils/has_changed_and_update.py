@@ -1,9 +1,6 @@
 import json
 
-import redis
-from django.conf import settings
-
-redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
+from core.utils.redis_pool import sync_redis as redis_client
 
 
 def has_changed_and_update(device_id: str, updates: list[dict], is_attribute_kv: bool = False) -> list[dict]:
@@ -96,6 +93,34 @@ def get_cached_attributes(
         return None
 
     return None
+
+
+def get_cached_attributes_batch(
+    device_ids: list[str], attribute_keys: list[str], attribute_type: str = "SERVER_SCOPE"
+) -> dict[str, dict | None]:
+    """Batch variant of :func:`get_cached_attributes` using a single Redis MGET.
+
+    Returns ``{device_id: cached_data_or_None}`` for every id. Per-device semantics
+    match the single version: a device is a hit only if all ``attribute_keys`` are
+    present in its cached payload.
+    """
+    if not device_ids:
+        return {}
+
+    cache_keys = [f"device_attrs:{device_id}:{attribute_type}" for device_id in device_ids]
+    raws = redis_client.mget(cache_keys)
+
+    result: dict[str, dict | None] = {}
+    for device_id, cached_raw in zip(device_ids, raws):
+        if not cached_raw:
+            result[device_id] = None
+            continue
+        try:
+            cached_data = json.loads(cached_raw)
+            result[device_id] = cached_data if all(key in cached_data for key in attribute_keys) else None
+        except (json.JSONDecodeError, TypeError):
+            result[device_id] = None
+    return result
 
 
 def set_cached_attributes(device_id: str, attributes_data: dict, attribute_type: str = "SERVER_SCOPE", ttl: int = 5):

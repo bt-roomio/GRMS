@@ -1,29 +1,33 @@
-import json
 import logging
 
-import redis
-from django.conf import settings
+import orjson
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 
-from core.management.mq.device_cache import (
+from core.management.mq.devices.device_cache import (
     _DEVICE_MEMORY_CACHE,
     _MEMORY_CACHE_TTL,
     DeviceType,
     _update_memory_cache,
+    build_device_data,
+    device_cache_key,
 )
 from core.utils.get_time import get_mil_sec
 from core.utils.random_letter import get_random_letter
+from core.utils.redis_pool import sync_redis as redis_client
 from core.utils.slugify import slugify_key
 from main.models import Device, DeviceCredentials, DeviceProfile
 from shuttle.models import Relation
 
-redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 
 # Increased from 60s to 600s (10 minutes) - devices rarely change
 EXPIRY_TIME = 600
 RELATION_CACHE_TTL = 3600  # 1 hour
+PROFILE_CACHE_TTL = 3600  # 1 hour - device profiles are stable
+
+# Process-local cache for DeviceProfile ids keyed by "tenant_id:profile_name"
+_PROFILE_MEMORY_CACHE: dict[str, dict] = {}
 
 
 def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
@@ -38,13 +42,13 @@ def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
         return cache_entry["data"]
 
     # Tier 2: Check Redis cache
-    cache_key = f"prs_msg:device_cache:{device_id}"
+    cache_key = device_cache_key(device_id)
     cached_device_raw = redis_client.get(cache_key)
     cached_device = cached_device_raw.decode("utf-8") if isinstance(cached_device_raw, bytes) else None
 
     if cached_device:
         logger.debug("Device found in Redis cache: %s", cached_device)
-        data = json.loads(cached_device)
+        data = orjson.loads(cached_device)
         # Populate memory cache from Redis hit
         _update_memory_cache(device_id, data)
         return data
@@ -65,13 +69,8 @@ def get_device(device_id: str, tenant_id=None) -> DeviceType | None:
 
 
 def _device_cache(cache_key, device):
-    data: DeviceType = {
-        "id": str(device.id),
-        "name": device.name,
-        "tenant_id": str(device.tenant_id),
-        "device_profile_id": str(device.device_profile_id),
-    }
-    redis_client.set(cache_key, json.dumps(data), ex=EXPIRY_TIME)
+    data = build_device_data(device.id, device.name, device.tenant_id, device.device_profile_id)
+    redis_client.set(cache_key, orjson.dumps(data), ex=EXPIRY_TIME)
     logger.debug("Device cached: %s", device)
     return data
 
@@ -93,6 +92,46 @@ def _ensure_relation(from_id: str, to_id: str):
     redis_client.set(cache_key, "1", ex=RELATION_CACHE_TTL)
 
 
+def _resolve_device_profile_id(tenant_id, profile_name: str) -> str:
+    """Resolve a DeviceProfile id by (tenant_id, name) with memory → Redis → DB caching.
+
+    Profiles are stable, so this avoids a DeviceProfile round-trip on every
+    connect/disconnect that carries a device_type. Also replaces the risky
+    get_or_create(name__iexact=...) (lookup doubling as a create field) with an
+    explicit filter-then-create.
+    """
+    cache_id = f"{tenant_id}:{profile_name.lower()}"
+    now = get_mil_sec() // 1000
+    entry = _PROFILE_MEMORY_CACHE.get(cache_id)
+    if entry and (now - entry["cached_at"]) < PROFILE_CACHE_TTL:
+        return entry["id"]
+
+    redis_key = f"prs_msg:device_profile:{cache_id}"
+    cached_raw = redis_client.get(redis_key)
+    if cached_raw:
+        profile_id = cached_raw.decode("utf-8") if isinstance(cached_raw, bytes) else cached_raw
+        _PROFILE_MEMORY_CACHE[cache_id] = {"id": profile_id, "cached_at": now}
+        return profile_id
+
+    profile = DeviceProfile.objects.filter(name__iexact=profile_name, tenant_id=tenant_id, active=True).first()
+    if not profile:
+        try:
+            with transaction.atomic():
+                profile = DeviceProfile.objects.create(
+                    name=profile_name, tenant_id=tenant_id, active=True, type="DEFAULT"
+                )
+        except IntegrityError:
+            # Параллельный поток/реплика создал профиль — берём существующий (unique_active_device_profile).
+            profile = DeviceProfile.objects.filter(name__iexact=profile_name, tenant_id=tenant_id, active=True).first()
+            if not profile:
+                raise
+    profile_id = str(profile.id)
+
+    redis_client.set(redis_key, profile_id, ex=PROFILE_CACHE_TTL)
+    _PROFILE_MEMORY_CACHE[cache_id] = {"id": profile_id, "cached_at": now}
+    return profile_id
+
+
 def get_sub_device(device: DeviceType, name: str, device_type: str | None = None):
     sub_cache_key = slugify_key(device.get("id") + "&" + name)  # "UUID_DEVICE & SUB_DEVICE"
     sub_device = get_device(sub_cache_key, device.get("tenant_id"))
@@ -102,13 +141,7 @@ def get_sub_device(device: DeviceType, name: str, device_type: str | None = None
         dt = device_type.strip().lower().replace("-", "_")
         profile_name = name_map.get(dt) or " ".join(w.capitalize() for w in dt.split("_") if w)
 
-        device_profile, _ = DeviceProfile.objects.get_or_create(
-            name__iexact=profile_name,
-            tenant_id=device.get("tenant_id"),
-            active=True,
-            defaults={"name": profile_name, "type": "DEFAULT"},
-        )
-        device["device_profile_id"] = device_profile.id
+        device["device_profile_id"] = _resolve_device_profile_id(device.get("tenant_id"), profile_name)
 
     if not sub_device:
         sub_device = get_or_create_device(name, device)
@@ -133,13 +166,22 @@ def get_or_create_device(name, from_device):
         type="default",
         device_profile_id=device_profile_id,
     )
-    obj.full_clean()
-    obj.save()
-    DeviceCredentials.objects.create(
-        credentials_type="ACCESS_TOKEN",
-        credentials_id=get_random_letter(),
-        device=obj,
-    )
+    try:
+        with transaction.atomic():
+            obj.full_clean()
+            obj.save()
+            DeviceCredentials.objects.create(
+                credentials_type="ACCESS_TOKEN",
+                credentials_id=get_random_letter(),
+                device=obj,
+            )
+    except (IntegrityError, ValidationError):
+        # Параллельный поток/реплика создал устройство с тем же (name, tenant) —
+        # берём существующее (unique_device_name_tenant_is_active) вместо падения батча.
+        existing = Device.objects.filter(name__iexact=name, tenant_id=tenant_id, is_active=True).first()
+        if existing:
+            return existing
+        raise
     Relation.objects.update_or_create(
         to_id_id=obj.id,
         from_type="DEVICE",

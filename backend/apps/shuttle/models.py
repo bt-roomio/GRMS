@@ -95,7 +95,7 @@ class AttributeKv(BaseModel):
     attribute_type = models.CharField(max_length=255, choices=ENTITY_TYPE, default=SERVER_SCOPE)
     attribute_key = models.CharField(max_length=255)
     bool_v = models.BooleanField(blank=True, null=True)
-    str_v = models.CharField(max_length=10000000, blank=True, null=True)
+    str_v = models.TextField(blank=True, null=True)
     long_v = models.BigIntegerField(blank=True, null=True)
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.JSONField(blank=True, null=True)
@@ -129,6 +129,12 @@ class AttributeKv(BaseModel):
             models.UniqueConstraint(
                 fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
                 name="unique_attrkv_type_scope_entity_key",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["entity_id", "attribute_type", "attribute_key"],
+                name="ix_attrkv_entity_type_key",
             ),
         ]
         permissions = [
