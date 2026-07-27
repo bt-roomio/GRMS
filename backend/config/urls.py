@@ -39,6 +39,6 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG and not settings.TESTING:
     urlpatterns += [path("admin/", admin.site.urls)]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
