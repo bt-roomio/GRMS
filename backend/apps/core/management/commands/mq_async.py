@@ -70,7 +70,7 @@ TOPIC_GATEWAY_RPC = "v1/gateway/rpc"
 
 # Batch processing configuration
 BATCH_SIZE = 200
-BATCH_TIMEOUT = 0.1  # 100ms
+BATCH_TIMEOUT = 0.3  # 100ms
 PREFETCH_COUNT = 1000
 
 RB_LOGIN = settings.RABBIT_LOGIN
