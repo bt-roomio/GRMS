@@ -5,10 +5,11 @@ from django.contrib.auth.models import Permission
 from django.db import transaction
 
 from rest_framework import serializers
+from rest_framework.generics import get_object_or_404
 
 from core.utils.constants import UI_PERMISSIONS
 from core.utils.serializers import ValidatorSerializer
-from main.models import DeviceProfile, Tenant, TenantProfile
+from main.models import Device, DeviceProfile, Tenant, TenantProfile
 from users.models import Role, User
 
 
@@ -29,6 +30,25 @@ class TenantFilterParams(ValidatorSerializer):
     search_value = serializers.CharField(required=False)
 
 
+def _serialize_gateways(instance):
+    """Строит список gateway-устройств тенанта для представления сериализатора.
+
+    Ожидает, что instance.gateways проставлен через prefetch_related(Prefetch("device_set", ..., "gateways")).
+    """
+    if not hasattr(instance, "gateways"):
+        return None
+    return [
+        {
+            "id": gateway.id,
+            "name": gateway.name,
+            "status": gateway.status,
+            "is_gateway": gateway.additional_info.get("gateway", False),
+            "excluded_monitoring": gateway.additional_info.get("excluded_monitoring", False),
+        }
+        for gateway in instance.gateways
+    ]
+
+
 class TenantSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         instance.created_at = (
@@ -43,6 +63,9 @@ class TenantSerializer(serializers.ModelSerializer):
         data["total_rooms"] = instance.total_rooms if hasattr(instance, "total_rooms") else 0
         data["offline_gateways"] = instance.offline_gateways if hasattr(instance, "offline_gateways") else 0
         data["total_gateways"] = instance.total_gateways if hasattr(instance, "total_gateways") else 0
+        gateways = _serialize_gateways(instance)
+        if gateways is not None:
+            data["gateways"] = gateways
         return data
 
     class Meta:
@@ -65,11 +88,44 @@ class TenantSerializer(serializers.ModelSerializer):
         )
 
 
+class UpdateGatewaySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    excluded_monitoring = serializers.BooleanField()
+
+
 class UpdateTenantSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        gateways = _serialize_gateways(instance)
+        if gateways is not None:
+            data["gateways"] = gateways
+        return data
+
+    gateways = UpdateGatewaySerializer(many=True, write_only=True, required=False)
+
     def validate_title(self, value):
         if Tenant.objects.filter(title__iexact=value).exclude(pk=self.instance.pk).exists():
             raise serializers.ValidationError(f"Tenant with title '{value}' already exists.")
         return value
+
+    def update(self, instance, validated_data):
+        gateways = validated_data.pop("gateways", None)
+        instance = super().update(instance, validated_data)
+
+        cached_gateways = {gateway.id: gateway for gateway in getattr(instance, "gateways", [])}
+        for gateway_data in gateways or []:
+            device = cached_gateways.get(gateway_data["id"]) or get_object_or_404(
+                Device,
+                id=gateway_data["id"],
+                tenant=instance,
+                is_active=True,
+                additional_info__gateway=True,
+            )
+            device.additional_info = device.additional_info or {}
+            device.additional_info["excluded_monitoring"] = gateway_data["excluded_monitoring"]
+            device.save(update_fields=["additional_info"])
+
+        return instance
 
     class Meta:
         model = Tenant
@@ -86,7 +142,11 @@ class UpdateTenantSerializer(serializers.ModelSerializer):
             "zip",
             "additional_info",
             "tenant_profile",
+            "gateways",
         )
+        extra_kwargs = {
+            "additional_info": {"read_only": True},
+        }
 
 
 class CreateTenantSerializer(serializers.Serializer):

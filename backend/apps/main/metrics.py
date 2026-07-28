@@ -121,7 +121,14 @@ def _update_device_status_metrics():
     excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
 
     # Получаем все offline gateway устройства
-    query = Device.objects.filter(is_active=True, additional_info__gateway=True, status=False)
+    query = Device.objects.filter(
+        is_active=True,
+        status=False,
+        additional_info__gateway=True,
+    ).exclude(
+        additional_info__has_key="excluded_monitoring",
+        additional_info__excluded_monitoring=True,
+    )
 
     # Исключаем gateway из списка исключений (если список не пустой)
     if excluded_gateways:
@@ -138,11 +145,6 @@ def _update_device_status_metrics():
         devices_offline_total.labels(tenant_id=tenant_id, tenant_name=tenant_name, device_id=device_id).set(1)
 
     # Обновляем агрегированную метрику (общее количество offline gateway устройств)
-    total_offline_query = Device.objects.filter(is_active=True, additional_info__gateway=True, status=False)
-
-    # Применяем исключения для агрегированной метрики
-    if excluded_gateways:
-        total_offline_query = total_offline_query.exclude(id__in=excluded_gateways)
-
-    total_offline = total_offline_query.count()
+    # Переиспользуем тот же query, чтобы не рассинхронизировать фильтры/исключения
+    total_offline = query.count()
     offline_gateway_devices_count.set(total_offline)
