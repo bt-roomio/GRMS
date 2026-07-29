@@ -4,15 +4,15 @@ from admin_panel.swagger.tenants import (
     AdminTenantListSwagger,
     AdminTenantUpdateSwagger,
 )
+from django.db.models import Prefetch
 from django.http import Http404
 
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.permission import IsSuperUser
-from main.models import Tenant
+from main.models import Device, Tenant
 from main.serializers.tenant import CreateTenantSerializer, TenantFilterParams, TenantSerializer, UpdateTenantSerializer
 
 
@@ -28,7 +28,7 @@ class AdminTenantListView(APIView):
     )
     def get(self, request):
         params = TenantFilterParams.check(request.query_params)
-        queryset = Tenant.objects.list(
+        queryset = Tenant.objects.list(  # ty: ignore
             sort_by=params.get("sort_by"),
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),
@@ -61,7 +61,17 @@ class AdminTenantDetailView(APIView):
         operation_description="**Superuser only.** Returns detailed information about a specific tenant.",
     )
     def get(self, _, tenant_id):
-        tenant: Tenant | None = Tenant.objects.filter(id=tenant_id).count_devices().first()
+        gateways = Device.objects.filter(
+            tenant_id=tenant_id,
+            is_active=True,
+            additional_info__gateway=True,
+        )
+        tenant: Tenant | None = (
+            Tenant.objects.filter(id=tenant_id)  # ty: ignore
+            .prefetch_related(Prefetch("device_set", gateways, "gateways"))
+            .count_devices()
+            .first()
+        )
         if not tenant:
             raise Http404("No Tenant matches the given query.")
         serializer = TenantSerializer(tenant)
@@ -75,8 +85,20 @@ class AdminTenantDetailView(APIView):
         operation_description="**Superuser only.** Updates data for a specific tenant.",
     )
     def put(self, request, tenant_id):
-        tenant = get_object_or_404(Tenant, id=tenant_id)
-        serializer = UpdateTenantSerializer(tenant, data=request.data)
+        gateways = Device.objects.filter(
+            tenant_id=tenant_id,
+            is_active=True,
+            additional_info__gateway=True,
+        )
+        tenant: Tenant | None = (
+            Tenant.objects.filter(id=tenant_id)  # ty: ignore
+            .prefetch_related(Prefetch("device_set", gateways, "gateways"))
+            .count_devices()
+            .first()
+        )
+        if not tenant:
+            raise Http404("No Tenant matches the given query.")
+        serializer = UpdateTenantSerializer(tenant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(TenantSerializer(tenant).data)

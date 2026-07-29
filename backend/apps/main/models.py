@@ -1,4 +1,5 @@
-from typing import Any, ClassVar, Dict, Iterable, Union, cast
+from collections.abc import Iterable
+from typing import Any, ClassVar, cast
 from uuid import UUID
 
 from django.contrib.postgres.fields import ArrayField
@@ -193,7 +194,7 @@ class Room(BaseModel, UpdateByModel):
                 room_id=str(self.pk),
             )
 
-    def ts_kvs_latest_values(self, keys: Union[Iterable[TsKvDictionary], Iterable[str]]) -> Dict[str, Any]:
+    def ts_kvs_latest_values(self, keys: Iterable[TsKvDictionary] | Iterable[str]) -> dict[str, Any]:
         """
         Возвращает словарь {key_name: value} для всех ключей из списка keys.
         keys может быть списком объектов TsKvDictionary или списка строк-имен ключей.
@@ -210,7 +211,7 @@ class Room(BaseModel, UpdateByModel):
             .select_related("key")
             .values_list("key__key", "long_v", "dbl_v")
         )
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for key_name, long_v, dbl_v in qs:
             # приоритет – long_v, если его нет, то dbl_v
             result[key_name] = long_v if long_v is not None else dbl_v
