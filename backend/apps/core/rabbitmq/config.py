@@ -16,7 +16,7 @@ def send_to_rabbitmq(channel: BlockingChannel, message, routing_key="fromGRMS"):
     return channel
 
 
-def connect_to_rabbitmq():
+def connect_to_rabbitmq() -> BlockingChannel:
     credentials = pika.PlainCredentials(RABBIT_LOGIN, RABBIT_PASSWORD)
     parameters = pika.ConnectionParameters(RABBIT_HOST, RABBIT_PORT, "/", credentials)
     connection = pika.BlockingConnection(parameters)

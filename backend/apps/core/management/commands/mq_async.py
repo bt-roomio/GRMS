@@ -21,8 +21,16 @@ sys.path.insert(0, str(backend_dir))
 # Initialize Django before importing anything that touches settings or models
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
-# ruff: noqa: E402
-from core.management.mq.engine.runner import run
+
+
+def main():
+    # Imported inside the function (not at module top) so it runs after
+    # django.setup(). A function-body import is not a module-level import, so
+    # E402 never applies — no noqa that tooling would disagree about.
+    from core.management.mq.engine.runner import run
+
+    run()
+
 
 if __name__ == "__main__":
-    run()
+    main()
