@@ -265,7 +265,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-realtime
-    command: celery -A config worker -Q realtime -n realtime@%h -l warning -c 4 --max-tasks-per-child=200
+    command: celery -A config worker -Q realtime -n realtime@%h -l warning -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
     tmpfs:
       - /prom_mp
     labels:

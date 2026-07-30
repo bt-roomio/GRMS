@@ -1,10 +1,12 @@
 import logging
 from collections import defaultdict
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 from core.utils.get_time import get_mil_sec
 from main.models import Device
-from main.observables.device import publish_device
-from main.observables.room_status import publish_room_status
+from main.serializers.device import SimpleDeviceSerializer
 from shuttle.models import AttributeKv
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
 from shuttle.utils.has_changed_and_update import (
@@ -14,6 +16,38 @@ from shuttle.utils.has_changed_and_update import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _publish_status_batch(devices):
+    """Публикация room_status/device для набора устройств одним пересечением границы
+    sync↔async, вместо async_to_sync на каждый publish (~9.4 мс на вызов из-за подъёма
+    event loop). room_status схлопываем по арендатору — это одна tenant-группа с
+    одинаковым payload, слать её по разу на устройство бессмысленно."""
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+
+    sends: list[tuple[str, dict]] = []
+    seen_tenants: set = set()
+    for device in devices:
+        tenant_id = str(device.tenant_id)
+        if tenant_id not in seen_tenants:
+            seen_tenants.add(tenant_id)
+            sends.append(
+                (f"room_status_{tenant_id}", {"type": "get_latest_activity", "update": {"tenant_id": tenant_id}})
+            )
+        sends.append(
+            (f"device_{tenant_id}", {"type": "device_latest_activity", "update": SimpleDeviceSerializer(device).data})
+        )
+
+    if not sends:
+        return
+
+    async def _fanout():
+        for group_name, payload in sends:
+            await channel_layer.group_send(group_name, payload)
+
+    async_to_sync(_fanout)()
 
 
 def update_activity_devices_batch(device_ids: list, connected: bool = True):
@@ -266,9 +300,7 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
     # Шаг 6: Публикация room_status/device для устройств, у которых сменился статус
     ids_for_room_status = [d for d in device_ids if device_needs_update_map.get(d)]
     if ids_for_room_status:
-        for device in Device.objects.filter(id__in=ids_for_room_status):
-            publish_room_status(device)
-            publish_device(device)
+        _publish_status_batch(Device.objects.filter(id__in=ids_for_room_status))
 
     logger.debug(
         "[update_activity_devices_batch] Processed %d device(s), %d updated, %d created, %d debounced",
