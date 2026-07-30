@@ -91,11 +91,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2.0"
-          memory: 1G
+          cpus: "4.0"
+          memory: 2G
         reservations:
           cpus: "0.25"
-          memory: 256M
+          memory: 512M
 
   celery-critical:
     deploy:

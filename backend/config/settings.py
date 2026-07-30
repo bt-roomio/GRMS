@@ -106,7 +106,6 @@ MIDDLEWARE = [
     "core.utils.middleware.CheckForTenantMiddleware",
     # allauth
     "allauth.account.middleware.AccountMiddleware",
-    "main.middlewares.device.DeviceMetricsMiddleware",
     # Should be end of middleware
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]

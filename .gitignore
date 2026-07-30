@@ -13,6 +13,15 @@ CLAUDE.md
 .planning
 claude-memory-compiler
 
+# Generated / tooling artifacts
+graphify-out/
+
+# Python tooling caches (monorepo root)
+__pycache__/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
 # Shell
 .envrc
 

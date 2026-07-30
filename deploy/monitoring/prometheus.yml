@@ -26,7 +26,7 @@ scrape_configs:
 
   - job_name: django
     scrape_interval:  30s
-    scrape_timeout:   5s
+    scrape_timeout:   10s
     sample_limit:     50000
     static_configs:
       - targets: [django:8000]

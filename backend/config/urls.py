@@ -3,8 +3,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import include, path
+from django_prometheus import exports as prometheus_exports
 
-from .yasg import urlpatterns as doc_path
+from main.metrics import update_device_metrics
+
+from .yasg import urlpatterns as doc_path  # ty: ignore
 
 
 def to_front_login(request):
@@ -13,6 +16,11 @@ def to_front_login(request):
 
 def to_front_signup(request):
     return redirect(f"{settings.FRONTEND_DOMAIN}/auth/login")
+
+
+def metrics_view(request):
+    update_device_metrics()
+    return prometheus_exports.ExportToDjangoView(request)
 
 
 urlpatterns = [
@@ -34,6 +42,7 @@ urlpatterns = [
     path("", include(("hoteza.urls", "hoteza"), namespace="hoteza-integration")),
     path("", include(("fleet.install_urls", "fleet_install"), namespace="fleet-install")),
     path("", include("django_prometheus.urls")),
+    path("metrics", metrics_view, name="prometheus-django-metrics"),
     path("login/", to_front_login),
     path("signup/", to_front_signup),
     path("accounts/login/", to_front_login, name="account_login"),

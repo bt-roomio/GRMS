@@ -104,6 +104,7 @@ dependencies = [
   "django-allauth==65.12.1",
   "django-countries==8.1.1",
   "flower>=2.0.1",
+  "graphifyy>=0.9.20",
 ]
 
 [dependency-groups]

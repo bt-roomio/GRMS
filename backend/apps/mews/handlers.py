@@ -33,7 +33,7 @@ class ReservationEventHandler:
         self.api_client = MewsAPIClient(
             client_token=mews_config.client_token,
             access_token=mews_config.access_token,
-            base_url=mews_config.api_base_url,  # pyright: ignore
+            base_url=mews_config.api_base_url,
         )
 
     def handle_event(self, event: Dict[str, Any]) -> None:
@@ -526,7 +526,7 @@ class ReservationEventHandler:
             return
 
         # Fetch resource (room) details
-        resource = self._fetch_resource(resource_id)  # pyright: ignore
+        resource = self._fetch_resource(resource_id)  # ty: ignore
         if not resource:
             logger.warning(f"Resource {resource_id} not found for reservation {reservation_id}")
             stats["errors"] += 1
@@ -554,7 +554,7 @@ class ReservationEventHandler:
                 # Check for guest move (only for check-in events)
                 if event_type == "checkin":
                     # Skip check-in if guest was checked out from ROOMIO
-                    if self._checked_out_from_roomio(customer_id, reservation_id):  # pyright: ignore
+                    if self._checked_out_from_roomio(customer_id, reservation_id):  # ty: ignore
                         logger.info(
                             f"Skipping check-in for {customer.get('FirstName')} {customer.get('LastName')} - "
                             f"guest was checked out from ROOMIO"
@@ -562,7 +562,7 @@ class ReservationEventHandler:
                         stats["skipped"] += 1
                         continue
 
-                    existing_guest = self._check_for_guest_move(customer_id, room_number)  # pyright: ignore
+                    existing_guest = self._check_for_guest_move(customer_id, room_number)  # ty: ignore
                     if existing_guest:
                         # This is a guest move, not a new check-in
                         # The pms_handler will handle the move when it receives the message
@@ -577,8 +577,8 @@ class ReservationEventHandler:
                     event=event_data,
                     customer=customer,
                     room_number=room_number,
-                    reservation_id=reservation_id,  # pyright: ignore
-                    resource_id=resource_id,  # pyright: ignore
+                    reservation_id=reservation_id,  # ty: ignore
+                    resource_id=resource_id,  # ty: ignore
                 )
 
                 logger.info(f"Standardized data for customer {customer_id}: {standardized_data}")

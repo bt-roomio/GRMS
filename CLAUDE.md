@@ -9,13 +9,14 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 ## Technology Stack
 
 - **Backend**: Django 5.0.4 with Django REST Framework
-- **Real-time**: Django Channels (WebSockets), Daphne ASGI server
-- **Database**: PostgreSQL with TimescaleDB extension for time-series data
-- **Task Queue**: Celery with Redis broker
+- **Package manager**: uv (`pyproject.toml` + `uv.lock`; `requirements.txt` is a generated mirror)
+- **Real-time**: Django Channels (WebSockets), served via Gunicorn/Uvicorn ASGI workers
+- **Database**: PostgreSQL 16 with TimescaleDB extension for time-series data, fronted by PgBouncer (transaction pooling)
+- **Task Queue**: Celery on a dedicated `redis-broker` instance (separate from the `redis` cache/channel layer)
 - **Message Queue**: RabbitMQ for device communication, MQTT broker
 - **Auth**: JWT (djangorestframework-simplejwt), django-allauth (Google, Microsoft, Keycloak SSO)
-- **Monitoring**: Prometheus metrics (django-prometheus)
-- **Process Management**: Supervisord (runs Django, Celery, MQ handler, custom services)
+- **Monitoring**: Prometheus metrics (django-prometheus); standalone Prometheus + Grafana + Alertmanager stack under `deploy/monitoring/`
+- **Process Management**: Each process runs as its own Docker Compose service (no supervisord); orchestrated via `deploy/Makefile`
 
 ## Development Commands
 
@@ -24,8 +25,8 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 All backend commands should be run from the `backend/` directory or via `./manage.py`:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (uv-managed; installs from uv.lock)
+uv sync --frozen
 
 # Database migrations
 ./manage.py makemigrations
@@ -55,53 +56,57 @@ pytest -v
 
 ### Code Quality
 
-Code style configuration is in `backend/pyproject.toml`:
+Code style configuration is in `backend/pyproject.toml`. Tooling is Ruff (lint + format + import sorting) and `ty` for type checking; `pre-commit` runs Ruff on commit (see `.pre-commit-config.yaml`):
 
 ```bash
-# Format code (Black, line length 120)
-black .
+# Format code (Ruff formatter, line length 120)
+ruff format .
 
-# Check code style (Ruff, line length 120, excludes migrations)
-ruff check .
+# Lint + import sorting (line length 120, excludes migrations; --fix to autofix)
+ruff check --fix .
 
-# Type checking (Pyright, standard mode)
-pyright
-
-# Sort imports (isort with Black-compatible profile)
-isort .
+# Type checking (ty, environment root ./apps)
+ty check
 ```
 
-Import order (configured in pyproject.toml):
+Import order (Ruff isort, configured in `[tool.ruff.lint.isort]`):
 1. Future imports
 2. Standard library
 3. Third-party packages
-4. Django REST Framework packages (drf)
+4. Django REST Framework packages (drf: rest_framework, rest_framework_simplejwt, drf_yasg)
 5. Config module
-6. First-party packages
-7. App packages (main, shuttle, users, core, services)
-8. Local folder imports
+6. First-party apps (main, shuttle, users, core, services, access_manager)
+7. Local folder imports
 
 ### Docker Development
 
+Compose stack and orchestration live in `deploy/`. Everything is driven through `deploy/Makefile` (run from `deploy/`), which layers `docker-compose.yml` with `docker-compose.override.yml` (dev, default) or `docker-compose.prod.yml` (`ENV=prod`, resource limits). Services are grouped into `infra`, `app`, `iot`, `front`, `proxy`.
+
 ```bash
-# Build and run all services
-docker compose up --build -d
+# Bring services up by level (run from deploy/)
+make up-infra       # postgres, pgbouncer, redis, redis-broker, rabbitmq
+make up-app         # infra + Django (backend) + Celery workers
+make up-all         # everything except Node-RED
+make up-all ENV=prod
 
-# View logs
-docker compose logs -f django
-docker compose logs -f celery
+# Logs / shell / status for a single service
+make logs s=backend
+make shell s=backend
+make ps
 
-# Execute commands in Django container
-docker exec -it django bash
-docker exec -it django python manage.py migrate
+# Django helpers
+make migrate
+make collectstatic
 
-# Restart services after code changes
-docker compose down backend nginx
-docker compose up backend nginx -d
+# Deploy (pull images + recreate)
+make deploy-backend
+make deploy-frontend
 
-# Pull latest images and restart
-docker compose pull && docker compose down && docker compose up -d
+# One-off exec (container names: django, celery-critical, celery-default, celery-low, ...)
+docker exec -it django python manage.py <command>
 ```
+
+Node-RED runs as a separate multi-tenant stack (`deploy/docker-compose.nodered.yml`, one project per tenant): `make nodered-up-<tenant>`, `make nodered-up-all`. The monitoring stack has its own compose + Makefile under `deploy/monitoring/`.
 
 ### Tenant Management
 
@@ -119,25 +124,30 @@ docker exec -it django python manage.py create_relation
 ### Custom Management Commands
 
 Core commands in `backend/apps/core/management/commands/`:
-- `mq.py` / `mq_async.py` - RabbitMQ message handler (mq_async runs via supervisord)
-- `active_attribute_server_scope.py` - Active attribute server (Celery beat task, supervisord entry commented out)
+- `mq_async.py` - RabbitMQ async message handler; runs as the `mq-async` service (invoked directly as `python apps/core/management/commands/mq_async.py`, 2 replicas, bypasses PgBouncer)
+- `active_attribute_server_scope.py` / `read_write_cpu_ram.py` - now driven by Celery beat (not standalone services)
 - `create_tenant.py` - Interactive tenant creation
+- `create_admin.py` - Create an admin/superuser
 - `delete_tenant.py` - Delete tenant
 - `create_relation.py` - Create relationships between entities
+- `give_perms.py` / `give_ui_perms.py` - Manage permissions
 - `fixtures.py` - Load fixture data
-- `give_perms.py` - Manage permissions
+- `reset_ids.py` - Reset/renumber IDs
+- `ts_kv_from_csv.py` - Import time-series data from CSV
+- `sim_message.py` / `sim_publish.py` - Simulate device messages/telemetry
 - `playground.py` - Development testing/experimentation
 
 Mews integration commands in `backend/apps/mews/management/commands/`:
-- `mews_websocket.py` - Mews WebSocket client (runs via supervisord)
+- `mews_websocket.py` - Mews WebSocket client (runs as the `mews-websocket` service)
 - `mews_sync.py` - Manual reservation synchronization
 - `mews_access_tokens.py` - Manage Mews access tokens
 - `get_mews_customers.py` - Fetch customer data from Mews
 - `sim_mews_event.py` - Simulate Mews events for testing
 
 Services commands in `backend/apps/services/management/commands/`:
-- `pms_handler.py` - PMS message handler (runs via supervisord)
+- `pms_handler.py` - PMS message handler (runs as the `pms-handler` service)
 - `pms_sync.py` - PMS synchronization
+- `migrate_integration_settings.py` - Migrate integration settings
 
 ## Architecture
 
@@ -187,19 +197,25 @@ The system uses multiple protocols:
   - Channel layer uses custom `uuidjson` serializer (registered in core.apps)
 - **MQTT**: External broker for IoT device communication (mqtt-broker service)
 - **RabbitMQ**: Internal message queue for device commands and telemetry
-  - Handled by `mq` management command running in supervisord
+  - Handled by the `mq_async` command running as the `mq-async` service (2 replicas)
 
-### Process Architecture (Supervisord)
+### Process Architecture (Docker services)
 
-The Django container runs multiple processes via supervisord (`backend/supervisord.conf`):
-1. **django** - Gunicorn with Uvicorn workers (ASGI, 4 workers, port 8000)
-2. **celery** - Background task worker (4 concurrency, max 100 tasks per child)
-3. **celery-beat** - Periodic task scheduler
-4. **mq_async** - RabbitMQ async message handler (custom management command)
-5. **mews_websocket** - Mews WebSocket client for real-time events
-6. **pms_handler** - PMS message handler for external integrations
+There is no supervisord. Each process is its own Compose service, all built from the same image and defined in `deploy/docker-compose.yml`:
 
-Note: `active_attribute_server_scope` and `read_write_cpu_ram` are commented out in supervisord.conf (now handled via Celery beat).
+1. **backend** (`django`) - Gunicorn with Uvicorn ASGI workers (port 8000). Startup runs `entrypoint.sh`: `migrate` + `collectstatic`, then Gunicorn with `GUNICORN_WORKERS` (default `2*CPU+1`).
+2. **celery-critical** - worker on the `critical` queue (`-c 2`, max 50 tasks/child)
+3. **celery-default** - worker on the `default` queue (`-c 8`, max 100 tasks/child)
+4. **celery-low** - worker on the `low` queue (`-c 1`, max 50 tasks/child)
+5. **celery-beat** - periodic task scheduler
+6. **celery-flower** - Celery monitoring UI (port 5555, basic auth via `FLOWER_BASIC_AUTH`)
+7. **mq-async** - RabbitMQ async message handler (2 replicas; connects directly to Postgres, bypassing PgBouncer)
+8. **mews-websocket** - Mews WebSocket client for real-time events
+9. **pms-handler** - PMS message handler for external integrations
+
+Infra services: `postgres` (TimescaleDB), `pgbouncer`, `redis` (cache/channel layer), `redis-broker` (Celery broker/result), `rabbitmq`. Edge: `mqtt` (IoT), `frontend` (Vue), `proxy` (nginx-proxy) + `letsencrypt` (acme-companion). Each service sets its own `PGAPPNAME` (`grms-backend`, `grms-celery-*`, `grms-mq-async`, ...) for Postgres monitoring.
+
+Note: `active_attribute_server_scope` and `read_write_cpu_ram` run via Celery beat, not as standalone services.
 
 ### Database Models
 
@@ -225,16 +241,20 @@ Key model patterns defined in `backend/apps/core/models.py`:
 
 ### Celery Tasks
 
+Queues are defined in `config/celery.py`: `critical`, `default` (default queue), `low`. Task-to-queue routing lives in `app.conf.task_routes` (e.g. `sync_devices_task`, `auto_check_out`, `auto_block` → `critical`; `aggregate_table_ts_kv`, `delete_old_logs`, `flush_expired_tokens` → `low`). Global settings: `task_soft_time_limit=300`, `task_time_limit=360`, `task_acks_late=True`, `worker_prefetch_multiplier=1`.
+
 Scheduled tasks in `config/settings.py` (`CELERY_BEAT_SCHEDULE`):
-- `auto-checkout` - Daily at 12:00 (main.tasks.auto_check_out)
-- `auto-block-guest` - 60s interval (main.tasks.auto_block_guest)
+- `auto-checkout` - every 5 minutes (main.tasks.auto_check_out)
+- `auto-block-guest` - 1800s interval (main.tasks.auto_block)
 - `sync_device` - 300s interval (access_manager.tasks.sync_device.sync_devices_task)
 - `clean_logs` - Daily at midnight (shuttle.tasks.delete_old_logs)
 - `update_db_metrics` - 60s interval (core.tasks.update_db_metrics)
 - `mews-sync` - 60s interval (mews.tasks.sync_reservations)
-- `mews-access-tokens` - 60s interval (mews.tasks.sync_access_tokens)
-- `active-attribute-server-scope` - 10s interval (core.tasks.active_attribute_server_scope)
-- `aggregate-ts-kv` - Daily at 03:00 (shuttle.tasks.aggregate_ts_kv)
+- `active-attribute-server-scope` - 10s interval (core.tasks.active_attribute_server_scope_task)
+- `aggregate-ts-kv` - Daily at 03:00 (shuttle.tasks.aggregate_table_ts_kv)
+- `flush-expired-tokens` - Daily at 03:00 (users.tasks.flush_expired_tokens)
+
+Note: `mews-access-tokens` is currently commented out in the schedule.
 
 Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` decorator.
 
@@ -248,30 +268,34 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 
 ### Monitoring
 
-- Prometheus metrics exposed at `/` (django-prometheus)
+- Prometheus metrics exposed at `/` (django-prometheus), aggregated across processes via `PROMETHEUS_MULTIPROC_DIR=/prom_mp`
 - Custom metrics in `main/metrics.py`
 - Gateway monitoring via `DJANGO_IS_MONITORING_GATEWAYS` and `DJANGO_MONITOR_DISABLED_GATEWAYS`
 - Database metrics updated every 60s via Celery task
+- Standalone observability stack under `deploy/monitoring/` (Prometheus + Grafana + Alertmanager + node-exporter + blackbox), with Grafana dashboards and alert rules; alerts route to Telegram. Runs on the shared external `roomio_net` network.
+- Celery workers/queues can be inspected via Flower (`celery-flower` service, port 5555)
 
 ## Configuration
 
 ### Environment Variables
 
-Key variables (see `docker/.env.example` and `backend/.env`):
-- Database: `POSTGRES_*` variables
-- Redis: `REDIS_HOST`, `REDIS_PORT`
-- RabbitMQ: `RABBIT_*` variables
+Key variables (see `deploy/env.example` for the compose stack and `backend/.env` for local dev):
+- Database: `POSTGRES_*` variables (containers reach Postgres through PgBouncer by default)
+- Redis: `REDIS_HOST`, `REDIS_PORT` (cache/channels); Celery uses `CELERY_BROKER_URL`/`CELERY_RESULT_BACKEND` pointed at `redis-broker`
+- RabbitMQ: `RABBITMQ_*` variables
 - Django: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`
 - CORS: `DJANGO_CORS_ORIGIN_WHITELIST`, `DJANGO_CSRF_TRUSTED_ORIGINS`
 - SSO: `KEYCLOAK_*`, `GOOGLE_CLIENT_*`, `MS_CLIENT_*`
 - Email: `EMAIL_*` variables
 - Frontend: `FRONTEND_DOMAIN`, `VITE_*` variables
+- Proxy/TLS (nginx-proxy + acme-companion): `API_VIRTUAL_HOST`, `FRONTEND_VIRTUAL_HOST`, `LETSENCRYPT_EMAIL`
+- Flower: `FLOWER_BASIC_AUTH` (user:password, required by the `celery-flower` service)
 
 ### Static & Media Files
 
 - Static files: `/app/static/` (collected via `collectstatic`)
 - Media files: `/app/media/` (user uploads)
-- Both served through nginx proxy in production
+- Both are shared volumes served by the `proxy` (nginx-proxy) container in production
 
 ## Testing
 
@@ -291,10 +315,12 @@ Key variables (see `docker/.env.example` and `backend/.env`):
 ## CI/CD
 
 GitLab CI pipeline (`.gitlab-ci.yml`) with stages:
-1. **test** - Run Django tests with TimescaleDB (2.21.0) and Redis 7 (Python 3.12, pytest)
+1. **test** - `uv sync --frozen` + `uv run python manage.py test` against TimescaleDB (2.21.0) and Redis 7 (uv image, Python 3.12)
 2. **build** - Build Docker image, push to GitLab registry (dev/latest tags)
 3. **staging** - Manual deployments to leto (dev environment)
-4. **production** - Manual deployments to grms (via jump host), cloud environments
+4. **production** - Manual deployments to grms (via jump host) and cloud environments
+
+Deploy jobs run the `deploy/Makefile` targets over SSH; the `MAKE_ENV` CI variable is passed through to select the compose profile (e.g. `ENV=prod`).
 
 Branches:
 - `dev` - Development branch, builds `dev` tag
@@ -326,7 +352,8 @@ Note: Django will automatically generate migrations. Never write migrations manu
 
 1. Create task in app's `tasks.py` with `@shared_task` decorator
 2. For periodic tasks, add to `CELERY_BEAT_SCHEDULE` in `config/settings.py`
-3. Task runs in separate Celery worker process
+3. To run it off the `default` queue, add a route in `app.conf.task_routes` (`config/celery.py`) targeting `critical` or `low`
+4. Tasks run in the matching Celery worker service (`celery-critical` / `celery-default` / `celery-low`)
 
 ### Adding Permissions
 
@@ -342,10 +369,10 @@ Note: Django will automatically generate migrations. Never write migrations manu
 - Custom `UnixTimeStampField` handles millisecond timestamps
 
 ### Multi-Process Architecture
-- Single Django container runs 6 services via supervisord
+- Each process is a separate Docker Compose service built from the same image (no supervisord)
 - Gunicorn uses Uvicorn workers for ASGI support (WebSockets)
-- Celery workers have separate database connection pool (`CONN_MAX_AGE=0`)
-- Each process has isolated Prometheus metrics via multiprocess mode
+- Celery is split into per-priority workers (`critical`/`default`/`low`) plus beat and flower
+- Each process has isolated Prometheus metrics via multiprocess mode (`PROMETHEUS_MULTIPROC_DIR`)
 
 ### WebSocket Architecture
 - Two separate WebSocket endpoints (v1 without auth, v2 with JWT)
@@ -354,17 +381,17 @@ Note: Django will automatically generate migrations. Never write migrations manu
 - JWT auth implemented as middleware wrapper (JWTAuthMiddlewareStack)
 
 ### Database Connection Management
-- Web workers: 60s connection pooling (`CONN_MAX_AGE=60`)
-- Celery workers: No pooling (`CONN_MAX_AGE=0`) to prevent stale connections
-- Each process sets `PGAPPNAME` for PostgreSQL monitoring (grms-web, grms-celery)
+- Pooling is handled by PgBouncer (transaction mode) in front of Postgres, so Django uses `CONN_MAX_AGE=0`
+- `mq-async` connects directly to Postgres (`POSTGRES_HOST=postgres`), bypassing PgBouncer — transaction pooling is incompatible with its long-lived async connections
+- Each process sets its own `PGAPPNAME` for PostgreSQL monitoring (`grms-backend`, `grms-celery-critical`, `grms-mq-async`, ...)
 
 ## Deployment Notes
 
 - The system requires TimescaleDB (PostgreSQL extension) for time-series data
-- Nginx proxy handles SSL termination via Let's Encrypt
-- Supervisord manages multiple processes in Django container
-- Use `docker compose pull && docker compose down && docker compose up -d` to update
+- `proxy` (nginx-proxy) + `letsencrypt` (acme-companion) handle routing and automatic TLS via `*_VIRTUAL_HOST` / `LETSENCRYPT_HOST` env vars
+- Processes run as separate Compose services orchestrated by `deploy/Makefile` (no supervisord)
+- Update deployments via `make deploy-backend` / `make deploy-frontend` (or the CI production jobs); `entrypoint.sh` runs migrations and collectstatic on backend startup
 - Create tenant before first use via `create_tenant` command
-- Monitor metrics at Prometheus endpoint (`/`) for production health
+- Monitor metrics at the Prometheus endpoint (`/`), Grafana (`deploy/monitoring/`), and Flower (port 5555) for production health
 - Never write migrations manually - always use `./manage.py makemigrations`
 - Before creating new features, check if similar patterns exist in the codebase

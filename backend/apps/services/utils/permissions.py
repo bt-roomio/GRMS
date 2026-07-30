@@ -17,7 +17,7 @@ class DoorLockPermission(permissions.BasePermission):
 
         try:
             integration = Integration.objects.get(
-                integrator="mobile key", access_token=access_token, integrator__client_id=client_token
+                access_token=access_token, integrator__client_id=client_token, is_active=True, enable=True
             )
         except Integration.DoesNotExist:
             return False

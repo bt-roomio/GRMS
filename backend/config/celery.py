@@ -28,11 +28,17 @@ app.conf.task_default_routing_key = "default"
 app.conf.task_routes = {
     "access_manager.tasks.sync_device.sync_devices_task": {"queue": "critical"},
     "access_manager.tasks.sync_device.sync_device_card_group": {"queue": "critical"},
+    "access_manager.tasks.room_card.manage_cards_for_room_task": {"queue": "critical"},
+    "access_manager.tasks.public_space_card.manage_cards_for_public_space_task": {"queue": "critical"},
+    "access_manager.tasks.send_rpc.send_rpc_request": {"queue": "critical"},
+    "access_manager.tasks.unplug_card.unplug": {"queue": "critical"},
     "main.tasks.auto_check_out": {"queue": "critical"},
     "main.tasks.auto_block": {"queue": "critical"},
     "shuttle.tasks.aggregate_table_ts_kv": {"queue": "low"},
     "shuttle.tasks.delete_old_logs": {"queue": "low"},
     "users.tasks.flush_expired_tokens": {"queue": "low"},
+    "admin_panel.tasks.send_activation_email": {"queue": "low"},
+    "mews.tasks.sync_access_tokens": {"queue": "low"},
 }
 
 app.conf.update(

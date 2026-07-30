@@ -26,7 +26,7 @@ def resolve_integration(scope):
 
     try:
         return Integration.objects.select_related("tenant").get(
-            integrator="mobile key", access_token=access_token, integrator__client_id=client_token
+            access_token=access_token, integrator__client_id=client_token, is_active=True, enable=True
         )
     except Integration.DoesNotExist:
         return None
