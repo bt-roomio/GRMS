@@ -1,7 +1,7 @@
 import logging
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from typing import DefaultDict
 
 import orjson
 from psycopg2 import errorcodes as pg_errorcodes
@@ -74,7 +74,7 @@ _TSKV_DICT_MEMORY_CACHE = {}
 _TSKV_DICT_CACHE_TTL = 3600  # 1 hour
 
 
-class TsKvDictionaryType(DefaultDict):
+class TsKvDictionaryType(defaultdict):
     key_id: str
     key: str
 
@@ -185,7 +185,7 @@ def _warm_tskv_dict_cache(batch):
     keys: set = set()
     for _device, topic, payload in batch:
         if topic.startswith("v1/gateway/") and isinstance(payload, dict):
-            for _sub_name, telemetry_list in payload.items():
+            for telemetry_list in payload.values():
                 _collect_value_keys(telemetry_list, keys)
         else:
             _collect_value_keys(payload, keys)
@@ -213,7 +213,7 @@ def sync_telemetry_batch(batch: list[tuple]):
     historical_objs = []
     latest_objs = []
     card_logs = []
-    updates_by_device: dict[str, list[dict]] = DefaultDict(list)  # ty: ignore
+    updates_by_device: dict[str, list[dict]] = defaultdict(list)
     device_ids = set()
 
     # Pre-resolve all TsKvDictionary keys in one pass so per-key lookups below hit memory
@@ -257,7 +257,7 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     # Batch publish WebSocket updates
     if updates_by_device:
-        logger.info("Dispatching publish_updates_batch_task: devices=%s", list(updates_by_device.keys()))
+        logger.info("Dispatching publish_updates_batch_task: devices=%s", len(updates_by_device.keys()))
         publish_updates_batch_task.delay(updates_by_device)
 
     logger.info(

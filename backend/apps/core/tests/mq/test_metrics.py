@@ -3,10 +3,12 @@
 from core.management.mq.mq_metrics import mq_keys_processed_total, mq_messages_processed_total
 
 
-def test_keys_metric_dropped_high_cardinality_key_label():
-    # Only gateway_id — the per-key label was removed to avoid series explosion.
-    assert mq_keys_processed_total._labelnames == ("gateway_id",)
+def test_keys_metric_has_no_labels():
+    # Метка gateway_id убрана (взрыв кардинальности); счётчик агрегируется по батчу.
+    assert mq_keys_processed_total._labelnames == ()
 
 
 def test_messages_metric_labels():
-    assert mq_messages_processed_total._labelnames == ("gateway_id", "topic")
+    # Осталась только topic (ограниченный набор); gateway_id убран во избежание
+    # серии на каждое устройство.
+    assert mq_messages_processed_total._labelnames == ("topic",)
