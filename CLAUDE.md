@@ -22,61 +22,11 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 
 ### Backend Development
 
-All backend commands should be run from the `backend/` directory or via `./manage.py`:
-
-```bash
-# Install dependencies (uv-managed; installs from uv.lock)
-uv sync --frozen
-
-# Database migrations
-./manage.py makemigrations
-./manage.py migrate
-
-# Run tests (uses pytest)
-./manage.py test
-
-# Run specific test file
-pytest path/to/test_file.py
-
-# Run specific test class or method
-pytest path/to/test_file.py::TestClass::test_method
-
-# Run tests with verbose output
-pytest -v
-
-# Create superuser
-./manage.py createsuperuser
-
-# Run development server (for local dev without Docker)
-./manage.py runserver
-
-# Check for issues (no database access)
-./manage.py check
-```
+Run backend commands from `backend/` or via `./manage.py`. Dependencies are uv-managed (`uv sync --frozen` from `uv.lock`); tests run under pytest (`./manage.py test`, or `pytest path/to/test.py::TestClass::test_method`).
 
 ### Code Quality
 
-Code style configuration is in `backend/pyproject.toml`. Tooling is Ruff (lint + format + import sorting) and `ty` for type checking; `pre-commit` runs Ruff on commit (see `.pre-commit-config.yaml`):
-
-```bash
-# Format code (Ruff formatter, line length 120)
-ruff format .
-
-# Lint + import sorting (line length 120, excludes migrations; --fix to autofix)
-ruff check --fix .
-
-# Type checking (ty, environment root ./apps)
-ty check
-```
-
-Import order (Ruff isort, configured in `[tool.ruff.lint.isort]`):
-1. Future imports
-2. Standard library
-3. Third-party packages
-4. Django REST Framework packages (drf: rest_framework, rest_framework_simplejwt, drf_yasg)
-5. Config module
-6. First-party apps (main, shuttle, users, core, services, access_manager)
-7. Local folder imports
+Code style config lives in `backend/pyproject.toml`: Ruff (lint + format + import sorting, line length 120) and `ty` (type check, environment root `./apps`). `pre-commit` runs Ruff on commit (`.pre-commit-config.yaml`). Import-order groups are defined under `[tool.ruff.lint.isort]`.
 
 ### Docker Development
 
