@@ -347,6 +347,7 @@ services:
       # Bypass pgbouncer: transaction pool mode is incompatible with async long-lived connections
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      - DB_CONN_MAX_AGE=60
     command: python apps/core/management/commands/mq_async.py
     tmpfs:
       - /prom_mp
