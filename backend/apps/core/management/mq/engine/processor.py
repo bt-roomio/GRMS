@@ -12,6 +12,7 @@ Buffering, batch timing and ack/nack are *not* here — they live in
 
 import asyncio
 import logging
+from collections import defaultdict
 from dataclasses import dataclass, field
 
 import aio_pika
@@ -104,6 +105,11 @@ class BatchProcessor:
     def _route(self, parsed, device_map: dict, message_status: dict) -> RoutedBatch:
         """Group parsed messages by topic, emit metrics, and mark unknown devices."""
         grouped = RoutedBatch()
+        # Аккумулируем счётчики по батчу: один label-lookup на топик (их немного)
+        # вместо одного на каждое сообщение, и без серии на каждый gateway_id
+        # (эта метка убрана, чтобы не плодить кардинальность).
+        topic_counts: dict[str, int] = defaultdict(int)
+        key_count = 0
         for message, msg in parsed:
             device = device_map.get(msg.get("sourceDeviceUUID"))
             if not device:
@@ -114,9 +120,8 @@ class BatchProcessor:
             topic = msg.get("topic", "")
             data = msg.get("data")
 
-            gateway_id = device.get("id", "unknown")
-            mq_messages_processed_total.labels(gateway_id=gateway_id, topic=topic).inc()
-            mq_keys_processed_total.labels(gateway_id=gateway_id).inc(len(_extract_keys(topic, data)))
+            topic_counts[topic] += 1
+            key_count += len(_extract_keys(topic, data))
 
             entry = (device, topic, data, message)
             if topic.endswith(TOPIC_TELEMETRY):
@@ -127,6 +132,11 @@ class BatchProcessor:
                 grouped.device_connect.append(entry)
             else:
                 grouped.other.append(entry)
+
+        for topic, count in topic_counts.items():
+            mq_messages_processed_total.labels(topic=topic).inc(count)
+        if key_count:
+            mq_keys_processed_total.inc(key_count)
         return grouped
 
     async def _run_group(self, label: str, items: list, handler, message_status: dict):

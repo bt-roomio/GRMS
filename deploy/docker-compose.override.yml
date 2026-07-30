@@ -76,6 +76,12 @@ services:
       - backend_venv:/app/.venv
     command: celery -A config worker -Q default -n default@%h -l debug -c 2
 
+  celery-realtime:
+    volumes:
+      - ../backend:/app
+      - backend_venv:/app/.venv
+    command: celery -A config worker -Q realtime -n realtime@%h -l debug -c 2
+
   celery-low:
     volumes:
       - ../backend:/app
