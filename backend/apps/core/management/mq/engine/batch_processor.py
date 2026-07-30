@@ -39,19 +39,41 @@ class BatchAccumulator:
         await self.message_queue.put(message)
 
     async def _collect_batch(self) -> list:
-        """Drain a batch: block for the first message, then grab whatever is already
-        queued up to batch_size. No per-message timer churn under load."""
+        """Drain a batch: block for the first message, then keep filling until either
+        ``batch_size`` is reached or ``batch_timeout`` elapses since that first message.
+
+        Closing the batch as soon as the queue is momentarily empty (a bare
+        ``get_nowait`` loop) looks cheap, but at realistic arrival rates the next
+        message is a few tens of milliseconds away, so batches degrade to 1-2
+        messages and every message ends up costing its own pair of downstream Celery
+        tasks. Lingering for the remainder of the window is what makes ``batch_size``
+        mean anything; under load the queue is never empty and the wait never happens.
+        """
         try:
             first = await asyncio.wait_for(self.message_queue.get(), timeout=self.batch_timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return []
 
         batch = [first]
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self.batch_timeout
+
         while len(batch) < self.batch_size:
+            # Fast path: take everything already buffered without touching the clock.
             try:
                 batch.append(self.message_queue.get_nowait())
+                continue
             except asyncio.QueueEmpty:
+                pass
+
+            remaining = deadline - loop.time()
+            if remaining <= 0:
                 break
+            try:
+                batch.append(await asyncio.wait_for(self.message_queue.get(), timeout=remaining))
+            except TimeoutError:
+                break
+
         return batch
 
     def _drain_remaining(self) -> list:
