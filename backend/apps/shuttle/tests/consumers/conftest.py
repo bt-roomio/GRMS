@@ -12,6 +12,7 @@ from django.test import override_settings
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from fleet.tests.sshd import client_key, sshd  # noqa: F401 - fixtures for test_fleet_terminal
 from shuttle.demultiplexer import Demultiplexer
 from shuttle.utils.jwt_auth import JWTAuthMiddlewareStack
 

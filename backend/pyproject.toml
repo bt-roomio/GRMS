@@ -142,6 +142,7 @@ known-first-party = [
   "core",
   "services",
   "access_manager",
+  "fleet",
 ]
 section-order = [
   "future",

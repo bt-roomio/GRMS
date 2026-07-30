@@ -7,6 +7,7 @@ from shuttle.v2_consumers.card_logs import CardLogConsumer
 from shuttle.v2_consumers.cards import CardConsumer
 from shuttle.v2_consumers.devices import DevicesListConsumer
 from shuttle.v2_consumers.emergency_status import EmergencyStatus
+from shuttle.v2_consumers.fleet_nodes import FleetNodeConsumer
 from shuttle.v2_consumers.gateway import GatewayConsumer
 from shuttle.v2_consumers.gateway_logs import GatewayLogsConsumer
 from shuttle.v2_consumers.guest_cards import GuestCardConsumer
@@ -44,6 +45,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "ts_kv_latest": TsKvLatestConsumer.as_asgi(),
         "emergency_status": EmergencyStatus.as_asgi(),
         "need_sync": NeedSyncConsumer.as_asgi(),
+        "fleet_nodes": FleetNodeConsumer.as_asgi(),
     }
 
     async def websocket_receive(self, message):
