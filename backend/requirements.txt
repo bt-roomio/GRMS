@@ -110,3 +110,4 @@ pytest-asyncio==1.1.0
 pytest-django==4.11.1
 django-allauth==65.12.1
 django-countries==8.1.1
+asyncssh==2.23.1
