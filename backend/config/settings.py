@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     "mews",
     "admin_panel",
     "hoteza",
+    "fleet",
 ]
 
 MIDDLEWARE = [
@@ -457,11 +458,47 @@ CELERY_BEAT_SCHEDULE = {
         "task": "users.tasks.flush_expired_tokens",
         "schedule": crontab(hour=3, minute=0),  # каждую ночь в 3:00
     },
+    "fleet-poll-peers": {
+        "task": "fleet.tasks.poll_fleet_peers",
+        "schedule": 60.0,
+    },
 }
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
 
 CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")
+
+# ---------------------------------------------------------------------------
+# Fleet — remote management of hotel VMs over the NetBird mesh
+# ---------------------------------------------------------------------------
+# NetBird is the connectivity layer only: its REST API tells us which nodes
+# exist and whether they are online. It can never run a command on one. All
+# execution goes over the node's own sshd, reachable only through the tunnel.
+NETBIRD_API_URL = os.getenv("NETBIRD_API_URL", "").rstrip("/")
+NETBIRD_PAT = os.getenv("NETBIRD_PAT", "")
+NETBIRD_HOTEL_GROUP_ID = os.getenv("NETBIRD_HOTEL_GROUP_ID", "")
+# Passed to `netbird up --management-url` inside the bootstrap script. Defaults
+# to the panel host, which is the same deployment WEBRTC_BROKER_URL points at.
+NETBIRD_MANAGEMENT_URL = os.getenv("NETBIRD_MANAGEMENT_URL", "") or os.getenv("WEBRTC_BROKER_URL", "")
+NETBIRD_TIMEOUT = float(os.getenv("NETBIRD_TIMEOUT", "10"))
+# Single-use setup keys minted per install; short-lived on purpose.
+NETBIRD_SETUP_KEY_TTL = int(os.getenv("NETBIRD_SETUP_KEY_TTL", "3600"))
+
+# The private half of the fleet keypair. Stays on this server, never leaves.
+FLEET_SSH_PRIVATE_KEY_PATH = os.path.expanduser(os.getenv("SSH_PRIVATE_KEY_PATH", "~/.roomio/fleet_key"))
+# The public half, injected into the bootstrap script and installed on every node.
+FLEET_SSH_PUBLIC_KEY = os.getenv("SSH_PUBLIC_KEY", "")
+FLEET_SSH_USER = os.getenv("SSH_USER", "roomio-agent")
+FLEET_SSH_PORT = int(os.getenv("SSH_PORT", "22"))
+FLEET_SSH_CONNECT_TIMEOUT = float(os.getenv("FLEET_SSH_CONNECT_TIMEOUT", "15"))
+FLEET_SSH_COMMAND_TIMEOUT = float(os.getenv("FLEET_SSH_COMMAND_TIMEOUT", "60"))
+
+FLEET_INSTALL_TOKEN_TTL_HOURS = int(os.getenv("INSTALL_TOKEN_TTL_HOURS", "24"))
+# A node whose peer has not been seen for this long is forced offline, in case
+# the poller misses an update.
+FLEET_OFFLINE_AFTER_SECONDS = int(os.getenv("FLEET_OFFLINE_AFTER_SECONDS", "120"))
+# Public base URL used to build the `curl ... | sudo bash` one-liner.
+FLEET_INSTALL_BASE_URL = os.getenv("FLEET_INSTALL_BASE_URL", "").rstrip("/")
 
 _LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "WARNING").upper()
 _LOG_FORMATTER = os.getenv("DJANGO_LOG_FORMATTER", "simple")

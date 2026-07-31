@@ -35,10 +35,13 @@ urlpatterns = [
                 path("access-manager/", include(("access_manager.urls", "access_manager"), namespace="access_manager")),
                 path("services/", include(("services.urls", "services"), namespace="services")),
                 path("admin/", include(("admin_panel.urls", "admin_panel"), namespace="admin_panel")),
+                path("fleet/", include(("fleet.urls", "fleet"), namespace="fleet")),
             ]
         ),
     ),
     path("", include(("hoteza.urls", "hoteza"), namespace="hoteza-integration")),
+    path("", include(("fleet.install_urls", "fleet_install"), namespace="fleet-install")),
+    path("", include("django_prometheus.urls")),
     path("metrics", metrics_view, name="prometheus-django-metrics"),
     path("login/", to_front_login),
     path("signup/", to_front_signup),
