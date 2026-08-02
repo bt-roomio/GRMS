@@ -7,7 +7,7 @@
 # process: half of it needs root, and `sudo cmd > file` fails regardless of sudo
 # because the redirect is done by your own unprivileged shell.
 #
-#   curl -fsSL "<install link>" | sudo bash
+#   curl -fsSL '<install link>' | sudo bash
 #
 # Re-running it is safe, and is how you re-enrol a node.
 #

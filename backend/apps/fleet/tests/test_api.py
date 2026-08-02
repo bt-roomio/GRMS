@@ -177,9 +177,15 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
         self.node.refresh_from_db()
-        self.assertIn(self.node.install_token, response.data["command"])
-        self.assertTrue(response.data["command"].startswith("curl -fsSL"))
-        self.assertIn("| sudo bash", response.data["command"])
+        command = response.data["command"]
+        self.assertIn(self.node.install_token, command)
+        self.assertTrue(command.startswith("curl -fsSL"))
+        self.assertIn("| sudo bash", command)
+
+        # No double quotes anywhere: JSON escapes them to \\", and the shell
+        # unescapes that into a literal quote inside the URL, which curl rejects.
+        self.assertNotIn('"', command)
+        self.assertNotIn('"', response.data["install_url"])
         self.assertIn("/install/tenant_1", response.data["install_url"])
 
         self.assertEqual(response.data["hostname"], "tenant_1")

@@ -165,7 +165,7 @@ def install_url(node: FleetNode, request=None) -> str:
 
 
 def install_command(node: FleetNode, request=None) -> str:
-    return f'curl -fsSL "{install_url(node, request)}" | sudo bash'
+    return f"curl -fsSL '{install_url(node, request)}' | sudo bash"
 
 
 def verify_install_token(node: FleetNode, token: str) -> None:
