@@ -1,25 +1,22 @@
-import json
 import logging
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from typing import DefaultDict
 
-import redis
-from django.conf import settings
+import orjson
 from psycopg2 import errorcodes as pg_errorcodes
 
 from access_manager.models import CardLog
+from core.management.mq.devices.get_device import get_sub_device
 from core.management.mq.fias import handle_fias
-from core.management.mq.get_device import get_sub_device
 from core.utils.date import unix_to_datetime
 from core.utils.get_time import get_mil_sec
 from core.utils.handle_card_event import handle_card_event
+from core.utils.redis_pool import sync_redis as redis_client
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
 from shuttle.tasks import publish_updates_batch_task, update_activity_devices_batch_task
 from shuttle.utils.find_compatible_field import find_compatible_field
-
-redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
 logger = logging.getLogger(__name__)
 
@@ -77,20 +74,19 @@ _TSKV_DICT_MEMORY_CACHE = {}
 _TSKV_DICT_CACHE_TTL = 3600  # 1 hour
 
 
-class TsKvDictionaryType(DefaultDict):
+class TsKvDictionaryType(defaultdict):
     key_id: str
     key: str
 
 
 def get_tskv_dict(key):
     """Get TsKvDictionary with 2-tier caching: memory → Redis → database"""
-    logger.info("Getting ts_kv_dictionary: %s", key)
+    logger.debug("Getting ts_kv_dictionary: %s", key)
 
     # Tier 1: Check in-memory cache
     current_time = get_mil_sec() // 1000
     cache_entry = _TSKV_DICT_MEMORY_CACHE.get(key)
     if cache_entry and (current_time - cache_entry["cached_at"]) < _TSKV_DICT_CACHE_TTL:
-        logger.info("TsKvDictionary found in memory cache: %s", key)
         return cache_entry["data"]
 
     # Tier 2: Check Redis cache
@@ -99,8 +95,7 @@ def get_tskv_dict(key):
     cached_obj = cached_raw.decode("utf-8") if isinstance(cached_raw, bytes) else None
 
     if cached_obj:
-        logger.info("TsKvDictionary found in Redis cache: %s", cached_obj)
-        data = json.loads(cached_obj)
+        data = orjson.loads(cached_obj)
         # Populate memory cache from Redis hit
         _TSKV_DICT_MEMORY_CACHE[key] = {"data": data, "cached_at": current_time}
         return data
@@ -113,13 +108,100 @@ def get_tskv_dict(key):
     }
 
     # Cache in both Redis and memory
-    redis_client.set(cache_key, json.dumps(data), ex=EXPIRY_TIME)
+    redis_client.set(cache_key, orjson.dumps(data), ex=EXPIRY_TIME)
     _TSKV_DICT_MEMORY_CACHE[key] = {"data": data, "cached_at": current_time}
 
     return data
 
 
+def get_tskv_dicts_batch(keys) -> dict:
+    """Resolve many TsKvDictionary keys at once: memory → one Redis MGET → DB for misses.
+
+    Populates the process-local + Redis caches so subsequent per-key ``get_tskv_dict()``
+    calls in the batch hit memory instead of doing a Redis/DB round-trip per key.
+    """
+    keys = [key for key in dict.fromkeys(keys) if key]
+    result: dict = {}
+    if not keys:
+        return result
+
+    current_time = get_mil_sec() // 1000
+
+    redis_misses = []
+    for key in keys:
+        entry = _TSKV_DICT_MEMORY_CACHE.get(key)
+        if entry and (current_time - entry["cached_at"]) < _TSKV_DICT_CACHE_TTL:
+            result[key] = entry["data"]
+        else:
+            redis_misses.append(key)
+
+    if not redis_misses:
+        return result
+
+    raws = redis_client.mget([f"prs_msg:tskv_dict:{key}" for key in redis_misses])
+    db_misses = []
+    for key, raw in zip(redis_misses, raws):  # ty: ignore
+        if raw:
+            data = orjson.loads(raw)
+            _TSKV_DICT_MEMORY_CACHE[key] = {"data": data, "cached_at": current_time}
+            result[key] = data
+        else:
+            db_misses.append(key)
+
+    if db_misses:
+        pipe = redis_client.pipeline()
+        for key in db_misses:
+            obj, _ = TsKvDictionary.objects.get_or_create(key=key)
+            data = {"key_id": obj.key_id, "key": obj.key}
+            result[key] = data
+            _TSKV_DICT_MEMORY_CACHE[key] = {"data": data, "cached_at": current_time}
+            pipe.set(f"prs_msg:tskv_dict:{key}", orjson.dumps(data), ex=EXPIRY_TIME)
+        pipe.execute()
+
+    return result
+
+
+def _collect_value_keys(payload, keys: set):
+    """Collect telemetry value keys from a single device payload (dict or list of entries)."""
+    entries = []
+    if isinstance(payload, dict) and "ts" in payload and "values" in payload:
+        entries = [payload["values"]]
+    elif isinstance(payload, list):
+        entries = [e["values"] for e in payload if isinstance(e, dict) and "ts" in e and "values" in e]
+    for values in entries:
+        if isinstance(values, dict):
+            # Только ключи, которые реально запишутся: _process_telemetry_entries тоже
+            # фильтрует через find_compatible_field, поэтому не прогреваем/не создаём
+            # TsKvDictionary для нехранимых значений (например None).
+            keys.update(find_compatible_field(values).keys())
+
+
+def _warm_tskv_dict_cache(batch):
+    """Pre-resolve every TsKvDictionary key in the batch in one pass.
+
+    Afterwards the per-key get_tskv_dict() calls in _process_telemetry_entries hit
+    the memory cache. rfid_card_event is excluded — it maps to CardLog, not a dict row.
+    """
+    keys: set = set()
+    for _device, topic, payload in batch:
+        if topic.startswith("v1/gateway/") and isinstance(payload, dict):
+            for telemetry_list in payload.values():
+                _collect_value_keys(telemetry_list, keys)
+        else:
+            _collect_value_keys(payload, keys)
+    keys.discard("rfid_card_event")
+    if keys:
+        get_tskv_dicts_batch(keys)
+
+
 executor = ThreadPoolExecutor(max_workers=4)  # для handle_fias
+
+
+def _log_fias_result(future):
+    """Surface exceptions from fire-and-forget handle_fias() submissions."""
+    exc = future.exception()
+    if exc is not None:
+        logger.error("handle_fias failed: %s", exc, exc_info=exc)
 
 
 def sync_telemetry_batch(batch: list[tuple]):
@@ -131,8 +213,11 @@ def sync_telemetry_batch(batch: list[tuple]):
     historical_objs = []
     latest_objs = []
     card_logs = []
-    updates_by_device: dict[str, list[dict]] = DefaultDict(list)
+    updates_by_device: dict[str, list[dict]] = defaultdict(list)
     device_ids = set()
+
+    # Pre-resolve all TsKvDictionary keys in one pass so per-key lookups below hit memory
+    _warm_tskv_dict_cache(batch)
 
     for device, topic, payload in batch:
         if topic.startswith("v1/gateway/") and isinstance(payload, dict):
@@ -172,7 +257,7 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     # Batch publish WebSocket updates
     if updates_by_device:
-        logger.info("Dispatching publish_updates_batch_task: devices=%s", list(updates_by_device.keys()))
+        logger.info("Dispatching publish_updates_batch_task: devices=%s", len(updates_by_device.keys()))
         publish_updates_batch_task.delay(updates_by_device)
 
     logger.info(
@@ -225,4 +310,4 @@ def _process_telemetry_entries(device, payload, ts_now, historical_objs, latest_
             )
 
             if key == "messageFromFIAS":
-                executor.submit(handle_fias, value, device)
+                executor.submit(handle_fias, value, device).add_done_callback(_log_fias_result)

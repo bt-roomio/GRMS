@@ -230,6 +230,14 @@ services:
     command: celery -A config worker -Q critical -n critical@%h -l warning -c 2 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
+    labels:
+      - autoheal=true
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d critical@$$(hostname) -t 10 | grep -q pong"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
 
   celery-default:
     <<: *django-common
@@ -241,6 +249,33 @@ services:
     command: celery -A config worker -Q default -n default@%h -l warning -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
+    labels:
+      - autoheal=true
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d default@$$(hostname) -t 10 | grep -q pong"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+
+  celery-realtime:
+    <<: *django-common
+    container_name: celery-realtime
+    depends_on: *worker-depends
+    environment:
+      <<: *celery-env
+      PGAPPNAME: grms-celery-realtime
+    command: celery -A config worker -Q realtime -n realtime@%h -l warning -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
+    tmpfs:
+      - /prom_mp
+    labels:
+      - autoheal=true
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d realtime@$$(hostname) -t 10 | grep -q pong"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
 
   celery-low:
     <<: *django-common
@@ -252,6 +287,14 @@ services:
     command: celery -A config worker -Q low -n low@%h -l warning -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
+    labels:
+      - autoheal=true
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d low@$$(hostname) -t 10 | grep -q pong"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
 
   celery-beat:
     <<: *django-common
@@ -277,6 +320,21 @@ services:
     tmpfs:
       - /prom_mp
 
+  # Перезапускает контейнеры со статусом unhealthy (label autoheal=true).
+  # Docker restart policy на healthcheck не реагирует — этот сайдкар закрывает
+  # разрыв: зависший celery-воркер (не отвечает на inspect ping) будет пересоздан.
+  autoheal:
+    image: willfarrell/autoheal:1.2.0
+    container_name: autoheal
+    restart: always
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+      AUTOHEAL_INTERVAL: "15"
+      AUTOHEAL_START_PERIOD: "60"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging: *default-logging
+
   mq-async:
     <<: *django-common
     depends_on: *worker-depends
@@ -289,6 +347,7 @@ services:
       # Bypass pgbouncer: transaction pool mode is incompatible with async long-lived connections
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      - DB_CONN_MAX_AGE=60
     command: python apps/core/management/commands/mq_async.py
     tmpfs:
       - /prom_mp

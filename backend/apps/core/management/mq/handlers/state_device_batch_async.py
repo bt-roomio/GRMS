@@ -6,7 +6,7 @@ from collections import defaultdict
 from asgiref.sync import sync_to_async
 from django.db import close_old_connections
 
-from core.management.mq.get_device import get_sub_device
+from core.management.mq.devices.get_device import get_sub_device
 from core.utils.cache import invalidate_quick_cache
 from core.utils.get_time import get_mil_sec
 from main.models import Device
@@ -15,7 +15,7 @@ from main.observables.room_status_async import publish_room_status_async
 from shuttle.models import AttributeKv
 from shuttle.services.attribute_kv_async import publish_updates_attribute_batch_async
 from shuttle.utils.has_changed_and_update import (
-    get_cached_attributes,
+    get_cached_attributes_batch,
     invalidate_attributes_cache,
     set_cached_attributes,
 )
@@ -34,7 +34,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
     if not batch:
         return
 
-    logger.debug(f"[state_device_batch_async] Processing batch: {len(batch)} messages")
+    logger.debug("[state_device_batch_async] Processing batch: %d messages", len(batch))
 
     ts_now = get_mil_sec()
 
@@ -72,23 +72,25 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             }
         )
 
-    logger.debug(f"[state_device_batch_async] Grouped into {len(device_updates)} unique devices")
-
-    # Шаг 2: Загрузка существующих атрибутов (из кеша или БД)
+    # Шаг 2: Загрузка существующих атрибутов — один MGET на весь батч, затем один SELECT на промахи
     attr_map_by_device = {}
+    cached_by_device = get_cached_attributes_batch(
+        [str(device_id) for device_id in device_updates], ["active", "lastActivityTime"], AttributeKv.SERVER_SCOPE
+    )
 
+    ids_needing_db = []
     for device_id, update_info in device_updates.items():
-        cached_attrs = get_cached_attributes(str(device_id), ["active", "lastActivityTime"], AttributeKv.SERVER_SCOPE)
+        cached_attrs = cached_by_device.get(str(device_id))
 
         if cached_attrs:
-            logger.debug(f"Cache hit for device {device_id}")
-            update_info["from_cache"] = True
-
             attr_map = {}
 
-            if "active" in cached_attrs:
+            # Кешируем attr только если известен его pk (id): без pk bulk_update()
+            # в Шаге 4 упал бы с ValueError. Если id в кеше нет — читаем из БД.
+            if "active" in cached_attrs and "id" in cached_attrs["active"]:
                 active_data = cached_attrs["active"]
-                active_attr = AttributeKv(
+                attr_map["active"] = AttributeKv(
+                    id=active_data["id"],
                     entity_id=device_id,
                     attribute_key="active",
                     attribute_type=AttributeKv.SERVER_SCOPE,
@@ -97,11 +99,11 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                 )
                 update_info["cached_tenant_id"] = active_data["tenant_id"]
                 update_info["cached_device_status"] = active_data.get("status", False)
-                attr_map["active"] = active_attr
 
-            if "lastActivityTime" in cached_attrs:
+            if "lastActivityTime" in cached_attrs and "id" in cached_attrs["lastActivityTime"]:
                 last_data = cached_attrs["lastActivityTime"]
-                last_activity_attr = AttributeKv(
+                attr_map["lastActivityTime"] = AttributeKv(
+                    id=last_data["id"],
                     entity_id=device_id,
                     attribute_key="lastActivityTime",
                     attribute_type=AttributeKv.SERVER_SCOPE,
@@ -110,28 +112,33 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                 )
                 if not update_info["cached_tenant_id"]:
                     update_info["cached_tenant_id"] = last_data["tenant_id"]
-                attr_map["lastActivityTime"] = last_activity_attr
 
-            attr_map_by_device[device_id] = attr_map
+            if attr_map:
+                update_info["from_cache"] = True
+                attr_map_by_device[device_id] = attr_map
+            else:
+                ids_needing_db.append(device_id)
         else:
-            logger.debug(f"Cache miss for device {device_id}, querying DB")
+            ids_needing_db.append(device_id)
 
-            def _query_attrs(_did=device_id):
-                close_old_connections()
-                return list(
-                    AttributeKv.objects.filter(
-                        entity_id=_did,
-                        attribute_type=AttributeKv.SERVER_SCOPE,
-                        attribute_key__in=["active", "lastActivityTime"],
-                    )
-                )
+    if ids_needing_db:
 
-            attrs = await sync_to_async(_query_attrs, thread_sensitive=False)()
+        def _query_attrs(_ids=ids_needing_db):
+            close_old_connections()
+            return list(
+                AttributeKv.objects.filter(
+                    entity_id__in=_ids,
+                    attribute_type=AttributeKv.SERVER_SCOPE,
+                    attribute_key__in=["active", "lastActivityTime"],
+                ).order_by()
+            )
 
-            attr_map = {attr.attribute_key: attr for attr in attrs}
-            attr_map_by_device[device_id] = attr_map
-
-    logger.debug(f"[state_device_batch_async] Loaded attributes for {len(attr_map_by_device)} devices")
+        attrs = await sync_to_async(_query_attrs, thread_sensitive=False)()
+        by_device = defaultdict(dict)
+        for attr in attrs:
+            by_device[str(attr.entity_id)][attr.attribute_key] = attr
+        for device_id in ids_needing_db:
+            attr_map_by_device[device_id] = by_device.get(str(device_id), {})
 
     # === Шаг 2.5: Batched device info (tenant_id, status) ===
     device_ids = list(device_updates.keys())
@@ -148,6 +155,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
     to_create = []
     devices_to_update_status = []
     devices_to_invalidate_cache = set()
+    devices_with_creates = set()  # устройства с bulk_create — их id клиентские (None), не кешируем
 
     for device_id, update_info in device_updates.items():
         connected = update_info["connected"]
@@ -159,7 +167,6 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
         # Debounce check (3 sec threshold)
         if connected and active_attr and active_attr.bool_v == connected and active_attr.last_update_ts > ts_now - 3000:
-            logger.debug(f"Debounce: skipping device {device_id}")
             continue
 
         device_needs_update = False
@@ -189,6 +196,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                     last_update_ts=ts_now,
                 )
             )
+            devices_with_creates.add(device_id)
 
         # Process lastActivityTime attribute
         if last_activity_attr:
@@ -208,6 +216,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                     last_update_ts=ts_now,
                 )
             )
+            devices_with_creates.add(device_id)
 
         if device_needs_update:
             devices_to_update_status.append((device_id, connected))
@@ -217,42 +226,34 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
         # ВАЖНО: Сравниваем строковые представления, так как типы могут отличаться (UUID vs str)
         device_id_str = str(device_id)
-        update_info["to_update_attrs"] = [a for a in to_update if str(a.entity_id) == device_id_str]
-        update_info["to_create_attrs"] = [a for a in to_create if str(a.entity_id) == device_id_str]
-
-        logger.debug(
-            f"[state_device_batch_async] Set for device {device_id} (type={type(device_id).__name__}): "
-            f"to_update_attrs={len(update_info['to_update_attrs'])}, to_create_attrs={len(update_info['to_create_attrs'])}"
-        )
-        if to_update:
-            logger.debug(
-                f"[state_device_batch_async] First to_update attr entity_id type: {type(to_update[0].entity_id).__name__}"
-            )
+        update_info["to_update_attrs"] = [a for a in to_update if str(a.entity_id) == device_id_str]  # ty: ignore
+        update_info["to_create_attrs"] = [a for a in to_create if str(a.entity_id) == device_id_str]  # ty: ignore
 
     logger.debug(
-        f"[state_device_batch_async] Prepared: {len(to_update)} updates, {len(to_create)} creates, "
-        f"{len(devices_to_update_status)} device status updates"
+        "[state_device_batch_async] Prepared: %d updates, %d creates, %d device status updates",
+        len(to_update),
+        len(to_create),
+        len(devices_to_update_status),
     )
-    if to_update:
-        logger.debug(f"[state_device_batch_async] to_update entity_ids: {[str(a.entity_id) for a in to_update]}")
-    logger.debug(f"[state_device_batch_async] device_updates keys: {list(device_updates.keys())}")
 
     # Шаг 4: Bulk DB operations (async)
     if to_update:
+
         def _bulk_update(_attrs=to_update):
             close_old_connections()
             AttributeKv.objects.bulk_update(_attrs, fields=["bool_v", "long_v", "last_update_ts", "entity_type"])
 
         await sync_to_async(_bulk_update, thread_sensitive=False)()
-        logger.debug(f"[state_device_batch_async] Bulk updated {len(to_update)} AttributeKv records")
+        logger.debug("[state_device_batch_async] Bulk updated %d AttributeKv records", len(to_update))
 
     if to_create:
+
         def _bulk_create(_attrs=to_create):
             close_old_connections()
             AttributeKv.objects.bulk_create(_attrs, ignore_conflicts=True)
 
         await sync_to_async(_bulk_create, thread_sensitive=False)()
-        logger.debug(f"[state_device_batch_async] Bulk created {len(to_create)} AttributeKv records")
+        logger.debug("[state_device_batch_async] Bulk created %d AttributeKv records", len(to_create))
 
         # Добавить созданные атрибуты в attr_map_by_device для WebSocket публикации
         for attr in to_create:
@@ -272,14 +273,14 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                 Device.objects.filter(id__in=_dids).update(status=False)
 
         await sync_to_async(_bulk_update_status, thread_sensitive=False)()
-        logger.debug(f"[state_device_batch_async] Updated status for {len(devices_to_update_status)} devices")
+        logger.debug("[state_device_batch_async] Updated status for %d devices", len(devices_to_update_status))
 
     # Шаг 5: Cache invalidation
     for device_id_str in devices_to_invalidate_cache:
         invalidate_attributes_cache(device_id_str, AttributeKv.SERVER_SCOPE)
 
     if devices_to_invalidate_cache:
-        logger.debug(f"[state_device_batch_async] Invalidated cache for {len(devices_to_invalidate_cache)} devices")
+        logger.debug("[state_device_batch_async] Invalidated cache for %d devices", len(devices_to_invalidate_cache))
 
     # Шаг 6: WebSocket публикация и cache update
     if to_update or to_create:
@@ -292,13 +293,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             device_needs_update = update_info.get("device_needs_update", False)
             attr_map = attr_map_by_device.get(device_id, {})
 
-            logger.debug(
-                f"[state_device_batch_async] Device {device_id}: to_update_attrs={len(update_info.get('to_update_attrs', []))}, "
-                f"to_create_attrs={len(update_info.get('to_create_attrs', []))}, attr_map={list(attr_map.keys())}"
-            )
-
             if not update_info.get("to_update_attrs") and not update_info.get("to_create_attrs"):
-                logger.debug(f"[state_device_batch_async] Skipping device {device_id} - no attribute changes")
                 continue
 
             if from_cache:
@@ -318,7 +313,6 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
             cache_data = {}
             for attr_key, attr in attr_map.items():
-                logger.debug(f"[state_device_batch_async] Preparing update for device {device_id}, attr {attr_key}")
                 # WebSocket update
                 updates_by_device[device_key].append(
                     {
@@ -330,8 +324,9 @@ async def sync_state_device_batch_async(batch: list[tuple]):
                     }
                 )
 
-                # Cache data
+                # Cache data (id обязателен — при чтении из кеша он нужен для bulk_update)
                 cache_attr = {
+                    "id": str(attr.id),
                     "entity_id": str(device_id),
                     "tenant_id": str(tenant_id),
                     "last_update_ts": attr.last_update_ts,
@@ -345,20 +340,25 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
                 cache_data[attr_key] = cache_attr
 
-            if cache_data:
+            # У устройств с bulk_create(ignore_conflicts) id атрибута сгенерирован на клиенте
+            # (None) и может не совпасть с реально сохранённой строкой — не кешируем такой id,
+            # следующий вызов сделает cache-miss и перечитает настоящий id из БД.
+            if cache_data and device_id not in devices_with_creates:
                 cache_updates_by_device[device_id] = cache_data
 
         # Async WebSocket publish
         if updates_by_device:
             await publish_updates_attribute_batch_async(updates_by_device)
-            logger.debug(f"[state_device_batch_async] Published WebSocket updates for {len(updates_by_device)} devices")
+            logger.debug(
+                "[state_device_batch_async] Published WebSocket updates for %d devices", len(updates_by_device)
+            )
 
         # Update Redis cache
         for device_id, cache_data in cache_updates_by_device.items():
             set_cached_attributes(str(device_id), cache_data, AttributeKv.SERVER_SCOPE, ttl=5)
 
         if cache_updates_by_device:
-            logger.debug(f"[state_device_batch_async] Updated cache for {len(cache_updates_by_device)} devices")
+            logger.debug("[state_device_batch_async] Updated cache for %d devices", len(cache_updates_by_device))
 
     # Шаг 7: Room status publication (NO attr.entity, batched fetch)
     device_ids_for_room_status = [
@@ -367,6 +367,7 @@ async def sync_state_device_batch_async(batch: list[tuple]):
 
     devices_for_room_status = []
     if device_ids_for_room_status:
+
         def _query_devices_for_room(_ids=device_ids_for_room_status):
             close_old_connections()
             return list(Device.objects.filter(id__in=_ids))
@@ -380,14 +381,16 @@ async def sync_state_device_batch_async(batch: list[tuple]):
             await sync_to_async(publish_device, thread_sensitive=True)(device)
             tenant_ids_to_invalidate.add(device.tenant_id)
         except Exception as e:
-            logger.warning(f"Failed to publish room status for device {device.id}: {e}")
+            logger.warning("Failed to publish room status for device %s: %s", device.id, e)
 
     for tenant_id in tenant_ids_to_invalidate:
         invalidate_quick_cache("devices", tenant_id)
 
     if devices_for_room_status:
-        logger.debug(f"[state_device_batch_async] Published room status for {len(devices_for_room_status)} devices")
+        logger.debug("[state_device_batch_async] Published room status for %d devices", len(devices_for_room_status))
 
     logger.info(
-        f"[state_device_batch_async] Completed batch processing: {len(batch)} messages, {len(device_updates)} devices"
+        "[state_device_batch_async] Completed batch processing: %d messages, %d devices",
+        len(batch),
+        len(device_updates),
     )
