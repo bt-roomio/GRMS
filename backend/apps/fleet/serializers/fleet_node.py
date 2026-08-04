@@ -127,6 +127,7 @@ class FleetNodeFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=15)
+    id = serializers.UUIDField(required=False)
     search_value = serializers.CharField(required=False)
     is_online = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)

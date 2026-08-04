@@ -1,7 +1,7 @@
 from djangochannelsrestframework.observer.generics import action
 
 from fleet.models import FleetNode
-from fleet.serializers.fleet_node import FleetNodeSerializer
+from fleet.serializers.fleet_node import FleetNodeFilterParams, FleetNodeSerializer
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
 
@@ -19,7 +19,13 @@ class FleetNodeConsumer(BaseGenericAsyncAPIConsumer):
         await super().accept(*args, **kwargs)
 
     def get_queryset(self, **kwargs):
-        return super().get_queryset(**kwargs).filter(tenant_id=self.tenant_id).select_related("tenant")
+        params = FleetNodeFilterParams.check(kwargs.get("query_params") or {})
+        query = super().get_queryset(**kwargs).filter(tenant_id=self.tenant_id).select_related("tenant")
+
+        if params.get("id"):
+            query = query.filter(id=params["id"])
+
+        return query
 
     @action()
     async def list(self, **kwargs):
