@@ -51,9 +51,9 @@ class PollerTest(TestCase):
         self.assertEqual(peer_name({"dns_label": "tenant-1.netbird.selfhosted"}), "")
         self.assertEqual(peer_name({}), "")
 
-    @patch("fleet.tasks.notify")
+    @patch("fleet.observables.fleet_node._send")
     @patch("fleet.tasks.NetBirdClient")
-    def test_poll_matches_a_real_netbird_payload(self, client_cls, _notify):
+    def test_poll_matches_a_real_netbird_payload(self, client_cls, _send):
         """The shape NetBird 0.75 actually returns: name is ours, hostname is the VM's."""
         peer = make_peer(name="tenant_1", hostname="grms-roomio", dns_label="tenant-1.netbird.selfhosted")
         client_cls.return_value = MagicMock(list_peers=MagicMock(return_value=[peer]))
@@ -114,9 +114,9 @@ class PollerTest(TestCase):
         self.node.refresh_from_db()
         self.assertTrue(self.node.is_online)
 
-    @patch("fleet.tasks.notify")
+    @patch("fleet.observables.fleet_node._send")
     @patch("fleet.tasks.NetBirdClient")
-    def test_netbird_outage_leaves_status_untouched(self, client_cls, _notify):
+    def test_netbird_outage_leaves_status_untouched(self, client_cls, _send):
         client_cls.return_value = MagicMock(list_peers=MagicMock(side_effect=NetBirdUnavailable("down")))
         old = get_mil_sec() - 3600 * 1000
         FleetNode.objects.filter(pk=self.node.pk).update(is_online=True, last_seen=old)
@@ -132,9 +132,9 @@ class PollerTest(TestCase):
         self.node.refresh_from_db()
         self.assertEqual(self.node.last_seen, to_mil_sec(peer["last_seen"]))
 
-    @patch("fleet.tasks.notify")
+    @patch("fleet.observables.fleet_node._send")
     @patch("fleet.tasks.NetBirdClient")
-    def test_poll_reconciles_against_netbird(self, client_cls, _notify):
+    def test_poll_reconciles_against_netbird(self, client_cls, _send):
         client_cls.return_value = MagicMock(list_peers=MagicMock(return_value=[make_peer()]))
 
         poll_fleet_peers()
@@ -143,9 +143,9 @@ class PollerTest(TestCase):
         self.assertTrue(self.node.is_online)
         self.assertEqual(self.node.netbird_peer_id, "peer-1")
 
-    @patch("fleet.tasks.notify")
+    @patch("fleet.observables.fleet_node._send")
     @patch("fleet.tasks.NetBirdClient")
-    def test_poll_ignores_peers_with_no_matching_node(self, client_cls, _notify):
+    def test_poll_ignores_peers_with_no_matching_node(self, client_cls, _send):
         client_cls.return_value = MagicMock(list_peers=MagicMock(return_value=[make_peer(name="someone_else")]))
 
         poll_fleet_peers()

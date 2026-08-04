@@ -250,9 +250,9 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["action"], FleetAuditLog.ACTION.PEER_PINNED)
 
-    @patch("fleet.tasks.notify")
+    @patch("fleet.observables.fleet_node._send")
     @patch("fleet.tasks.NetBirdClient")
-    def test_refresh_forces_a_poll(self, client_cls, _notify):
+    def test_refresh_forces_a_poll(self, client_cls, _send):
         peer = {
             "id": "peer-9",
             "name": "tenant_1",
