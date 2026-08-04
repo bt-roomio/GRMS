@@ -44,8 +44,6 @@ class NetBirdClient:
             }
         )
 
-    # -- plumbing ----------------------------------------------------------
-
     def _request(self, method: str, path: str, **kwargs) -> Any:
         url = f"{self.base_url}/{path.lstrip('/')}"
         try:
@@ -68,8 +66,6 @@ class NetBirdClient:
         except ValueError as exc:
             raise NetBirdAPIError(response.status_code, f"non-JSON response: {exc}") from exc
 
-    # -- peers -------------------------------------------------------------
-
     def list_peers(self, group_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         All peers, optionally narrowed to one group.
@@ -88,8 +84,6 @@ class NetBirdClient:
 
     def delete_peer(self, peer_id: str) -> None:
         self._request("DELETE", f"/peers/{peer_id}")
-
-    # -- setup keys --------------------------------------------------------
 
     def create_setup_key(
         self,
@@ -128,8 +122,6 @@ class NetBirdClient:
 
     def list_setup_keys(self) -> List[Dict[str, Any]]:
         return self._request("GET", "/setup-keys") or []
-
-    # -- groups ------------------------------------------------------------
 
     def list_groups(self) -> List[Dict[str, Any]]:
         return self._request("GET", "/groups") or []

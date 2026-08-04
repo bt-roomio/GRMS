@@ -32,9 +32,6 @@ class EnrollmentError(Exception):
     """The install request is not valid — expired, already used, or unknown."""
 
 
-# -- peer lifecycle --------------------------------------------------------
-
-
 def release_peer(node: FleetNode, client=None, user=None) -> None:
     """
     Delete this node's NetBird peer and its setup key, then forget both.
@@ -129,9 +126,6 @@ def prepare_enrollment(node: FleetNode, user=None) -> str:
     return setup_key
 
 
-# -- install token ---------------------------------------------------------
-
-
 def issue_install_token(node: FleetNode, user=None) -> FleetNode:
     """
     Mint a fresh one-time install token, invalidating any previous link.
@@ -184,9 +178,6 @@ def verify_install_token(node: FleetNode, token: str) -> None:
 
     if not node.netbird_setup_key:
         raise EnrollmentError("setup key already consumed")
-
-
-# -- script ----------------------------------------------------------------
 
 
 def render_bootstrap(node: FleetNode, setup_key: str) -> str:

@@ -111,7 +111,7 @@ def refresh_swagger():
         request_body=None,
         responses={200: FleetNodeSerializer()},
         tags=[TAG],
-        operation_description="Polls NetBird immediately instead of waiting for the next 30s beat tick.",
+        operation_description="Polls NetBird immediately instead of waiting for the next 60s beat tick.",
     )
 
 

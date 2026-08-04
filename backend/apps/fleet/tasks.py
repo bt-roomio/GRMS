@@ -14,17 +14,6 @@ from fleet.utils.time import to_mil_sec
 
 logger = logging.getLogger(__name__)
 
-# Fields the poller owns. Anything not listed here is never touched by polling.
-PEER_FIELDS = (
-    "netbird_peer_id",
-    "mesh_ip",
-    "is_online",
-    "last_seen",
-    "os",
-    "netbird_version",
-    "enrolled_at",
-)
-
 
 def peer_name(peer) -> str:
     """
@@ -98,32 +87,10 @@ def apply_peer(node: FleetNode, peer: dict) -> bool:
 
 
 def sweep_unconfirmed(confirmed_ids) -> list:
-    """
-    Force offline every node this poll did not confirm as connected.
-
-    Never second-guesses a fresh `connected: true` against `last_seen`: NetBird
-    does not always refresh that field, so doing so flaps nodes every cycle.
-    """
     stale = FleetNode.objects.is_active().filter(is_online=True).exclude(id__in=confirmed_ids)
     stale_ids = list(stale.values_list("id", flat=True))
     stale.update(is_online=False, updated_at=get_mil_sec())
     return stale_ids
-
-
-def sweep_lagging() -> list:
-    """
-    Fallback for when NetBird itself is unreachable.
-
-    Nothing can be confirmed, so anything unsighted for
-    FLEET_OFFLINE_AFTER_SECONDS drops offline rather than sitting green on
-    stale information.
-    """
-    cutoff = get_mil_sec() - settings.FLEET_OFFLINE_AFTER_SECONDS * 1000
-
-    lagging = FleetNode.objects.is_active().filter(is_online=True, last_seen__isnull=False, last_seen__lt=cutoff)
-    lagging_ids = list(lagging.values_list("id", flat=True))
-    lagging.update(is_online=False, updated_at=get_mil_sec())
-    return lagging_ids
 
 
 def notify(node_ids) -> None:
@@ -148,12 +115,6 @@ def notify(node_ids) -> None:
 
 @shared_task(name="fleet.tasks.poll_fleet_peers", ignore_result=True)
 def poll_fleet_peers():
-    """
-    Reconcile FleetNode rows against NetBird's peer list.
-
-    "Online" means connected to the mesh, not that the stack inside the VM is
-    healthy.
-    """
     try:
         client = NetBirdClient()
     except NetBirdNotConfigured:
@@ -163,8 +124,7 @@ def poll_fleet_peers():
     try:
         peers = client.list_peers(group_id=settings.NETBIRD_HOTEL_GROUP_ID or None)
     except NetBirdError:
-        logger.exception("Fleet poller could not reach the NetBird API")
-        notify(sweep_lagging())
+        logger.exception("Fleet poller could not reach the NetBird API — leaving node status untouched")
         return
 
     by_code = {peer_name(peer): peer for peer in peers if peer_name(peer)}

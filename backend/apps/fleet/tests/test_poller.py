@@ -1,12 +1,12 @@
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.utils import timezone
 
 from core.utils.get_time import get_mil_sec
 from fleet.models import FleetAuditLog, FleetNode
 from fleet.netbird.exceptions import NetBirdUnavailable
-from fleet.tasks import apply_peer, peer_name, poll_fleet_peers, sweep_lagging, sweep_unconfirmed
+from fleet.tasks import apply_peer, peer_name, poll_fleet_peers, sweep_unconfirmed
 from fleet.tests.factories import create_gateway
 from fleet.utils.time import to_mil_sec
 from main.models import Tenant
@@ -105,7 +105,6 @@ class PollerTest(TestCase):
         self.node.refresh_from_db()
         self.assertFalse(self.node.is_online)
 
-    @override_settings(FLEET_OFFLINE_AFTER_SECONDS=120)
     def test_confirmed_node_survives_a_stale_last_seen(self):
         """NetBird does not always refresh last_seen while a peer stays connected."""
         old = get_mil_sec() - 3600 * 1000
@@ -115,27 +114,17 @@ class PollerTest(TestCase):
         self.node.refresh_from_db()
         self.assertTrue(self.node.is_online)
 
-    @override_settings(FLEET_OFFLINE_AFTER_SECONDS=120)
-    def test_lagging_sweep_drops_nodes_not_sighted_recently(self):
-        old = get_mil_sec() - 300 * 1000
-        FleetNode.objects.filter(pk=self.node.pk).update(is_online=True, last_seen=old)
-
-        self.assertIn(self.node.id, sweep_lagging())
-        self.node.refresh_from_db()
-        self.assertFalse(self.node.is_online)
-
-    @override_settings(FLEET_OFFLINE_AFTER_SECONDS=120)
     @patch("fleet.tasks.notify")
     @patch("fleet.tasks.NetBirdClient")
-    def test_netbird_outage_falls_back_to_last_seen(self, client_cls, _notify):
+    def test_netbird_outage_leaves_status_untouched(self, client_cls, _notify):
         client_cls.return_value = MagicMock(list_peers=MagicMock(side_effect=NetBirdUnavailable("down")))
-        old = get_mil_sec() - 300 * 1000
+        old = get_mil_sec() - 3600 * 1000
         FleetNode.objects.filter(pk=self.node.pk).update(is_online=True, last_seen=old)
 
         poll_fleet_peers()
 
         self.node.refresh_from_db()
-        self.assertFalse(self.node.is_online)
+        self.assertTrue(self.node.is_online)
 
     def test_last_seen_is_stored_in_milliseconds(self):
         peer = make_peer()

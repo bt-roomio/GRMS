@@ -133,8 +133,6 @@ class FleetNodeFilterParams(ValidatorSerializer):
 
 
 class InstallCommandSerializer(serializers.Serializer):
-    """Everything the UI needs to render the install instructions."""
-
     install_url = serializers.CharField(read_only=True, help_text="One-time link that serves the bootstrap script.")
     command = serializers.CharField(read_only=True, help_text="curl … | sudo bash — needs the VM to reach this server.")
     hostname = serializers.CharField(read_only=True, help_text="The NetBird peer name this node will register as.")

@@ -494,9 +494,6 @@ FLEET_SSH_CONNECT_TIMEOUT = float(os.getenv("FLEET_SSH_CONNECT_TIMEOUT", "15"))
 FLEET_SSH_COMMAND_TIMEOUT = float(os.getenv("FLEET_SSH_COMMAND_TIMEOUT", "60"))
 
 FLEET_INSTALL_TOKEN_TTL_HOURS = int(os.getenv("INSTALL_TOKEN_TTL_HOURS", "24"))
-# A node whose peer has not been seen for this long is forced offline, in case
-# the poller misses an update.
-FLEET_OFFLINE_AFTER_SECONDS = int(os.getenv("FLEET_OFFLINE_AFTER_SECONDS", "120"))
 # Public base URL used to build the `curl ... | sudo bash` one-liner.
 FLEET_INSTALL_BASE_URL = os.getenv("FLEET_INSTALL_BASE_URL", "").rstrip("/")
 

@@ -33,5 +33,4 @@ class FleetNodeQuerySet(BaseQuerySet):
         return query.order_by(*sort_by or ["code"])
 
     def for_gateway(self, gateway_id):
-        """The one active node of a gateway, or None."""
         return self.is_active().filter(gateway_id=gateway_id).first()
