@@ -71,6 +71,24 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertIn("other_1", codes)
         self.assertNotIn("tenant_1", codes)
 
+    def test_list_can_be_filtered_to_one_node(self):
+        response = self.get(
+            f"{reverse('fleet:node-list')}?id={self.node.id}",
+            HTTP_AUTHORIZATION=self.bearer_token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([row["code"] for row in response.data["results"]], ["tenant_1"])
+
+    def test_filtering_by_a_foreign_id_returns_nothing(self):
+        """Tenant scoping wins over the filter — a valid id from elsewhere is not a way in."""
+        self.grant("angelina@gmail.com", "view_fleetnode")
+        response = self.get(
+            f"{reverse('fleet:node-list')}?id={self.node.id}",
+            HTTP_AUTHORIZATION=self.angelina_token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["results"], [])
+
     def test_user_without_permission_is_denied(self):
         response = self.get(reverse("fleet:node-list"), HTTP_AUTHORIZATION=self.karina_token)
         self.assertEqual(response.status_code, 403)
@@ -250,9 +268,9 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["action"], FleetAuditLog.ACTION.PEER_PINNED)
 
-    @patch("fleet.tasks.notify")
+    @patch("fleet.observables.fleet_node._send")
     @patch("fleet.tasks.NetBirdClient")
-    def test_refresh_forces_a_poll(self, client_cls, _notify):
+    def test_refresh_forces_a_poll(self, client_cls, _send):
         peer = {
             "id": "peer-9",
             "name": "tenant_1",

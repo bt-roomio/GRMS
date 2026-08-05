@@ -127,14 +127,13 @@ class FleetNodeFilterParams(ValidatorSerializer):
 
     page = serializers.IntegerField(default=1)
     size = serializers.IntegerField(default=15)
+    id = serializers.UUIDField(required=False)
     search_value = serializers.CharField(required=False)
     is_online = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
 
 
 class InstallCommandSerializer(serializers.Serializer):
-    """Everything the UI needs to render the install instructions."""
-
     install_url = serializers.CharField(read_only=True, help_text="One-time link that serves the bootstrap script.")
     command = serializers.CharField(read_only=True, help_text="curl … | sudo bash — needs the VM to reach this server.")
     hostname = serializers.CharField(read_only=True, help_text="The NetBird peer name this node will register as.")

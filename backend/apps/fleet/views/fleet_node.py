@@ -58,6 +58,7 @@ class FleetNodeListView(APIView):
             sort_by=params.get("sort_by", []),
             search_value=params.get("search_value"),
             is_online=params.get("is_online"),
+            node_id=params.get("id"),
         )
         serializer = FleetNodeSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore

@@ -16,8 +16,11 @@ class FleetNodeQuerySet(BaseQuerySet):
             return self
         return self.filter(tenant_id=tenant_id)
 
-    def list(self, tenant_id, sort_by=None, search_value=None, is_online=None):
+    def list(self, tenant_id, sort_by=None, search_value=None, is_online=None, node_id=None):
         query = self.is_active().for_tenant(tenant_id).select_related("tenant", "gateway")
+
+        if node_id:
+            query = query.filter(id=node_id)
 
         if search_value:
             query = query.filter(
@@ -33,5 +36,4 @@ class FleetNodeQuerySet(BaseQuerySet):
         return query.order_by(*sort_by or ["code"])
 
     def for_gateway(self, gateway_id):
-        """The one active node of a gateway, or None."""
         return self.is_active().filter(gateway_id=gateway_id).first()
