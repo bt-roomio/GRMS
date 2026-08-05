@@ -6,10 +6,10 @@ from django.test import override_settings
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from fleet.exceptions import FleetPathRejected
 from fleet.models import FleetAuditLog, FleetNode
 from fleet.netbird.exceptions import NetBirdUnavailable
 from fleet.tests.factories import create_gateway
+from fleet.utils.exceptions import FleetPathRejected
 from main.models import Tenant
 from users.models import User
 
@@ -184,7 +184,7 @@ class FleetNodeApiTest(BaseTestCase):
             delete_peer=MagicMock(),
             delete_setup_key=MagicMock(),
         )
-        with patch("fleet.enroll.NetBirdClient", return_value=client):
+        with patch("fleet.utils.enroll.NetBirdClient", return_value=client):
             response = self.client.post(
                 reverse("fleet:node-install", args=[(node or self.node).id]),
                 HTTP_AUTHORIZATION=self.bearer_token,
@@ -225,7 +225,7 @@ class FleetNodeApiTest(BaseTestCase):
 
     @override_settings(**INSTALL_SETTINGS)
     def test_install_reports_a_netbird_outage(self):
-        with patch("fleet.enroll.NetBirdClient", side_effect=NetBirdUnavailable("down")):
+        with patch("fleet.utils.enroll.NetBirdClient", side_effect=NetBirdUnavailable("down")):
             response = self.client.post(
                 reverse("fleet:node-install", args=[self.node.id]),
                 HTTP_AUTHORIZATION=self.bearer_token,
@@ -236,7 +236,7 @@ class FleetNodeApiTest(BaseTestCase):
 
     def test_run_command_reports_output_and_is_audited(self):
         result = {"rc": 0, "stdout": "up 3 days\n", "stderr": ""}
-        with patch("fleet.views.fleet_node.ssh.run_command_sync", return_value=result) as runner:
+        with patch("fleet.views.command.ssh.run_command_sync", return_value=result) as runner:
             response = self.client.post(
                 reverse("fleet:node-run", args=[self.node.id]),
                 data={"command": "uptime"},
@@ -277,7 +277,7 @@ class FleetNodeApiTest(BaseTestCase):
             "mode": "0600",
             "replaced": False,
         }
-        with patch("fleet.views.fleet_node.sftp.upload_sync", return_value=result) as uploader:
+        with patch("fleet.views.upload.sftp.upload_sync", return_value=result) as uploader:
             response = self.upload(self.bearer_token, mode="0600")
 
         self.assertEqual(response.status_code, 200)
@@ -293,7 +293,7 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertEqual(log.detail["sha256"], "abc123")
 
     def test_upload_needs_nothing_but_the_file(self):
-        with patch("fleet.views.fleet_node.sftp.upload_sync", return_value={}) as uploader:
+        with patch("fleet.views.upload.sftp.upload_sync", return_value={}) as uploader:
             response = self.upload(self.bearer_token)
 
         self.assertEqual(response.status_code, 200)
@@ -302,14 +302,14 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertTrue(kwargs["overwrite"], "re-uploading the same file replaces it")
 
     def test_overwrite_can_be_turned_off(self):
-        with patch("fleet.views.fleet_node.sftp.upload_sync", return_value={}) as uploader:
+        with patch("fleet.views.upload.sftp.upload_sync", return_value={}) as uploader:
             self.upload(self.bearer_token, overwrite="false")
 
         _, kwargs = uploader.call_args
         self.assertFalse(kwargs["overwrite"])
 
     def test_a_refused_upload_is_a_400_and_is_audited(self):
-        with patch("fleet.views.fleet_node.sftp.upload_sync", side_effect=FleetPathRejected("nope")):
+        with patch("fleet.views.upload.sftp.upload_sync", side_effect=FleetPathRejected("nope")):
             response = self.upload(self.bearer_token)
 
         self.assertEqual(response.status_code, 400)
@@ -325,7 +325,7 @@ class FleetNodeApiTest(BaseTestCase):
 
     @override_settings(FLEET_UPLOAD_MAX_BYTES=4)
     def test_upload_rejects_a_file_over_the_limit_before_connecting(self):
-        with patch("fleet.views.fleet_node.sftp.upload_sync") as uploader:
+        with patch("fleet.views.upload.sftp.upload_sync") as uploader:
             response = self.upload(
                 self.bearer_token,
                 file=SimpleUploadedFile("big.bin", b"x" * 64),

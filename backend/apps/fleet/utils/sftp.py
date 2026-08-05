@@ -7,9 +7,9 @@ import uuid
 import asyncssh
 from django.conf import settings
 
-from fleet.exceptions import FleetPathRejected, FleetTransferFailed
-from fleet.ssh import connect, run_blocking
+from fleet.utils.exceptions import FleetPathRejected, FleetTransferFailed
 from fleet.utils.paths import ssh_user, upload_root
+from fleet.utils.ssh import connect, run_blocking
 
 logger = logging.getLogger(__name__)
 

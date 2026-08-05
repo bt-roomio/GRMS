@@ -1,14 +1,14 @@
 from django.urls import path
 
+from fleet.views.audit_log import FleetNodeAuditLogView
+from fleet.views.command import FleetNodeRunCommandView
+from fleet.views.enrollment import FleetNodeInstallView
 from fleet.views.fleet_node import (
-    FleetNodeAuditLogView,
     FleetNodeDetailView,
-    FleetNodeInstallView,
     FleetNodeListView,
-    FleetNodeRunCommandView,
     FleetNodeStatusView,
-    FleetNodeUploadView,
 )
+from fleet.views.upload import FleetNodeUploadView
 
 urlpatterns = [
     path("nodes/", FleetNodeListView.as_view(), name="node-list"),

@@ -3,7 +3,10 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 
 from core.utils.get_time import get_mil_sec
-from fleet.enroll import (
+from fleet.models import FleetAuditLog, FleetNode
+from fleet.netbird.exceptions import NetBirdAPIError, NetBirdUnavailable
+from fleet.tests.factories import create_gateway
+from fleet.utils.enroll import (
     EnrollmentError,
     issue_install_token,
     prepare_enrollment,
@@ -11,9 +14,6 @@ from fleet.enroll import (
     render_bootstrap,
     verify_install_token,
 )
-from fleet.models import FleetAuditLog, FleetNode
-from fleet.netbird.exceptions import NetBirdAPIError, NetBirdUnavailable
-from fleet.tests.factories import create_gateway
 from main.models import Tenant
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
@@ -96,7 +96,7 @@ class PeerLifecycleTest(NodeTestCase):
 
     def prepare(self, client=None):
         client = client or fake_client()
-        with patch("fleet.enroll.NetBirdClient", return_value=client):
+        with patch("fleet.utils.enroll.NetBirdClient", return_value=client):
             key = prepare_enrollment(self.node)
         return client, key
 
@@ -248,7 +248,7 @@ class InstallEndpointTest(NodeTestCase):
 
     def setUp(self):
         super().setUp()
-        with patch("fleet.enroll.NetBirdClient", return_value=fake_client()):
+        with patch("fleet.utils.enroll.NetBirdClient", return_value=fake_client()):
             prepare_enrollment(self.node)
 
     def url(self, token=None, code=None):
@@ -294,5 +294,5 @@ class InstallEndpointTest(NodeTestCase):
 
     def test_a_netbird_outage_cannot_break_the_link(self):
         """Nothing here talks to NetBird any more — the key was minted earlier."""
-        with patch("fleet.enroll.NetBirdClient", side_effect=NetBirdUnavailable("down")):
+        with patch("fleet.utils.enroll.NetBirdClient", side_effect=NetBirdUnavailable("down")):
             self.assertEqual(self.client.get(self.url()).status_code, 200)
