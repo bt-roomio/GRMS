@@ -280,6 +280,7 @@ class ReservationEventHandler:
         """
         standardized_data = {
             "hotel_id": str(self.mews_config.company_id),
+            "tenant_id": str(self.tenant.id),
             "first_name": customer.get("FirstName") or customer.get("LastName"),
             "last_name": customer.get("LastName", "") if customer.get("FirstName") else "",
             "room_number": room_number,

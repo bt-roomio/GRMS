@@ -51,7 +51,7 @@ class Command(BaseCommand):
             connection.close()
             self.stdout.write(self.style.SUCCESS(f"Queue '{PMS_MESSAGES_QUEUE}' setup completed"))
         except Exception as e:
-            logger.error(f"✗ Failed to setup queue '{PMS_MESSAGES_QUEUE}': {str(e)}")
+            logger.error(f"✗ Failed to setup queue '{PMS_MESSAGES_QUEUE}': {e!s}")
             self.stdout.write(self.style.ERROR(f"✗ Failed to setup queue '{PMS_MESSAGES_QUEUE}': {e}"))
             return
 
@@ -89,7 +89,7 @@ class Command(BaseCommand):
                         if method.delivery_tag:
                             ch.basic_ack(delivery_tag=method.delivery_tag)
                     except Exception as e:
-                        logger.error(f"[{queue_name}] ✗ Unexpected error: {str(e)}", exc_info=True)
+                        logger.error(f"[{queue_name}] ✗ Unexpected error: {e!s}", exc_info=True)
                         # Acknowledge to prevent requeue loop
                         if method.delivery_tag:
                             ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -103,7 +103,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("\nShutting down gracefully..."))
                 break
             except Exception as err:
-                logger.error(f"[{queue_name}] ✗ Connection error: {str(err)}. Retrying in 5 seconds...")
+                logger.error(f"[{queue_name}] ✗ Connection error: {err!s}. Retrying in 5 seconds...")
                 self.stdout.write(self.style.ERROR(f"[{queue_name}] Connection lost. Retrying in 5 seconds..."))
                 time.sleep(5)
 
@@ -136,7 +136,7 @@ class Command(BaseCommand):
             ROUTES[event_type](validated_data)
 
         except json.JSONDecodeError as e:
-            logger.error(f"✗ Failed to decode message: {str(e)}")
+            logger.error(f"✗ Failed to decode message: {e!s}")
             raise ValidationError("Invalid JSON format")
         except (ValidationError, Exception):
             raise
@@ -147,21 +147,16 @@ class Command(BaseCommand):
             integrator__client_id__isnull=False,
             enable=True,
             is_active=True,
-            hotel_id=data.get("hotel_id"),
         )
-        tenants = (
-            Tenant.objects.filter(integration__in=integrations)
+        tenant: Tenant | None = (
+            Tenant.objects.filter(id=data.get("tenant_id"), integration__in=integrations)
             .prefetch_related(Prefetch("integration", integrations))
             .distinct()
+            .first()
         )
 
-        if tenants.count() > 1:
-            logger.warning(f"Found multiple tenants for hotel_id: {data.get('hotel_id')}")
-
-        tenant: Tenant | None = tenants.first()
-
         if not tenant:
-            logger.error(f"✗ Tenant not found for hotel_id: {data.get('hotel_id')}")
+            logger.error(f"✗ Tenant not found for tenant_id: {data.get('tenant_id')}")
             raise ValidationError("Tenant not found!")
 
         if data.get("event_type") != "canceled":
@@ -380,7 +375,7 @@ def handle_guest_move(guest: Guest, data: dict):
         old_room.refresh_from_db()
         old_room.save(update_fields=["state"])
     except Exception as e:
-        logger.error(f"✗ Failed to move guest: {str(e)}")
+        logger.error(f"✗ Failed to move guest: {e!s}")
         raise
 
 
