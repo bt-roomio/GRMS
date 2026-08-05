@@ -493,6 +493,10 @@ FLEET_SSH_PORT = int(os.getenv("SSH_PORT", "22"))
 FLEET_SSH_CONNECT_TIMEOUT = float(os.getenv("FLEET_SSH_CONNECT_TIMEOUT", "15"))
 FLEET_SSH_COMMAND_TIMEOUT = float(os.getenv("FLEET_SSH_COMMAND_TIMEOUT", "60"))
 
+FLEET_UPLOAD_ROOT = os.getenv("FLEET_UPLOAD_ROOT", "")
+FLEET_UPLOAD_MAX_BYTES = int(os.getenv("FLEET_UPLOAD_MAX_BYTES", str(100 * 1024 * 1024)))
+FLEET_UPLOAD_TIMEOUT = float(os.getenv("FLEET_UPLOAD_TIMEOUT", "300"))
+
 FLEET_INSTALL_TOKEN_TTL_HOURS = int(os.getenv("INSTALL_TOKEN_TTL_HOURS", "24"))
 # Public base URL used to build the `curl ... | sudo bash` one-liner.
 FLEET_INSTALL_BASE_URL = os.getenv("FLEET_INSTALL_BASE_URL", "").rstrip("/")

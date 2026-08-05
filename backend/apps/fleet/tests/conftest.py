@@ -4,4 +4,4 @@ tests — which sit under shuttle with the other consumer tests — can reuse th
 pytest only discovers fixtures through a conftest, hence this re-export.
 """
 
-from fleet.tests.sshd import client_key, sshd  # noqa: F401
+from fleet.tests.sshd import client_key, sshd, upload_root  # noqa: F401

@@ -2,12 +2,13 @@ import logging
 
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
+from rest_framework.parsers import MultiPartParser
 from rest_framework.views import APIView, Response
 
 from core.utils.get_time import get_mil_sec
 from core.utils.pagination import pagination
 from core.utils.permission import check_perms
-from fleet import ssh
+from fleet import sftp, ssh
 from fleet.enroll import (
     EnrollmentError,
     install_command,
@@ -26,6 +27,7 @@ from fleet.serializers.fleet_node import (
     FleetNodeSerializer,
     FleetNodeUpdateSerializer,
     RunCommandSerializer,
+    UploadFileSerializer,
 )
 from fleet.swagger.fleet_node import (
     audit_log_swagger,
@@ -37,11 +39,14 @@ from fleet.swagger.fleet_node import (
     retrieve_swagger,
     run_command_swagger,
     update_swagger,
+    upload_swagger,
 )
 from fleet.utils.audit import client_ip, log_action
 from fleet.utils.scope import tenant_scope
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_UPLOAD_MODE = 0o644
 
 
 def get_node(request, pk):
@@ -183,6 +188,52 @@ class FleetNodeRunCommandView(APIView):
                 "command": command,
                 "rc": result["rc"],
                 "duration_ms": get_mil_sec() - started,
+            },
+            remote_addr=client_ip(request),
+        )
+        return Response(result)
+
+
+class FleetNodeUploadView(APIView):
+    parser_classes = (MultiPartParser,)
+
+    @upload_swagger()
+    @check_perms(["fleet.upload_fleetnode"])
+    def post(self, request, pk):
+        node = get_node(request, pk)
+        params = UploadFileSerializer.check(request.data)
+
+        upload = params["file"]
+        mode = params.get("mode", DEFAULT_UPLOAD_MODE)
+
+        started = get_mil_sec()
+        upload.seek(0)
+        try:
+            result = sftp.upload_sync(
+                node,
+                upload,
+                upload.name,
+                mode=mode,
+                overwrite=params["overwrite"],
+            )
+        except FleetError as exc:
+            log_action(
+                FleetAuditLog.ACTION.FILE_UPLOAD_FAILED,
+                node=node,
+                user=request.user,
+                detail={"name": upload.name, "error": str(exc)},
+                remote_addr=client_ip(request),
+            )
+            raise ValidationError({"file": str(exc)}) from exc
+
+        log_action(
+            FleetAuditLog.ACTION.FILE_UPLOADED,
+            node=node,
+            user=request.user,
+            detail={
+                "name": upload.name,
+                "duration_ms": get_mil_sec() - started,
+                **result,
             },
             remote_addr=client_ip(request),
         )

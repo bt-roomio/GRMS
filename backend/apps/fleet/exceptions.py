@@ -19,3 +19,14 @@ class FleetHostKeyMismatch(FleetError):
 
 class FleetKeyUnavailable(FleetError):
     """The fleet private key is missing or unreadable on this server."""
+
+
+class FleetPathRejected(FleetError):
+    """
+    The requested destination escapes ``FLEET_UPLOAD_ROOT``, or the node resolved
+    it to somewhere outside that tree. Nothing is transferred.
+    """
+
+
+class FleetTransferFailed(FleetError):
+    """The connection held but the file could not be written to the node."""

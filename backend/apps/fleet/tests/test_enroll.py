@@ -202,6 +202,14 @@ class BootstrapScriptTest(NodeTestCase):
         self.assertIn(ENROLL_SETTINGS["FLEET_SSH_PUBLIC_KEY"], script)
         self.assertIn("netbird down", script)
 
+    def test_the_home_directory_is_owned_by_the_agent(self):
+        """
+        `useradd -m` only owns a home it creates, and is skipped altogether when
+        the account already exists — a pre-existing home stays root-owned, and
+        uploads into it fail with a permission error.
+        """
+        self.assertIn("chown roomio-agent:roomio-agent /home/roomio-agent", self.script())
+
     def test_netbird_up_stays_on_a_single_line(self):
         """A line continuation followed by a blank line silently breaks the join."""
         up_lines = [line for line in self.script().splitlines() if line.startswith("netbird up ")]

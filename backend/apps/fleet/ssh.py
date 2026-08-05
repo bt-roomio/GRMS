@@ -1,10 +1,10 @@
 import asyncio
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 import asyncssh
-from channels.db import database_sync_to_async
 from django.conf import settings
 
 from fleet.exceptions import (
@@ -15,6 +15,7 @@ from fleet.exceptions import (
 )
 from fleet.models import FleetAuditLog
 from fleet.utils.audit import alog_action
+from fleet.utils.db import db
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ def _known_hosts_for(node):
     return resolve
 
 
-@database_sync_to_async
+@db
 def _pin_host_key(node, exported: str):
     node.ssh_host_key = exported
     node.save(update_fields=["ssh_host_key", "updated_at"])
@@ -153,9 +154,14 @@ async def run_command(node, command: str, timeout=None) -> dict:
     }
 
 
+def run_blocking(coro_factory):
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="fleet-ssh") as pool:
+        return pool.submit(lambda: asyncio.run(coro_factory())).result()
+
+
 def run_command_sync(node, command: str, timeout=None) -> dict:
     """Blocking wrapper for DRF views and Celery tasks."""
-    return asyncio.run(run_command(node, command, timeout=timeout))
+    return run_blocking(lambda: run_command(node, command, timeout=timeout))
 
 
 async def open_pty(conn, term_type="xterm-256color", cols=80, rows=24):
