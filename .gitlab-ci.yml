@@ -173,6 +173,7 @@ leto-backend:
     SSH_PORT: $LETO_PORT
     SSH_USER: $LETO_USER
     REMOTE_DIR: ~/GRMS/deploy
+    MAKE_ENV: "ENV=prod"
 
 leto-frontend:
   extends: [.ssh-direct, .frontend-deploy]
