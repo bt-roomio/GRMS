@@ -148,19 +148,15 @@ class Command(BaseCommand):
             enable=True,
             is_active=True,
         )
-        tenants = (
-            Tenant.objects.filter(integration__in=integrations)
+        tenant: Tenant | None = (
+            Tenant.objects.filter(id=data.get("tenant_id"), integration__in=integrations)
             .prefetch_related(Prefetch("integration", integrations))
             .distinct()
+            .first()
         )
 
-        if tenants.count() > 1:
-            logger.warning(f"Found multiple tenants for hotel_id: {data.get('hotel_id')}")
-
-        tenant: Tenant | None = tenants.first()
-
         if not tenant:
-            logger.error(f"✗ Tenant not found for hotel_id: {data.get('hotel_id')}")
+            logger.error(f"✗ Tenant not found for tenant_id: {data.get('tenant_id')}")
             raise ValidationError("Tenant not found!")
 
         if data.get("event_type") != "canceled":
