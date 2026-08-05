@@ -89,7 +89,7 @@ class Command(BaseCommand):
                     on_connected=lambda t=tenant.title: self._on_connected(t),
                     on_disconnected=lambda reason, t=tenant.title: self._on_disconnected(reason, t),
                     auto_reconnect=True,
-                    max_reconnect_attempts=5,
+                    max_reconnect_attempts=None,
                 )
 
                 clients.append(client)
