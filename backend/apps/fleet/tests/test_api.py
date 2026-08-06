@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 
@@ -8,6 +9,7 @@ from core.tests.base import BaseTestCase
 from fleet.models import FleetAuditLog, FleetNode
 from fleet.netbird.exceptions import NetBirdUnavailable
 from fleet.tests.factories import create_gateway
+from fleet.utils.exceptions import FleetPathRejected
 from main.models import Tenant
 from users.models import User
 
@@ -182,7 +184,7 @@ class FleetNodeApiTest(BaseTestCase):
             delete_peer=MagicMock(),
             delete_setup_key=MagicMock(),
         )
-        with patch("fleet.enroll.NetBirdClient", return_value=client):
+        with patch("fleet.utils.enroll.NetBirdClient", return_value=client):
             response = self.client.post(
                 reverse("fleet:node-install", args=[(node or self.node).id]),
                 HTTP_AUTHORIZATION=self.bearer_token,
@@ -223,7 +225,7 @@ class FleetNodeApiTest(BaseTestCase):
 
     @override_settings(**INSTALL_SETTINGS)
     def test_install_reports_a_netbird_outage(self):
-        with patch("fleet.enroll.NetBirdClient", side_effect=NetBirdUnavailable("down")):
+        with patch("fleet.utils.enroll.NetBirdClient", side_effect=NetBirdUnavailable("down")):
             response = self.client.post(
                 reverse("fleet:node-install", args=[self.node.id]),
                 HTTP_AUTHORIZATION=self.bearer_token,
@@ -234,7 +236,7 @@ class FleetNodeApiTest(BaseTestCase):
 
     def test_run_command_reports_output_and_is_audited(self):
         result = {"rc": 0, "stdout": "up 3 days\n", "stderr": ""}
-        with patch("fleet.views.fleet_node.ssh.run_command_sync", return_value=result) as runner:
+        with patch("fleet.views.command.ssh.run_command_sync", return_value=result) as runner:
             response = self.client.post(
                 reverse("fleet:node-run", args=[self.node.id]),
                 data={"command": "uptime"},
@@ -256,6 +258,96 @@ class FleetNodeApiTest(BaseTestCase):
             HTTP_AUTHORIZATION=self.karina_token,
         )
         self.assertEqual(response.status_code, 403)
+
+    def upload(self, token, **overrides):
+        payload = {"file": SimpleUploadedFile("app.yml", b"roomio config\n", content_type="text/yaml")}
+        payload.update(overrides)
+        return self.client.post(
+            reverse("fleet:node-upload", args=[self.node.id]),
+            data=payload,
+            format="multipart",
+            HTTP_AUTHORIZATION=token,
+        )
+
+    def test_upload_sends_the_file_under_its_own_name_and_is_audited(self):
+        result = {
+            "path": "/home/roomio-agent/app.yml",
+            "size": 14,
+            "sha256": "abc123",
+            "mode": "0600",
+            "replaced": False,
+        }
+        with patch("fleet.views.upload.sftp.upload_sync", return_value=result) as uploader:
+            response = self.upload(self.bearer_token, mode="0600")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["path"], "/home/roomio-agent/app.yml")
+
+        args, kwargs = uploader.call_args
+        self.assertEqual(args[2], "app.yml", "the destination is the uploaded file's own name")
+        self.assertEqual(kwargs["mode"], 0o600)
+
+        log = FleetAuditLog.objects.filter(node=self.node, action=FleetAuditLog.ACTION.FILE_UPLOADED).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.detail["name"], "app.yml")
+        self.assertEqual(log.detail["sha256"], "abc123")
+
+    def test_upload_needs_nothing_but_the_file(self):
+        with patch("fleet.views.upload.sftp.upload_sync", return_value={}) as uploader:
+            response = self.upload(self.bearer_token)
+
+        self.assertEqual(response.status_code, 200)
+        _, kwargs = uploader.call_args
+        self.assertEqual(kwargs["mode"], 0o644)
+        self.assertTrue(kwargs["overwrite"], "re-uploading the same file replaces it")
+
+    def test_overwrite_can_be_turned_off(self):
+        with patch("fleet.views.upload.sftp.upload_sync", return_value={}) as uploader:
+            self.upload(self.bearer_token, overwrite="false")
+
+        _, kwargs = uploader.call_args
+        self.assertFalse(kwargs["overwrite"])
+
+    def test_a_refused_upload_is_a_400_and_is_audited(self):
+        with patch("fleet.views.upload.sftp.upload_sync", side_effect=FleetPathRejected("nope")):
+            response = self.upload(self.bearer_token)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("file", response.data)
+        self.assertTrue(
+            FleetAuditLog.objects.filter(node=self.node, action=FleetAuditLog.ACTION.FILE_UPLOAD_FAILED).exists()
+        )
+
+    def test_upload_rejects_a_malformed_mode(self):
+        response = self.upload(self.bearer_token, mode="rwx")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("mode", response.data)
+
+    @override_settings(FLEET_UPLOAD_MAX_BYTES=4)
+    def test_upload_rejects_a_file_over_the_limit_before_connecting(self):
+        with patch("fleet.views.upload.sftp.upload_sync") as uploader:
+            response = self.upload(
+                self.bearer_token,
+                file=SimpleUploadedFile("big.bin", b"x" * 64),
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("file", response.data)
+        uploader.assert_not_called()
+
+    def test_upload_is_denied_without_permission(self):
+        response = self.upload(self.karina_token)
+        self.assertEqual(response.status_code, 403)
+
+    def test_upload_is_denied_for_a_foreign_tenants_node(self):
+        self.grant("angelina@gmail.com", "upload_fleetnode")
+        response = self.client.post(
+            reverse("fleet:node-upload", args=[self.node.id]),
+            data={"file": SimpleUploadedFile("app.yml", b"x")},
+            format="multipart",
+            HTTP_AUTHORIZATION=self.angelina_token,
+        )
+        self.assertEqual(response.status_code, 404)
 
     def test_audit_log_endpoint_lists_node_history(self):
         FleetAuditLog.objects.create(node=self.node, action=FleetAuditLog.ACTION.PEER_PINNED, detail={})

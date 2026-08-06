@@ -40,6 +40,11 @@ netbird up --setup-key {{ setup_key }} --management-url {{ management_url }} --a
 
 echo "==> Creating the {{ ssh_user }} account"
 id -u {{ ssh_user }} >/dev/null 2>&1 || useradd -m -d {{ ssh_home }} -s /bin/bash {{ ssh_user }}
+# `useradd -m` only owns a home it creates itself, and the check above skips
+# useradd entirely when the account already exists. Either way a pre-existing
+# {{ ssh_home }} stays root-owned, and file uploads land there.
+install -d -o {{ ssh_user }} -g {{ ssh_user }} {{ ssh_home }}
+chown {{ ssh_user }}:{{ ssh_user }} {{ ssh_home }}
 
 echo "==> Installing the backend public key"
 install -d -m 700 -o {{ ssh_user }} -g {{ ssh_user }} {{ ssh_home }}/.ssh

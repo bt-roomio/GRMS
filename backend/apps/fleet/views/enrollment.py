@@ -7,14 +7,24 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from fleet.enroll import (
+from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView, Response
+
+from core.utils.permission import check_perms
+from fleet.models import FleetAuditLog, FleetNode
+from fleet.netbird.exceptions import NetBirdError
+from fleet.swagger.enrollment import install_swagger
+from fleet.utils.audit import client_ip, log_action
+from fleet.utils.enroll import (
     EnrollmentError,
     consume_token,
+    install_command,
+    install_url,
+    prepare_enrollment,
     render_bootstrap,
     verify_install_token,
 )
-from fleet.models import FleetAuditLog, FleetNode
-from fleet.utils.audit import client_ip, log_action
+from fleet.utils.scope import tenant_scope
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +34,41 @@ def _plain(body, status=200):
     response["Cache-Control"] = "no-store"
     response["X-Robots-Tag"] = "noindex, nofollow"
     return response
+
+
+class FleetNodeInstallView(APIView):
+    """
+    Everything behind the "Install agent" button.
+
+    Whatever the node had before, it comes out with exactly one unused
+    single-use setup key and no peer.
+    """
+
+    @install_swagger()
+    @check_perms(["fleet.enroll_fleetnode"])
+    def post(self, request, pk):
+        node = FleetNode.objects.get_node(pk, tenant_scope(request))
+        replaced = bool(node.netbird_peer_id or node.netbird_setup_key_id)
+
+        try:
+            # The key never leaves the server; it is rendered into the script
+            # when the install link is fetched.
+            prepare_enrollment(node, user=request.user)
+        except NetBirdError as exc:
+            logger.exception("Could not prepare enrollment for %s", node.code)
+            raise ValidationError({"netbird": str(exc)}) from exc
+        except EnrollmentError as exc:
+            raise ValidationError({"netbird": str(exc)}) from exc
+
+        return Response(
+            {
+                "install_url": install_url(node, request),
+                "command": install_command(node, request),
+                "hostname": node.code,
+                "peer_replaced": replaced,
+                "expires_at": node.token_expires_at,
+            }
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")

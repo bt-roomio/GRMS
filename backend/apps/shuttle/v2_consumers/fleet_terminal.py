@@ -7,10 +7,10 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from core.utils.get_time import get_mil_sec
-from fleet import ssh
-from fleet.exceptions import FleetError, FleetHostKeyMismatch
 from fleet.models import FleetAuditLog, FleetNode
+from fleet.utils import ssh
 from fleet.utils.audit import alog_action
+from fleet.utils.exceptions import FleetError, FleetHostKeyMismatch
 from fleet.utils.scope import tenant_scope_for_user
 
 logger = logging.getLogger(__name__)

@@ -77,6 +77,7 @@ class FleetNode(BaseModel, UpdateByModel):
             ("enroll_fleetnode", "Can issue install tokens for fleet nodes"),
             ("terminal_fleetnode", "Can open a terminal on a fleet node"),
             ("exec_fleetnode", "Can run commands on a fleet node"),
+            ("upload_fleetnode", "Can upload files to a fleet node"),
         ]
 
 
@@ -98,6 +99,8 @@ class FleetAuditLog(BaseModel):
         TERMINAL_OPEN = "terminal_open", "Terminal session opened"
         TERMINAL_CLOSE = "terminal_close", "Terminal session closed"
         TERMINAL_DENIED = "terminal_denied", "Terminal session denied"
+        FILE_UPLOADED = "file_uploaded", "File uploaded"
+        FILE_UPLOAD_FAILED = "file_upload_failed", "File upload failed"
 
     user = models.ForeignKey("users.User", SET_NULL, null=True, blank=True, related_name="fleet_audit_logs")
     node = models.ForeignKey("fleet.FleetNode", SET_NULL, null=True, blank=True, related_name="audit_logs")

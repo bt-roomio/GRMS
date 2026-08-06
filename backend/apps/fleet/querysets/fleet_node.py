@@ -1,5 +1,7 @@
 from django.db.models import Q
 
+from rest_framework.generics import get_object_or_404
+
 from core.querysets.base_queryset import BaseQuerySet
 
 
@@ -34,6 +36,9 @@ class FleetNodeQuerySet(BaseQuerySet):
             query = query.filter(is_online=is_online)
 
         return query.order_by(*sort_by or ["code"])
+
+    def get_node(self, node_id, tenant_id):
+        return get_object_or_404(self.is_active().for_tenant(tenant_id), pk=node_id)
 
     def for_gateway(self, gateway_id):
         return self.is_active().filter(gateway_id=gateway_id).first()

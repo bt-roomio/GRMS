@@ -10,6 +10,7 @@ from fleet.models import FleetAuditLog, FleetNode
 from fleet.netbird.client import NetBirdClient
 from fleet.netbird.exceptions import NetBirdAPIError, NetBirdError
 from fleet.utils.audit import log_action
+from fleet.utils.paths import ssh_home, ssh_user
 
 logger = logging.getLogger(__name__)
 
@@ -194,8 +195,8 @@ def render_bootstrap(node: FleetNode, setup_key: str) -> str:
             "setup_key": setup_key,
             "management_url": settings.NETBIRD_MANAGEMENT_URL,
             "public_key": settings.FLEET_SSH_PUBLIC_KEY.strip(),
-            "ssh_user": node.ssh_user or settings.FLEET_SSH_USER,
-            "ssh_home": f"/home/{node.ssh_user or settings.FLEET_SSH_USER}",
+            "ssh_user": ssh_user(node),
+            "ssh_home": ssh_home(node),
             "generated_at": timezone.now().isoformat(timespec="seconds"),
         },
     )
