@@ -9,6 +9,7 @@ from fleet.netbird.client import NetBirdClient
 from fleet.netbird.exceptions import NetBirdError, NetBirdNotConfigured
 from fleet.observables.fleet_node import publish_fleet_nodes
 from fleet.utils.audit import log_action
+from fleet.utils.code import node_prefix
 from fleet.utils.time import to_mil_sec
 
 logger = logging.getLogger(__name__)
@@ -99,13 +100,12 @@ def poll_fleet_peers():
         logger.exception("Fleet poller could not reach the NetBird API — leaving node status untouched")
         return
 
-    by_code = {peer_name(peer): peer for peer in peers if peer_name(peer)}
+    prefix = f"{node_prefix()}_"
+    by_code = {peer_name(peer): peer for peer in peers if peer_name(peer).startswith(prefix)}
     nodes = FleetNode.objects.is_active().filter(code__in=by_code.keys()) if by_code else []
 
     unmatched = set(by_code) - {node.code for node in nodes}
     if unmatched:
-        # Almost always a wrong --hostname, which is otherwise invisible: the
-        # node just sits offline with no error anywhere.
         logger.warning("Fleet poller saw %s peer(s) with no matching node: %s", len(unmatched), sorted(unmatched))
 
     touched, confirmed_ids = [], []

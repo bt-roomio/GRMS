@@ -15,13 +15,9 @@ class FleetNode(BaseModel, UpdateByModel):
     the node is the machine running it.
     """
 
-    # One active node per gateway. The gateway also decides the tenant.
     gateway = models.ForeignKey("main.Device", CASCADE, related_name="fleet_nodes")
-    # Denormalised from ``gateway.tenant`` so scoping and the poller stay single-table.
     tenant = models.ForeignKey("main.Tenant", CASCADE, related_name="fleet_nodes")
 
-    # ``{tenant_slug}_{gateway_slug}`` — also used verbatim as the NetBird
-    # hostname, which is how the poller matches a peer back to this row.
     code = models.CharField(max_length=128, editable=False)
 
     title = models.CharField(max_length=255, null=True, blank=True)
@@ -37,17 +33,12 @@ class FleetNode(BaseModel, UpdateByModel):
     netbird_version = models.CharField(max_length=64, null=True, blank=True)
 
     ssh_user = models.CharField(max_length=64, default="roomio-agent")
-    # Trust-on-first-use pin, OpenSSH format. Recorded on the first successful
-    # connection and enforced on every one after it.
     ssh_host_key = models.TextField(null=True, blank=True)
 
-    # One-time install token handed out with the "Install agent" one-liner.
     install_token = models.CharField(max_length=128, null=True, blank=True)
     token_expires_at = UnixTimeStampField(null=True, blank=True)
     token_used_at = UnixTimeStampField(null=True, blank=True)
 
-    # The id lets us delete the key on re-enrollment. The plaintext is held only
-    # until ``/install/<code>`` renders it, then wiped with the token.
     netbird_setup_key_id = models.CharField(max_length=64, null=True, blank=True)
     netbird_setup_key = models.CharField(max_length=128, null=True, blank=True)
 
@@ -65,8 +56,6 @@ class FleetNode(BaseModel, UpdateByModel):
     class Meta(BaseModel.Meta):
         db_table = "fleet_node"
         constraints = [
-            # Partial rather than OneToOneField: nodes are soft-deleted, and a
-            # plain unique would permanently block re-enrolling a gateway.
             UniqueConstraint("gateway", condition=Q(is_active=True), name="unique_active_fleet_node_gateway"),
             UniqueConstraint("code", condition=Q(is_active=True), name="unique_active_fleet_node_code"),
         ]
