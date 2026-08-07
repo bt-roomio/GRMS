@@ -8,10 +8,13 @@ from fleet.models import FleetAuditLog, FleetNode
 from fleet.netbird.exceptions import NetBirdUnavailable
 from fleet.tasks import apply_peer, peer_name, poll_fleet_peers, sweep_unconfirmed
 from fleet.tests.factories import create_gateway
+from fleet.utils.code import node_prefix
 from fleet.utils.time import to_mil_sec
 from main.models import Tenant
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
+# The poller only looks at peers named for this backend.
+NODE_CODE = f"{node_prefix()}_tenant_1"
 
 
 def now_rfc3339():
@@ -21,7 +24,7 @@ def now_rfc3339():
 def make_peer(**overrides):
     peer = {
         "id": "peer-1",
-        "name": "tenant_1",
+        "name": NODE_CODE,
         "hostname": "grms-roomio",
         "ip": "100.84.90.52",
         "connected": True,
@@ -39,7 +42,7 @@ class PollerTest(TestCase):
 
     def setUp(self):
         gateway = create_gateway(Tenant.objects.get(pk=TENANT_ID), name="Front Desk")
-        self.node = FleetNode.objects.create(tenant_id=TENANT_ID, gateway=gateway, code="tenant_1")
+        self.node = FleetNode.objects.create(tenant_id=TENANT_ID, gateway=gateway, code=NODE_CODE)
 
     def test_peer_is_matched_on_name_and_nothing_else(self):
         """
@@ -55,7 +58,7 @@ class PollerTest(TestCase):
     @patch("fleet.tasks.NetBirdClient")
     def test_poll_matches_a_real_netbird_payload(self, client_cls, _send):
         """The shape NetBird 0.75 actually returns: name is ours, hostname is the VM's."""
-        peer = make_peer(name="tenant_1", hostname="grms-roomio", dns_label="tenant-1.netbird.selfhosted")
+        peer = make_peer(name=NODE_CODE, hostname="grms-roomio", dns_label="tenant-1.netbird.selfhosted")
         client_cls.return_value = MagicMock(list_peers=MagicMock(return_value=[peer]))
 
         poll_fleet_peers()

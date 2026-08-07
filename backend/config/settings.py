@@ -468,21 +468,17 @@ HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split("
 
 CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")
 
-# ---------------------------------------------------------------------------
 # Fleet — remote management of hotel VMs over the NetBird mesh
-# ---------------------------------------------------------------------------
-# NetBird is the connectivity layer only: its REST API tells us which nodes
-# exist and whether they are online. It can never run a command on one. All
-# execution goes over the node's own sshd, reachable only through the tunnel.
+
 NETBIRD_API_URL = os.getenv("NETBIRD_API_URL", "").rstrip("/")
 NETBIRD_PAT = os.getenv("NETBIRD_PAT", "")
 NETBIRD_HOTEL_GROUP_ID = os.getenv("NETBIRD_HOTEL_GROUP_ID", "")
-# Passed to `netbird up --management-url` inside the bootstrap script. Defaults
-# to the panel host, which is the same deployment WEBRTC_BROKER_URL points at.
 NETBIRD_MANAGEMENT_URL = os.getenv("NETBIRD_MANAGEMENT_URL", "") or os.getenv("WEBRTC_BROKER_URL", "")
 NETBIRD_TIMEOUT = float(os.getenv("NETBIRD_TIMEOUT", "10"))
-# Single-use setup keys minted per install; short-lived on purpose.
 NETBIRD_SETUP_KEY_TTL = int(os.getenv("NETBIRD_SETUP_KEY_TTL", "3600"))
+
+# "derive it from FRONTEND_DOMAIN" — see `fleet.utils.code.node_prefix`.
+FLEET_NODE_PREFIX = os.getenv("FLEET_NODE_PREFIX", "")
 
 # The private half of the fleet keypair. Stays on this server, never leaves.
 FLEET_SSH_PRIVATE_KEY_PATH = os.path.expanduser(os.getenv("SSH_PRIVATE_KEY_PATH", "~/.roomio/fleet_key"))

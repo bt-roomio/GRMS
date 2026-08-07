@@ -9,12 +9,17 @@ from core.tests.base import BaseTestCase
 from fleet.models import FleetAuditLog, FleetNode
 from fleet.netbird.exceptions import NetBirdUnavailable
 from fleet.tests.factories import create_gateway
+from fleet.utils.code import node_prefix
 from fleet.utils.exceptions import FleetPathRejected
 from main.models import Tenant
 from users.models import User
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
 OTHER_TENANT_ID = "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
+
+# Codes carry this backend's prefix, the same as the ones the API mints.
+NODE_CODE = f"{node_prefix()}_tenant_1"
+OTHER_CODE = f"{node_prefix()}_other_1"
 
 INSTALL_SETTINGS = {
     "FLEET_INSTALL_BASE_URL": "https://grms.example.com",
@@ -38,10 +43,10 @@ class FleetNodeApiTest(BaseTestCase):
         self.foreign_gateway = create_gateway(self.other_tenant, name="Lobby")
 
         self.node = FleetNode.objects.create(
-            tenant=self.tenant, gateway=self.gateway, code="tenant_1", mesh_ip="100.84.90.52"
+            tenant=self.tenant, gateway=self.gateway, code=NODE_CODE, mesh_ip="100.84.90.52"
         )
         self.foreign_node = FleetNode.objects.create(
-            tenant=self.other_tenant, gateway=self.foreign_gateway, code="other_1"
+            tenant=self.other_tenant, gateway=self.foreign_gateway, code=OTHER_CODE
         )
 
     def test_list_requires_authentication(self):
@@ -64,14 +69,14 @@ class FleetNodeApiTest(BaseTestCase):
 
     def test_superuser_sees_the_whole_fleet(self):
         codes = self.codes_visible_to(self.bearer_token)
-        self.assertIn("tenant_1", codes)
-        self.assertIn("other_1", codes, "a superuser is not scoped to one tenant")
+        self.assertIn(NODE_CODE, codes)
+        self.assertIn(OTHER_CODE, codes, "a superuser is not scoped to one tenant")
 
     def test_list_is_scoped_to_the_users_tenant(self):
         self.grant("angelina@gmail.com", "view_fleetnode")
         codes = self.codes_visible_to(self.angelina_token)
-        self.assertIn("other_1", codes)
-        self.assertNotIn("tenant_1", codes)
+        self.assertIn(OTHER_CODE, codes)
+        self.assertNotIn(NODE_CODE, codes)
 
     def test_list_can_be_filtered_to_one_node(self):
         response = self.get(
@@ -79,7 +84,7 @@ class FleetNodeApiTest(BaseTestCase):
             HTTP_AUTHORIZATION=self.bearer_token,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([row["code"] for row in response.data["results"]], ["tenant_1"])
+        self.assertEqual([row["code"] for row in response.data["results"]], [NODE_CODE])
 
     def test_filtering_by_a_foreign_id_returns_nothing(self):
         """Tenant scoping wins over the filter — a valid id from elsewhere is not a way in."""
@@ -113,7 +118,7 @@ class FleetNodeApiTest(BaseTestCase):
         response = self.create(gateway=str(self.spare_gateway.id), title="Spa VM")
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data["code"], "tenant_spa")
+        self.assertEqual(response.data["code"], f"{node_prefix()}_tenant_spa")
         self.assertEqual(str(response.data["tenant"]), TENANT_ID, "the gateway decides the tenant")
         self.assertEqual(response.data["gateway_name"], "Spa")
         self.assertEqual(response.data["ssh_user"], "roomio-agent")
@@ -206,9 +211,9 @@ class FleetNodeApiTest(BaseTestCase):
         # unescapes that into a literal quote inside the URL, which curl rejects.
         self.assertNotIn('"', command)
         self.assertNotIn('"', response.data["install_url"])
-        self.assertIn("/install/tenant_1", response.data["install_url"])
+        self.assertIn(f"/install/{NODE_CODE}", response.data["install_url"])
 
-        self.assertEqual(response.data["hostname"], "tenant_1")
+        self.assertEqual(response.data["hostname"], NODE_CODE)
         self.assertFalse(response.data["peer_replaced"])
 
     @override_settings(**INSTALL_SETTINGS)
@@ -221,7 +226,7 @@ class FleetNodeApiTest(BaseTestCase):
         self.assertTrue(response.data["peer_replaced"])
         client.delete_peer.assert_called_once_with("peer-old")
         client.delete_setup_key.assert_called_once_with("key-old")
-        self.assertEqual(response.data["hostname"], "tenant_1", "the peer name must not change")
+        self.assertEqual(response.data["hostname"], NODE_CODE, "the peer name must not change")
 
     @override_settings(**INSTALL_SETTINGS)
     def test_install_reports_a_netbird_outage(self):
@@ -365,7 +370,7 @@ class FleetNodeApiTest(BaseTestCase):
     def test_refresh_forces_a_poll(self, client_cls, _send):
         peer = {
             "id": "peer-9",
-            "name": "tenant_1",
+            "name": NODE_CODE,
             "hostname": "grms-roomio",
             "ip": "100.84.90.52",
             "connected": True,
