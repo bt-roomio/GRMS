@@ -1,4 +1,4 @@
-from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, Value, When
+from django.db.models import BooleanField, Case, Exists, OuterRef, Prefetch, Q, Subquery, Value, When
 
 from core.querysets.base_queryset import BaseQuerySet
 
@@ -22,7 +22,9 @@ class PublicSpaceQuerySet(BaseQuerySet):
             )
         )
 
-    def list(self, tenant_id, sort_by=None, search_field=None, search_value=None, accessible_for_guest=None, status=None):
+    def list(
+        self, tenant_id, sort_by=None, search_field=None, search_value=None, accessible_for_guest=None, status=None
+    ):
         from main.models import DevicePublicSpaces
 
         sort_by = sort_by or ["created_at"]
@@ -56,6 +58,18 @@ class PublicSpaceQuerySet(BaseQuerySet):
             query = query.filter(Q(name__istartswith=search_value))
 
         return query.order_by(*sort_by)
+
+    def door_lock_devices(self):
+        from main.models import DevicePublicSpaces
+
+        first_device = DevicePublicSpaces.objects.filter(public_space=OuterRef("pk"), device__is_active=True).order_by(
+            "device__created_at"
+        )
+
+        return self.annotate(
+            effective_device_id=Subquery(first_device.values("device_id")[:1]),
+            effective_device_status=Subquery(first_device.values("device__status")[:1], output_field=BooleanField()),
+        ).filter(effective_device_id__isnull=False)
 
     def quick_list(self, tenant_id, search_value=None):
         query = self.filter(tenant_id=tenant_id)
