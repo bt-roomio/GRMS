@@ -1,7 +1,5 @@
-import random
-import string
+import secrets
 
 
 def get_random_letter(length=15) -> str:
-    letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for _ in range(length))
+    return secrets.token_hex(length)

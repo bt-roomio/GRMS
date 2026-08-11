@@ -18,9 +18,7 @@ class LockKeyDoorsListView(APIView):
     @lockkeys_doors_list_swagger()
     def get(self, request):
         rooms = Room.objects.by_tenant(request.tenant).door_lock_devices()
-        public_spaces = PublicSpace.objects.filter(tenant=request.tenant).prefetch_related(
-            "device_public_spaces__device"
-        )
+        public_spaces = PublicSpace.objects.filter(tenant=request.tenant).door_lock_devices()  # ty: ignore
         rooms_data = RoomLockKeySerializer(rooms, many=True).data
         public_spaces_data = PublicSpaceLockKeySerializer(public_spaces, many=True).data
         return Response([*rooms_data, *public_spaces_data])
@@ -30,7 +28,7 @@ class LockKeyDoorOpenView(APIView):
     permission_classes = (DoorLockPermission,)
 
     @lockkeys_door_open_swagger()
-    def post(self, request, space_id):
+    def post(self, _, space_id):
         device = get_object_or_404(Device, pk=space_id)
         result = prepare_mqtt_request(device, "unlock", {}, 33)
         return Response(result)
