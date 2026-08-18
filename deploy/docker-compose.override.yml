@@ -43,7 +43,7 @@ services:
   backend:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
       - static_volume:/app/static/
       - media_volume:/app/media/
       - prom_mp:/prom_mp
@@ -67,54 +67,54 @@ services:
   celery-critical:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
     command: celery -A config worker -Q critical -n critical@%h -l debug -c 1
 
   celery-default:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
     command: celery -A config worker -Q default -n default@%h -l debug -c 2
 
   celery-realtime:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
     command: celery -A config worker -Q realtime -n realtime@%h -l debug -c 2
 
   celery-low:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
     command: celery -A config worker -Q low -n low@%h -l debug -c 1
 
   celery-beat:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
     command: celery -A config beat --loglevel=debug
 
   celery-flower:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
 
   mq-async:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
     deploy:
-      replicas: 1   # в dev достаточно одной реплики
+      replicas: 1
 
   mews-websocket:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
 
   pms-handler:
     volumes:
       - ../backend:/app
-      - backend_venv:/app/.venv
+      - /app/.venv
 
   # --- Frontend: dev-сервер с hot-reload вместо сборки ---
   frontend:
@@ -125,6 +125,3 @@ services:
     # слушает :5173 и не отдаёт /healthz, поэтому в dev он отключён
     healthcheck:
       test: ["NONE"]
-
-volumes:
-  backend_venv:

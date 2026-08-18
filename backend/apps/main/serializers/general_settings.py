@@ -25,7 +25,7 @@ class TagSerializer(serializers.Serializer):
         allow_blank=True,
         error_messages={"invalid_choice": f"Scope of the attribute, e.g., {[k[0] for k in AttributeKv.ENTITY_TYPE]}"},
     )
-    config = serializers.JSONField(default={})
+    config = serializers.JSONField(default=dict)
 
     class Meta:
         ref_name = "RoomFieldTag"
@@ -63,6 +63,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
         queryset=Dashboard.objects.all(), required=False, many=False, allow_null=True
     )
     room_fields = TagSerializer(many=True, required=False)
+    ai_settings = serializers.JSONField(required=False)
 
     def validate_main_dashboard(self, value):
         if value is None:
@@ -98,6 +99,8 @@ class GeneralSettingsSerializer(serializers.Serializer):
                 g_settings[field_name] = g_settings.get(field_name, {"ving_card": False, "kaba": False})
             elif field_name == "room_fields":
                 g_settings[field_name] = g_settings.get(field_name, [])
+            elif field_name == "ai_settings":
+                g_settings[field_name] = g_settings.get(field_name, {})
             else:
                 g_settings[field_name] = g_settings.get(field_name, field.default)
 
