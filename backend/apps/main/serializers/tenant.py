@@ -26,6 +26,8 @@ class TenantFilterParams(ValidatorSerializer):
     search_field = serializers.ChoiceField(choices=("title",), required=False)
     search_value = serializers.CharField(required=False)
     group = serializers.UUIDField(required=False)
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=50, min_value=1, max_value=500)
 
 
 def _serialize_gateways(instance):

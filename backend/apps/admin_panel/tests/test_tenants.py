@@ -18,7 +18,7 @@ class AdminTenantListTest(BaseTestCase):
         response = self.get(reverse("admin_panel:admin-tenant-list"))
         self.assertEqual(response.status_code, 200)
         assert response.data is not None
-        ids = [t["id"] for t in response.data]
+        ids = [t["id"] for t in response.data["results"]]
         self.assertIn(TENANT_ID, ids)
         self.assertIn(TENANT_2_ID, ids)
 

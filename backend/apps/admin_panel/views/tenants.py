@@ -12,6 +12,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.pagination import pagination
 from core.utils.permission import IsSuperUser
 from main.models import Device, Tenant
 from main.serializers.tenant import CreateTenantSerializer, TenantFilterParams, TenantSerializer, UpdateTenantSerializer
@@ -36,7 +37,8 @@ class AdminTenantListView(APIView):
             group=params.get("group"),
         )
         serializer = TenantSerializer(queryset, many=True)
-        return Response(serializer.data)
+        data = pagination(queryset, serializer, params.get("page"), params.get("size"))
+        return Response(data)
 
     @swagger_auto_schema(
         tags=["Admin Panel"],

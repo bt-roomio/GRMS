@@ -89,7 +89,7 @@ class AdminTenantGroupTest(BaseTestCase):
 
         response = self.get(reverse("admin_panel:admin-tenant-list"), {"group": str(self.group.pk)})
         assert response.data is not None
-        self.assertEqual([str(t["id"]) for t in response.data], [TENANT_ID])
+        self.assertEqual([str(t["id"]) for t in response.data["results"]], [TENANT_ID])
 
     def test_unscoped_superuser_can_impersonate_a_chain_admin(self):
         """Chain admins have no tenant; a tenant-only filter would hide them entirely."""
@@ -126,8 +126,8 @@ class AdminTenantGroupTest(BaseTestCase):
 
         response = self.get(reverse("admin_panel:admin-tenant-list"), {"group": str(self.group.pk)})
         assert response.data is not None
-        self.assertEqual([str(t["id"]) for t in response.data], [TENANT_ID])
-        self.assertEqual(response.data[0]["group_title"], "Chain")
+        self.assertEqual([str(t["id"]) for t in response.data["results"]], [TENANT_ID])
+        self.assertEqual(response.data["results"][0]["group_title"], "Chain")
 
     def test_forbidden_for_non_superuser(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.angelina_token)

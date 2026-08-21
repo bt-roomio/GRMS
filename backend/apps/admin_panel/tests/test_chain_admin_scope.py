@@ -30,7 +30,7 @@ class ChainAdminScopeTest(BaseTestCase):
     def test_tenant_list_shows_only_the_chain(self):
         response = self.get(reverse("admin_panel:admin-tenant-list"))
         assert response.data is not None
-        self.assertEqual([str(t["id"]) for t in response.data], [TENANT_ID])
+        self.assertEqual([str(t["id"]) for t in response.data["results"]], [TENANT_ID])
 
     def test_foreign_tenant_is_invisible(self):
         url = reverse("admin_panel:admin-tenant-detail", kwargs={"tenant_id": self.outsider.pk})
