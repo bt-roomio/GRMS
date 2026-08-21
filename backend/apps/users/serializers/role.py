@@ -21,7 +21,8 @@ class RoleSimpleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Role
-        fields = ("id", "name", "permissions", "additional_info")
+        fields = ("id", "name", "permissions", "additional_info", "tenant")
+        extra_kwargs = {"tenant": {"read_only": True}}
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -35,17 +36,19 @@ class RoleSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-        tenant, pk = instance.tenant, instance.pk
         name = validated_data.get("name", instance.name)
 
-        if instance.name != name and Role.objects.filter(name=name, tenant=tenant).exclude(pk=pk).exists():
-            raise serializers.ValidationError({"name": "A role with this name already exists for this tenant."})
+        if instance.name != name:
+            clash = Role.objects.filter(name=name, tenant=instance.tenant).exclude(pk=instance.pk)
+            if clash.exists():
+                raise serializers.ValidationError({"name": "A role with this name already exists for this tenant."})
 
         return super().update(instance, validated_data)
 
     class Meta:
         model = Role
-        fields = ("id", "name", "permissions", "additional_info")
+        fields = ("id", "name", "permissions", "additional_info", "tenant")
+        extra_kwargs = {"tenant": {"read_only": True}}
 
 
 class RoleQuickFilterParams(ValidatorSerializer):

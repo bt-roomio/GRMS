@@ -1,4 +1,7 @@
-from admin_panel.serializers.users import AdminChangePasswordSerializer, AdminTenantUsersFilterParams
+from admin_panel.serializers.users import (
+    AdminChangePasswordSerializer,
+    AdminTenantUsersFilterParams,
+)
 from admin_panel.swagger.users import (
     AdminChangePasswordSwagger,
     AdminCreateTenantUserSwagger,
@@ -6,6 +9,7 @@ from admin_panel.swagger.users import (
     AdminTenantUsersSwagger,
 )
 from admin_panel.tasks import send_activation_email
+from admin_panel.utils.scope import get_scoped_tenant
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
@@ -13,7 +17,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.utils.permission import IsSuperUser
-from main.models import Tenant
 from users.models import User
 from users.serializers.user import UserSerializer
 from users.utils.emails import send_reset_link_email
@@ -30,7 +33,7 @@ class AdminTenantUsersView(APIView):
         operation_description="**Superuser only.** Returns a list of active users for the given tenant.",
     )
     def get(self, request, tenant_id):
-        get_object_or_404(Tenant, id=tenant_id)
+        get_scoped_tenant(request, tenant_id)
         params = AdminTenantUsersFilterParams.check(request.GET)
         queryset = User.objects.list(
             tenant_id=tenant_id,
@@ -53,8 +56,8 @@ class AdminTenantUsersView(APIView):
         ),
     )
     def post(self, request, tenant_id):
-        get_object_or_404(Tenant, id=tenant_id)
-        serializer = UserSerializer(data=request.data)
+        get_scoped_tenant(request, tenant_id)
+        serializer = UserSerializer(data=request.data, context={"request": request, "tenant_id": tenant_id})
         serializer.is_valid(raise_exception=True)
         user = serializer.save(tenant_id=tenant_id)
 
@@ -79,7 +82,7 @@ class AdminTenantUserDetailView(APIView):
         operation_description="**Superuser only.** Returns details of a specific user within a tenant.",
     )
     def get(self, request, tenant_id, user_id):
-        get_object_or_404(Tenant, id=tenant_id)
+        get_scoped_tenant(request, tenant_id)
         user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
         serializer = UserSerializer(user)
         return Response(serializer.data)
@@ -92,9 +95,9 @@ class AdminTenantUserDetailView(APIView):
         operation_description="**Superuser only.** Updates a user's data (including roles) within a tenant.",
     )
     def put(self, request, tenant_id, user_id):
-        get_object_or_404(Tenant, id=tenant_id)
+        get_scoped_tenant(request, tenant_id)
         user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
-        serializer = UserSerializer(user, data=request.data)
+        serializer = UserSerializer(user, data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -111,7 +114,7 @@ class AdminChangePasswordView(APIView):
         operation_description="**Superuser only.** Directly sets a new password for any user within a tenant.",
     )
     def post(self, request, tenant_id, user_id):
-        get_object_or_404(Tenant, id=tenant_id)
+        get_scoped_tenant(request, tenant_id)
         user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
         serializer = AdminChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

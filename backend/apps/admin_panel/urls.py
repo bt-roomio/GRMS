@@ -1,5 +1,6 @@
 from admin_panel.views.impersonate import ImpersonateView
 from admin_panel.views.roles import AdminTenantRolesView
+from admin_panel.views.tenant_groups import AdminTenantGroupDetailView, AdminTenantGroupListView
 from admin_panel.views.tenants import AdminTenantDetailView, AdminTenantListView
 from admin_panel.views.users import AdminChangePasswordView, AdminTenantUserDetailView, AdminTenantUsersView
 from django.urls import path
@@ -19,5 +20,7 @@ urlpatterns = [
         name="admin-tenant-user-change-password",
     ),
     path("tenant/<uuid:tenant_id>/role/", AdminTenantRolesView.as_view(), name="admin-tenant-roles"),
+    path("tenant-group/", AdminTenantGroupListView.as_view(), name="admin-group-list"),
+    path("tenant-group/<uuid:group_id>/", AdminTenantGroupDetailView.as_view(), name="admin-group-detail"),
     path("impersonate/<uuid:user_id>/", ImpersonateView.as_view(), name="admin-impersonate"),
 ]

@@ -13,8 +13,9 @@ class RolesTest(BaseTestCase):
         response = self.get(reverse("users:roles-list"))
         self.assertEqual(response.status_code, 200)
         assert response.data is not None
-        self.assertEqual(response.data[0]["name"], "Reception")
-        self.assertEqual(response.data[0]["id"], "d3c94703-ab5e-4926-ac52-a9bf8cf34ac6")
+        by_id = {role["id"]: role for role in response.data}
+        self.assertCountEqual([role["name"] for role in response.data], ["Reception", "TENANT_ADMIN"])
+        self.assertEqual(by_id["d3c94703-ab5e-4926-ac52-a9bf8cf34ac6"]["name"], "Reception")
 
     def test_create(self):
         response = self.post(reverse("users:roles-list"), data={"name": "NEW_ROLE", "permissions": []}, format="json")

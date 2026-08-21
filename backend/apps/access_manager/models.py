@@ -54,7 +54,7 @@ WEEK_DAYS = (
 
 class Group(BaseModel, UpdateByModel):
     name = models.CharField(max_length=255)
-    tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE)
+    tenant = models.ForeignKey("main.Tenant", on_delete=models.CASCADE, related_name="card_groups")
     week_days = ArrayField(models.CharField(max_length=10, choices=WEEK_DAYS))
     start_time = models.TimeField()
     end_time = models.TimeField()
