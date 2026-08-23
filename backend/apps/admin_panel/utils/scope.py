@@ -13,7 +13,7 @@ def scoped_tenants(request):
     return available_tenants_qs(request.user)
 
 
-def get_scoped_tenant(request, tenant_id):
+def get_scoped_tenant_or_404(request, tenant_id):
     """404 rather than 403: a chain admin should not learn that other hotels exist."""
     return get_object_or_404(scoped_tenants(request), pk=tenant_id)
 
