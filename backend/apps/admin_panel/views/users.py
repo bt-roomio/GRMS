@@ -9,7 +9,7 @@ from admin_panel.swagger.users import (
     AdminTenantUsersSwagger,
 )
 from admin_panel.tasks import send_activation_email
-from admin_panel.utils.scope import get_scoped_tenant_or_404
+from admin_panel.utils.scope import get_scoped_tenant_or_404, get_scoped_user_or_404
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.generics import get_object_or_404
@@ -111,11 +111,14 @@ class AdminChangePasswordView(APIView):
         request_body=AdminChangePasswordSerializer,
         responses=AdminChangePasswordSwagger,
         security=[{"Bearer": []}],
-        operation_description="**Superuser only.** Directly sets a new password for any user within a tenant.",
+        operation_description=(
+            "**Superuser only.** Directly sets a new password for any account the caller administers: "
+            "a user of a hotel in scope, or the admin of a chain in scope. "
+            "A superuser without a chain pin cannot be targeted here."
+        ),
     )
-    def post(self, request, tenant_id, user_id):
-        get_scoped_tenant_or_404(request, tenant_id)
-        user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
+    def post(self, request, user_id):
+        user = get_scoped_user_or_404(request, user_id)
         serializer = AdminChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user.set_password(serializer.validated_data["new_password"])

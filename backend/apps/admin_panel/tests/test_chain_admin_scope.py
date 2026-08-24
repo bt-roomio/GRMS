@@ -105,3 +105,37 @@ class ChainAdminScopeTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Tenant.objects.get(pk=TENANT_ID).group_id, self.group.pk)
+
+    def test_can_reset_the_password_of_a_peer_chain_admin(self):
+        peer = User.objects.create(email="peer@chain.com", tenant_group=self.group, is_superuser=True)
+        url = reverse("admin_panel:admin-user-change-password", kwargs={"user_id": peer.pk})
+
+        response = self.post(url, data={"new_password": "NewPassword1"}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        peer.refresh_from_db()
+        self.assertTrue(peer.check_password("NewPassword1"))
+
+    def test_cannot_reset_the_password_outside_the_chain(self):
+        romeo = User.objects.get(email="romeo@gmail.com")  # tenant 2, outside the chain
+        url = reverse("admin_panel:admin-user-change-password", kwargs={"user_id": romeo.pk})
+        self.assertEqual(self.post(url, data={"new_password": "NewPassword1"}, format="json").status_code, 404)
+
+    def test_cannot_reset_the_password_of_another_chains_admin(self):
+        other = TenantGroup.objects.create(title="Other")
+        stranger = User.objects.create(email="admin@other.com", tenant_group=other, is_superuser=True)
+        url = reverse("admin_panel:admin-user-change-password", kwargs={"user_id": stranger.pk})
+        self.assertEqual(self.post(url, data={"new_password": "NewPassword1"}, format="json").status_code, 404)
+
+    def test_cannot_reset_the_password_of_a_superuser_inside_the_chain(self):
+        # `admin@gmail.com` lives in this chain's hotel but carries no pin, so its
+        # reach is system-wide: resetting it would be an escape from the chain.
+        target = User.objects.get(email="admin@gmail.com")
+        self.assertEqual(str(target.tenant_id), TENANT_ID)
+        url = reverse("admin_panel:admin-user-change-password", kwargs={"user_id": target.pk})
+
+        response = self.post(url, data={"new_password": "Pwned12345"}, format="json")
+
+        self.assertEqual(response.status_code, 404)
+        target.refresh_from_db()
+        self.assertFalse(target.check_password("Pwned12345"))

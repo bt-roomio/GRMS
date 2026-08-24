@@ -3,6 +3,7 @@ from admin_panel.swagger.tenant_groups import (
     AdminTenantGroupDetailSwagger,
     AdminTenantGroupListSwagger,
 )
+from admin_panel.utils.scope import scoped_groups
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.exceptions import PermissionDenied
@@ -22,22 +23,8 @@ from main.serializers.tenant_group import (
 from main.services.tenant_provisioning import dissolve_tenant_group
 
 
-def scoped_groups(request):
-    """The chains the caller may touch: their own, or all of them."""
-    if request.user.tenant_group_id:
-        return TenantGroup.objects.filter(pk=request.user.tenant_group_id)
-    return TenantGroup.objects.all()
-
-
 class AdminTenantGroupListView(APIView):
     permission_classes = (IsSuperUser,)
-
-    def get_queryset(self, request):
-        """A chain admin only ever sees their own chain."""
-        queryset = TenantGroup.objects.all()
-        if request.user.tenant_group_id:
-            queryset = queryset.filter(pk=request.user.tenant_group_id)
-        return queryset
 
     @swagger_auto_schema(
         tags=["Admin Panel"],
@@ -48,7 +35,7 @@ class AdminTenantGroupListView(APIView):
     )
     def get(self, request):
         params = TenantGroupFilterParams.check(request.query_params)
-        queryset = self.get_queryset(request).list(
+        queryset = scoped_groups(request).list(
             sort_by=params.get("sort_by"),
             search_field=params.get("search_field"),
             search_value=params.get("search_value"),

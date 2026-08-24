@@ -1,6 +1,8 @@
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
+from main.models import TenantGroup
+from users.models import User
 
 TENANT_ID = "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
 OTHER_TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
@@ -173,63 +175,56 @@ class AdminChangePasswordTest(BaseTestCase):
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
 
+    def url(self, user_id):
+        return reverse("admin_panel:admin-user-change-password", kwargs={"user_id": user_id})
+
     def test_change_password(self):
-        response = self.post(
-            reverse(
-                "admin_panel:admin-tenant-user-change-password",
-                kwargs={"tenant_id": TENANT_ID, "user_id": USER_ID},
-            ),
-            {"new_password": "NewPassword1"},
-            format="json",
-        )
+        response = self.post(self.url(USER_ID), {"new_password": "NewPassword1"}, format="json")
         assert response.data is not None
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["message"], "Password changed.")
+        self.assertTrue(User.objects.get(pk=USER_ID).check_password("NewPassword1"))
 
     def test_change_password_invalid(self):
         # Case - too short / no uppercase / no digit
-        response = self.post(
-            reverse(
-                "admin_panel:admin-tenant-user-change-password",
-                kwargs={"tenant_id": TENANT_ID, "user_id": USER_ID},
-            ),
-            {"new_password": "weak"},
-            format="json",
-        )
+        response = self.post(self.url(USER_ID), {"new_password": "weak"}, format="json")
         self.assertEqual(response.status_code, 400)
 
     def test_change_password_user_not_found(self):
-        response = self.post(
-            reverse(
-                "admin_panel:admin-tenant-user-change-password",
-                kwargs={"tenant_id": TENANT_ID, "user_id": NON_EXISTENT_ID},
-            ),
-            {"new_password": "NewPassword1"},
-            format="json",
-        )
+        response = self.post(self.url(NON_EXISTENT_ID), {"new_password": "NewPassword1"}, format="json")
         self.assertEqual(response.status_code, 404)
 
-    def test_change_password_wrong_tenant(self):
-        # User belongs to OTHER_TENANT_ID, not TENANT_ID
-        other_user_id = "b5c0a9db-6082-402a-86c0-25e8f24ab19e"  # test@gmail.com (tenant: 28c81921)
-        response = self.post(
-            reverse(
-                "admin_panel:admin-tenant-user-change-password",
-                kwargs={"tenant_id": TENANT_ID, "user_id": other_user_id},
-            ),
-            {"new_password": "NewPassword1"},
-            format="json",
+    def test_change_password_of_a_chain_admin(self):
+        group = TenantGroup.objects.create(title="Chain")
+        chain_admin = User.objects.create(
+            email="chain@hotel.com", tenant_group=group, is_superuser=True, is_active=True
         )
+
+        response = self.post(self.url(chain_admin.pk), {"new_password": "NewPassword1"}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        chain_admin.refresh_from_db()
+        self.assertTrue(chain_admin.check_password("NewPassword1"))
+
+    def test_unpinned_superuser_is_out_of_reach(self):
+        # An account tied to neither a hotel nor a chain answers to nobody here.
+        loner = User.objects.create(email="loner@hotel.com", is_superuser=True, is_active=True)
+        response = self.post(self.url(loner.pk), {"new_password": "NewPassword1"}, format="json")
         self.assertEqual(response.status_code, 404)
+
+    def test_unpinned_superuser_living_in_a_hotel_is_out_of_reach(self):
+        # The shape that matters: system-wide reach *and* a hotel, so the tenant
+        # half of the scope would otherwise pick it up. `admin@gmail.com` is one.
+        target = User.objects.get(email="admin@gmail.com")
+        self.assertTrue(target.is_superuser and target.tenant_id and not target.tenant_group_id)
+
+        response = self.post(self.url(target.pk), {"new_password": "NewPassword1"}, format="json")
+
+        self.assertEqual(response.status_code, 404)
+        target.refresh_from_db()
+        self.assertFalse(target.check_password("NewPassword1"))
 
     def test_change_password_forbidden_for_non_superuser(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.angelina_token)
-        response = self.post(
-            reverse(
-                "admin_panel:admin-tenant-user-change-password",
-                kwargs={"tenant_id": TENANT_ID, "user_id": USER_ID},
-            ),
-            {"new_password": "NewPassword1"},
-            format="json",
-        )
+        response = self.post(self.url(USER_ID), {"new_password": "NewPassword1"}, format="json")
         self.assertEqual(response.status_code, 403)

@@ -15,11 +15,6 @@ urlpatterns = [
         AdminTenantUserDetailView.as_view(),
         name="admin-tenant-user-detail",
     ),
-    path(
-        "tenant/<uuid:tenant_id>/user/<uuid:user_id>/change-password/",
-        AdminChangePasswordView.as_view(),
-        name="admin-tenant-user-change-password",
-    ),
     path("tenant/<uuid:tenant_id>/role/", AdminTenantRolesView.as_view(), name="admin-tenant-roles"),
     path(
         "tenant/<uuid:tenant_id>/integration/", AdminTenantIntegrationsView.as_view(), name="admin-tenant-integrations"
@@ -31,5 +26,6 @@ urlpatterns = [
     ),
     path("tenant-group/", AdminTenantGroupListView.as_view(), name="admin-group-list"),
     path("tenant-group/<uuid:group_id>/", AdminTenantGroupDetailView.as_view(), name="admin-group-detail"),
+    path("user/<uuid:user_id>/change-password/", AdminChangePasswordView.as_view(), name="admin-user-change-password"),
     path("impersonate/<uuid:user_id>/", ImpersonateView.as_view(), name="admin-impersonate"),
 ]
