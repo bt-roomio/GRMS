@@ -21,6 +21,7 @@ from main.serializers.tenant_group import (
     UpdateTenantGroupSerializer,
 )
 from main.services.tenant_provisioning import dissolve_tenant_group
+from users.models import User
 
 
 class AdminTenantGroupListView(APIView):
@@ -74,7 +75,8 @@ class AdminTenantGroupDetailView(APIView):
     )
     def get(self, request, group_id):
         group = get_object_or_404(scoped_groups(request).count_tenants(), pk=group_id)
-        return Response(TenantGroupSerializer(group).data)
+        user = User.objects.filter(tenant_group=group, is_active=True, is_superuser=True).first()
+        return Response(TenantGroupSerializer(group, context={"user": user}).data)
 
     @swagger_auto_schema(
         tags=["Admin Panel"],
@@ -88,7 +90,8 @@ class AdminTenantGroupDetailView(APIView):
         serializer = UpdateTenantGroupSerializer(group, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(TenantGroupSerializer(group).data)
+        user = User.objects.filter(tenant_group=group, is_active=True, is_superuser=True).first()
+        return Response(TenantGroupSerializer(group, context={"user": user}).data)
 
     @swagger_auto_schema(
         tags=["Admin Panel"],

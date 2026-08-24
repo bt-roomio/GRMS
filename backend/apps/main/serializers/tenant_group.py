@@ -24,6 +24,8 @@ class TenantGroupSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["tenants_count"] = getattr(instance, "tenants_count", 0)
+        if "user" in self.context and isinstance(self.context["user"], User):
+            data["user_id"] = self.context["user"].id
         return data
 
     class Meta:
