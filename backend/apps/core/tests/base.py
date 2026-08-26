@@ -54,5 +54,8 @@ class BaseTestCase(APITestCase):
     def put(self, *args, **kwargs):
         return cast(Response, self.client.put(*args, **kwargs))
 
+    def patch(self, *args, **kwargs):
+        return cast(Response, self.client.patch(*args, **kwargs))
+
     def delete(self, *args, **kwargs):
         return cast(Response, self.client.delete(*args, **kwargs))

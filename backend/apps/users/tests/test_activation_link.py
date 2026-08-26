@@ -12,7 +12,7 @@ class ActivationLinkTests(BaseTestCase):
     def test_activation_link(self):
         response = self.post(
             reverse("users:users-list"),
-            {"email": "test@test.test", "roles": ["bb436b2a-2ff5-4835-a264-fe27e30710e6"]},
+            {"email": "test@test.test", "roles": ["c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f"]},
             format="json",
         )
 

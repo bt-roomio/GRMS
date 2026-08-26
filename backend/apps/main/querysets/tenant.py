@@ -4,9 +4,12 @@ from core.querysets.base_queryset import BaseQuerySet
 
 
 class TenantQuerySet(BaseQuerySet):
-    def list(self, sort_by=None, search_field=None, search_value=None):
-        query = self.count_devices()
+    def list(self, sort_by=None, search_field=None, search_value=None, group=None):
+        # `group_title` is serialised for every row, so the chain comes along in one join.
+        query = self.select_related("group").count_devices()
 
+        if group:
+            query = query.filter(group_id=group)
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
         if sort_by:

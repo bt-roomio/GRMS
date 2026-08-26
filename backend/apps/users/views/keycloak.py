@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 
-from rest_framework_simplejwt.tokens import RefreshToken
+from users.serializers.jwt_token import build_tokens_for
 
 KC_BASE = settings.KC_BASE_URL
 KC_REALM = settings.KC_REALM
@@ -94,8 +94,7 @@ def kc_callback(request):
     except User.DoesNotExist:
         return JsonResponse({"detail": "User not allowed"}, status=403)
 
-    refresh = RefreshToken.for_user(user)
-    payload = {"access": str(refresh.access_token), "refresh": str(refresh), "id_token": id_token}  # pyright: ignore
+    payload = {**build_tokens_for(user), "id_token": id_token}
     return JsonResponse(payload, status=200)
 
 

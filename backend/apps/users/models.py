@@ -49,6 +49,14 @@ class User(AbstractUser):
         blank=True,
         help_text=_("Customer associated with this user"),
     )
+    tenant_group = models.ForeignKey(
+        "main.TenantGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        help_text=_("Hotel chain this user manages. If set, the user may switch between all of its tenants."),
+    )
     roles = models.ManyToManyField(
         "users.Role",
         verbose_name=_("roles"),
@@ -60,7 +68,7 @@ class User(AbstractUser):
 
     username = None
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ()
 
     objects = UsersManager()
 
@@ -101,7 +109,7 @@ class ResetPassword(BaseModel):
     def save(self, *args, **kwargs):
         if not self.key:
             self.key = tokens.generate()
-        return super(ResetPassword, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.key
@@ -127,12 +135,15 @@ class Role(BaseModel):
         help_text=_("Specific permissions granted to this role"),
     )
     additional_info = models.JSONField(
-        blank=True,
         null=True,
+        blank=True,
         help_text=_("Additional role configuration stored as JSON"),
     )
 
     objects = RoleQuerySet.as_manager()
+
+    def __str__(self):
+        return self.name
 
     class Meta(BaseModel.Meta):
         verbose_name = "role"
@@ -151,6 +162,3 @@ class Role(BaseModel):
             ),
         ]
         ordering = ("-created_at",)
-
-    def __str__(self):
-        return self.name

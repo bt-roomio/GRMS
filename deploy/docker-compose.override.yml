@@ -46,7 +46,6 @@ services:
       - /app/.venv
       - static_volume:/app/static/
       - media_volume:/app/media/
-      - prom_mp:/prom_mp
     ports:
       - "8000:8000"
     environment:

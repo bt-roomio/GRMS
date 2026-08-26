@@ -64,6 +64,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     )
     room_fields = TagSerializer(many=True, required=False)
     ai_settings = serializers.JSONField(required=False)
+    location = serializers.JSONField(required=False)
 
     def validate_main_dashboard(self, value):
         if value is None:
@@ -99,8 +100,9 @@ class GeneralSettingsSerializer(serializers.Serializer):
                 g_settings[field_name] = g_settings.get(field_name, {"ving_card": False, "kaba": False})
             elif field_name == "room_fields":
                 g_settings[field_name] = g_settings.get(field_name, [])
-            elif field_name == "ai_settings":
+            elif field_name == "ai_settings" or field_name == "location":
                 g_settings[field_name] = g_settings.get(field_name, {})
+
             else:
                 g_settings[field_name] = g_settings.get(field_name, field.default)
 

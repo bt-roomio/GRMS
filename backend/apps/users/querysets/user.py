@@ -11,6 +11,11 @@ class UsersManager(BaseUserManager):
         return self.get(**{self.model.USERNAME_FIELD: username, "is_active": True})
 
     def list(self, tenant_id, sort_by=None, search_field=None, search_value=None):
+        # `tenant_id=None` would match every hotel-less account (chain admins, superusers)
+        # instead of returning nothing, so an empty scope is spelled out explicitly.
+        if not tenant_id:
+            return self.none()
+
         query = self.prefetch_related("roles").filter(tenant_id=tenant_id, is_active=True)
 
         if sort_by:

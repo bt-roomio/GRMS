@@ -1,16 +1,13 @@
-from datetime import datetime
-
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import Permission
-from django.db import transaction
+from datetime import UTC, datetime
+from typing import ClassVar
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
-from core.utils.constants import UI_PERMISSIONS
 from core.utils.serializers import ValidatorSerializer
-from main.models import Device, DeviceProfile, Tenant, TenantProfile
-from users.models import Role, User
+from main.models import Device, Tenant, TenantGroup
+from main.services.tenant_provisioning import provision_tenant
+from users.models import User
 
 
 class TenantFilterParams(ValidatorSerializer):
@@ -28,6 +25,9 @@ class TenantFilterParams(ValidatorSerializer):
     )
     search_field = serializers.ChoiceField(choices=("title",), required=False)
     search_value = serializers.CharField(required=False)
+    group = serializers.UUIDField(required=False)
+    page = serializers.IntegerField(default=1, min_value=1)
+    size = serializers.IntegerField(default=50, min_value=1, max_value=500)
 
 
 def _serialize_gateways(instance):
@@ -52,7 +52,7 @@ def _serialize_gateways(instance):
 class TenantSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         instance.created_at = (
-            datetime.fromtimestamp(instance.created_at / 1000)
+            datetime.fromtimestamp(instance.created_at / 1000, tz=UTC)
             if isinstance(instance.created_at, int)
             else instance.created_at
         )
@@ -66,6 +66,7 @@ class TenantSerializer(serializers.ModelSerializer):
         gateways = _serialize_gateways(instance)
         if gateways is not None:
             data["gateways"] = gateways
+        data["group_title"] = instance.group.title if instance.group_id else None
         return data
 
     class Meta:
@@ -74,6 +75,7 @@ class TenantSerializer(serializers.ModelSerializer):
             "id",
             "created_at",
             "title",
+            "group",
             "email",
             "tenant_profile",
             "additional_info",
@@ -104,8 +106,16 @@ class UpdateTenantSerializer(serializers.ModelSerializer):
     gateways = UpdateGatewaySerializer(many=True, write_only=True, required=False)
 
     def validate_title(self, value):
-        if Tenant.objects.filter(title__iexact=value).exclude(pk=self.instance.pk).exists():
+        if Tenant.objects.filter(title__iexact=value).exclude(pk=self.instance.pk).exists():  # ty: ignore
             raise serializers.ValidationError(f"Tenant with title '{value}' already exists.")
+        return value
+
+    def validate_group(self, value):
+        """A chain admin may only park hotels in their own chain."""
+        request = self.context.get("request")
+        pinned = request.user.tenant_group_id if request else None
+        if pinned and (value is None or value.pk != pinned):
+            raise serializers.ValidationError("You can only manage hotels of your own chain.")
         return value
 
     def update(self, instance, validated_data):
@@ -131,6 +141,7 @@ class UpdateTenantSerializer(serializers.ModelSerializer):
         model = Tenant
         fields = (
             "title",
+            "group",
             "email",
             "phone",
             "address",
@@ -144,7 +155,7 @@ class UpdateTenantSerializer(serializers.ModelSerializer):
             "tenant_profile",
             "gateways",
         )
-        extra_kwargs = {
+        extra_kwargs: ClassVar[dict[str, dict[str, bool]]] = {
             "additional_info": {"read_only": True},
         }
 
@@ -153,37 +164,19 @@ class CreateTenantSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    group = serializers.PrimaryKeyRelatedField(queryset=TenantGroup.objects.all(), required=False, allow_null=True)
 
-    def validate_email(self, value):
-        normalized = value.lower()
+    def validate(self, attrs):
+        email, title = attrs.get("email"), attrs.get("title")
+
+        normalized = email.lower()
         if User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError(f"User with email '{normalized}' already exists.")
-        return normalized
 
-    def validate_title(self, value):
-        if Tenant.objects.filter(title__iexact=value).exists():
-            raise serializers.ValidationError(f"Tenant with title '{value}' already exists.")
-        return value
+        if Tenant.objects.filter(title__iexact=title).exists():
+            raise serializers.ValidationError(f"Tenant with title '{title}' already exists.")
+
+        return attrs
 
     def create(self, validated_data):
-        with transaction.atomic():
-            tenant_profile, _ = TenantProfile.objects.get_or_create(name="Default", defaults={"is_default": True})
-            tenant = Tenant.objects.create(tenant_profile=tenant_profile, title=validated_data["title"])
-            Tenant.objects.get_or_create(tenant_profile=tenant_profile, title="Default")
-
-            role, _ = Role.objects.get_or_create(name="TENANT_ADMIN", tenant=tenant)
-            role.permissions.add(*Permission.objects.all())
-            role.additional_info = {"ui_permissions": UI_PERMISSIONS}
-            role.save()
-
-            user = User.objects.create(
-                tenant=tenant,
-                email=validated_data["email"],
-                password=make_password(validated_data["password"]),
-            )
-            user.roles.add(role)
-
-            for name in ["Default", "Integration Devices", "Card Reader"]:
-                DeviceProfile.objects.get_or_create(name=name, tenant=tenant, type="DEFAULT")
-
-        return tenant
+        return provision_tenant(**validated_data)
