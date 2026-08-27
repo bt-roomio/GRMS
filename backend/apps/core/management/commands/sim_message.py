@@ -15,27 +15,88 @@ from shuttle.models import Relation
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 
+# FIAS integration device that messages are attributed to
+
+# One coherent scenario: check in to 301, move to 302, check out of 302
+FIAS_SAMPLES = {
+    "checkin": {
+        "command": "checkin",
+        "roomName": "301",
+        "reservationNumber": "4001",
+        "shareFlag": False,
+        "messageDate": 1787745391000,
+        "checkInDate": 1787810400000,
+        "checkOutDate": 1787983200000,
+        "guestGroupNumber": None,
+        "guestTitle": None,
+        "guestFirstName": None,
+        "guestName": " Ytest ",
+        "language": "English / American",
+        "workstationId": "THEOVASQL",
+        "swapFlag": 0,
+    },
+    "checkout": {
+        "command": "checkout",
+        "roomName": "302",
+        "reservationNumber": "4001",
+        "messageDate": 1787983200000,
+        "guestName": "Ytest",
+        "workstationId": "THEOVASQL",
+    },
+    "keydelete": {
+        "command": "keydelete",
+        "operationId": "keyread|THEOVASQL|MyWorkstation|||260331|113238",
+        "requiresRpcConfirmation": True,
+        "keyCoder": "MyWorkstation",
+        "roomName": "215",
+        "workstationId": "THEOVASQL",
+        "messageDate": 1774945958000,
+        "reservationNumber": None,
+    },
+    "keyrequest": {
+        "command": "keyrequest",
+        "keyType": "newKeyRequest",
+        "keyCoder": "MyWorkstation",
+        "roomName": "215",
+        "keyCount": "2",
+        "checkInDate": 1777507200000,
+        "messageDate": 1777574505000,
+        "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
+        "checkOutDate": 1773316800000,
+        "workstationId": "THEOVASQL",
+        "guestGroupNumber": None,
+        "reservationNumber": "701",
+        "requiresRpcConfirmation": True,
+    },
+    # Guest room move 301 -> 302, handled by handle_guest_move()
+    "datachange": {
+        "command": "datachange",
+        "language": "English / American",
+        "roomName": "302",
+        "guestName": "Ytest",
+        "shareFlag": False,
+        "guestTitle": None,
+        "messageDate": 1787745391000,
+        "checkInDate": 1787810400000,
+        "checkOutDate": 1787983200000,
+        "oldRoomName": "301",
+        "operationId": "datachange|IKI.GR.546051536||9793230|301|260825|230532",
+        "workstationId": "THEOVASQL",
+        "guestFirstName": None,
+        "guestGroupNumber": None,
+        "reservationNumber": "4001",
+    },
+}
+
 
 class Command(BaseCommand):
     help = "simulate_message_to_rabbitmq"
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--value",
-            type=int,
-            help="value",
-            default=1,
-        )
-
     def handle(self, **_):
-        nines_gateway_id = "48aedc23-1f2f-49ba-ab36-20ba650af5c7"
+        case = "datachange"
+        device_id = "01474019-f627-4822-8f00-e3adb6571226"
 
-        msg1 = self.single_telemetry(nines_gateway_id, "0c:2e:e4:6a:f6:45")
-        msg2 = self.single_telemetry(nines_gateway_id, "08:b0:bb:1f:a2:37")
-        msg3 = self.single_telemetry(nines_gateway_id, "18:a0:6e:41:02:80")
-        self.send_msg(msg1, "/telemetry")
-        self.send_msg(msg2, "/telemetry")
-        self.send_msg(msg3, "/telemetry")
+        self.fias_message(case=case, device_id=device_id)
         # for msg in self.generate_msg_telemetry(tenant_id):
         #     self.send_msg(msg, "/telemetry")
 
@@ -86,56 +147,17 @@ class Command(BaseCommand):
             print(f"Generated message for device {msg['sourceDeviceUUID']}: {str(msg)[:10]}")
             yield msg
 
-    def fias_message(self, *args, **options):
-        data = {
-            "command": "checkin",
-            "roomName": "153",
-            "reservationNumber": "4001",
-            "shareFlag": False,
-            "messageDate": 1773231216000,
-            "checkInDate": 1773180000000,
-            "checkOutDate": 1773266400000,
-            "guestGroupNumber": None,
-            "guestTitle": None,
-            "guestFirstName": None,
-            "guestName": " Ytest ",
-            "language": "English / American",
-            "workstationId": "THEOVASQL",
-            "swapFlag": 0,
-        }
-        data = {
-            "command": "keydelete",
-            "operationId": "keyread|THEOVASQL|MyWorkstation|||260331|113238",
-            "requiresRpcConfirmation": True,
-            "keyCoder": "MyWorkstation",
-            "roomName": "215",
-            "workstationId": "THEOVASQL",
-            "messageDate": 1774945958000,
-            "reservationNumber": None,
-        }
-        data = {
-            "command": "keyrequest",
-            "keyType": "newKeyRequest",
-            "keyCoder": "MyWorkstation",
-            "roomName": "215",
-            "keyCount": "2",
-            "checkInDate": 1777507200000,
-            "messageDate": 1777574505000,
-            "operationId": "keyrequest|THEOVASQL|1|701|104|260430|184145",
-            "checkOutDate": 1773316800000,
-            "workstationId": "THEOVASQL",
-            "guestGroupNumber": None,
-            "reservationNumber": "701",
-            "requiresRpcConfirmation": True,
-        }
-
-        device = get_object_or_404(Device, pk="7778a61d-eefa-4933-b187-699f2baa3744")
+    def fias_message(self, case, device_id):
+        data = FIAS_SAMPLES[case]
+        device = get_object_or_404(Device, pk=device_id)
         device = {
             "id": str(device.id),
             "name": device.name,
             "tenant_id": str(device.tenant_id),
             "device_profile_id": str(device.device_profile_id),
         }
+
+        print(f"Dispatching FIAS '{case}' to device {device['name']} ({device['id']}): {data}")
         handle_fias(data, device)
 
     def generate_msg_access_door_log(self):
