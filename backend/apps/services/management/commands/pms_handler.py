@@ -369,11 +369,16 @@ def handle_guest_move(guest: Guest, data: dict):
             f"✓ Guest moved successfully: {guest.name} {guest.lastname} from Room {old_room.number if old_room else 'N/A'} to Room {new_room.number}, pms_id: {guest.pms_id}"  # pyright: ignore
         )
 
-        publish_guest_changes(guest)
-        move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
+        # Room state first: publishing hits the channel layer and card dispatch enqueues
+        # Celery tasks, so either can raise. Doing them before the state recompute would
+        # leave the guest moved but both rooms stuck in their pre-move state.
         new_room.save(update_fields=["state"])
         old_room.refresh_from_db()
         old_room.save(update_fields=["state"])
+
+        # old_room_id lets subscribers of the room being left refresh too
+        publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
+        move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
     except Exception as e:
         logger.error(f"✗ Failed to move guest: {e!s}")
         raise

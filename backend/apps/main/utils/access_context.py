@@ -1,5 +1,4 @@
 import logging
-from typing import List, Union
 
 from django.db.models import Q
 
@@ -9,7 +8,7 @@ from main.models import Device, Guest, PublicSpace
 _logger = logging.getLogger(__name__)
 
 
-def get_guest_access_context(guests: Union[Guest, List[Guest]]) -> dict:
+def get_guest_access_context(guests: Guest | list[Guest]) -> dict:
     """
     Checking if door lock devices exist for guest's spaces
     """
