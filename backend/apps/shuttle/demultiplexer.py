@@ -50,7 +50,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
 
     async def websocket_receive(self, message):
         try:
-            if "text" in message and message["text"]:
+            if message.get("text"):
                 content = json.loads(message["text"])
                 await self.receive_json(content)
             else:
@@ -60,7 +60,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
                 {
                     "stream": None,
                     "payload": {
-                        "errors": [{"json": f"Invalid JSON: {str(e)}"}],
+                        "errors": [{"json": f"Invalid JSON: {e!s}"}],
                         "data": None,
                         "action": None,
                         "response_status": 400,
@@ -89,7 +89,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
             err = {
                 "stream": content.get("stream"),
                 "payload": {
-                    "errors": [{"stream": f"Invalid stream: {str(e)}"}],
+                    "errors": [{"stream": f"Invalid stream: {e!s}"}],
                     "data": None,
                     "action": content.get("payload").get("action"),
                     "response_status": 400,

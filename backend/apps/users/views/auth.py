@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
-from rest_framework_simplejwt.tokens import RefreshToken
+from users.serializers.jwt_token import build_tokens_for
 
 FRONTEND_DOMAIN = settings.FRONTEND_DOMAIN
 
@@ -18,10 +18,8 @@ def callback_provider(request):
     if not social_account:
         return redirect(f"{FRONTEND_DOMAIN}/auth/login/?error=NoSocialAccount")
 
-    refresh = RefreshToken.for_user(user)
-    access_token = str(refresh.access_token)  # pyright: ignore
-    refresh_token = str(refresh)
-    response = redirect(f"{FRONTEND_DOMAIN}/auth/login/?access={access_token}&refresh={refresh_token}")
+    tokens = build_tokens_for(user)
+    response = redirect(f"{FRONTEND_DOMAIN}/auth/login/?access={tokens['access']}&refresh={tokens['refresh']}")
     response.delete_cookie("sessionid", path="/")
     response.delete_cookie("messages", path="/")
     return response

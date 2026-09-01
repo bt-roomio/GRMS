@@ -39,10 +39,9 @@ urlpatterns = [
             ]
         ),
     ),
+    path("metrics", metrics_view, name="prometheus-django-metrics"),
     path("", include(("hoteza.urls", "hoteza"), namespace="hoteza-integration")),
     path("", include(("fleet.install_urls", "fleet_install"), namespace="fleet-install")),
-    path("", include("django_prometheus.urls")),
-    path("metrics", metrics_view, name="prometheus-django-metrics"),
     path("login/", to_front_login),
     path("signup/", to_front_signup),
     path("accounts/login/", to_front_login, name="account_login"),

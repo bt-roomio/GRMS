@@ -22,15 +22,36 @@ from main.querysets.room import RoomQuerySet
 from main.querysets.room_history import RoomHistoryQuerySet
 from main.querysets.room_type import RoomTypeQuerySet
 from main.querysets.tenant import TenantQuerySet
+from main.querysets.tenant_group import TenantGroupQuerySet
 from main.querysets.widget_type import WidgetTypeQuerySet
 from main.utils.default_state import default_state
 from services.models import BaseModel as ServiceBaseModel
 from shuttle.models import Relation, TsKvDictionary, TsKvLatest
 
 
+class TenantGroup(ServiceBaseModel):
+    """A hotel chain: groups several tenants under a single owner."""
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    additional_info = models.JSONField(null=True, blank=True)
+
+    objects = TenantGroupQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        return self.title
+
+    class Meta(ServiceBaseModel.Meta):
+        db_table = "main_tenant_group"
+        ordering = ("-created_at",)
+        constraints = [UniqueConstraint(Lower("title"), name="unique_tenant_group_title")]
+
+
 class Tenant(ServiceBaseModel):
     title = models.CharField(max_length=255, null=True, blank=True)
     tenant_profile = models.ForeignKey("main.TenantProfile", CASCADE)
+    group = models.ForeignKey("main.TenantGroup", SET_NULL, "tenants", null=True, blank=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(max_length=255, null=True, blank=True)
     address = models.CharField(null=True, blank=True)
@@ -47,8 +68,6 @@ class Tenant(ServiceBaseModel):
 
     def __str__(self) -> str:
         return self.title
-
-    objects = TenantQuerySet.as_manager()
 
     class Meta(ServiceBaseModel.Meta):
         db_table = "main_tenant"

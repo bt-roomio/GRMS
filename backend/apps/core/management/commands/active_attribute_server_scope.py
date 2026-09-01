@@ -32,7 +32,7 @@ class Command(BaseCommand):
     # Inactivity threshold in milliseconds (60 seconds)
     INACTIVITY_THRESHOLD_MS = 60000
 
-    def handle(self, *args, **options):
+    def handle(self, **_):
         """
         Retrieve and check activity status of all gateway devices.
 

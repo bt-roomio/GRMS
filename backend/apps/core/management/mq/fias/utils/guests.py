@@ -48,13 +48,18 @@ def resolve_card_uid(tenant_id, key_coder):
     return collect_unique_cards(reader.id, count=1, timeout=CARD_ON_READER_TIMEOUT)[0]
 
 
+def resolve_room(tenant_id, room_name):
+    room = Room.objects.filter(tenant_id=tenant_id, number=room_name).first()
+    if not room:
+        raise LookupFailure(f"Room not found: {room_name}")
+    return room
+
+
 def resolve_room_and_guest(tenant_id, room_name):
     if not room_name:
         raise LookupFailure("Missing required field: roomName")
 
-    room = Room.objects.filter(tenant_id=tenant_id, number=room_name).first()
-    if not room:
-        raise LookupFailure(f"Room not found: {room_name}")
+    room = resolve_room(tenant_id, room_name)
 
     guest = Guest.objects.filter(room=room, is_active=True).order_by("created_at").first()
     if not guest:
@@ -73,9 +78,7 @@ def resolve_guests_for_keydelete(tenant_id, room_name, reservation_number):
     if not room_name:
         raise LookupFailure("Missing required field: roomName")
 
-    room = Room.objects.filter(tenant_id=tenant_id, number=room_name).first()
-    if not room:
-        raise LookupFailure(f"Room not found: {room_name}")
+    room = resolve_room(tenant_id, room_name)
 
     guests_qs = Guest.objects.filter(tenant_id=tenant_id, room=room, is_active=True)
     if reservation_number:
@@ -87,3 +90,61 @@ def resolve_guests_for_keydelete(tenant_id, room_name, reservation_number):
             raise LookupFailure(f"Guest not found for reservation {reservation_number} in room {room_name}")
         raise LookupFailure(f"No active guests in room {room_name}")
     return guests
+
+
+def resolve_guests_for_datachange(tenant_id, reservation_number, old_room_name, room_name):
+    """Find every active guest a FIAS `datachange` applies to.
+
+    `pms_reg_num` is not unique — `CheckInSerializer` matches on it without room scoping,
+    so a recycled reservation number can hit a stale stay. Whenever `oldRoomName` is
+    given it wins: guests are taken from that room, narrowed by reservation number only
+    when that narrowing actually matches something.
+    """
+    guests = Guest.objects.filter(tenant_id=tenant_id, is_active=True)
+
+    if old_room_name:
+        matched = _guests_in_room(guests, tenant_id, old_room_name, reservation_number)
+    elif reservation_number:
+        # No oldRoomName means no move, so the target room says nothing about who this is:
+        # guessing by it would stamp the message onto whoever happens to live there.
+        matched = guests.filter(additional_info__pms_reg_num=reservation_number)
+        if not matched.exists():
+            raise LookupFailure(f"Reservation {reservation_number} not found")
+    else:
+        matched = _guests_in_room(guests, tenant_id, room_name, None)
+
+    # A guest with no room cannot be moved: handle_guest_move() dereferences the old room
+    resolved = [guest for guest in matched.order_by("created_at") if guest.room_id]
+
+    skipped = matched.count() - len(resolved)
+    if skipped:
+        logger.warning("datachange skipped %s guest(s) without a room in %s", skipped, old_room_name or room_name)
+    if not resolved:
+        raise LookupFailure(
+            f"No active guest found for reservation {reservation_number} / room {old_room_name or room_name}"
+        )
+
+    return resolved
+
+
+def _guests_in_room(guests, tenant_id, room_name, reservation_number):
+    """Guests of `reservation_number` in `room_name`, or the whole room when it holds one stay.
+
+    Guests booked outside FIAS carry no `pms_reg_num`, so an empty narrowing falls back to
+    the room — but only while no other reservation claims it, otherwise a co-tenant on a
+    different booking would be dragged along.
+    """
+    in_room = guests.filter(room=resolve_room(tenant_id, room_name))
+    if not reservation_number:
+        return in_room
+
+    matched = in_room.filter(additional_info__pms_reg_num=reservation_number)
+    if matched.exists():
+        return matched
+
+    # Checked in Python rather than via `additional_info__pms_reg_num__isnull`: that lookup
+    # compiles to `-> 'pms_reg_num' IS NOT NULL`, which a stored JSON null also satisfies.
+    if any((info or {}).get("pms_reg_num") for info in in_room.values_list("additional_info", flat=True)):
+        raise LookupFailure(f"Reservation {reservation_number} not found in room {room_name}")
+
+    return in_room

@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 from django.db import models
 from django.db.models import Q, UniqueConstraint
@@ -51,7 +52,7 @@ class Integration(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "services_integration"
-        constraints = [
+        constraints: ClassVar[list] = [
             UniqueConstraint(
                 "integrator",
                 "tenant",

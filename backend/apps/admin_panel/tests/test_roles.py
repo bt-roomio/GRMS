@@ -15,12 +15,13 @@ class AdminTenantRolesTest(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
 
     def test_list(self):
+        # TENANT_ID has 2 roles: Reception and its own TENANT_ADMIN
         response = self.get(reverse("admin_panel:admin-tenant-roles", kwargs={"tenant_id": TENANT_ID}))
         assert response.data is not None
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], RECEPTION_ROLE_ID)
-        self.assertEqual(response.data[0]["name"], "Reception")
+        self.assertEqual(len(response.data), 2)
+        self.assertIn(RECEPTION_ROLE_ID, [r["id"] for r in response.data])
+        self.assertCountEqual([r["name"] for r in response.data], ["Reception", "TENANT_ADMIN"])
 
     def test_list_other_tenant(self):
         # OTHER_TENANT_ID has 2 roles: SYS_ADMIN and TENANT_ADMIN

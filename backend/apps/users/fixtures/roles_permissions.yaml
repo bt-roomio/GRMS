@@ -40,7 +40,7 @@
   fields:
     name: TENANT_ADMIN
     tenant: 28c81921-f78e-4864-87d2-cec674f19d1c
-    permissions:
+    permissions: &tenant_admin_perms
       - - view_generalsettings
         - main
         - tenant
@@ -509,3 +509,12 @@
       - - delete_controllerfile
         - shuttle
         - controllerfile
+
+# Each tenant needs its own TENANT_ADMIN: a role belongs to exactly one hotel,
+# so reusing tenant 1's role for a tenant 2 user would be a scope violation.
+- model: users.Role
+  pk: c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f
+  fields:
+    name: TENANT_ADMIN
+    tenant: ac73203f-e25f-4baa-a5c7-a4c9585f5bbc
+    permissions: *tenant_admin_perms

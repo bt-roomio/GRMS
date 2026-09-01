@@ -27,7 +27,7 @@ class UserTest(BaseTestCase):
         self.assertEqual(response.data["results"][0]["phone"], "+999987654321")
         self.assertEqual(response.data["results"][0]["date_joined"], "2025-01-01T00:00:00Z")
         self.assertEqual(str(response.data["results"][0]["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
-        self.assertEqual(str(response.data["results"][0]["roles"][0]), "bb436b2a-2ff5-4835-a264-fe27e30710e6")
+        self.assertEqual(str(response.data["results"][0]["roles"][0]), "c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f")
         self.assertEqual(response.data["results"][0]["is_active"], True)
 
     def test_create(self):
@@ -48,7 +48,7 @@ class UserTest(BaseTestCase):
                 "additional_info": {},
                 "phone": "+999123456789",
                 "tenant": "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc",
-                "roles": ["bb436b2a-2ff5-4835-a264-fe27e30710e6"],
+                "roles": ["c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f"],
                 "is_active": True,
             },
             format="json",
@@ -62,7 +62,7 @@ class UserTest(BaseTestCase):
         self.assertEqual(response.data["additional_info"], {})
         self.assertEqual(response.data["phone"], "+999123456789")
         self.assertEqual(str(response.data["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
-        self.assertEqual(str(response.data["roles"][0]), "bb436b2a-2ff5-4835-a264-fe27e30710e6")
+        self.assertEqual(str(response.data["roles"][0]), "c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f")
         self.assertEqual(response.data["is_active"], True)
 
     def test_update(self):
@@ -75,7 +75,7 @@ class UserTest(BaseTestCase):
             "additional_info": {"department": "IT"},
             "phone": "+999987654321",
             "tenant": "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc",
-            "roles": ["bb436b2a-2ff5-4835-a264-fe27e30710e6"],
+            "roles": ["c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f"],
             "is_active": True,
         }
 
@@ -92,7 +92,7 @@ class UserTest(BaseTestCase):
         self.assertEqual(response.data["additional_info"], {"department": "IT"})
         self.assertEqual(response.data["phone"], "+999987654321")
         self.assertEqual(str(response.data["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
-        self.assertEqual(str(response.data["roles"][0]), "bb436b2a-2ff5-4835-a264-fe27e30710e6")
+        self.assertEqual(str(response.data["roles"][0]), "c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f")
         self.assertEqual(response.data["is_active"], True)
 
         # Case - non-existent user

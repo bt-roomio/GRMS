@@ -88,6 +88,8 @@ services:
   backend:
     environment:
       - GUNICORN_WORKERS=4
+    volumes:
+      - /etc/roomio/fleet_key:/etc/roomio/fleet_key:ro
     deploy:
       resources:
         limits:

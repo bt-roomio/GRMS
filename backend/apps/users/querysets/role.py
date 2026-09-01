@@ -2,9 +2,10 @@ from django.db.models import Q, QuerySet
 
 
 class RoleQuerySet(QuerySet):
-    def list(self, tenant, is_superuser, search_field=None, search_value=None):
+    def list(self, tenants, unscoped, search_field=None, search_value=None):
+        """`tenants` is the caller's scope; `unscoped` lifts it for a plain superuser."""
         query = self.prefetch_related("permissions")
-        query = query.filter(tenant=tenant) if not is_superuser else query
+        query = query if unscoped else query.filter(tenant__in=tenants)
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
         elif search_value:
