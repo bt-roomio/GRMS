@@ -83,11 +83,11 @@ class CheckInSerializer(serializers.Serializer):
             tenant = Tenant.objects.filter(id=attrs.get("tenant_id")).first()
 
         if not tenant:
-            raise JsonValidationError({"result": 9, "message": "Tenant not found!"})
+            raise JsonValidationError({"result": 9, "message": f"Tenant not found! ({attrs.get('tenant_id')})"})
 
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()
         if not room:
-            raise JsonValidationError({"result": 9, "message": "Room not found!"})
+            raise JsonValidationError({"result": 9, "message": f"Room not found! ({attrs.get('room_number')})"})
 
         guest = Guest.objects.filter(
             additional_info__pms_reg_num=attrs.get("pms_reg_num"),
