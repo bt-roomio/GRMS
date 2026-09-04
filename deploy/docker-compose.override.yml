@@ -46,6 +46,7 @@ services:
       - /app/.venv
       - static_volume:/app/static/
       - media_volume:/app/media/
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     ports:
       - "8000:8000"
     environment:

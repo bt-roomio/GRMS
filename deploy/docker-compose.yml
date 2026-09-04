@@ -212,6 +212,7 @@ services:
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     tmpfs:
       - /prom_mp
     healthcheck:
