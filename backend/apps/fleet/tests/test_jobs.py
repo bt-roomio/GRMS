@@ -21,12 +21,37 @@ OTHER_TENANT_ID = "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
 NODE_CODE = f"{node_prefix()}_jobs_1"
 OTHER_CODE = f"{node_prefix()}_jobs_other_1"
 
+# Defined here rather than picked out of the catalog: these cover what the
+# machinery guarantees about *any* action, and must keep doing so however thin
+# the shipped catalog gets.
 FREE_FORM = FleetAction(
     name="echo_note",
     title="Echo",
     description="Only exists in this test.",
     template="echo {note}",
     params=(ActionParam(name="note", description="Anything", required=True),),
+)
+
+NO_PARAMS = FleetAction(
+    name="plain",
+    title="Plain",
+    description="Only exists in this test.",
+    template="true",
+)
+
+SERVICE_LOGS = FleetAction(
+    name="service_logs",
+    title="Service logs",
+    description="Only exists in this test.",
+    template="journalctl -u {gateway_service} -n {lines}",
+    params=(
+        ActionParam(
+            name="lines",
+            description="How many log lines to return.",
+            default=200,
+            choices=("50", "200"),
+        ),
+    ),
 )
 
 
@@ -39,15 +64,15 @@ class ActionCatalogTest(BaseTestCase):
 
     def test_a_param_the_action_does_not_declare_is_refused(self):
         with self.assertRaises(FleetActionInvalidParams):
-            ACTIONS["disk_usage"].build({"target": "/"})
+            NO_PARAMS.build({"target": "/"})
 
     def test_a_server_side_value_cannot_be_supplied_by_the_caller(self):
         with self.assertRaises(FleetActionInvalidParams):
-            ACTIONS["gateway_logs"].build({"gateway_service": "sshd"})
+            SERVICE_LOGS.build({"gateway_service": "sshd"})
 
     def test_a_value_outside_the_choices_is_refused(self):
         with self.assertRaises(FleetActionInvalidParams):
-            ACTIONS["gateway_logs"].build({"lines": "; rm -rf /"})
+            SERVICE_LOGS.build({"lines": "; rm -rf /"})
 
     def test_a_missing_required_param_is_refused(self):
         with self.assertRaises(FleetActionInvalidParams):
@@ -58,11 +83,11 @@ class ActionCatalogTest(BaseTestCase):
         self.assertEqual(command, "echo 'hi; rm -rf /'")
 
     def test_the_default_is_used_when_the_param_is_absent(self):
-        self.assertIn("-n 200", ACTIONS["gateway_logs"].build({}))
+        self.assertIn("-n 200", SERVICE_LOGS.build({}))
 
     @override_settings(FLEET_GATEWAY_SERVICE="roomio-edge")
     def test_the_gateway_service_comes_from_settings(self):
-        self.assertIn("roomio-edge", ACTIONS["restart_gateway"].build({}))
+        self.assertIn("roomio-edge", SERVICE_LOGS.build({}))
 
 
 class FleetJobApiTest(BaseTestCase):
@@ -108,7 +133,7 @@ class FleetJobApiTest(BaseTestCase):
         return FleetJob.objects.filter(tenant__in=(self.tenant, self.other_tenant))
 
     def create(self, token=None, **payload):
-        payload.setdefault("action", "disk_usage")
+        payload.setdefault("action", "uptime")
         return self.client.post(
             reverse("fleet:job-list"),
             data=payload,
@@ -209,7 +234,7 @@ class FleetJobApiTest(BaseTestCase):
         self.assertEqual(self.create(all_nodes=True, node_ids=[str(self.node.id)]).status_code, 400)
 
     def test_bad_params_are_caught_before_a_job_exists(self):
-        response = self.create(action="gateway_logs", params={"lines": "; reboot"}, node_ids=[str(self.node.id)])
+        response = self.create(action="uptime", params={"lines": "; reboot"}, node_ids=[str(self.node.id)])
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("params", response.data)
@@ -261,14 +286,16 @@ class FleetJobApiTest(BaseTestCase):
 
     def test_the_list_is_scoped_and_filterable(self):
         self.create(node_ids=[str(self.node.id)])
-        self.create(action="agent_version", node_ids=[str(self.node.id)])
+        # Straight to the table: an action that has since left the catalog cannot
+        # be created through the API, and its rows must stay listable.
+        FleetJob.objects.create(tenant=self.tenant, action="withdrawn_action")
 
         response = self.get(
-            f"{reverse('fleet:job-list')}?action=agent_version",
+            f"{reverse('fleet:job-list')}?action=uptime",
             HTTP_AUTHORIZATION=self.bearer_token,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual({row["action"] for row in response.data["results"]}, {"agent_version"})
+        self.assertEqual({row["action"] for row in response.data["results"]}, {"uptime"})
         self.assertEqual(response.data["results"][0]["counts"]["total"], 1)
 
 
@@ -285,7 +312,7 @@ class RunFleetJobTest(BaseTestCase):
         self.tenant = create_tenant()
         self.node = create_node(tenant=self.tenant)
 
-    def make_job(self, action="disk_usage", status=FleetJob.STATUS.PENDING):
+    def make_job(self, action="uptime", status=FleetJob.STATUS.PENDING):
         job = FleetJob.objects.create(tenant=self.tenant, action=action, status=status)
         FleetJobTask.objects.create(job=job, node=self.node, node_code=self.node.code)
         return job
@@ -297,8 +324,8 @@ class RunFleetJobTest(BaseTestCase):
             run_fleet_job(str(job.id))
 
         command, timeout = fan_out.await_args.args[1], fan_out.await_args.args[2]
-        self.assertEqual(command, "df -h -x tmpfs -x devtmpfs -x overlay")
-        self.assertEqual(timeout, ACTIONS["disk_usage"].timeout)
+        self.assertEqual(command, "uptime")
+        self.assertEqual(timeout, ACTIONS["uptime"].timeout)
 
         job.refresh_from_db()
         self.assertEqual(job.status, FleetJob.STATUS.DONE)

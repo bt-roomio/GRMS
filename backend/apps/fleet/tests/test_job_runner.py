@@ -17,7 +17,7 @@ pytestmark = pytest.mark.django_db
 
 
 @sync_to_async
-def make_job(nodes, action="disk_usage", status=FleetJob.STATUS.RUNNING):
+def make_job(nodes, action="uptime", status=FleetJob.STATUS.RUNNING):
     tenant = nodes[0].tenant
     job = FleetJob.objects.create(tenant=tenant, action=action, status=status)
     FleetJobTask.objects.bulk_create(FleetJobTask(job=job, node=node, node_code=node.code) for node in nodes)

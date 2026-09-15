@@ -109,59 +109,11 @@ ACTIONS: dict[str, FleetAction] = {
     action.name: action
     for action in (
         FleetAction(
-            name="disk_usage",
-            title="Disk usage",
-            description="Free space on every real filesystem.",
-            template="df -h -x tmpfs -x devtmpfs -x overlay",
+            name="uptime",
+            title="Uptime",
+            description="How long the node has been up, and its load average.",
+            template="uptime",
             timeout=30,
-        ),
-        FleetAction(
-            name="agent_version",
-            title="Agent version",
-            description="NetBird version and mesh status, plus kernel and uptime.",
-            template="netbird version; uname -a; uptime",
-            timeout=30,
-        ),
-        FleetAction(
-            name="gateway_status",
-            title="Gateway status",
-            description="systemd state of the gateway service.",
-            template="systemctl is-active {gateway_service}; systemctl status {gateway_service} --no-pager -n 0",
-            timeout=30,
-        ),
-        FleetAction(
-            name="gateway_logs",
-            title="Gateway logs",
-            description="Tail of the gateway service journal.",
-            template="sudo journalctl -u {gateway_service} -n {lines} --no-pager",
-            params=(
-                ActionParam(
-                    name="lines",
-                    description="How many log lines to return.",
-                    default=200,
-                    choices=("50", "100", "200", "500", "1000"),
-                ),
-            ),
-            timeout=60,
-        ),
-        FleetAction(
-            name="restart_gateway",
-            title="Restart gateway",
-            description="Restart the gateway service and report its state afterwards.",
-            template="sudo systemctl restart {gateway_service} && systemctl is-active {gateway_service}",
-            timeout=120,
-            is_disruptive=True,
-        ),
-        FleetAction(
-            name="reboot",
-            title="Reboot node",
-            description="Schedule a reboot one minute out.",
-            # Scheduled rather than immediate: `systemctl reboot` tears down sshd
-            # under us, and the command would come back as a connection error
-            # rather than a success.
-            template="sudo shutdown -r +1 'Roomio fleet job'",
-            timeout=30,
-            is_disruptive=True,
         ),
     )
 }

@@ -58,7 +58,7 @@ def job_cancel_swagger():
 
 def action_catalog_swagger():
     return swagger_auto_schema(
-        responses={200: '{"results": [{"name": "restart_gateway", "title": "...", "params": []}]}'},
+        responses={200: '{"results": [{"name": "command", "title": "...", "params": []}]}'},
         tags=[TAG],
         operation_description=(
             "The action catalog a job may draw from. Build the UI menu from this — the "

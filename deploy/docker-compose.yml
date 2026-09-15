@@ -56,8 +56,11 @@ x-celery-env: &celery-env
   CELERY_BROKER_URL: redis://redis-broker:6379/0
   CELERY_RESULT_BACKEND: redis://redis-broker:6379/1
 
+# Воркеры ходят на ноды по SSH тем же ключом, что и Django: fleet-джобы
+# выполняются в celery-critical, и без этого монта каждая задача падает с
+# "Fleet private key not found".
 x-celery-volumes: &celery-volumes
-  []
+  - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
 
 # =============================================================================
 # SERVICES
@@ -229,6 +232,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-critical
+    volumes: *celery-volumes
     command: celery -A config worker -Q critical -n critical@%h -l warning -c 2 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
@@ -248,6 +252,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
+    volumes: *celery-volumes
     command: celery -A config worker -Q default -n default@%h -l warning -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
@@ -267,6 +272,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-realtime
+    volumes: *celery-volumes
     command: celery -A config worker -Q realtime -n realtime@%h -l warning -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
     tmpfs:
       - /prom_mp
@@ -286,6 +292,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
+    volumes: *celery-volumes
     command: celery -A config worker -Q low -n low@%h -l warning -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
