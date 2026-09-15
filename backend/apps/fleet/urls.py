@@ -8,6 +8,12 @@ from fleet.views.fleet_node import (
     FleetNodeListView,
     FleetNodeStatusView,
 )
+from fleet.views.job import (
+    FleetActionCatalogView,
+    FleetJobCancelView,
+    FleetJobDetailView,
+    FleetJobListView,
+)
 from fleet.views.upload import FleetNodeUploadView
 
 urlpatterns = [
@@ -22,4 +28,8 @@ urlpatterns = [
         FleetNodeAuditLogView.as_view(),
         name="node-audit-logs",
     ),
+    path("actions/", FleetActionCatalogView.as_view(), name="action-catalog"),
+    path("jobs/", FleetJobListView.as_view(), name="job-list"),
+    path("jobs/<uuid:pk>/", FleetJobDetailView.as_view(), name="job-detail"),
+    path("jobs/<uuid:pk>/cancel/", FleetJobCancelView.as_view(), name="job-cancel"),
 ]

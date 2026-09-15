@@ -5,6 +5,7 @@ from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
 from fleet.querysets.audit_log import FleetAuditLogQuerySet
 from fleet.querysets.fleet_node import FleetNodeQuerySet
+from fleet.querysets.job import FleetJobQuerySet, FleetJobTaskQuerySet
 
 
 class FleetNode(BaseModel, UpdateByModel):
@@ -90,6 +91,8 @@ class FleetAuditLog(BaseModel):
         TERMINAL_DENIED = "terminal_denied", "Terminal session denied"
         FILE_UPLOADED = "file_uploaded", "File uploaded"
         FILE_UPLOAD_FAILED = "file_upload_failed", "File upload failed"
+        JOB_STARTED = "job_started", "Bulk job started"
+        JOB_CANCELLED = "job_cancelled", "Bulk job cancelled"
 
     user = models.ForeignKey("users.User", SET_NULL, null=True, blank=True, related_name="fleet_audit_logs")
     node = models.ForeignKey("fleet.FleetNode", SET_NULL, null=True, blank=True, related_name="audit_logs")
@@ -107,4 +110,97 @@ class FleetAuditLog(BaseModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=["node", "-created_at"], name="fleet_audit_node_ts_idx"),
+        ]
+
+
+class FleetJob(BaseModel, UpdateByModel):
+    """
+    One catalog action, fanned out over many nodes.
+
+    The job carries *what* was asked for; each :class:`FleetJobTask` carries what
+    happened on one node. Free-form shell never reaches here — ``action`` is a key
+    in ``fleet.actions`` and the command is built server-side.
+    """
+
+    class STATUS(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        DONE = "done", "Done"
+        CANCELLED = "cancelled", "Cancelled"
+
+    tenant = models.ForeignKey("main.Tenant", CASCADE, related_name="fleet_jobs")
+
+    action = models.CharField(max_length=64)
+    params = models.JSONField(null=True, blank=True)
+
+    status = models.CharField(max_length=16, choices=STATUS.choices, default=STATUS.PENDING)
+
+    started_at = UnixTimeStampField(null=True, blank=True)
+    finished_at = UnixTimeStampField(null=True, blank=True)
+
+    objects = FleetJobQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        return f"{self.action} ({self.status})"
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self.status == self.STATUS.CANCELLED
+
+    class Meta(BaseModel.Meta):
+        db_table = "fleet_job"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["tenant", "-created_at"], name="fleet_job_tenant_ts_idx"),
+        ]
+        permissions = [
+            ("run_fleetjob", "Can run bulk actions across fleet nodes"),
+        ]
+
+
+class FleetJobTask(BaseModel):
+    """
+    One node's slice of a job.
+
+    Every targeted node gets a row up front, so the total is known the moment the
+    job is created and a node that is skipped is visible rather than absent.
+    ``node_code`` is a snapshot: nodes are soft-deleted, and the row must stay
+    readable after the node is gone.
+    """
+
+    class STATUS(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        DONE = "done", "Done"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+        CANCELLED = "cancelled", "Cancelled"
+
+    job = models.ForeignKey("fleet.FleetJob", CASCADE, related_name="tasks")
+    node = models.ForeignKey("fleet.FleetNode", SET_NULL, null=True, blank=True, related_name="job_tasks")
+    node_code = models.CharField(max_length=128)
+
+    status = models.CharField(max_length=16, choices=STATUS.choices, default=STATUS.PENDING)
+
+    exit_code = models.IntegerField(null=True, blank=True)
+    stdout = models.TextField(null=True, blank=True)
+    stderr = models.TextField(null=True, blank=True)
+    error = models.TextField(null=True, blank=True)
+
+    started_at = UnixTimeStampField(null=True, blank=True)
+    finished_at = UnixTimeStampField(null=True, blank=True)
+
+    objects = FleetJobTaskQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        return f"{self.node_code}: {self.status}"
+
+    class Meta(BaseModel.Meta):
+        db_table = "fleet_job_task"
+        ordering = ("node_code",)
+        constraints = [
+            UniqueConstraint("job", "node", name="unique_fleet_job_task_node"),
+        ]
+        indexes = [
+            models.Index(fields=["job", "status"], name="fleet_job_task_status_idx"),
         ]

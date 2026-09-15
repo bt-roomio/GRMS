@@ -64,13 +64,13 @@ class FleetNodePublishTest(TestCase):
         ``gateway`` is CASCADE. Django fast-deletes cascaded rows with one silent
         ``DELETE`` unless a ``post_delete`` receiver is registered for the model.
         """
-        create_node(tenant=self.tenant, gateway=self.gateway)
+        node = create_node(tenant=self.tenant, gateway=self.gateway)
         send.reset_mock()
 
         with self.captureOnCommitCallbacks(execute=True):
             self.gateway.delete()
 
-        self.assertFalse(FleetNode.objects.exists())
+        self.assertFalse(FleetNode.objects.filter(pk=node.pk).exists())
         self.assert_published(send)
 
     def test_bulk_update_publishes(self, send):

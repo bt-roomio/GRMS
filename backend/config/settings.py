@@ -493,6 +493,13 @@ FLEET_UPLOAD_ROOT = os.getenv("FLEET_UPLOAD_ROOT", "")
 FLEET_UPLOAD_MAX_BYTES = int(os.getenv("FLEET_UPLOAD_MAX_BYTES", str(100 * 1024 * 1024)))
 FLEET_UPLOAD_TIMEOUT = float(os.getenv("FLEET_UPLOAD_TIMEOUT", "300"))
 
+
+FLEET_GATEWAY_SERVICE = os.getenv("FLEET_GATEWAY_SERVICE", "roomio-gateway")
+FLEET_JOB_CONCURRENCY = int(os.getenv("FLEET_JOB_CONCURRENCY", "5"))
+FLEET_JOB_MAX_NODES = int(os.getenv("FLEET_JOB_MAX_NODES", "200"))
+FLEET_JOB_OUTPUT_LIMIT = int(os.getenv("FLEET_JOB_OUTPUT_LIMIT", str(64 * 1024)))
+FLEET_JOB_TIMEOUT = float(os.getenv("FLEET_JOB_TIMEOUT", "1800"))
+
 FLEET_INSTALL_TOKEN_TTL_HOURS = int(os.getenv("INSTALL_TOKEN_TTL_HOURS", "24"))
 # Public base URL used to build the `curl ... | sudo bash` one-liner.
 FLEET_INSTALL_BASE_URL = os.getenv("FLEET_INSTALL_BASE_URL", "").rstrip("/")
