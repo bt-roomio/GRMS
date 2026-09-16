@@ -1,8 +1,7 @@
 import logging
 
-from channels.db import database_sync_to_async
-
 from fleet.models import FleetAuditLog
+from fleet.utils.db import db
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ def log_action(action, node=None, user=None, detail=None, remote_addr=None) -> N
         )
 
 
-alog_action = database_sync_to_async(log_action)
+alog_action = db(log_action)
 
 
 def client_ip(request):

@@ -468,21 +468,17 @@ HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split("
 
 CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")
 
-# ---------------------------------------------------------------------------
 # Fleet — remote management of hotel VMs over the NetBird mesh
-# ---------------------------------------------------------------------------
-# NetBird is the connectivity layer only: its REST API tells us which nodes
-# exist and whether they are online. It can never run a command on one. All
-# execution goes over the node's own sshd, reachable only through the tunnel.
+
 NETBIRD_API_URL = os.getenv("NETBIRD_API_URL", "").rstrip("/")
 NETBIRD_PAT = os.getenv("NETBIRD_PAT", "")
 NETBIRD_HOTEL_GROUP_ID = os.getenv("NETBIRD_HOTEL_GROUP_ID", "")
-# Passed to `netbird up --management-url` inside the bootstrap script. Defaults
-# to the panel host, which is the same deployment WEBRTC_BROKER_URL points at.
 NETBIRD_MANAGEMENT_URL = os.getenv("NETBIRD_MANAGEMENT_URL", "") or os.getenv("WEBRTC_BROKER_URL", "")
 NETBIRD_TIMEOUT = float(os.getenv("NETBIRD_TIMEOUT", "10"))
-# Single-use setup keys minted per install; short-lived on purpose.
 NETBIRD_SETUP_KEY_TTL = int(os.getenv("NETBIRD_SETUP_KEY_TTL", "3600"))
+
+# "derive it from FRONTEND_DOMAIN" — see `fleet.utils.code.node_prefix`.
+FLEET_NODE_PREFIX = os.getenv("FLEET_NODE_PREFIX", "")
 
 # The private half of the fleet keypair. Stays on this server, never leaves.
 FLEET_SSH_PRIVATE_KEY_PATH = os.path.expanduser(os.getenv("SSH_PRIVATE_KEY_PATH", "~/.roomio/fleet_key"))
@@ -492,6 +488,17 @@ FLEET_SSH_USER = os.getenv("SSH_USER", "roomio-agent")
 FLEET_SSH_PORT = int(os.getenv("SSH_PORT", "22"))
 FLEET_SSH_CONNECT_TIMEOUT = float(os.getenv("FLEET_SSH_CONNECT_TIMEOUT", "15"))
 FLEET_SSH_COMMAND_TIMEOUT = float(os.getenv("FLEET_SSH_COMMAND_TIMEOUT", "60"))
+
+FLEET_UPLOAD_ROOT = os.getenv("FLEET_UPLOAD_ROOT", "")
+FLEET_UPLOAD_MAX_BYTES = int(os.getenv("FLEET_UPLOAD_MAX_BYTES", str(100 * 1024 * 1024)))
+FLEET_UPLOAD_TIMEOUT = float(os.getenv("FLEET_UPLOAD_TIMEOUT", "300"))
+
+
+FLEET_GATEWAY_SERVICE = os.getenv("FLEET_GATEWAY_SERVICE", "roomio-gateway")
+FLEET_JOB_CONCURRENCY = int(os.getenv("FLEET_JOB_CONCURRENCY", "5"))
+FLEET_JOB_MAX_NODES = int(os.getenv("FLEET_JOB_MAX_NODES", "200"))
+FLEET_JOB_OUTPUT_LIMIT = int(os.getenv("FLEET_JOB_OUTPUT_LIMIT", str(64 * 1024)))
+FLEET_JOB_TIMEOUT = float(os.getenv("FLEET_JOB_TIMEOUT", "1800"))
 
 FLEET_INSTALL_TOKEN_TTL_HOURS = int(os.getenv("INSTALL_TOKEN_TTL_HOURS", "24"))
 # Public base URL used to build the `curl ... | sudo bash` one-liner.

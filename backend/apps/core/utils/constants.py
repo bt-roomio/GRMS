@@ -202,6 +202,7 @@ UI_PERMISSIONS = [
     "c-fleet-install",
     "c-fleet-run",
     "c-fleet-terminal",
+    "c-fleet-upload",
     "c-fleet-logs",
     "settings",
     "s-general",

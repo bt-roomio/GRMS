@@ -19,7 +19,7 @@ class NetBirdClient:
 
     A phonebook, nothing more: which peers exist, their groups, whether they
     are connected. It cannot reach or run anything on a peer — that is
-    `fleet.ssh`.
+    `fleet.utils.ssh`.
     """
 
     def __init__(

@@ -3,7 +3,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from core.utils.serializers import ValidatorSerializer
-from fleet.models import FleetAuditLog, FleetNode
+from fleet.models import FleetNode
 from fleet.utils.code import build_code
 from main.models import Device
 from users.serializers.user import SimpleUserSerializer
@@ -131,43 +131,3 @@ class FleetNodeFilterParams(ValidatorSerializer):
     search_value = serializers.CharField(required=False)
     is_online = serializers.BooleanField(required=False, allow_null=True, default=None)
     sort_by = serializers.ListField(child=serializers.ChoiceField(choices=SORT_FIELDS), required=False)
-
-
-class InstallCommandSerializer(serializers.Serializer):
-    install_url = serializers.CharField(read_only=True, help_text="One-time link that serves the bootstrap script.")
-    command = serializers.CharField(read_only=True, help_text="curl … | sudo bash — needs the VM to reach this server.")
-    hostname = serializers.CharField(read_only=True, help_text="The NetBird peer name this node will register as.")
-    peer_replaced = serializers.BooleanField(
-        read_only=True,
-        help_text="True when an existing peer and its setup key were deleted to make room for this one.",
-    )
-    expires_at = serializers.IntegerField(read_only=True)
-
-
-class RunCommandSerializer(ValidatorSerializer):
-    command = serializers.CharField(max_length=4096)
-    timeout = serializers.FloatField(required=False, min_value=1, max_value=600)
-
-
-class FleetAuditLogSerializer(serializers.ModelSerializer):
-    user = SimpleUserSerializer(read_only=True)
-    node_code = serializers.CharField(source="node.code", read_only=True)
-
-    class Meta:
-        model = FleetAuditLog
-        fields = (
-            "id",
-            "action",
-            "user",
-            "node",
-            "node_code",
-            "detail",
-            "remote_addr",
-            "created_at",
-        )
-
-
-class FleetAuditLogFilterParams(ValidatorSerializer):
-    page = serializers.IntegerField(default=1)
-    size = serializers.IntegerField(default=15)
-    action = serializers.ChoiceField(choices=FleetAuditLog.ACTION.choices, required=False)

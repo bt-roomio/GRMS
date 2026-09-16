@@ -35,6 +35,7 @@ app.conf.task_routes = {
     "access_manager.tasks.public_space_card.manage_cards_for_public_space_task": {"queue": "critical"},
     "access_manager.tasks.send_rpc.send_rpc_request": {"queue": "critical"},
     "access_manager.tasks.unplug_card.unplug": {"queue": "critical"},
+    "fleet.tasks.run_fleet_job": {"queue": "critical"},
     "main.tasks.auto_check_out": {"queue": "critical"},
     "main.tasks.auto_block": {"queue": "critical"},
     # WebSocket-публикация и обновление активности устройств из mq-async.

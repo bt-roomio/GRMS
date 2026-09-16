@@ -46,6 +46,7 @@ services:
       - /app/.venv
       - static_volume:/app/static/
       - media_volume:/app/media/
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     ports:
       - "8000:8000"
     environment:
@@ -67,24 +68,28 @@ services:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q critical -n critical@%h -l debug -c 1
 
   celery-default:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q default -n default@%h -l debug -c 2
 
   celery-realtime:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q realtime -n realtime@%h -l debug -c 2
 
   celery-low:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q low -n low@%h -l debug -c 1
 
   celery-beat:

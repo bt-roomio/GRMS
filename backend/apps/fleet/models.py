@@ -5,6 +5,7 @@ from core.models import BaseModel, UpdateByModel
 from core.utils.unix_timestamp import UnixTimeStampField
 from fleet.querysets.audit_log import FleetAuditLogQuerySet
 from fleet.querysets.fleet_node import FleetNodeQuerySet
+from fleet.querysets.job import FleetJobQuerySet, FleetJobTaskQuerySet
 
 
 class FleetNode(BaseModel, UpdateByModel):
@@ -15,13 +16,9 @@ class FleetNode(BaseModel, UpdateByModel):
     the node is the machine running it.
     """
 
-    # One active node per gateway. The gateway also decides the tenant.
     gateway = models.ForeignKey("main.Device", CASCADE, related_name="fleet_nodes")
-    # Denormalised from ``gateway.tenant`` so scoping and the poller stay single-table.
     tenant = models.ForeignKey("main.Tenant", CASCADE, related_name="fleet_nodes")
 
-    # ``{tenant_slug}_{gateway_slug}`` — also used verbatim as the NetBird
-    # hostname, which is how the poller matches a peer back to this row.
     code = models.CharField(max_length=128, editable=False)
 
     title = models.CharField(max_length=255, null=True, blank=True)
@@ -37,17 +34,12 @@ class FleetNode(BaseModel, UpdateByModel):
     netbird_version = models.CharField(max_length=64, null=True, blank=True)
 
     ssh_user = models.CharField(max_length=64, default="roomio-agent")
-    # Trust-on-first-use pin, OpenSSH format. Recorded on the first successful
-    # connection and enforced on every one after it.
     ssh_host_key = models.TextField(null=True, blank=True)
 
-    # One-time install token handed out with the "Install agent" one-liner.
     install_token = models.CharField(max_length=128, null=True, blank=True)
     token_expires_at = UnixTimeStampField(null=True, blank=True)
     token_used_at = UnixTimeStampField(null=True, blank=True)
 
-    # The id lets us delete the key on re-enrollment. The plaintext is held only
-    # until ``/install/<code>`` renders it, then wiped with the token.
     netbird_setup_key_id = models.CharField(max_length=64, null=True, blank=True)
     netbird_setup_key = models.CharField(max_length=128, null=True, blank=True)
 
@@ -65,8 +57,6 @@ class FleetNode(BaseModel, UpdateByModel):
     class Meta(BaseModel.Meta):
         db_table = "fleet_node"
         constraints = [
-            # Partial rather than OneToOneField: nodes are soft-deleted, and a
-            # plain unique would permanently block re-enrolling a gateway.
             UniqueConstraint("gateway", condition=Q(is_active=True), name="unique_active_fleet_node_gateway"),
             UniqueConstraint("code", condition=Q(is_active=True), name="unique_active_fleet_node_code"),
         ]
@@ -77,6 +67,7 @@ class FleetNode(BaseModel, UpdateByModel):
             ("enroll_fleetnode", "Can issue install tokens for fleet nodes"),
             ("terminal_fleetnode", "Can open a terminal on a fleet node"),
             ("exec_fleetnode", "Can run commands on a fleet node"),
+            ("upload_fleetnode", "Can upload files to a fleet node"),
         ]
 
 
@@ -98,6 +89,10 @@ class FleetAuditLog(BaseModel):
         TERMINAL_OPEN = "terminal_open", "Terminal session opened"
         TERMINAL_CLOSE = "terminal_close", "Terminal session closed"
         TERMINAL_DENIED = "terminal_denied", "Terminal session denied"
+        FILE_UPLOADED = "file_uploaded", "File uploaded"
+        FILE_UPLOAD_FAILED = "file_upload_failed", "File upload failed"
+        JOB_STARTED = "job_started", "Bulk job started"
+        JOB_CANCELLED = "job_cancelled", "Bulk job cancelled"
 
     user = models.ForeignKey("users.User", SET_NULL, null=True, blank=True, related_name="fleet_audit_logs")
     node = models.ForeignKey("fleet.FleetNode", SET_NULL, null=True, blank=True, related_name="audit_logs")
@@ -115,4 +110,97 @@ class FleetAuditLog(BaseModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=["node", "-created_at"], name="fleet_audit_node_ts_idx"),
+        ]
+
+
+class FleetJob(BaseModel, UpdateByModel):
+    """
+    One catalog action, fanned out over many nodes.
+
+    The job carries *what* was asked for; each :class:`FleetJobTask` carries what
+    happened on one node. Free-form shell never reaches here — ``action`` is a key
+    in ``fleet.actions`` and the command is built server-side.
+    """
+
+    class STATUS(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        DONE = "done", "Done"
+        CANCELLED = "cancelled", "Cancelled"
+
+    tenant = models.ForeignKey("main.Tenant", CASCADE, related_name="fleet_jobs")
+
+    action = models.CharField(max_length=64)
+    params = models.JSONField(null=True, blank=True)
+
+    status = models.CharField(max_length=16, choices=STATUS.choices, default=STATUS.PENDING)
+
+    started_at = UnixTimeStampField(null=True, blank=True)
+    finished_at = UnixTimeStampField(null=True, blank=True)
+
+    objects = FleetJobQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        return f"{self.action} ({self.status})"
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self.status == self.STATUS.CANCELLED
+
+    class Meta(BaseModel.Meta):
+        db_table = "fleet_job"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["tenant", "-created_at"], name="fleet_job_tenant_ts_idx"),
+        ]
+        permissions = [
+            ("run_fleetjob", "Can run bulk actions across fleet nodes"),
+        ]
+
+
+class FleetJobTask(BaseModel):
+    """
+    One node's slice of a job.
+
+    Every targeted node gets a row up front, so the total is known the moment the
+    job is created and a node that is skipped is visible rather than absent.
+    ``node_code`` is a snapshot: nodes are soft-deleted, and the row must stay
+    readable after the node is gone.
+    """
+
+    class STATUS(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        DONE = "done", "Done"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+        CANCELLED = "cancelled", "Cancelled"
+
+    job = models.ForeignKey("fleet.FleetJob", CASCADE, related_name="tasks")
+    node = models.ForeignKey("fleet.FleetNode", SET_NULL, null=True, blank=True, related_name="job_tasks")
+    node_code = models.CharField(max_length=128)
+
+    status = models.CharField(max_length=16, choices=STATUS.choices, default=STATUS.PENDING)
+
+    exit_code = models.IntegerField(null=True, blank=True)
+    stdout = models.TextField(null=True, blank=True)
+    stderr = models.TextField(null=True, blank=True)
+    error = models.TextField(null=True, blank=True)
+
+    started_at = UnixTimeStampField(null=True, blank=True)
+    finished_at = UnixTimeStampField(null=True, blank=True)
+
+    objects = FleetJobTaskQuerySet.as_manager()
+
+    def __str__(self) -> str:
+        return f"{self.node_code}: {self.status}"
+
+    class Meta(BaseModel.Meta):
+        db_table = "fleet_job_task"
+        ordering = ("node_code",)
+        constraints = [
+            UniqueConstraint("job", "node", name="unique_fleet_job_task_node"),
+        ]
+        indexes = [
+            models.Index(fields=["job", "status"], name="fleet_job_task_status_idx"),
         ]

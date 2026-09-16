@@ -47,6 +47,13 @@ async def handle_process(process):
 
 
 @pytest.fixture
+def upload_root(tmp_path):
+    root = tmp_path / "opt" / "roomio"
+    root.mkdir(parents=True)
+    return root
+
+
+@pytest.fixture
 def client_key(tmp_path):
     """Stands in for the fleet private key held by the Django server."""
     key = asyncssh.generate_private_key("ssh-ed25519")
@@ -67,6 +74,7 @@ async def sshd(client_key):
         server_host_keys=[host_key],
         authorized_client_keys=asyncssh.import_authorized_keys(key.export_public_key().decode()),
         process_factory=handle_process,
+        sftp_factory=True,
     )
     port = server.sockets[0].getsockname()[1]
     try:
