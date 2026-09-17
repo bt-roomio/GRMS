@@ -10,9 +10,8 @@ class SendLinkParams(serializers.Serializer):
         email = attrs.get("email")
         if email:
             attrs["email"] = email.lower()
-        try:
-            user = User.objects.get(email=attrs["email"], is_active=True)
-            attrs["user"] = user
-        except User.DoesNotExist:
-            raise serializers.ValidationError({"email": "User with this email not found or is inactive."})
+
+        # A missing user is not a validation error: the view answers identically
+        # in both cases so that account existence is not disclosed.
+        attrs["user"] = User.objects.filter(email=attrs["email"], is_active=True).first()
         return attrs

@@ -21,7 +21,7 @@ CAPTCHA_BRUTE_FORCE_CONFIG = {
 
 @override_settings(BRUTE_FORCE_CONFIG=CAPTCHA_BRUTE_FORCE_CONFIG, TURNSTILE_SITE_KEY="test-site-key")
 class CaptchaRequirementTests(TestCase):
-    """Тесты для определения необходимости CAPTCHA"""
+    """Tests for deciding whether a CAPTCHA is required"""
 
     def setUp(self):
         self.middleware = APIBruteForceProtectionMiddleware(lambda r: HttpResponse())
@@ -50,7 +50,7 @@ class CaptchaRequirementTests(TestCase):
 
 @override_settings(BRUTE_FORCE_CONFIG=CAPTCHA_BRUTE_FORCE_CONFIG, TURNSTILE_SITE_KEY="test-site-key")
 class CaptchaCheckTests(TestCase):
-    """Тесты для валидации CAPTCHA токена"""
+    """Tests for CAPTCHA token validation"""
 
     def setUp(self):
         self.middleware = APIBruteForceProtectionMiddleware(lambda r: HttpResponse())
@@ -85,7 +85,7 @@ class CaptchaCheckTests(TestCase):
     @patch("core.utils.turnstile.verify_turnstile_token")
     @patch("core.middleware.brute_force_protection.security_cache")
     def test_fail_open_on_infrastructure_error(self, mock_cache, mock_verify):
-        """При проблемах с Cloudflare — пропускаем запрос (fail open)"""
+        """On Cloudflare trouble the request is let through (fail open)"""
         mock_cache.get.return_value = 3
         mock_verify.side_effect = TurnstileVerificationError("timeout")
         result = self.middleware._check_captcha("1.2.3.4", "test@example.com", captcha_token="some-token")
@@ -94,7 +94,7 @@ class CaptchaCheckTests(TestCase):
 
 @override_settings(BRUTE_FORCE_CONFIG=CAPTCHA_BRUTE_FORCE_CONFIG, TURNSTILE_SITE_KEY="test-site-key")
 class CaptchaProcessRequestTests(TestCase):
-    """Тесты для process_request с CAPTCHA"""
+    """Tests for process_request with CAPTCHA"""
 
     def setUp(self):
         self.factory = RequestFactory()
@@ -147,7 +147,7 @@ class CaptchaProcessRequestTests(TestCase):
 
 @override_settings(BRUTE_FORCE_CONFIG=CAPTCHA_BRUTE_FORCE_CONFIG, TURNSTILE_SITE_KEY="test-site-key")
 class CaptchaProcessResponseTests(TestCase):
-    """Тесты для обогащения response данными о CAPTCHA"""
+    """Tests for enriching the response with CAPTCHA data"""
 
     def setUp(self):
         self.factory = RequestFactory()
@@ -156,6 +156,10 @@ class CaptchaProcessResponseTests(TestCase):
     @patch("core.middleware.brute_force_protection.security_cache")
     def test_response_includes_captcha_required_after_threshold(self, mock_cache):
         mock_cache.get.side_effect = lambda key, default=None: {}.get(key, 3 if "bf:attempts:" in key else default)
+        # add() returns False — the key already exists, so the counter goes through
+        # incr(). Without this the mock would report "key created" and the count
+        # would be 1.
+        mock_cache.add.return_value = False
         mock_cache.incr.return_value = 3
 
         request = self.factory.post(
@@ -176,6 +180,7 @@ class CaptchaProcessResponseTests(TestCase):
     @patch("core.middleware.brute_force_protection.security_cache")
     def test_response_no_captcha_below_threshold(self, mock_cache):
         mock_cache.get.side_effect = lambda key, default=None: {}.get(key, 1 if "bf:attempts:" in key else default)
+        mock_cache.add.return_value = False
         mock_cache.incr.return_value = 1
 
         request = self.factory.post(

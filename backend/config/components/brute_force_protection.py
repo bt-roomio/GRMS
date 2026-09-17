@@ -1,12 +1,5 @@
-"""
-Конфигурация защиты от brute force для REST API
-"""
-
 import os
-
-# ============================================
-# CLOUDFLARE TURNSTILE CAPTCHA
-# ============================================
+from typing import Any
 
 TURNSTILE_ENABLED = os.getenv("TURNSTILE_ENABLED", "False").lower() in ("true", "1", "yes")
 TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
@@ -14,75 +7,35 @@ TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 TURNSTILE_TIMEOUT = 5  # seconds
 
-# ============================================
-# BRUTE FORCE PROTECTION CONFIGURATION
-# ============================================
 
-BRUTE_FORCE_CONFIG = {
-    # ===== БАЗОВЫЕ НАСТРОЙКИ =====
-    # Endpoints для защиты (можно добавлять свои)
+def _ip_list(env_name: str) -> list[str]:
+    """Read a comma-separated IP list from an environment variable."""
+    return [ip.strip() for ip in os.getenv(env_name, "").split(",") if ip.strip()]
+
+
+BRUTE_FORCE_CONFIG: dict[str, Any] = {
     "protected_endpoints": [
         "/api/v1/users/access-token/",
         "/api/v1/users/refresh-token/",
-        "/api/v1/users/send-link/",
     ],
-    # Основной лимит попыток
-    "max_attempts": 5,  # Максимум попыток
-    "lockout_duration": 900,  # 15 минут блокировки
-    "attempt_window": 10,  # 300,  # Окно 5 минут для подсчета
-    # ===== РАСШИРЕННЫЕ ВРЕМЕННЫЕ ОКНА ===== Защита от медленных атак
+    "max_attempts": 5,
+    "lockout_duration": 900,  # 15 minutes of lockout
+    "attempt_window": 300,  # 5 minutes to count attempts (do NOT lower: 10s makes lockout unreachable)
     "time_windows": {
         "1h": {
-            "duration": 3600,  # 1 час
-            "max_attempts": 10,  # Максимум 10 попыток за час
+            "duration": 3600,
+            "max_attempts": 10,
         },
         "24h": {
-            "duration": 86400,  # 24 часа
-            "max_attempts": 30,  # Максимум 30 попыток за день
-        },
-        "7d": {
-            "duration": 604800,  # 7 дней
-            "max_attempts": 100,  # Максимум 100 попыток за неделю
+            "duration": 86400,
+            "max_attempts": 30,
         },
     },
-    # ===== PROGRESSIVE DELAYS =====
-    # Экспоненциальные задержки
     "enable_progressive_delays": True,
-    "base_delay": 0.5,  # Базовая задержка (секунды)
-    "max_delay": 30,  # Максимальная задержка (секунды)
-    # ===== CAPTCHA (Cloudflare Turnstile) =====
-    # Number of failed attempts before CAPTCHA is required
+    "base_delay": 0.5,
+    "max_delay": 30,
     "captcha_threshold": 3,
     "captcha_enabled": TURNSTILE_ENABLED,
-    # ===== WHITELIST =====
-    # IP адреса, которые не блокируются (для тестов)
-    "whitelist_ips": [
-        "127.0.0.1",
-        "::1",
-        # Добавьте свои доверенные IP
-    ],
-    # ===== BLACKLIST =====
-    # IP адреса, которые блокируются навсегда
-    "blacklist_ips": [
-        # Добавьте известные вредоносные IP
-    ],
+    "whitelist_ips": _ip_list("BRUTE_FORCE_WHITELIST_IPS"),
+    "blacklist_ips": _ip_list("BRUTE_FORCE_BLACKLIST_IPS"),
 }
-
-# ============================================
-# LOGGING
-# ============================================
-
-# LOGGING["loggers"]["security"] = {
-#     "handlers": ["console", "security_file"],
-#     "level": "INFO",
-#     "propagate": False,
-# }
-#
-# LOGGING["handlers"]["security_file"] = {
-#     "level": "WARNING",
-#     "class": "logging.handlers.RotatingFileHandler",
-#     "filename": "logs/security_brute_force.log",
-#     "formatter": "verbose_with_location",
-#     "maxBytes": 1024 * 1024 * 15,  # 15 MB
-#     "backupCount": 5,
-# }

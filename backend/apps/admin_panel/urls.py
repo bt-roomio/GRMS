@@ -1,3 +1,4 @@
+from admin_panel.views.brute_force import AdminUserLockView
 from admin_panel.views.impersonate import ImpersonateView
 from admin_panel.views.integrations import AdminTenantIntegrationDetailView, AdminTenantIntegrationsView
 from admin_panel.views.roles import AdminTenantRolesView
@@ -27,5 +28,6 @@ urlpatterns = [
     path("tenant-group/", AdminTenantGroupListView.as_view(), name="admin-group-list"),
     path("tenant-group/<uuid:group_id>/", AdminTenantGroupDetailView.as_view(), name="admin-group-detail"),
     path("user/<uuid:user_id>/change-password/", AdminChangePasswordView.as_view(), name="admin-user-change-password"),
+    path("user/<uuid:user_id>/lock/", AdminUserLockView.as_view(), name="admin-user-lock"),
     path("impersonate/<uuid:user_id>/", ImpersonateView.as_view(), name="admin-impersonate"),
 ]

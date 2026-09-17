@@ -91,6 +91,14 @@ INSTALLED_APPS = [
     "fleet",
 ]
 
+# Every header listed here must be unconditionally overwritten by a trusted
+# proxy: without Cloudflare in front, CF-Connecting-IP has to be removed or a
+# client can forge any address and bypass rate limiting. Empty = REMOTE_ADDR only.
+# Imported here rather than at the top: apps/ joins sys.path earlier in this file.
+from core.utils.ip import trusted_ip_headers_from_env  # ty: ignore
+
+TRUSTED_IP_HEADERS = trusted_ip_headers_from_env()
+
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     # Should be start of middleware
@@ -412,7 +420,7 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = True
-# Task events для мониторинга через Flower (иначе вкладка Tasks пустая)
+# Task events for Flower monitoring (otherwise the Tasks tab stays empty)
 CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 
@@ -456,7 +464,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "flush-expired-tokens": {
         "task": "users.tasks.flush_expired_tokens",
-        "schedule": crontab(hour=3, minute=0),  # каждую ночь в 3:00
+        "schedule": crontab(hour=3, minute=0),  # nightly at 3:00
     },
     "fleet-poll-peers": {
         "task": "fleet.tasks.poll_fleet_peers",
@@ -508,20 +516,28 @@ _LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "WARNING").upper()
 _LOG_FORMATTER = os.getenv("DJANGO_LOG_FORMATTER", "simple")
 _LOG_SQL = os.getenv("DJANGO_LOG_SQL", "false").lower() in ("1", "true", "yes")
 
+# All logs go to stdout/stderr — rotation and retention are handled by Docker
+# (x-logging in deploy/docker-compose.yml: json-file, max-size 50m, max-file 5).
+# File handlers are deliberately unused: RotatingFileHandler is not
+# multiprocess-safe with GUNICORN_WORKERS > 1, and writing inside the container
+# without a volume is lost on redeploy.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    # {name} is present in every format: all subsystems log into a single stdout,
+    # and the logger name is the only way to tell security/hoteza/… apart when
+    # reading them (`docker logs django | grep ' security '`).
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} {module}:{lineno} {process:d} {thread:d} {message}",
+            "format": "{levelname} {asctime} {name} {module}:{lineno} {process:d} {thread:d} {message}",
             "style": "{",
         },
         "simple": {
-            "format": "{levelname} {asctime} {message}",
+            "format": "{levelname} {asctime} {name} {message}",
             "style": "{",
         },
         "verbose_with_location": {
-            "format": "[{levelname}] {asctime} {pathname}:{lineno} | {message}",
+            "format": "[{levelname}] {asctime} [{name}] {pathname}:{lineno} | {message}",
             "style": "{",
         },
     },
@@ -536,27 +552,18 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": _LOG_FORMATTER,
         },
-        "file": {
-            "level": "WARNING",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "fail_request.log",
-            "formatter": "verbose",
-            "maxBytes": 1024 * 1024 * 15,  # 1 MB
-            "backupCount": 3,
-        },
-        "file_hoteza_app": {
-            "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "hoteza.log",
-            "formatter": "verbose",
-            "maxBytes": 1024 * 1024 * 15,  # 1 MB
-            "backupCount": 3,
-        },
     },
     "loggers": {
         "django": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
+        },
+        # INFO is set explicitly instead of _LOG_LEVEL: lockout and successful
+        # login events are always needed, regardless of overall log verbosity.
+        "security": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
         "celery": {
             "handlers": ["console"],
@@ -589,16 +596,11 @@ LOGGING = {
             "propagate": False,
         },
         "hoteza": {
-            "handlers": ["file_hoteza_app"],
-            "level": _LOG_LEVEL,
-            "propagate": False,
-        },
-        "core": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
             "propagate": False,
         },
-        "security": {
+        "core": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
             "propagate": False,
@@ -627,4 +629,17 @@ LOGGING = {
     },
 }
 
-from .components.brute_force_protection import BRUTE_FORCE_CONFIG  # noqa: E402 F401  # ty: ignore
+# The import sits at the bottom on purpose: the component reads os.getenv at
+# module level, while load_dotenv() is called earlier in this file — at the top
+# the .env file is not loaded yet.
+# E402 is disabled for this file in pyproject.toml (per-file-ignores) so that an
+# editor autofix does not strip an inline suppression as "unused".
+# The F401 below is required: the names are unused here, they simply become settings.
+from .components.brute_force_protection import (  # noqa: F401  # ty: ignore
+    BRUTE_FORCE_CONFIG,
+    TURNSTILE_ENABLED,
+    TURNSTILE_SECRET_KEY,
+    TURNSTILE_SITE_KEY,
+    TURNSTILE_TIMEOUT,
+    TURNSTILE_VERIFY_URL,
+)

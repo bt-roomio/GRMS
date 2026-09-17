@@ -2,6 +2,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from core.utils.ip import get_client_ip
 from users.serializers.jwt_token import CustomTokenObtainPairSerializer
 
 
@@ -9,14 +10,7 @@ class AuthTokenThrottle(AnonRateThrottle):
     scope = "auth_token"
 
     def get_ident(self, request):
-        # CF-Connecting-IP → X-Real-IP (nginx-set) → REMOTE_ADDR.
-        # X-Forwarded-For намеренно не используется: leftmost-запись
-        # контролируется клиентом и позволяет обойти throttle.
-        return (
-            request.META.get("HTTP_CF_CONNECTING_IP")
-            or request.META.get("HTTP_X_REAL_IP")
-            or request.META.get("REMOTE_ADDR", "unknown")
-        )
+        return get_client_ip(request)
 
 
 class CustomTokenRefreshView(TokenRefreshView):

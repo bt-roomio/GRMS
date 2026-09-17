@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 from rest_framework.views import Http404
@@ -26,12 +28,12 @@ def check_perms(perms):
 
 
 class IsSuperUser(BasePermission):
-    def has_permission(self, request, view):  # pyright: ignore
+    def has_permission(self, request, view):
         return bool(request.user and request.user.is_active and request.user.is_superuser)
 
 
 class IsGroupUser(BasePermission):
-    groups = []
+    groups: ClassVar = []
 
     def has_permission(self, request, view):
         user = request.user
@@ -39,12 +41,12 @@ class IsGroupUser(BasePermission):
 
 
 class IsSysAdmin(IsGroupUser):
-    groups = ["SYS_ADMIN"]
+    groups: ClassVar = ["SYS_ADMIN"]
 
 
 class IsTenantAdmin(IsGroupUser):
-    groups = ["TENANT_ADMIN"]
+    groups: ClassVar = ["TENANT_ADMIN"]
 
 
 class IsTenantAndSysAdmin(IsGroupUser):
-    groups = ["TENANT_ADMIN", "SYS_ADMIN"]
+    groups: ClassVar = ["TENANT_ADMIN", "SYS_ADMIN"]
