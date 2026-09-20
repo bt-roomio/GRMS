@@ -4,6 +4,7 @@ from django.db import transaction
 
 from core.utils.constants import UI_PERMISSIONS
 from main.models import DeviceProfile, Tenant, TenantGroup, TenantProfile
+from main.services.nodered import schedule_nodered_provisioning
 from users.models import Role, User
 
 DEFAULT_DEVICE_PROFILES = ("Default", "Integration Devices", "Card Reader")
@@ -30,6 +31,8 @@ def provision_tenant(*, title, email, password, group=None):
 
     for name in DEFAULT_DEVICE_PROFILES:
         DeviceProfile.objects.get_or_create(name=name, tenant=tenant, type="DEFAULT")
+
+    schedule_nodered_provisioning(tenant)
 
     return tenant
 

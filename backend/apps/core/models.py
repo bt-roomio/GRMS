@@ -53,7 +53,7 @@ class UpdateByModel(models.Model):
     def save(self, *args, **kwargs):
         if self.pk:
             self.updated_at = get_mil_sec()
-        return super(UpdateByModel, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     class Meta:
         abstract = True

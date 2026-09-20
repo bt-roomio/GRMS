@@ -7,6 +7,11 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
+# docker CLI + compose (статические сборки): celery-low поднимает Node-RED тенантов через docker.sock.
+# 28, а не 29: CLI 29 требует Engine API >= 1.44 на хосте.
+COPY --from=docker:28-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker:28-cli /usr/local/libexec/docker/cli-plugins/docker-compose /usr/local/libexec/docker/cli-plugins/docker-compose
+
 # Зависимости — отдельный слой, инвалидируется только при изменении lock-файла
 RUN --mount=type=cache,target=/root/.cache/uv \
   --mount=type=bind,source=pyproject.toml,target=pyproject.toml \

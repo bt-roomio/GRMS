@@ -292,7 +292,15 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
-    volumes: *celery-volumes
+    # Сверх *celery-volumes: provision/deprovision Node-RED тенантов (main.services.nodered)
+    # пишет .env.nodered.<slug> в deploy/ и вызывает docker compose на хосте.
+    # ВНИМАНИЕ: доступ к docker.sock равносилен root на хосте — монтировать только сюда.
+    volumes:
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/deploy
+      # docker login к registry.gitlab.com для pull образа node-red-nodes (того, кто запускает make)
+      - ${DOCKER_CONFIG_DIR:-${HOME}/.docker}:/root/.docker:ro
     command: celery -A config worker -Q low -n low@%h -l warning -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp

@@ -1,3 +1,4 @@
+import subprocess
 import time
 from datetime import time as time_cls
 
@@ -6,8 +7,10 @@ from celery.utils.log import get_task_logger
 from django.db.models import Count, Q
 
 from access_manager.tasks.send_rpc import send_rpc_request
+from core.utils.cloudflare import CloudflareUnavailable
 from core.utils.helpers import safely_remove
 from main.models import Guest, Room
+from main.services.nodered import deprovision_nodered, provision_nodered
 from main.utils.access_context import get_guest_access_context
 
 logger = get_task_logger(__name__)
@@ -79,3 +82,30 @@ def auto_block():
             _ = send_rpc_request(str(device.id), cards, 0)
 
     logger.info("auto block task successfully finish.")
+
+
+# Retried only on failures that can pass by themselves; a failed provisioning is
+# visible in tenant.additional_info["nodered"] and re-run with `provision_nodered`.
+# The time limits leave room for `up -d` pulling the image.
+@shared_task(
+    name="main.tasks.provision_nodered_task",
+    autoretry_for=(CloudflareUnavailable, subprocess.TimeoutExpired),
+    retry_backoff=30,
+    max_retries=3,
+    soft_time_limit=600,
+    time_limit=660,
+)
+def provision_nodered_task(tenant_id):
+    provision_nodered(tenant_id)
+
+
+@shared_task(
+    name="main.tasks.deprovision_nodered_task",
+    autoretry_for=(CloudflareUnavailable, subprocess.TimeoutExpired),
+    retry_backoff=30,
+    max_retries=3,
+    soft_time_limit=600,
+    time_limit=660,
+)
+def deprovision_nodered_task(slug, dns_record_id=None):
+    deprovision_nodered(slug, dns_record_id)

@@ -45,7 +45,7 @@ class TenantGroup(ServiceBaseModel):
     class Meta(ServiceBaseModel.Meta):
         db_table = "main_tenant_group"
         ordering = ("-created_at",)
-        constraints = [UniqueConstraint(Lower("title"), name="unique_tenant_group_title")]
+        constraints: ClassVar = [UniqueConstraint(Lower("title"), name="unique_tenant_group_title")]
 
 
 class Tenant(ServiceBaseModel):
@@ -71,7 +71,7 @@ class Tenant(ServiceBaseModel):
 
     class Meta(ServiceBaseModel.Meta):
         db_table = "main_tenant"
-        permissions = [
+        permissions: ClassVar = [
             ("view_alarmsettings", "Can view alarms"),
             ("change_alarmsettings", "Can change alarms"),
             ("view_generalsettings", "Can view general settings"),
@@ -159,11 +159,10 @@ class Room(BaseModel, UpdateByModel):
 
     def clean(self):
         super().clean()
-        if self.state is not None:
-            if self.Available in self.state and self.CheckedIn in self.state:
-                raise ValidationError(
-                    {"state": "Поле state не может содержать одновременно состояния Available и CheckedIn."}
-                )
+        if self.state is not None and self.Available in self.state and self.CheckedIn in self.state:
+            raise ValidationError(
+                {"state": "Поле state не может содержать одновременно состояния Available и CheckedIn."}
+            )
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -238,12 +237,12 @@ class Room(BaseModel, UpdateByModel):
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 fields=["number", "floor", "block", "tenant"], condition=Q(active=True), name="unique_active_room"
             )
         ]
-        permissions = [
+        permissions: ClassVar = [
             ("add_roomfromconf", "Can add room from conf"),
             ("view_roomstatus", "Can view room status"),
         ]
@@ -326,7 +325,7 @@ class Device(BaseModel):
 
     relations: Manager["Relation"]
 
-    objects = DeviceQuerySet.as_manager()
+    objects: ClassVar[DeviceQuerySet] = cast(DeviceQuerySet, DeviceQuerySet.as_manager())
 
     def __str__(self):
         return str(self.name)
@@ -356,12 +355,12 @@ class Device(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_device"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 Lower("name"), "tenant", condition=Q(is_active=True), name="unique_device_name_tenant_is_active"
             ),
         ]
-        permissions = [
+        permissions: ClassVar = [
             ("add_devicefromconf", "Can add device from conf"),
         ]
 
@@ -420,7 +419,7 @@ class DeviceProfile(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_device_profile"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(Lower("name"), "tenant", condition=Q(active=True), name="unique_active_device_profile")
         ]
 
@@ -483,8 +482,8 @@ class Dashboard(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_dashboard"
-        constraints = [UniqueConstraint(Lower("title"), "tenant", name="unique_dashboard_title_tenant")]
-        permissions = [
+        constraints: ClassVar = [UniqueConstraint(Lower("title"), "tenant", name="unique_dashboard_title_tenant")]
+        permissions: ClassVar = [
             ("view_dashboardtype", "Can view dashboard types"),
         ]
 
@@ -546,7 +545,7 @@ class Guest(BaseModel):
     class Meta(BaseModel.Meta):
         db_table = "main_guest"
         ordering = ["created_at"]
-        permissions = [
+        permissions: ClassVar = [
             ("change_guestmoveroom", "Can change guest move room"),
         ]
 

@@ -38,6 +38,9 @@ app.conf.task_routes = {
     "fleet.tasks.run_fleet_job": {"queue": "critical"},
     "main.tasks.auto_check_out": {"queue": "critical"},
     "main.tasks.auto_block": {"queue": "critical"},
+    # Только celery-low смонтирован с docker.sock и deploy/; -c 1 исключает гонки за env-файлы.
+    "main.tasks.provision_nodered_task": {"queue": "low"},
+    "main.tasks.deprovision_nodered_task": {"queue": "low"},
     # WebSocket-публикация и обновление активности устройств из mq-async.
     "shuttle.tasks.publish_updates_batch_task": {"queue": "realtime"},
     "shuttle.tasks.publish_updates_attribute_batch_task": {"queue": "realtime"},

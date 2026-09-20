@@ -26,6 +26,16 @@ def gateway_slug(gateway) -> str:
     return slugify_part(getattr(gateway, "name", None) or str(getattr(gateway, "id", "")), "gateway")
 
 
+def frontend_host() -> str:
+    """
+    Bare host of FRONTEND_DOMAIN, which may be set with or without a scheme.
+    """
+    domain = settings.FRONTEND_DOMAIN or ""
+    if "//" not in domain:
+        domain = f"//{domain}"
+    return urlsplit(domain).hostname or ""
+
+
 def node_prefix() -> str:
     """
     This backend's name inside the NetBird account.
@@ -33,11 +43,7 @@ def node_prefix() -> str:
     if settings.FLEET_NODE_PREFIX:
         return slugify_part(settings.FLEET_NODE_PREFIX, "roomio")
 
-    domain = settings.FRONTEND_DOMAIN or ""
-    if "//" not in domain:
-        domain = f"//{domain}"
-    host = urlsplit(domain).hostname or ""
-    return slugify_part(host.split(".")[0], "roomio")
+    return slugify_part(frontend_host().split(".")[0], "roomio")
 
 
 def build_code(tenant, gateway) -> str:

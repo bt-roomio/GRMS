@@ -163,7 +163,29 @@ make shell s=backend       # войти в контейнер и выполня�
 
 Каждый тенант — отдельный контейнер с изолированным volume и доменом.
 
-### Подготовка тенанта
+### Автоматически (при создании тенанта)
+
+При `NODERED_PROVISIONING_ENABLED=True` создание тенанта (admin API или `create_tenant`)
+ставит в `celery-low` задачу, которая:
+
+1. заводит в Cloudflare `CNAME <slug>.nodered.<host FRONTEND_DOMAIN>` → `NODERED_DNS_TARGET`
+   (по умолчанию `API_VIRTUAL_HOST`), DNS-only;
+2. пишет `.env.nodered.<slug>` из `.env.nodered.example`;
+3. выполняет `docker compose ... --project-name nodered-<slug> up -d`;
+4. прописывает `https://<slug>.nodered.<domain>` в general settings тенанта (`roomio_node_url`).
+
+`<slug>` — название тенанта в виде `[a-z0-9-]` (`Flamingo Hotel` → `flamingo-hotel`).
+Статус и ошибка — в `tenant.additional_info["nodered"]`; повторить:
+`docker exec -it django python manage.py provision_nodered <id|title>`.
+
+`delete_tenant` останавливает контейнер (`down`, volume с flows сохраняется), переименовывает
+env-файл в `.env.nodered.<slug>.removed` и удаляет DNS-запись.
+
+Нужны переменные `CLOUDFLARE_API_TOKEN` (Zone.DNS:Edit), `CLOUDFLARE_ZONE_ID`, а на хосте —
+`docker login registry.gitlab.com` (конфиг монтируется из `DOCKER_CONFIG_DIR`, по умолчанию `~/.docker`).
+`celery-low` получает `/var/run/docker.sock` — это root-доступ к хосту.
+
+### Подготовка тенанта вручную
 
 ```bash
 cp .env.nodered.example .env.nodered.nines
@@ -179,15 +201,12 @@ make nodered-restart-nines     # перезапустить
 make nodered-logs-nines        # логи
 make nodered-pull-nines        # обновить образ
 
-make nodered-up-all            # поднять всех (NODERED_TENANTS=nines map olympic)
+make nodered-up-all            # поднять всех (NODERED_TENANTS)
 make nodered-down-all          # остановить всех
 ```
 
-Список тенантов по умолчанию задан в Makefile:
-
-```makefile
-NODERED_TENANTS ?= nines map olympic
-```
+По умолчанию `NODERED_TENANTS` — все `.env.nodered.<name>` в этой папке (кроме `example` и `*.removed`).
+Переопределить: `make nodered-up-all NODERED_TENANTS="nines map"`.
 
 ---
 

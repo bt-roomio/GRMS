@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from main.models import Tenant
+from main.services.nodered import schedule_nodered_teardown
 
 
 class Command(BaseCommand):
@@ -65,6 +66,8 @@ class Command(BaseCommand):
 
             # Perform deletion in a transaction
             with transaction.atomic():
+                # Read the Node-RED slug before the row is gone; runs after commit
+                schedule_nodered_teardown(tenant)
                 # Django will automatically delete all related objects via CASCADE
                 tenant.delete()
 

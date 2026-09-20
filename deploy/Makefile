@@ -43,7 +43,8 @@ ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS)
 
 # Node-RED multi-tenant
 NODERED         = docker compose -f docker-compose.nodered.yml
-NODERED_TENANTS ?= nines map ol fl
+# По умолчанию — все .env.nodered.<name> рядом (включая созданные автоматически при создании тенанта)
+NODERED_TENANTS ?= $(patsubst .env.nodered.%,%,$(filter-out .env.nodered.example %.removed,$(wildcard .env.nodered.*)))
 
 PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
 
