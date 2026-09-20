@@ -56,8 +56,11 @@ class CloudflareClient:
             }
         )
 
+    def _zone_path(self, path: str = "") -> str:
+        return f"zones/{self.zone_id}/{path.lstrip('/')}".rstrip("/")
+
     def _request(self, method: str, path: str, **kwargs) -> Any:
-        url = f"{self.base_url}/zones/{self.zone_id}/{path.lstrip('/')}"
+        url = f"{self.base_url}/{path.lstrip('/')}"
         try:
             response = self.session.request(method, url, timeout=self.timeout, **kwargs)
         except requests.RequestException as exc:
@@ -78,8 +81,15 @@ class CloudflareClient:
 
         return payload.get("result")
 
+    def zone_name(self) -> str:
+        """
+        The zone's own domain. A record name outside it is taken as relative and
+        gets the zone appended, so callers check before writing.
+        """
+        return (self._request("GET", self._zone_path()) or {}).get("name", "")
+
     def find_record(self, name: str, record_type: str = "CNAME") -> dict[str, Any] | None:
-        records = self._request("GET", "dns_records", params={"type": record_type, "name": name}) or []
+        records = self._request("GET", self._zone_path("dns_records"), params={"type": record_type, "name": name}) or []
         return records[0] if records else None
 
     def upsert_cname(self, name: str, target: str, comment: str = "") -> dict[str, Any]:
@@ -93,12 +103,12 @@ class CloudflareClient:
 
         record = self.find_record(name)
         if record:
-            return self._request("PATCH", f"dns_records/{record['id']}", json=data)
-        return self._request("POST", "dns_records", json=data)
+            return self._request("PATCH", self._zone_path(f"dns_records/{record['id']}"), json=data)
+        return self._request("POST", self._zone_path("dns_records"), json=data)
 
     def delete_record(self, record_id: str) -> None:
         try:
-            self._request("DELETE", f"dns_records/{record_id}")
+            self._request("DELETE", self._zone_path(f"dns_records/{record_id}"))
         except CloudflareAPIError as exc:
             if exc.status_code != 404:
                 raise

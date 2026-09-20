@@ -1,7 +1,7 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.test import override_settings
 
@@ -13,6 +13,7 @@ from main.services.nodered import (
     nodered_host,
     provision_nodered,
     read_env,
+    reclaim_slug,
     removed_env_path,
     resolve_slug,
     write_env,
@@ -66,23 +67,54 @@ class NodeRedServiceTest(BaseTestCase):
         self.assertEqual(values["TZ"], "Asia/Nicosia")
         self.assertIn("# Node-RED tenant env", path.read_text())
 
+    def test_env_file_is_readable_by_the_host_operator(self):
+        """Written from a root container, it still has to be readable on the host."""
+        path = write_env("flamingo-hotel", self.tenant, "flamingo-hotel.nodered.cloud.room.io")
+        self.assertEqual(path.stat().st_mode & 0o777, 0o644)
+
     def test_base_domain_overrides_the_frontend_one(self):
-        with override_settings(NODERED_BASE_DOMAIN="https://nodered.bukhara.cloud"):
+        with override_settings(NODERED_BASE_DOMAIN="https://bukhara.cloud"):
             self.assertEqual(nodered_host("flamingo-hotel"), "flamingo-hotel.nodered.bukhara.cloud")
         self.assertEqual(nodered_host("flamingo-hotel"), "flamingo-hotel.nodered.cloud.room.io")
 
-    def test_slug_held_by_another_tenant_gets_the_tenant_id(self):
-        removed_env_path("flamingo-hotel").write_text("NODERED_TENANT_ID=11111111-1111-1111-1111-111111111111\n")
+    def test_slug_of_a_live_namesake_gets_the_tenant_id(self):
+        env_path("flamingo-hotel").write_text("NODERED_TENANT_ID=11111111-1111-1111-1111-111111111111\n")
         self.assertEqual(resolve_slug(self.tenant), f"flamingo-hotel-{self.tenant.id.hex[:8]}")
+
+    def test_slug_of_a_deleted_tenant_is_free_again(self):
+        removed_env_path("flamingo-hotel").write_text("NODERED_TENANT_ID=11111111-1111-1111-1111-111111111111\n")
+        self.assertEqual(resolve_slug(self.tenant), "flamingo-hotel")
 
     def test_own_slug_is_reused(self):
         env_path("flamingo-hotel").write_text(f"NODERED_TENANT_ID={TENANT_ID}\n")
         self.assertEqual(resolve_slug(self.tenant), "flamingo-hotel")
 
     @patch("main.services.nodered.subprocess.run")
+    def test_reclaiming_a_name_drops_the_volume_of_the_previous_tenant(self, run):
+        marker = removed_env_path("flamingo-hotel")
+        marker.write_text("NODERED_TENANT_ID=11111111-1111-1111-1111-111111111111\n")
+        run.return_value = MagicMock(returncode=0, stderr="")
+
+        reclaim_slug("flamingo-hotel", TENANT_ID)
+
+        self.assertEqual(run.call_args.args[0], ["docker", "volume", "rm", "nodered-flamingo-hotel_nodered_data"])
+        self.assertFalse(marker.exists())
+
+    @patch("main.services.nodered.subprocess.run")
+    def test_own_marker_is_left_alone(self, run):
+        marker = removed_env_path("flamingo-hotel")
+        marker.write_text(f"NODERED_TENANT_ID={TENANT_ID}\n")
+
+        reclaim_slug("flamingo-hotel", TENANT_ID)
+
+        run.assert_not_called()
+        self.assertTrue(marker.exists())
+
+    @patch("main.services.nodered.subprocess.run")
     @patch("main.services.nodered.CloudflareClient")
     def test_provision_sets_node_url_and_keeps_general_settings(self, client, run):
         client.return_value.upsert_cname.return_value = {"id": "rec1"}
+        client.return_value.zone_name.return_value = "cloud.room.io"
 
         provision_nodered(TENANT_ID)
 
@@ -104,6 +136,7 @@ class NodeRedServiceTest(BaseTestCase):
     @patch("main.services.nodered.CloudflareClient")
     def test_compose_failure_is_recorded_and_raised(self, client, run):
         client.return_value.upsert_cname.return_value = {"id": "rec1"}
+        client.return_value.zone_name.return_value = "cloud.room.io"
         run.side_effect = subprocess.CalledProcessError(1, ["docker"], stderr="pull access denied")
 
         with self.assertRaisesMessage(Exception, "pull access denied"):
@@ -113,6 +146,18 @@ class NodeRedServiceTest(BaseTestCase):
         self.assertEqual(info["nodered"]["status"], "failed")
         self.assertIn("pull access denied", info["nodered"]["error"])
         self.assertEqual(info["general_settings"]["roomio_node_url"], "")
+
+    @patch("main.services.nodered.subprocess.run")
+    @patch("main.services.nodered.CloudflareClient")
+    def test_host_outside_the_cloudflare_zone_is_refused(self, client, run):
+        client.return_value.zone_name.return_value = "bukhara.cloud"
+
+        with self.assertRaisesMessage(Exception, "outside the Cloudflare zone"):
+            provision_nodered(TENANT_ID)
+
+        client.return_value.upsert_cname.assert_not_called()
+        info = Tenant.objects.get(id=TENANT_ID).additional_info
+        self.assertEqual(info["nodered"]["status"], "failed")
 
     @patch("main.services.nodered.subprocess.run")
     @patch("main.services.nodered.CloudflareClient")

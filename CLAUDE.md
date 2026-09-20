@@ -56,7 +56,7 @@ make deploy-frontend
 docker exec -it django python manage.py <command>
 ```
 
-Node-RED runs as a separate multi-tenant stack (`deploy/docker-compose.nodered.yml`, one project per tenant): `make nodered-up-<tenant>`, `make nodered-up-all` (tenants = every `.env.nodered.<name>` present). With `NODERED_PROVISIONING_ENABLED`, creating a tenant auto-provisions it (`main/services/nodered.py`, task on the `low` queue): Cloudflare CNAME `<slug>.<NODERED_BASE_DOMAIN>` (default base: `nodered.<FRONTEND_DOMAIN host>`), `.env.nodered.<slug>`, `docker compose up -d` via the Docker socket mounted into `celery-low`, and `roomio_node_url` in general settings; `delete_tenant` tears it down. Retry with `provision_nodered <tenant>`. The monitoring stack has its own compose + Makefile under `deploy/monitoring/`.
+Node-RED runs as a separate multi-tenant stack (`deploy/docker-compose.nodered.yml`, one project per tenant): `make nodered-up-<tenant>`, `make nodered-up-all` (tenants = every `.env.nodered.<name>` present). With `NODERED_PROVISIONING_ENABLED`, creating a tenant auto-provisions it (`main/services/nodered.py`, task on the `low` queue): Cloudflare CNAME `<slug>.nodered.<NODERED_BASE_DOMAIN>` (falling back to the `FRONTEND_DOMAIN` host; the name must sit inside `CLOUDFLARE_ZONE_ID`), `.env.nodered.<slug>`, `docker compose up -d` via the Docker socket mounted into `celery-low`, and `roomio_node_url` in general settings; `delete_tenant` tears it down. Retry with `provision_nodered <tenant>`. The monitoring stack has its own compose + Makefile under `deploy/monitoring/`.
 
 ### Tenant Management
 

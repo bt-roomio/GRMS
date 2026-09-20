@@ -41,12 +41,11 @@ def removed_env_path(slug: str) -> Path:
 
 def nodered_base_host() -> str:
     """
-    Domain the tenant subdomains hang off.
-
-    NODERED_BASE_DOMAIN when set — it carries every label below the tenant, so
-    "nodered.bukhara.cloud" and "bukhara.cloud" are both spelled out in full.
+    Domain the tenant subdomains hang off: nodered.<NODERED_BASE_DOMAIN>,
+    or nodered.<FRONTEND_DOMAIN host> when the former is unset.
     """
-    return domain_host(settings.NODERED_BASE_DOMAIN) or (f"nodered.{frontend_host()}" if frontend_host() else "")
+    base = domain_host(settings.NODERED_BASE_DOMAIN) or frontend_host()
+    return f"nodered.{base}" if base else ""
 
 
 def nodered_host(slug: str) -> str:
@@ -62,19 +61,51 @@ def read_env(path: Path) -> dict[str, str]:
     return values
 
 
+def volume_name(slug: str) -> str:
+    """Compose names it <project>_<volume>, and the project is nodered-<slug>."""
+    return f"nodered-{slug}_nodered_data"
+
+
 def resolve_slug(tenant: Tenant) -> str:
     """
     DNS label, compose project and env-file suffix of the tenant's Node-RED.
 
-    `compose down` keeps the volume, so a name once held by another tenant
-    (live or removed env file) would hand this hotel someone else's flows —
-    such a name gets the tenant id appended.
+    A live env file held by another tenant means two hotels share a title; the
+    newcomer takes a suffixed name rather than the other's running container.
+    A `.removed` file is only the record of a deleted tenant — that name is free
+    again, and `reclaim_slug` clears what it left behind.
     """
     slug = tenant_slug(tenant)
-    for path in (env_path(slug), removed_env_path(slug)):
-        if path.exists() and read_env(path).get("NODERED_TENANT_ID") != str(tenant.id):
-            return f"{slug}-{tenant.id.hex[:8]}"
+    path = env_path(slug)
+    if path.exists() and read_env(path).get("NODERED_TENANT_ID") != str(tenant.id):
+        return f"{slug}-{tenant.id.hex[:8]}"
     return slug
+
+
+def reclaim_slug(slug: str, tenant_id) -> None:
+    """
+    Take a name back from a deleted tenant, dropping the volume it left.
+
+    `compose down` keeps the flows so a deletion can be undone; reusing the name
+    is the moment that stops being true, and the newcomer must start empty.
+    """
+    marker = removed_env_path(slug)
+    if not marker.exists() or read_env(marker).get("NODERED_TENANT_ID") == str(tenant_id):
+        return
+
+    result = subprocess.run(
+        ["docker", "volume", "rm", volume_name(slug)],
+        capture_output=True,
+        text=True,
+        timeout=settings.NODERED_COMPOSE_TIMEOUT,
+        check=False,
+    )
+    stderr = (result.stderr or "").strip()
+    if result.returncode and "no such volume" not in stderr.lower():
+        raise NodeRedError(f"could not drop the volume left by the previous tenant of {slug}: {stderr}")
+
+    marker.unlink()
+    logger.info("Reclaimed the Node-RED name %s from a deleted tenant", slug)
 
 
 def write_env(slug: str, tenant: Tenant, host: str) -> Path:
@@ -101,9 +132,26 @@ def write_env(slug: str, tenant: Tenant, host: str) -> Path:
     # The temporary name must not match `.env.nodered.*`, which the Makefile globs.
     tmp = path.with_name(f".tmp{path.name}")
     tmp.write_text("\n".join(lines) + "\n")
-    tmp.chmod(0o600)
+    hand_over_to_host(tmp)
     os.replace(tmp, path)
     return path
+
+
+def hand_over_to_host(path: Path) -> None:
+    """
+    Give the file to whoever owns deploy/, readable like the hand-written ones.
+
+    Celery runs as root inside the container, so a file left as root:root 0600
+    cannot be read by the operator — and `docker compose --env-file` parses it
+    client-side, so `make nodered-up-<slug>` would fail on its own env file.
+    It holds no credentials: name, tenant id, host, contact email, log level.
+    """
+    path.chmod(0o644)
+    try:
+        deploy = Path(settings.NODERED_DEPLOY_DIR).stat()
+        os.chown(path, deploy.st_uid, deploy.st_gid)
+    except OSError as exc:  # not root, or a mount that will not take a chown
+        logger.warning("Could not hand %s to the owner of the deploy directory: %s", path.name, exc)
 
 
 def compose(slug: str, *args: str) -> None:
@@ -158,10 +206,18 @@ def provision_nodered(tenant_id) -> None:
                 "NODERED_BASE_DOMAIN (or FRONTEND_DOMAIN) and NODERED_DNS_TARGET (or API_VIRTUAL_HOST) must be set"
             )
 
+        client = CloudflareClient()
+        zone = client.zone_name()
+        if host != zone and not host.endswith(f".{zone}"):
+            # Cloudflare would read a foreign name as relative and silently append
+            # the zone, turning it into <host>.<zone>.
+            raise ImproperlyConfigured(f"{host} is outside the Cloudflare zone {zone}")
+
         comment = f"GRMS Node-RED: {tenant.title} ({tenant.id})"[:100]
-        record = CloudflareClient().upsert_cname(host, settings.NODERED_DNS_TARGET, comment=comment)
+        record = client.upsert_cname(host, settings.NODERED_DNS_TARGET, comment=comment)
         save_state(tenant.id, dns_record_id=record["id"])
 
+        reclaim_slug(slug, tenant.id)
         write_env(slug, tenant, host)
         compose(slug, "up", "-d")
     except Exception as exc:

@@ -31,6 +31,12 @@ class CloudflareClientTest(SimpleTestCase):
         client = CloudflareClient()
         self.assertEqual(client.session.headers["Authorization"], "Bearer cf_test")
 
+    def test_zone_name(self):
+        client = CloudflareClient()
+        with patch.object(client.session, "request", return_value=response(result={"name": "bukhara.cloud"})) as req:
+            self.assertEqual(client.zone_name(), "bukhara.cloud")
+        self.assertEqual(req.call_args.args[1], "https://api.cloudflare.com/client/v4/zones/zone1")
+
     def test_upsert_creates_missing_record(self):
         client = CloudflareClient()
         replies = [response(result=[]), response(result={"id": "rec1"})]
