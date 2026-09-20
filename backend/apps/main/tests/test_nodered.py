@@ -10,6 +10,7 @@ from main.models import Tenant
 from main.services.nodered import (
     deprovision_nodered,
     env_path,
+    nodered_host,
     provision_nodered,
     read_env,
     removed_env_path,
@@ -43,6 +44,7 @@ class NodeRedServiceTest(BaseTestCase):
             NODERED_DEPLOY_DIR=tmp.name,
             FRONTEND_DOMAIN="https://cloud.room.io",
             NODERED_DNS_TARGET="api.cloud.room.io",
+            NODERED_BASE_DOMAIN="",
             LETSENCRYPT_EMAIL="ops@room.io",
         )
         settings_override.enable()
@@ -63,6 +65,11 @@ class NodeRedServiceTest(BaseTestCase):
         self.assertEqual(values["LETSENCRYPT_EMAIL"], "ops@room.io")
         self.assertEqual(values["TZ"], "Asia/Nicosia")
         self.assertIn("# Node-RED tenant env", path.read_text())
+
+    def test_base_domain_overrides_the_frontend_one(self):
+        with override_settings(NODERED_BASE_DOMAIN="https://nodered.bukhara.cloud"):
+            self.assertEqual(nodered_host("flamingo-hotel"), "flamingo-hotel.nodered.bukhara.cloud")
+        self.assertEqual(nodered_host("flamingo-hotel"), "flamingo-hotel.nodered.cloud.room.io")
 
     def test_slug_held_by_another_tenant_gets_the_tenant_id(self):
         removed_env_path("flamingo-hotel").write_text("NODERED_TENANT_ID=11111111-1111-1111-1111-111111111111\n")

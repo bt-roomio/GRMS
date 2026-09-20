@@ -26,14 +26,18 @@ def gateway_slug(gateway) -> str:
     return slugify_part(getattr(gateway, "name", None) or str(getattr(gateway, "id", "")), "gateway")
 
 
-def frontend_host() -> str:
+def domain_host(domain: str) -> str:
     """
-    Bare host of FRONTEND_DOMAIN, which may be set with or without a scheme.
+    Bare host of a domain that may be written with or without a scheme.
     """
-    domain = settings.FRONTEND_DOMAIN or ""
+    domain = domain or ""
     if "//" not in domain:
         domain = f"//{domain}"
     return urlsplit(domain).hostname or ""
+
+
+def frontend_host() -> str:
+    return domain_host(settings.FRONTEND_DOMAIN)
 
 
 def node_prefix() -> str:

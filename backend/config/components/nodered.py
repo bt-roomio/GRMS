@@ -4,9 +4,12 @@ import os
 # Off by default: provisioning creates public DNS records and containers on the host.
 NODERED_PROVISIONING_ENABLED = os.getenv("NODERED_PROVISIONING_ENABLED", "False").lower() in ("true", "1", "yes")
 
+# Domain the tenant subdomains hang off: <tenant>.<NODERED_BASE_DOMAIN>.
+# Empty falls back to nodered.<FRONTEND_DOMAIN host>.
+NODERED_BASE_DOMAIN = os.getenv("NODERED_BASE_DOMAIN", "")
 # Where celery-low sees deploy/ (docker-compose.nodered.yml, .env.nodered.*).
 NODERED_DEPLOY_DIR = os.getenv("NODERED_DEPLOY_DIR", "/deploy")
-# CNAME target of <tenant>.nodered.<FRONTEND_DOMAIN host> — the host nginx-proxy listens on.
+# CNAME target of every tenant subdomain — the host nginx-proxy listens on.
 NODERED_DNS_TARGET = os.getenv("NODERED_DNS_TARGET", "") or os.getenv("API_VIRTUAL_HOST", "")
 # `up -d` may pull the image, hence the generous limit.
 NODERED_COMPOSE_TIMEOUT = float(os.getenv("NODERED_COMPOSE_TIMEOUT", "540"))

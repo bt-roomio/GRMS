@@ -95,7 +95,7 @@ INSTALLED_APPS = [
 # proxy: without Cloudflare in front, CF-Connecting-IP has to be removed or a
 # client can forge any address and bypass rate limiting. Empty = REMOTE_ADDR only.
 # Imported here rather than at the top: apps/ joins sys.path earlier in this file.
-from core.utils.ip import trusted_ip_headers_from_env  # ty: ignore
+from core.utils.ip import trusted_ip_headers_from_env
 
 TRUSTED_IP_HEADERS = trusted_ip_headers_from_env()
 
@@ -649,6 +649,7 @@ from .components.nodered import (  # noqa: F401  # ty: ignore
     CLOUDFLARE_TIMEOUT,
     CLOUDFLARE_ZONE_ID,
     LETSENCRYPT_EMAIL,
+    NODERED_BASE_DOMAIN,
     NODERED_COMPOSE_TIMEOUT,
     NODERED_DEPLOY_DIR,
     NODERED_DNS_TARGET,

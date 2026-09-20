@@ -16,7 +16,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 
 from core.utils.cloudflare import CloudflareClient
-from fleet.utils.code import frontend_host, tenant_slug
+from fleet.utils.code import domain_host, frontend_host, tenant_slug
 from main.models import Tenant
 
 logger = logging.getLogger(__name__)
@@ -39,8 +39,18 @@ def removed_env_path(slug: str) -> Path:
     return Path(settings.NODERED_DEPLOY_DIR) / f".env.nodered.{slug}.removed"
 
 
+def nodered_base_host() -> str:
+    """
+    Domain the tenant subdomains hang off.
+
+    NODERED_BASE_DOMAIN when set — it carries every label below the tenant, so
+    "nodered.bukhara.cloud" and "bukhara.cloud" are both spelled out in full.
+    """
+    return domain_host(settings.NODERED_BASE_DOMAIN) or (f"nodered.{frontend_host()}" if frontend_host() else "")
+
+
 def nodered_host(slug: str) -> str:
-    return f"{slug}.nodered.{frontend_host()}"
+    return f"{slug}.{nodered_base_host()}"
 
 
 def read_env(path: Path) -> dict[str, str]:
@@ -143,8 +153,10 @@ def provision_nodered(tenant_id) -> None:
     save_state(tenant.id, slug=slug, host=host, status=PENDING, error=None)
 
     try:
-        if not frontend_host() or not settings.NODERED_DNS_TARGET:
-            raise ImproperlyConfigured("FRONTEND_DOMAIN and NODERED_DNS_TARGET (or API_VIRTUAL_HOST) must be set")
+        if not nodered_base_host() or not settings.NODERED_DNS_TARGET:
+            raise ImproperlyConfigured(
+                "NODERED_BASE_DOMAIN (or FRONTEND_DOMAIN) and NODERED_DNS_TARGET (or API_VIRTUAL_HOST) must be set"
+            )
 
         comment = f"GRMS Node-RED: {tenant.title} ({tenant.id})"[:100]
         record = CloudflareClient().upsert_cname(host, settings.NODERED_DNS_TARGET, comment=comment)

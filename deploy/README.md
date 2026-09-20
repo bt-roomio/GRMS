@@ -168,8 +168,8 @@ make shell s=backend       # войти в контейнер и выполня�
 При `NODERED_PROVISIONING_ENABLED=True` создание тенанта (admin API или `create_tenant`)
 ставит в `celery-low` задачу, которая:
 
-1. заводит в Cloudflare `CNAME <slug>.nodered.<host FRONTEND_DOMAIN>` → `NODERED_DNS_TARGET`
-   (по умолчанию `API_VIRTUAL_HOST`), DNS-only;
+1. заводит в Cloudflare `CNAME <slug>.<NODERED_BASE_DOMAIN>` → `NODERED_DNS_TARGET`
+   (по умолчанию `API_VIRTUAL_HOST`), DNS-only. Без `NODERED_BASE_DOMAIN` база — `nodered.<host FRONTEND_DOMAIN>`;
 2. пишет `.env.nodered.<slug>` из `.env.nodered.example`;
 3. выполняет `docker compose ... --project-name nodered-<slug> up -d`;
 4. прописывает `https://<slug>.nodered.<domain>` в general settings тенанта (`roomio_node_url`).
@@ -180,6 +180,8 @@ make shell s=backend       # войти в контейнер и выполня�
 
 `delete_tenant` останавливает контейнер (`down`, volume с flows сохраняется), переименовывает
 env-файл в `.env.nodered.<slug>.removed` и удаляет DNS-запись.
+
+Домен должен лежать в зоне `CLOUDFLARE_ZONE_ID`.
 
 Нужны переменные `CLOUDFLARE_API_TOKEN` (Zone.DNS:Edit), `CLOUDFLARE_ZONE_ID`, а на хосте —
 `docker login registry.gitlab.com` (конфиг монтируется из `DOCKER_CONFIG_DIR`, по умолчанию `~/.docker`).
