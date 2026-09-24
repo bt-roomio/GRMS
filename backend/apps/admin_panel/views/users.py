@@ -16,6 +16,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.utils.brute_force import get_lock_status
 from core.utils.permission import IsSuperUser
 from users.models import User
 from users.serializers.user import UserSerializer
@@ -79,13 +80,16 @@ class AdminTenantUserDetailView(APIView):
         tags=["Admin Panel"],
         responses=AdminTenantUserDetailSwagger,
         security=[{"Bearer": []}],
-        operation_description="**Superuser only.** Returns details of a specific user within a tenant.",
+        operation_description=(
+            "**Superuser only.** Returns details of a specific user within a tenant. "
+            "`is_blocked` is true while the account is locked out after failed logins."
+        ),
     )
     def get(self, request, tenant_id, user_id):
         get_scoped_tenant_or_404(request, tenant_id)
         user = get_object_or_404(User, id=user_id, tenant_id=tenant_id)
         serializer = UserSerializer(user)
-        return Response(serializer.data)
+        return Response({**serializer.data, "is_blocked": get_lock_status(user.email)["is_locked"]})
 
     @swagger_auto_schema(
         tags=["Admin Panel"],

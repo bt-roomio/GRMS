@@ -1,27 +1,5 @@
 from drf_yasg import openapi
 
-AdminUserLockStatusSwagger = {
-    200: openapi.Response(
-        description="Lock status",
-        examples={
-            "application/json": {
-                "email": "user@example.com",
-                "is_locked": True,
-                "known_ips": ["203.0.113.10"],
-                "locks": [
-                    {
-                        "ip": "203.0.113.10",
-                        "endpoint": "/api/v1/users/access-token/",
-                        "reason": "lockout",
-                        "seconds_left": 742,
-                    }
-                ],
-            }
-        },
-    ),
-    404: openapi.Response(description="User not found"),
-}
-
 AdminUnlockUserSwagger = {
     200: openapi.Response(
         description="Account unlocked",
@@ -34,5 +12,6 @@ AdminUnlockUserSwagger = {
             }
         },
     ),
+    403: openapi.Response(description="No `main.unlock_user` permission"),
     404: openapi.Response(description="User not found"),
 }

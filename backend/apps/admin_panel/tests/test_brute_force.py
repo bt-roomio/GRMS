@@ -1,12 +1,13 @@
 from unittest.mock import patch
 
+from django.contrib.auth.models import Permission
 from django.core.cache.backends.locmem import LocMemCache
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
 from core.utils import brute_force as bf
 from main.models import Tenant, TenantGroup
-from users.models import User
+from users.models import Role, User
 from users.serializers.jwt_token import build_tokens_for
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
@@ -30,6 +31,11 @@ class AdminUnlockTestBase(BaseTestCase):
         tokens = build_tokens_for(User.objects.get(pk=user.pk))
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
 
+    def grant_unlock(self, user):
+        role = Role.objects.create(name="Unlocker", tenant_id=user.tenant_id)
+        role.permissions.add(Permission.objects.get(codename="unlock_user", content_type__app_label="main"))
+        user.roles.add(role)
+
     def lock_victim(self, ip="203.0.113.10"):
         """Put the account into a locked state exactly the way the middleware does."""
         email = bf.normalize_email(self.victim.email)
@@ -40,18 +46,61 @@ class AdminUnlockTestBase(BaseTestCase):
 
 
 class AdminUnlockAccessTests(AdminUnlockTestBase):
-    """Access: SYS_ADMIN and TENANT_GROUP_ADMIN only, within their own scope."""
+    """Access: anyone with `main.unlock_user`, within their own scope."""
 
-    def test_regular_user_is_forbidden(self):
+    def url(self, user):
+        return reverse("admin_panel:admin-user-lock", kwargs={"user_id": user.pk})
+
+    def test_user_without_permission_is_forbidden(self):
         self.authenticate(self.victim)
-        url = reverse("admin_panel:admin-user-lock", kwargs={"user_id": self.victim.pk})
-        self.assertEqual(self.post(url, data={}, format="json").status_code, 403)
-        self.assertEqual(self.get(url).status_code, 403)
+        self.assertEqual(self.post(self.url(self.victim), data={}, format="json").status_code, 403)
 
     def test_anonymous_is_rejected(self):
         self.client.credentials()
-        url = reverse("admin_panel:admin-user-lock", kwargs={"user_id": self.victim.pk})
-        self.assertIn(self.get(url).status_code, (401, 403))
+        self.assertIn(self.post(self.url(self.victim), data={}, format="json").status_code, (401, 403))
+
+    def test_status_endpoint_is_gone(self):
+        admin = User.objects.filter(is_superuser=True).first()
+        assert admin is not None
+        self.authenticate(admin)
+        self.assertEqual(self.get(self.url(self.victim)).status_code, 405)
+
+    def test_user_with_permission_can_unlock_colleague(self):
+        operator = User.objects.create(email="operator@example.com", tenant_id=TENANT_ID, is_superuser=False)
+        self.grant_unlock(operator)
+        self.authenticate(operator)
+        email, _ = self.lock_victim()
+
+        self.assertEqual(self.post(self.url(self.victim), data={}, format="json").status_code, 200)
+        self.assertFalse(bf.get_lock_status(email, cache=self.cache)["is_locked"])
+
+    def test_user_with_permission_cannot_reach_other_hotel(self):
+        outsider_tenant = Tenant.objects.exclude(pk=TENANT_ID).first()
+        assert outsider_tenant is not None
+        operator = User.objects.create(email="operator@example.com", tenant_id=TENANT_ID, is_superuser=False)
+        self.grant_unlock(operator)
+        self.authenticate(operator)
+
+        foreign = User.objects.create(email="outsider@example.com", tenant=outsider_tenant, is_superuser=False)
+        self.assertEqual(self.post(self.url(foreign), data={}, format="json").status_code, 404)
+
+    def test_user_with_permission_cannot_reach_superuser(self):
+        operator = User.objects.create(email="operator@example.com", tenant_id=TENANT_ID, is_superuser=False)
+        self.grant_unlock(operator)
+        self.authenticate(operator)
+
+        superuser = User.objects.create(email="root@example.com", tenant_id=TENANT_ID, is_superuser=True)
+        self.assertEqual(self.post(self.url(superuser), data={}, format="json").status_code, 404)
+
+    def test_user_with_permission_cannot_reach_chain_admin(self):
+        group = TenantGroup.objects.create(title="Chain")
+        Tenant.objects.filter(pk=TENANT_ID).update(group=group)
+        operator = User.objects.create(email="operator@example.com", tenant_id=TENANT_ID, is_superuser=False)
+        self.grant_unlock(operator)
+        self.authenticate(operator)
+
+        chain_admin = User.objects.create(email="chain@example.com", tenant_group=group, is_superuser=True)
+        self.assertEqual(self.post(self.url(chain_admin), data={}, format="json").status_code, 404)
 
     def test_sys_admin_can_unlock(self):
         admin = User.objects.filter(is_superuser=True).first()
@@ -109,24 +158,6 @@ class AdminUnlockBehaviourTests(AdminUnlockTestBase):
         assert admin is not None
         self.authenticate(admin)
         self.url = reverse("admin_panel:admin-user-lock", kwargs={"user_id": self.victim.pk})
-
-    def test_status_reports_lock_and_remaining_time(self):
-        self.lock_victim()
-        response = self.get(self.url)
-        assert response.data is not None
-
-        self.assertTrue(response.data["is_locked"])
-        self.assertEqual(response.data["known_ips"], ["203.0.113.10"])
-        lock = response.data["locks"][0]
-        self.assertEqual(lock["reason"], "lockout")
-        self.assertEqual(lock["endpoint"], LOGIN)
-        self.assertGreater(lock["seconds_left"], 0)
-
-    def test_status_is_clean_for_unlocked_account(self):
-        response = self.get(self.url)
-        assert response.data is not None
-        self.assertFalse(response.data["is_locked"])
-        self.assertEqual(response.data["locks"], [])
 
     def test_unlock_clears_every_key_kind(self):
         email, ip = self.lock_victim()

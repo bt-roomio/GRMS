@@ -43,6 +43,10 @@ def scoped_users(request):
     a chain admin the password of a system-wide account — an escalation out of
     their own chain. These accounts are managed out of band instead.
     """
+    if not request.user.is_superuser:
+        # A regular user holds no chain, and superusers of any tier are above them.
+        return User.objects.filter(tenant__in=scoped_tenants(request), is_superuser=False)
+
     reachable = User.objects.filter(Q(tenant__in=scoped_tenants(request)) | Q(tenant_group__in=scoped_groups(request)))
     return reachable.exclude(is_superuser=True, tenant_group__isnull=True)
 

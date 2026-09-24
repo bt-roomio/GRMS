@@ -78,6 +78,7 @@ class Tenant(ServiceBaseModel):
             ("change_generalsettings", "Can change general settings"),
             ("view_integrationsettings", "Can view integration settings"),
             ("change_integrationsettings", "Can change integration settings"),
+            ("unlock_user", "Can unlock user"),
         ]
 
 

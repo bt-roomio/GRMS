@@ -3,6 +3,7 @@ from typing import Any, ClassVar
 from drf_yasg import openapi
 from rest_framework import serializers
 
+from core.utils.brute_force import get_lock_status
 from core.utils.serializers import ValidatorSerializer
 from users.models import Role, User
 from users.serializers.role import RoleSimpleSerializer
@@ -126,12 +127,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    def to_representation(self, instance):
+    def to_representation(self, instance: User):
         data = super().to_representation(instance)
         data["roles"] = RoleSimpleSerializer(instance.roles, many=True).data
         # A chain admin administers hotels without living in one, so `tenant` may be null.
         data["tenant_name"] = instance.tenant.title if instance.tenant_id else None
         data["tenant_has_access_ai"] = instance.tenant.has_access_ai if instance.tenant_id else False
+        data["is_blocked"] = get_lock_status(instance.email)["is_locked"]
         return data
 
     class Meta:

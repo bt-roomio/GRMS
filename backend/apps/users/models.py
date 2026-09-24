@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser, Permission
 from django.db import models
@@ -72,6 +73,8 @@ class User(AbstractUser):
 
     objects = UsersManager()
 
+    tenant_id: uuid.UUID
+
     # TODO: optimise
     def save(self, *args, **kwargs):
         if self.email:
@@ -81,7 +84,7 @@ class User(AbstractUser):
     class Meta:
         db_table = "users_users"
         default_related_name = "users"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 Lower("email"),
                 condition=Q(is_active=True),
@@ -149,7 +152,7 @@ class Role(BaseModel):
         verbose_name = "role"
         verbose_name_plural = "roles"
         db_table = "users_roles"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 fields=["name", "tenant"],
                 condition=Q(tenant__isnull=False),
