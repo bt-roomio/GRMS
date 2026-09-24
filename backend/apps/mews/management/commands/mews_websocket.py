@@ -23,7 +23,7 @@ class MewsConfigAdapter:
     def __init__(self, integration: Integration):
         additional_info = integration.additional_info or {}
         self.tenant = integration.tenant
-        self.client_token = integration.integrator.client_id
+        self.client_token = additional_info.get("client_token") or integration.integrator.client_id
         self.access_token = integration.access_token or ""
         self.company_id = integration.hotel_id or ""
         self.environment = additional_info.get("environment", "demo")
