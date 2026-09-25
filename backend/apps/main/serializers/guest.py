@@ -33,11 +33,13 @@ class GuestMoveRoomSerializer(serializers.Serializer):
         guests = list(instance)
         old_guest_context = get_guest_access_context(guests)
 
-        from_room.save(update_fields=["state"])
         for guest in guests:
             guest.room = to_room
             guest.save()
+        # Both rooms are recomputed after the move so from_room gets Check-out and to_room Check-in
         to_room.save(update_fields=["state"])
+        from_room.refresh_from_db()
+        from_room.save(update_fields=["state"])
 
         move_guest_cards(guests, old_guest_context, get_guest_access_context(guests))
 

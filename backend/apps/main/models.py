@@ -155,6 +155,9 @@ class Room(BaseModel, UpdateByModel):
 
     objects: ClassVar[RoomQuerySet] = cast(RoomQuerySet, RoomQuerySet.as_manager())
 
+    tenant_id: UUID
+    guests: GuestQuerySet
+
     def __str__(self):
         return self.number
 
@@ -298,6 +301,8 @@ class RoomType(BaseModel):
 
     objects = RoomTypeQuerySet.as_manager()
 
+    tenant_id: UUID
+
     def __str__(self):
         return str(self.title)
 
@@ -396,6 +401,9 @@ class DeviceProfile(BaseModel):
 
     objects = DeviceProfileQuerySet.as_manager()
 
+    # TYPE
+    tenant_id: UUID
+
     def clean(self):
         super().clean()
         if self.active:
@@ -462,6 +470,8 @@ class Dashboard(BaseModel):
     external_id = models.UUIDField(blank=True, null=True)
 
     objects = DashboardQuerySet.as_manager()
+
+    tenant_id: UUID
 
     def clean(self):
         super().clean()
@@ -537,6 +547,8 @@ class Guest(BaseModel):
 
     objects = GuestQuerySet.as_manager()
 
+    tenant_id: UUID
+
     def __str__(self):
         return str(f"{self.name} {self.lastname} in {self.room}")
 
@@ -561,6 +573,8 @@ class PublicSpace(BaseModel):
     additional_info = models.JSONField(null=True, blank=True)
 
     objects = PublicSpaceQuerySet.as_manager()
+
+    tenant_id: UUID
 
     def __str__(self):
         return str(self.name)
