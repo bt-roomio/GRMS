@@ -29,7 +29,7 @@ def auto_check_out():
         for device in access_context.get("devices"):  # ty: ignore
             _ = send_rpc_request(str(device.id), cards, 0)
 
-    guests.update(is_active=False)
+    guests.update(is_active=False, check_out_source=Guest.SOURCE.AUTO, check_out_by=None)
 
     rooms_with_active_guest_counts = Room.objects.annotate(
         active_guest_count=Count(

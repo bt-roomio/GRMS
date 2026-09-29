@@ -7,6 +7,7 @@ from hoteza.serializers.checkout import CheckOutSerializer
 from core.management.mq.fias.handlers.datachange import handle_datachange
 from core.management.mq.fias.utils.guests import override_checkout_time
 from core.management.mq.fias.utils.payloads import build_reservation_payload
+from main.models import Guest
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def handle_reservation(command, data, device):
     if command == "checkin":
         mapped["departureDateTS"] = override_checkout_time(mapped["tenantId"], mapped["departureDateTS"])
 
-    serializer = serializer_cls(data=mapped)
+    serializer = serializer_cls(data=mapped, context={"source": Guest.SOURCE.FIAS})
 
     # Caught broadly on purpose: DRF raises rest_framework's ValidationError and hoteza
     # raises JsonValidationError (an APIException) — neither is Django's ValidationError,

@@ -227,10 +227,10 @@ class RoomQuerySet(BaseQuerySet):
             result = send_rpc_request(str(device.id), cards, 0, user=user)
             not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
-        guests.update(is_active=False)
+        checked_out = guests.update(is_active=False, check_out_source=Guest.SOURCE.ROOMIO, check_out_by_id=user)
         for room in query:
             room.save(update_fields=["state"])
-        return guests.count(), deactivate_result
+        return checked_out, deactivate_result
 
     def block_floors(self, tenant):
         query = (

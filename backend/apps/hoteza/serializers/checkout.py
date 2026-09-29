@@ -64,6 +64,6 @@ class CheckOutSerializer(serializers.Serializer):
         result = None
         for guest in guests:
             data = {"is_active": False, "tenant": validated_data.get("tenant"), "room": validated_data.get("room")}
-            serializer = GuestSerializer()
+            serializer = GuestSerializer(context={"source": self.context.get("source", Guest.SOURCE.HOTEZA)})
             result = serializer.update(guest, data)
         return result or guests
