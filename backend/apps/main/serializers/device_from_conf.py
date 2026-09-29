@@ -1,9 +1,13 @@
+from django.db import transaction
+
 from rest_framework import serializers
 
 from main.services.device_config import (
     DEFAULT_PROFILE_NAME,
     CanonicalDevice,
+    RoomSpec,
     create_devices_from_config,
+    link_devices_to_rooms,
     require_active_gateway,
 )
 from shuttle.utils.camel_to_snake import to_snake_case_data
@@ -12,6 +16,10 @@ from shuttle.utils.camel_to_snake import to_snake_case_data
 class DeviceMacAddressSerializer(serializers.Serializer):
     mac_address = serializers.CharField()
     address_map_id = serializers.IntegerField()
+    room_number = serializers.CharField(required=False)
+    room_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    floor = serializers.CharField(required=False, allow_blank=True)
+    block = serializers.CharField(required=False, allow_blank=True)
 
 
 class TagSerializer(serializers.Serializer):
@@ -58,11 +66,12 @@ class DeviceFromConfSerializer(serializers.Serializer):
         return attrs
 
     def to_internal_value(self, data):
-        devices = [i for i in data.get("devices", []) if "macAddress" in i and "addressMapId" in i]
+        data = to_snake_case_data(data)
+        devices = [i for i in data.get("devices", []) if "mac_address" in i and "address_map_id" in i]
         if not devices:
             raise serializers.ValidationError({"detail": "No devices found"})
         data["devices"] = devices
-        return super().to_internal_value(to_snake_case_data(data))
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         tenant = self.context["tenant"]
@@ -71,14 +80,32 @@ class DeviceFromConfSerializer(serializers.Serializer):
         devices_in = validated_data.pop("devices")
         maps_in = validated_data.pop("address_maps")
 
-        create_devices_from_config(
-            tenant=tenant,
-            gateway=gateway,
-            devices=roomio_to_canonical(devices_in, maps_in),
-        )
+        device_rooms = {}
+        for d in devices_in:
+            if d.get("room_number"):
+                spec = RoomSpec(d["room_number"], d.get("room_type"), d.get("floor"), d.get("block"))
+                device_rooms.setdefault(d["mac_address"], spec)
 
-        # Echo the original request shape back to the caller (unchanged contract).
-        result_devices = [{"mac_address": d["mac_address"], "address_map_id": d["address_map_id"]} for d in devices_in]
+        with transaction.atomic():
+            create_devices_from_config(
+                tenant=tenant,
+                gateway=gateway,
+                devices=roomio_to_canonical(devices_in, maps_in),
+            )
+            linked_rooms = link_devices_to_rooms(tenant=tenant, device_rooms=device_rooms) if device_rooms else {}
+
+        # Echo the request shape back, plus the room each device was linked to.
+        result_devices = []
+        for d in devices_in:
+            result = {"mac_address": d["mac_address"], "address_map_id": d["address_map_id"]}
+            if room := linked_rooms.get(d["mac_address"]):
+                result.update(
+                    room_number=room.number,
+                    floor=room.floor,
+                    block=room.block,
+                    room_type=room.type.title if room.type else None,
+                )
+            result_devices.append(result)
         return {
             "gateway_id": gateway_id,
             "devices": result_devices,
