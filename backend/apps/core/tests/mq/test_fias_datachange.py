@@ -87,12 +87,32 @@ class FiasDatachangeTest(TestCase):
         self.assertEqual(guest.lastname, "Amigoyev")
         self.assertIsNone(guest.language)
 
-    def test_unknown_target_room_raises(self):
+    def test_unknown_rooms_on_both_sides_raise(self):
         with self.assertRaises(LookupFailure):
-            handle_fias(datachange_message(roomName="999"), self.device)
+            handle_fias(datachange_message(roomName="999", oldRoomName="998"), self.device)
 
         guest = Guest.objects.get(pk=GUEST_IN_101)
         self.assertEqual(str(guest.room_id), ROOM_101)
+        self.assertTrue(guest.is_active)
+
+    def test_unknown_target_room_checks_guest_out_of_old_room(self):
+        Guest.objects.filter(pk=GUEST_IN_101).update(additional_info={"pms_reg_num": "4001"})
+
+        handle_fias(datachange_message(roomName="999"), self.device)
+
+        guest = Guest.objects.get(pk=GUEST_IN_101)
+        self.assertFalse(guest.is_active)
+        self.handle_guest_move.assert_not_called()
+
+    def test_unknown_old_room_checks_guest_in_to_new_room(self):
+        handle_fias(datachange_message(roomName="103", oldRoomName="998"), self.device)
+
+        guest = Guest.objects.get(additional_info__pms_reg_num="4001", is_active=True)
+        self.assertEqual(str(guest.room_id), ROOM_103)
+        self.assertEqual(guest.name, "Ytest")
+        self.handle_guest_move.assert_not_called()
+        # The guest in the known room 101 is not the one arriving
+        self.assertEqual(str(Guest.objects.get(pk=GUEST_IN_101).room_id), ROOM_101)
 
     def test_no_active_guest_raises(self):
         Guest.objects.filter(pk=GUEST_IN_101).update(is_active=False)

@@ -48,8 +48,12 @@ def resolve_card_uid(tenant_id, key_coder):
     return collect_unique_cards(reader.id, count=1, timeout=CARD_ON_READER_TIMEOUT)[0]
 
 
+def find_room(tenant_id, room_name):
+    return Room.objects.filter(tenant_id=tenant_id, number=room_name).first()
+
+
 def resolve_room(tenant_id, room_name):
-    room = Room.objects.filter(tenant_id=tenant_id, number=room_name).first()
+    room = find_room(tenant_id, room_name)
     if not room:
         raise LookupFailure(f"Room not found: {room_name}")
     return room
