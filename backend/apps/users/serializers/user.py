@@ -3,7 +3,7 @@ from typing import Any, ClassVar
 from drf_yasg import openapi
 from rest_framework import serializers
 
-from core.utils.brute_force import get_lock_status
+from core.utils.brute_force import get_lock_status, locked_emails, normalize_email
 from core.utils.serializers import ValidatorSerializer
 from users.models import Role, User
 from users.serializers.role import RoleSimpleSerializer
@@ -30,6 +30,14 @@ class AdditionalInfoField(serializers.JSONField):
         }
 
 
+class UserListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        # Lock status of the whole page in one batch instead of per user in the child
+        users = list(data.all() if hasattr(data, "all") else data)
+        self.context["locked_emails"] = locked_emails(user.email for user in users)
+        return super().to_representation(users)
+
+
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=True)
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
@@ -40,6 +48,11 @@ class UserSerializer(serializers.ModelSerializer):
         # A chain admin administers hotels without living in one, so `tenant` may be null.
         data["tenant_name"] = instance.tenant.title if instance.tenant_id else None
         data["tenant_has_access_ai"] = instance.tenant.has_access_ai if instance.tenant_id else False
+        locked = self.context.get("locked_emails")
+        if locked is None:
+            data["is_blocked"] = get_lock_status(instance.email)["is_locked"]
+        else:
+            data["is_blocked"] = normalize_email(instance.email) in locked
         return data
 
     def validate_tenant_group(self, value):
@@ -124,6 +137,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
         )
         extra_kwargs: ClassVar[dict[str, dict[str, bool]]] = {"is_superuser": {"read_only": True}}
+        list_serializer_class = UserListSerializer
 
 
 class UserDetailSerializer(serializers.ModelSerializer):

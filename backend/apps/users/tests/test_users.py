@@ -1,6 +1,9 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
+from users.models import User
 
 
 class UserTest(BaseTestCase):
@@ -29,6 +32,19 @@ class UserTest(BaseTestCase):
         self.assertEqual(str(response.data["results"][0]["tenant"]), "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
         self.assertEqual(str(response.data["results"][0]["roles"][0]), "c4d5e6f7-1a2b-4c3d-9e8f-0a1b2c3d4e5f")
         self.assertEqual(response.data["results"][0]["is_active"], True)
+
+    def test_list_query_count_does_not_grow_with_users(self):
+        url = reverse("users:users-list")
+        with CaptureQueriesContext(connection) as before:
+            self.get(url)
+        for i in range(3):
+            User.objects.create(email=f"extra{i}@example.com", tenant_id="ac73203f-e25f-4baa-a5c7-a4c9585f5bbc")
+        with CaptureQueriesContext(connection) as after:
+            response = self.get(url)
+
+        assert response.data is not None
+        self.assertEqual(response.data["count"], 5)
+        self.assertEqual(len(after.captured_queries), len(before.captured_queries))
 
     def test_create(self):
         # Case

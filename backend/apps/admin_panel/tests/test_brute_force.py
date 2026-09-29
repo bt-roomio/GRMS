@@ -186,3 +186,56 @@ class AdminUnlockBehaviourTests(AdminUnlockTestBase):
     def test_unknown_user_returns_404(self):
         url = reverse("admin_panel:admin-user-lock", kwargs={"user_id": "00000000-0000-0000-0000-000000000000"})
         self.assertEqual(self.post(url, data={}, format="json").status_code, 404)
+
+
+class LockedEmailsTests(AdminUnlockTestBase):
+    """Batch lock check used by user lists must agree with get_lock_status."""
+
+    def setUp(self):
+        super().setUp()
+        self.other = User.objects.filter(tenant_id=TENANT_ID).exclude(pk=self.victim.pk).first()
+        assert self.other is not None
+
+    def assert_agrees(self, expected):
+        emails = [self.victim.email.upper(), self.other.email]
+        self.assertEqual(bf.locked_emails(emails, cache=self.cache), expected)
+        for email in emails:
+            normalized = bf.normalize_email(email)
+            self.assertEqual(bf.get_lock_status(email, cache=self.cache)["is_locked"], normalized in expected)
+
+    def test_nobody_locked(self):
+        self.assert_agrees(set())
+
+    def test_lockout(self):
+        email, _ = self.lock_victim()
+        self.assert_agrees({email})
+
+    def test_expired_lockout_is_not_a_lock(self):
+        email, ip = self.lock_victim()
+        self.cache.set(bf.key("next_allowed", LOGIN, email, ip), bf.time.time() - 1, 900)
+        self.assert_agrees(set())
+
+    def test_hard_block(self):
+        email = bf.normalize_email(self.victim.email)
+        bf.remember_ip(email, "203.0.113.20", cache=self.cache)
+        self.cache.set(bf.hard_block_key("203.0.113.20"), 1, 900)
+        self.assert_agrees({email})
+
+    def test_extended_window(self):
+        email = bf.normalize_email(self.victim.email)
+        window_name, window_config = next(iter(bf._windows().items()))
+        bf.remember_ip(email, "203.0.113.30", cache=self.cache)
+        self.cache.set(bf.window_key(window_name, LOGIN, email, "203.0.113.30"), window_config["max_attempts"], 900)
+        self.assert_agrees({email})
+
+    def test_admin_user_list_marks_locked_account(self):
+        admin = User.objects.filter(is_superuser=True, tenant_group__isnull=True).first()
+        assert admin is not None
+        self.authenticate(admin)
+        self.lock_victim()
+
+        response = self.get(reverse("admin_panel:admin-tenant-users", kwargs={"tenant_id": TENANT_ID}))
+
+        self.assertEqual(response.status_code, 200)
+        blocked = {row["id"] for row in response.data if row["is_blocked"]}
+        self.assertEqual(blocked, {str(self.victim.pk)})
