@@ -33,7 +33,7 @@ class AdminUnlockTestBase(BaseTestCase):
 
     def grant_unlock(self, user):
         role = Role.objects.create(name="Unlocker", tenant_id=user.tenant_id)
-        role.permissions.add(Permission.objects.get(codename="unlock_user", content_type__app_label="main"))
+        role.permissions.add(Permission.objects.get(codename="add_user", content_type__app_label="users"))
         user.roles.add(role)
 
     def lock_victim(self, ip="203.0.113.10"):
@@ -46,7 +46,7 @@ class AdminUnlockTestBase(BaseTestCase):
 
 
 class AdminUnlockAccessTests(AdminUnlockTestBase):
-    """Access: anyone with `main.unlock_user`, within their own scope."""
+    """Access: anyone with `users.add_user`, within their own scope."""
 
     def url(self, user):
         return reverse("admin_panel:admin-user-lock", kwargs={"user_id": user.pk})

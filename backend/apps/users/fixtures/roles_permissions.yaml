@@ -62,10 +62,6 @@
         - main
         - tenant
 
-      - - unlock_user
-        - main
-        - tenant
-
       - - view_user
         - users
         - user

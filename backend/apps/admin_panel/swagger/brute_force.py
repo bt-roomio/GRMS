@@ -12,6 +12,6 @@ AdminUnlockUserSwagger = {
             }
         },
     ),
-    403: openapi.Response(description="No `main.unlock_user` permission"),
+    403: openapi.Response(description="No `users.add_user` permission"),
     404: openapi.Response(description="User not found"),
 }
