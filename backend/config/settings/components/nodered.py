@@ -1,8 +1,10 @@
 import os
 
+from config.settings.components import env_bool
+
 # Per-tenant Node-RED — see `main.services.nodered`.
 # Off by default: provisioning creates public DNS records and containers on the host.
-NODERED_PROVISIONING_ENABLED = os.getenv("NODERED_PROVISIONING_ENABLED", "False").lower() in ("true", "1", "yes")
+NODERED_PROVISIONING_ENABLED = env_bool("NODERED_PROVISIONING_ENABLED", "False")
 
 # Domain the tenant subdomains hang off: <tenant>.<NODERED_BASE_DOMAIN>.
 # Empty falls back to nodered.<FRONTEND_DOMAIN host>.

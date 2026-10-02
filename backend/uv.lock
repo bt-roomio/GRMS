@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = "==3.12.*"
 
 [[package]]
@@ -223,19 +223,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/12/a0/46450fcf9e56af18a6b0440ba49db6635419bb7bc84142c35f4143b1a66c/channels-4.3.1.tar.gz", hash = "sha256:97413ffd674542db08e16a9ef09cd86ec0113e5f8125fbd33cf0854adcf27cdb", size = 26896, upload-time = "2025-08-01T13:25:19.952Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/89/1c/eae1c2a8c195760376e7f65d0bdcc3e966695d29cfbe5c54841ce5c71408/channels-4.3.1-py3-none-any.whl", hash = "sha256:b091d4b26f91d807de3e84aead7ba785314f27eaf5bac31dd51b1c956b883859", size = 31286, upload-time = "2025-08-01T13:25:18.845Z" },
-]
-
-[[package]]
-name = "channels-demultiplexer"
-version = "2.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "channels" },
-    { name = "django-appconf" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/89/cb/9e616e9cef864138aace3b3b8c6d30366ab8676cc3f610f08329f46df9fc/channels-demultiplexer-2.2.0.tar.gz", hash = "sha256:e024783362ededb7673f37b99b4e930a0eb52ad637722efef1d10be89350b0b8", size = 6806, upload-time = "2020-12-11T08:30:19.155Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/c6/0bb0e693897ee850992886c1f96689579f1a5d06ee50dbaf5c09c67cad37/channels_demultiplexer-2.2.0-py3-none-any.whl", hash = "sha256:7797657c7a45e2dcd6da34545671df67354c983e1d8ce37e28c5c04964517315", size = 9449, upload-time = "2020-12-11T08:30:17.944Z" },
 ]
 
 [[package]]
@@ -467,33 +454,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-celery-beat"
-version = "2.6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "celery" },
-    { name = "cron-descriptor" },
-    { name = "django" },
-    { name = "django-timezone-field" },
-    { name = "python-crontab" },
-    { name = "tzdata" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/ce/308fdad8c073051c0a1e494939d5c304b4efbbeb4bee1115495a60c139e8/django-celery-beat-2.6.0.tar.gz", hash = "sha256:f75b2d129731f1214be8383e18fae6bfeacdb55dffb2116ce849222c0106f9ad", size = 160452, upload-time = "2024-03-03T17:07:03.864Z" }
-
-[[package]]
-name = "django-celery-results"
-version = "2.5.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "celery" },
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/75/24/a13ad6a276f62385da6d83a1995ded452d173841b6e0a83a899c3b75062e/django_celery_results-2.5.1.tar.gz", hash = "sha256:3ecb7147f773f34d0381bac6246337ce4cf88a2ea7b82774ed48e518b67bb8fd", size = 80944, upload-time = "2023-05-08T14:22:24.486Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/2e/aa82857354d5227922c2ae6e83e5214537d8f108184bfeea6704d0b045d8/django_celery_results-2.5.1-py3-none-any.whl", hash = "sha256:0da4cd5ecc049333e4524a23fcfc3460dfae91aa0a60f1fae4b6b2889c254e01", size = 36293, upload-time = "2023-05-08T14:22:12.955Z" },
-]
-
-[[package]]
 name = "django-compat"
 version = "1.0.15"
 source = { registry = "https://pypi.org/simple" }
@@ -538,18 +498,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/37/bd/a122ba96167f5dfab70a58ca22fa046b7ef1ebad9ff026f7831bd6c2a49c/django-crontab-0.7.1.tar.gz", hash = "sha256:1201810a212460aaaa48eb6a766738740daf42c1a4f6aafecfb1525036929236", size = 7089, upload-time = "2016-03-07T19:35:54.714Z" }
 
 [[package]]
-name = "django-filter"
-version = "25.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b5/40/c702a6fe8cccac9bf426b55724ebdf57d10a132bae80a17691d0cf0b9bac/django_filter-25.1.tar.gz", hash = "sha256:1ec9eef48fa8da1c0ac9b411744b16c3f4c31176c867886e4c48da369c407153", size = 143021, upload-time = "2025-02-14T16:30:53.238Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/a6/70dcd68537c434ba7cb9277d403c5c829caf04f35baf5eb9458be251e382/django_filter-25.1-py3-none-any.whl", hash = "sha256:4fa48677cf5857b9b1347fed23e355ea792464e0fe07244d1fdfb8a806215b80", size = 94114, upload-time = "2025-02-14T16:30:50.435Z" },
-]
-
-[[package]]
 name = "django-group-model"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -582,6 +530,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/83/9d/2272742fdd9d0a9f0b28cd995b0539430c9467a2192e4de2cea9ea6ad38c/django-redis-5.4.0.tar.gz", hash = "sha256:6a02abaa34b0fea8bf9b707d2c363ab6adc7409950b2db93602e6cb292818c42", size = 52567, upload-time = "2023-10-01T20:22:01.221Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/f1/63caad7c9222c26a62082f4f777de26389233b7574629996098bf6d25a4d/django_redis-5.4.0-py3-none-any.whl", hash = "sha256:ebc88df7da810732e2af9987f7f426c96204bf89319df4c6da6ca9a2942edd5b", size = 31119, upload-time = "2023-10-01T20:21:33.009Z" },
+]
+
+[[package]]
+name = "django-split-settings"
+version = "1.3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/b9/1c13089454afd7a42d492b8aa8a0c7e49eeca58c0f2ad331f361a067c876/django_split_settings-1.3.2.tar.gz", hash = "sha256:d3975aa3601e37f65c59b9977b6bcb1de8bc27496930054078589c7d56998a9d", size = 5751, upload-time = "2024-07-05T14:30:05.997Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/69/d94db8dac55bcfb6b3243578a3096cfda6c42ea5da292c36919768152ec6/django_split_settings-1.3.2-py3-none-any.whl", hash = "sha256:72bd7dd9f12602585681074d1f859643fb4f6b196b584688fab86bdd73a57dff", size = 6435, upload-time = "2024-07-05T14:29:59.756Z" },
 ]
 
 [[package]]
@@ -794,7 +751,6 @@ dependencies = [
     { name = "certifi" },
     { name = "cffi" },
     { name = "channels" },
-    { name = "channels-demultiplexer" },
     { name = "channels-redis" },
     { name = "channelsmultiplexer" },
     { name = "charset-normalizer" },
@@ -810,16 +766,14 @@ dependencies = [
     { name = "django" },
     { name = "django-allauth" },
     { name = "django-appconf" },
-    { name = "django-celery-beat" },
-    { name = "django-celery-results" },
     { name = "django-compat" },
     { name = "django-cors-headers" },
     { name = "django-countries" },
     { name = "django-crontab" },
-    { name = "django-filter" },
     { name = "django-group-model" },
     { name = "django-prometheus" },
     { name = "django-redis" },
+    { name = "django-split-settings" },
     { name = "django-timezone-field" },
     { name = "djangochannelsrestframework" },
     { name = "djangorestframework" },
@@ -917,7 +871,6 @@ requires-dist = [
     { name = "certifi", specifier = "==2025.1.31" },
     { name = "cffi", specifier = "==1.16.0" },
     { name = "channels", specifier = "==4.3.1" },
-    { name = "channels-demultiplexer", specifier = "==2.2.0" },
     { name = "channels-redis", specifier = "==4.3.0" },
     { name = "channelsmultiplexer", specifier = "==0.0.3" },
     { name = "charset-normalizer", specifier = "==3.4.1" },
@@ -933,16 +886,14 @@ requires-dist = [
     { name = "django", specifier = "==5.0.4" },
     { name = "django-allauth", specifier = "==65.12.1" },
     { name = "django-appconf", specifier = "==1.1.0" },
-    { name = "django-celery-beat", specifier = "==2.6.0" },
-    { name = "django-celery-results", specifier = "==2.5.1" },
     { name = "django-compat", specifier = "==1.0.15" },
     { name = "django-cors-headers", specifier = "==4.3.1" },
     { name = "django-countries", specifier = "==8.1.1" },
     { name = "django-crontab", specifier = "==0.7.1" },
-    { name = "django-filter", specifier = "==25.1" },
     { name = "django-group-model", specifier = "==1.0.1" },
     { name = "django-prometheus", specifier = "==2.4.1" },
     { name = "django-redis", specifier = "==5.4.0" },
+    { name = "django-split-settings", specifier = "==1.3.2" },
     { name = "django-timezone-field", specifier = "==7.0" },
     { name = "djangochannelsrestframework", specifier = "==1.3.0" },
     { name = "djangorestframework", specifier = "==3.16.0" },

@@ -126,7 +126,7 @@ The Django project is organized into specialized apps under `backend/apps/`:
   - Demultiplexer for routing WebSocket messages
 - **access_manager**: Physical access control integration, device synchronization
 - **services**: External service integrations (PMS systems)
-- **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, not in INSTALLED_APPS, routes at root level)
+- **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, no models, routes at root level)
 - **admin_panel**: Multi-tenant admin operations (tenant management, user management, user impersonation), routes under `/api/v1/admin/`
 - **mews**: Mews PMS integration
   - Real-time WebSocket client for Mews events
@@ -193,7 +193,7 @@ Key model patterns defined in `backend/apps/core/models.py`:
 
 Queues are defined in `config/celery.py`: `critical`, `default` (default queue), `low`. Task-to-queue routing lives in `app.conf.task_routes` (e.g. `sync_devices_task`, `auto_check_out`, `auto_block` → `critical`; `aggregate_table_ts_kv`, `delete_old_logs`, `flush_expired_tokens` → `low`). Global settings: `task_soft_time_limit=300`, `task_time_limit=360`, `task_acks_late=True`, `worker_prefetch_multiplier=1`.
 
-Scheduled tasks in `config/settings.py` (`CELERY_BEAT_SCHEDULE`):
+Scheduled tasks in `config/settings/components/celery.py` (`CELERY_BEAT_SCHEDULE`):
 - `auto-checkout` - every 5 minutes (main.tasks.auto_check_out)
 - `auto-block-guest` - 1800s interval (main.tasks.auto_block)
 - `sync_device` - 300s interval (access_manager.tasks.sync_device.sync_devices_task)
@@ -212,7 +212,7 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 
 - Custom user model: `users.User` (email-based, no username field)
 - Multiple auth backends: JWT, Django ModelBackend, django-allauth
-- Social auth: Google OAuth, Microsoft, Keycloak (OpenID Connect)
+- Social auth: Google OAuth, Microsoft (allauth); Keycloak via custom views in `users/views/keycloak.py`
 - Custom adapters prevent public signup: `NoSignupAccountAdapter`, `NoNewSocialSignupAdapter`
 - Frontend redirects configured via `FRONTEND_DOMAIN` env var
 
@@ -226,6 +226,10 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 - Celery workers/queues can be inspected via Flower (`celery-flower` service, port 5555)
 
 ## Configuration
+
+### Settings Layout
+
+`config/settings/` is a package assembled by django-split-settings (`DJANGO_SETTINGS_MODULE` stays `config.settings`). `__init__.py` lists the components in load order; each file in `components/` covers one topic (`base`, `security`, `auth`, `database`, `redis`, `drf`, `celery`, `mail`, `monitoring`, `integrations`, `fleet`, `brute_force_protection`, `nodered`, `logging`). `components/__init__.py` loads `.env`, puts `apps/` on `sys.path` and provides `env_bool()` / `env_list()`. A component that needs a value from another one imports it explicitly (`from config.settings.components.base import TIME_ZONE`) rather than relying on the shared namespace, so ruff/ty can resolve it. New settings go into the matching component (or a new component added to `include(...)`).
 
 ### Environment Variables
 
@@ -301,7 +305,7 @@ Note: Django will automatically generate migrations. Never write migrations manu
 ### Adding a Celery Task
 
 1. Create task in app's `tasks.py` with `@shared_task` decorator
-2. For periodic tasks, add to `CELERY_BEAT_SCHEDULE` in `config/settings.py`
+2. For periodic tasks, add to `CELERY_BEAT_SCHEDULE` in `config/settings/components/celery.py`
 3. To run it off the `default` queue, add a route in `app.conf.task_routes` (`config/celery.py`) targeting `critical` or `low`
 4. Tasks run in the matching Celery worker service (`celery-critical` / `celery-default` / `celery-low`)
 

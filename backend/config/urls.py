@@ -7,7 +7,7 @@ from django_prometheus import exports as prometheus_exports
 
 from main.metrics import update_device_metrics
 
-from .yasg import urlpatterns as doc_path  # ty: ignore
+from .yasg import urlpatterns as doc_path
 
 
 def to_front_login(request):
