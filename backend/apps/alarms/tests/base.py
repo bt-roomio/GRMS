@@ -1,7 +1,9 @@
 from django.test import TestCase
 
-from alarms.constants import ATTR_ACTIVE, ATTR_GATEWAY_ACTIVE, ATTR_NOTIFY_ON_OFFLINE
+from alarms.constants import ATTR_ACTIVE
+from alarms.models import AlarmRule
 from alarms.services.attributes import set_server_attribute
+from alarms.templates import boolean_filter
 from main.models import DeviceProfile
 from shuttle.models import TsKvDictionary, TsKvLatest
 
@@ -27,14 +29,26 @@ class AlarmTestCase(TestCase):
         "device.yaml",
     )
 
-    def set_rules(self, *rules, profile_id=PROFILE_ID):
+    def set_rules(self, *rules, profile_id=PROFILE_ID, enabled=True):
+        """Give a profile exactly these rules, as rows — what the CRUD writes."""
         profile = DeviceProfile.objects.get(pk=profile_id)
-        profile_data = profile.profile_data if isinstance(profile.profile_data, dict) else {}
-        profile.profile_data = {**profile_data, "alarms": list(rules)}
-        # save() runs full_clean(), which the fixtures' duplicate profile names
-        # would trip over; the rules are the only thing under test here.
-        DeviceProfile.objects.filter(pk=profile.pk).update(profile_data=profile.profile_data)
-        return profile
+        AlarmRule.objects.filter(device_profile=profile).delete()
+
+        return [
+            AlarmRule.objects.create(
+                tenant_id=profile.tenant_id,
+                device_profile=profile,
+                alarm_type=rule["alarmType"],
+                enabled=enabled,
+                create_rules=rule.get("createRules") or {},
+                clear_rule=rule.get("clearRule"),
+                propagate=bool(rule.get("propagate")),
+                propagate_relation_types=rule.get("propagateRelationTypes") or [],
+                propagate_to_owner=bool(rule.get("propagateToOwner")),
+                propagate_to_tenant=bool(rule.get("propagateToTenant")),
+            )
+            for rule in rules
+        ]
 
     def set_attribute(self, key, value, device_id=DEVICE_ID):
         return set_server_attribute(device_id, key, value)
@@ -48,14 +62,6 @@ class AlarmTestCase(TestCase):
             defaults={column: value},
         )
         return latest
-
-
-def boolean_filter(key, expected, key_type="ATTRIBUTE"):
-    return {
-        "key": {"type": key_type, "key": key},
-        "valueType": "BOOLEAN",
-        "predicate": {"type": "BOOLEAN", "operation": "EQUAL", "value": {"defaultValue": expected}},
-    }
 
 
 def offline_rule(minutes=10, severity="MAJOR", alarm_type="Device Offline", clear=True, **extra):
@@ -85,30 +91,6 @@ def offline_rule(minutes=10, severity="MAJOR", alarm_type="Device Offline", clea
             }
         }
 
-    return rule
-
-
-def guarded_offline_rule(minutes=10, severity="MAJOR"):
-    """
-    The device-offline rule as docs/alarms.md recommends assembling it: the
-    per-device toggle and the gateway guard included, so a dead gateway raises
-    one alarm instead of one per device behind it.
-    """
-    rule = offline_rule(minutes=minutes, severity=severity)
-    rule["createRules"][severity]["condition"]["condition"] += [
-        boolean_filter(ATTR_NOTIFY_ON_OFFLINE, True),
-        boolean_filter(ATTR_GATEWAY_ACTIVE, True),
-        boolean_filter("is_gateway", False, key_type="ENTITY_FIELD"),
-    ]
-    return rule
-
-
-def gateway_offline_rule(minutes=5, severity="CRITICAL"):
-    """The other half of the pair: gateways only, propagated to their devices."""
-    rule = offline_rule(minutes=minutes, severity=severity, alarm_type="Gateway Offline", propagate=True)
-    create_rule = rule["createRules"][severity]
-    create_rule["condition"]["condition"].append(boolean_filter("is_gateway", True, key_type="ENTITY_FIELD"))
-    create_rule["alarmDetails"] = "Шлюз ${originatorName} не на связи"
     return rule
 
 

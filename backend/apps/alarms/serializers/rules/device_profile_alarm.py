@@ -8,9 +8,10 @@ class DeviceProfileAlarmSerializer(serializers.Serializer):
     """
     ``DeviceProfileAlarm`` — one alarm type on a device profile.
 
-    Rules have no table of their own: they live in
-    ``DeviceProfile.profile_data["alarms"]``, which is where TB keeps them, and
-    apply to every device of the profile. There is no targeting.
+    The wire format of a rule: TB keeps these inside
+    ``DeviceProfile.profile_data["alarms"]``, GRMS stores them as ``AlarmRule``
+    rows, and this serializer validates the object either way. A rule applies to
+    every device of its profile — there is no targeting.
     """
 
     id = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -39,10 +40,11 @@ class DeviceProfileAlarmSerializer(serializers.Serializer):
 
 def validate_profile_alarms(alarms, raise_exception: bool = True):
     """
-    Validate the whole ``profile_data["alarms"]`` list.
+    Validate a whole list of rules — a TB profile export, or the body of
+    ``rules/bulk/``.
 
-    Returns the cleaned list, still camelCase, ready to be written back into
-    ``profile_data`` unchanged.
+    Returns the cleaned list, still camelCase, ready to be split into
+    ``AlarmRule`` rows unchanged.
     """
     if alarms in (None, ""):
         return []

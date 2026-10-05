@@ -135,7 +135,10 @@ class ProfileAlarmsTest(SimpleTestCase):
         with self.assertRaises(ValidationError):
             validate_profile_alarms({"alarmType": "x"})
 
-    def test_documented_connectivity_rules_pass_the_validator(self):
-        from alarms.tests.base import gateway_offline_rule, guarded_offline_rule
+    def test_every_shipped_template_passes_the_validator(self):
+        """A crooked template would otherwise reach the panel unnoticed."""
+        from alarms.templates import catalogue
 
-        self.assertEqual(len(validate_profile_alarms([guarded_offline_rule(), gateway_offline_rule()])), 2)
+        templates = catalogue()
+        cleaned = validate_profile_alarms([template["rule"] for template in templates])
+        self.assertEqual(len(cleaned), len(templates))

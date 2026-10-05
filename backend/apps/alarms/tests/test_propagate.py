@@ -4,14 +4,13 @@ from django.utils import timezone
 
 from alarms.models import Alarm
 from alarms.services.engine import evaluate
+from alarms.templates import device_offline_rule, gateway_offline_rule
 from alarms.tests.base import (
     DEVICE_ID,
     OTHER_DEVICE_ID,
     ROOM_ID,
     TENANT_ID,
     AlarmTestCase,
-    gateway_offline_rule,
-    guarded_offline_rule,
     offline_rule,
 )
 from main.models import Device
@@ -69,7 +68,7 @@ class GatewayCascadeTest(AlarmTestCase):
 
     def setUp(self):
         self.now = timezone.now()
-        self.set_rules(guarded_offline_rule(), gateway_offline_rule())
+        self.set_rules(device_offline_rule(), gateway_offline_rule())
 
         Device.objects.filter(pk=OTHER_DEVICE_ID).update(additional_info={"gateway": True})
         Relation.objects.create(

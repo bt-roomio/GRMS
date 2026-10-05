@@ -35,9 +35,10 @@
 «в номере 305 температура выше 30° с 14:00». Строка аварии **и есть журнал**: отдельной таблицы
 событий нет, длительность инцидента — `clear_ts - start_ts`.
 
-**Правило аварии** — JSON в формате ThingsBoard, лежит в `DeviceProfile.profile_data["alarms"]` и
-действует на все активные устройства профиля. Своей таблицы у правил нет, редактируются они
-обычным `PUT` профиля.
+**Правило аварии** — строка в таблице `alarms_alarm_rule` с FK на профиль устройства: правило
+действует на все активные устройства этого профиля. Условия внутри правила остаются JSON в формате
+ThingsBoard (они рекурсивны и полиморфны), а у самого правила есть свой CRUD, выключатель
+`enabled` и аудит.
 
 **Вычислитель** — Celery-задача, которая раз в `ALARMS_EVAL_INTERVAL_SEC` (30 с) читает последние
 значения телеметрии (`TsKvLatest`) и серверных атрибутов (`AttributeKv`), прогоняет правила и
@@ -49,7 +50,7 @@ flowchart LR
     MQ --> LATEST[(TsKvLatest)]
     MQ --> ATTR[(AttributeKv<br/>SERVER_SCOPE)]
     WD[watchdog<br/>active_attribute_server_scope] --> ATTR
-    PROFILE[(DeviceProfile<br/>profile_data.alarms)] --> EVAL
+    RULES[(AlarmRule<br/>FK → DeviceProfile)] --> EVAL
     LATEST --> EVAL[evaluate_alarm_rules<br/>каждые 30 с]
     ATTR --> EVAL
     EVAL --> ALARM[(Alarm<br/>AlarmComment<br/>AlarmRuleState)]
@@ -62,7 +63,7 @@ flowchart LR
 
 | Термин | Где в коде | Смысл |
 |---|---|---|
-| Правило (`DeviceProfileAlarm`) | `profile_data["alarms"][i]` | Один тип аварии на профиле: набор правил создания по severity и правило снятия |
+| Правило (`DeviceProfileAlarm` в TB) | `alarms.AlarmRule` | Один тип аварии на профиле: набор правил создания по severity и правило снятия |
 | `alarmType` | `Alarm.alarm_type` | Имя типа аварии: `Device Offline`, `High Temperature`. Уникально внутри профиля |
 | Severity | `AlarmSeverity` | `CRITICAL` > `MAJOR` > `MINOR` > `WARNING` > `INDETERMINATE` |
 | Originator | `Alarm.originator` | Устройство, на котором сработало правило |
@@ -79,9 +80,12 @@ flowchart LR
 
 | Путь | Что там |
 |---|---|
-| `apps/alarms/models.py` | `Alarm`, `AlarmComment`, `AlarmRuleState` |
+| `apps/alarms/models.py` | `AlarmRule`, `Alarm`, `AlarmComment`, `AlarmRuleState` |
 | `apps/alarms/constants.py` | Словарь TB: severity, типы ключей, операции, спецификации, расписания, белый список `ENTITY_FIELD` |
 | `apps/alarms/serializers/rules/` | Валидация формата правил (зеркало классов TB) |
+| `apps/alarms/serializers/rule.py` | CRUD-контракт правила: конверт GRMS + объект TB |
+| `apps/alarms/querysets/rule.py` | Выборки правил: `active()`, `for_profiles()`, `list()` |
+| `apps/alarms/views/rule.py` | CRUD правил, `bulk`, `preview` |
 | `apps/alarms/serializers/alarm.py` | Сериализаторы аварий, комментариев, параметров фильтрации |
 | `apps/alarms/services/engine.py` | Проход вычислителя: профили → устройства → снимки → правила |
 | `apps/alarms/services/state.py` | Одно правило на одном устройстве: создать / обновить / эскалировать / снять; `ack`, `clear`, `assign` |
@@ -94,6 +98,7 @@ flowchart LR
 | `apps/alarms/services/propagate.py` | Цели распространения |
 | `apps/alarms/services/preview.py` | Сухой прогон правил профиля |
 | `apps/alarms/services/keys.py` | Каталог ключей для конструктора правил |
+| `apps/alarms/templates.py` | Каталог шаблонов правил: то, что конструктор предлагает кнопкой «добавить типовое» |
 | `apps/alarms/services/attributes.py` | Запись серверных атрибутов `notifyOnOffline`, `gatewayActive` |
 | `apps/alarms/notifications/` | Диспетчер уведомлений и настройки тенанта |
 | `apps/alarms/channels/`, `apps/alarms/telegram/` | Канал доставки и HTTP-клиент Bot API |
@@ -103,14 +108,47 @@ flowchart LR
 | `apps/alarms/tasks.py` | `evaluate_alarm_rules`, `dispatch_notifications`, `purge_alarms` |
 | `apps/main/serializers/notification_settings.py`, `views/notification_settings.py` | Настройки уведомлений тенанта |
 | `apps/main/serializers/device.py` | Поле `notify_on_offline` устройства |
-| `apps/main/serializers/device_profile.py` | Валидация `profile_data["alarms"]` при сохранении профиля |
 | `apps/core/management/commands/active_attribute_server_scope.py` | Watchdog: поддерживает `gatewayActive` |
 
 ---
 
 ## 3. Модель данных
 
-### 3.1. `Alarm` (`alarms_alarm`)
+### 3.1. `AlarmRule` (`alarms_alarm_rule`)
+
+Правило аварии. Порт `DeviceProfileAlarm` из ThingsBoard, который держит правила внутри
+`DeviceProfile.profile_data["alarms"]`; здесь каждое правило — строка.
+
+| Поле | Тип | Смысл |
+|---|---|---|
+| `id` | UUID | Он же идентификатор правила в API |
+| `tenant` | FK `main.Tenant` | Берётся из профиля, из тела запроса не читается |
+| `device_profile` | FK `main.DeviceProfile` | Правило действует на все активные устройства профиля |
+| `alarm_type` | str | Тип аварии. Уникален внутри профиля (ограничение БД) |
+| `enabled` | bool | Выключенное правило вычислитель не видит |
+| `create_rules` | JSON | `{"CRITICAL": {condition, schedule, alarmDetails}, …}` в формате TB (camelCase внутри) |
+| `clear_rule` | JSON, null | Правило снятия |
+| `propagate`, `propagate_relation_types`, `propagate_to_owner`, `propagate_to_tenant` | | Распространение, см. [4.10](#410-распространение) |
+| `created_at`, `created_by`, `updated_at`, `updated_by` | | Аудит из `BaseModel` / `UpdateByModel` |
+
+```python
+UniqueConstraint(fields=["device_profile", "alarm_type"], name="uniq_alarm_rule_profile_type")
+```
+
+Два правила одного типа на одном профиле боролись бы за одну и ту же строку аварии, поэтому
+уникальность обеспечивает БД, а не валидатор. Индексы — `(tenant, enabled)` и
+`(device_profile, enabled)`: вычислитель выбирает правила ровно по ним.
+
+**Почему условия остались JSON.** Дерево условий рекурсивно (`COMPLEX`) и полиморфно (`spec`,
+`schedule`), вычислитель читает его словарями, а хранение в формате TB позволяет вставлять
+правило, выгруженное из ThingsBoard, без переделки. Нормализовать это в таблицы — недели работы
+без выгоды.
+
+Метод `AlarmRule.as_rule()` превращает строку обратно в объект `DeviceProfileAlarm` — это
+единственное место конвертации, поэтому ни вычислитель, ни валидаторы не знают, что правила
+переехали в таблицу.
+
+### 3.2. `Alarm` (`alarms_alarm`)
 
 | Поле | Тип | Смысл |
 |---|---|---|
@@ -136,7 +174,7 @@ flowchart LR
 Индексы: `(tenant, cleared, -start_ts)`, `(originator, -start_ts)`, `(alarm_type, -start_ts)`,
 `(severity, -start_ts)`, GIN по `propagate_entity_ids`.
 
-### 3.2. Статус
+### 3.3. Статус
 
 Статус не хранится — это пара двух независимых флагов:
 
@@ -147,7 +185,7 @@ flowchart LR
 
 Квитирование не закрывает аварию, закрытие не квитирует. Закрытую аварию можно квитировать.
 
-### 3.3. Дедупликация
+### 3.4. Дедупликация
 
 На одном устройстве может быть **не больше одной незакрытой аварии каждого типа** — это частичный
 уникальный индекс в БД:
@@ -164,7 +202,7 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 - гонка двух процессов, вставляющих одну и ту же аварию, решается на уровне БД:
   `get_or_create` вернёт уже существующую строку.
 
-### 3.4. `AlarmComment` (`alarms_alarm_comment`)
+### 3.5. `AlarmComment` (`alarms_alarm_comment`)
 
 | Поле | Смысл |
 |---|---|
@@ -191,7 +229,7 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 Пользовательский комментарий: `{"text": "Выехал техник"}`, после правки —
 `{"text": "…", "edited": true, "edited_at": "2026-09-14T10:31:02.114Z"}`.
 
-### 3.5. `AlarmRuleState` (`alarms_rule_state`)
+### 3.6. `AlarmRuleState` (`alarms_rule_state`)
 
 Счётчики спецификаций `DURATION` / `REPEATING` между проходами вычислителя. Одна строка на пару
 (устройство, `alarmType`); создаётся при первом совпадении условия и удаляется, как только ни одно
@@ -213,10 +251,14 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 
 ## 4. Формат правил
 
-Правила — массив в `DeviceProfile.profile_data["alarms"]`. Имена полей — camelCase, **как в
-ThingsBoard**: правило, экспортированное из профиля TB, вставляется без правок (с поправкой на
-[отличия GRMS](#отличия-от-thingsboard)). Хранится ровно то, что вернул валидатор, — с
-дописанными значениями по умолчанию.
+Правило приезжает в API как объект `DeviceProfileAlarm` — camelCase, **как в ThingsBoard**:
+правило, экспортированное из профиля TB, вставляется без правок (с поправкой на
+[отличия GRMS](#отличия-от-thingsboard)). Поля верхнего уровня раскладываются по колонкам
+`alarms_alarm_rule`, условия и расписания сохраняются как JSON ровно в том виде, который вернул
+валидатор, — с дописанными значениями по умолчанию.
+
+Скелет ниже — это тело одного правила в `POST /api/v1/alarms/rules/` и один элемент массива в
+`POST /api/v1/alarms/rules/bulk/`.
 
 ### 4.1. Полный скелет
 
@@ -273,7 +315,7 @@ ThingsBoard**: правило, экспортированное из профи�
 
 | Поле | Обяз. | По умолчанию | Смысл |
 |---|---|---|---|
-| `id` | нет | — | Идентификатор правила, произвольная строка. Стоит задавать свой (`myDeviceOffline`): по нему правило находят скрипты и миграции |
+| `id` | — | — | Только в ответах: UUID строки правила. В теле запроса игнорируется |
 | `alarmType` | да | — | Тип аварии, до 255 символов |
 | `createRules` | да | — | Словарь `severity → AlarmRule`, непустой, ключи только из пяти severity |
 | `clearRule` | нет | — | `AlarmRule` снятия (`alarmDetails` в нём не используется) |
@@ -281,6 +323,13 @@ ThingsBoard**: правило, экспортированное из профи�
 | `propagateRelationTypes` | нет | `[]` | Типы связей `shuttle.Relation`; пусто — любые |
 | `propagateToOwner` | нет | `false` | Добавить id номера устройства в `propagate_entity_ids` |
 | `propagateToTenant` | нет | `false` | Добавить id тенанта в `propagate_entity_ids` |
+
+Рядом с этими полями в теле запроса едет конверт GRMS — snake_case, как остальное API:
+
+| Поле | Обяз. | Смысл |
+|---|---|---|
+| `device_profile` | да при создании | UUID профиля, к которому крепится правило |
+| `enabled` | нет, по умолчанию `true` | Выключатель правила |
 
 ### 4.3. `AlarmRule`
 
@@ -578,8 +627,8 @@ TB не выражается — нужны два разных правила.
 
 ### 4.11. Валидация
 
-Правила проверяются при каждом сохранении профиля (`PUT /api/v1/main/device-profile/<pk>/`, если
-в `profile_data` есть ключ `alarms`) и в [`preview`](#preview). Проверяется:
+Правила проверяются при создании и изменении (`POST`/`PUT /api/v1/alarms/rules/…`), при массовой
+замене (`rules/bulk/`) и в [`preview`](#preview) — одним и тем же валидатором. Проверяется:
 
 - `alarmType` уникален внутри профиля;
 - `createRules` непустой, ключи — только `CRITICAL`/`MAJOR`/`MINOR`/`WARNING`/`INDETERMINATE`;
@@ -596,32 +645,32 @@ TB не выражается — нужны два разных правила.
 Валидатор дописывает значения по умолчанию: `spec: {"type": "SIMPLE"}`, `ignoreCase: false`,
 `inherit: false`, `timezone: "UTC"`, `propagate*`.
 
-Пример ответа `400` (в `valueType` указан `NUMERIC` для булева предиката, длительность `0`):
+Пример ответа `400` на `POST`/`PUT` одного правила (в `valueType` указан `NUMERIC` для булева
+предиката, длительность `0`):
 
 ```json
 {
-  "profile_data": {
-    "alarms": [
-      {
-        "createRules": {
-          "MAJOR": {
-            "condition": {
-              "condition": [
-                {"predicate": ["valueType NUMERIC needs NUMERIC predicates, got ['BOOLEAN']."]}
-              ],
-              "spec": {"predicate": ["A DURATION needs a positive 'defaultValue'."]}
-            }
-          }
-        }
+  "createRules": {
+    "MAJOR": {
+      "condition": {
+        "condition": [
+          {"predicate": ["valueType NUMERIC needs NUMERIC predicates, got ['BOOLEAN']."]}
+        ],
+        "spec": {"predicate": ["A DURATION needs a positive 'defaultValue'."]}
       }
-    ]
+    }
   }
 }
 ```
 
-Путь к ошибке повторяет путь в JSON правила; элементы массивов — по индексу. В `preview`
-обёртки `profile_data` нет — ответ начинается с `alarms`. Пустой `createRules`:
-`{"alarms": [{"createRules": ["This dictionary may not be empty."]}]}`.
+Путь к ошибке повторяет путь в JSON правила; элементы массивов — по индексу. В `rules/bulk/` и
+`rules/preview/` то же самое завёрнуто в `alarms` с индексом правила:
+
+```json
+{"alarms": [{}, {"createRules": ["This dictionary may not be empty."]}]}
+```
+
+Пустой объект на месте первого правила означает, что с ним всё в порядке, — индексы сохраняются.
 
 ### Отличия от ThingsBoard
 
@@ -646,7 +695,8 @@ TB не выражается — нужны два разных правила.
 Задача `alarms.tasks.evaluate_alarm_rules` (очередь `default`, beat каждые
 `ALARMS_EVAL_INTERVAL_SEC`, по умолчанию 30 с). При `ALARMS_ENABLED=false` сразу выходит.
 
-1. Берутся активные профили (`DeviceProfile.active = true`) с непустым `profile_data["alarms"]`.
+1. Одним запросом берутся включённые правила активных профилей (`AlarmRule.objects.active()`,
+   то есть `enabled = true` и `device_profile.active = true`), сгруппированные по профилю.
 2. Берутся их активные устройства (`Device.is_active = true`), пачками по 500.
 3. Для пачки собираются все ключи, на которые ссылаются правила: имена `TIME_SERIES`, имена
    `ATTRIBUTE`, атрибуты устройства из `dynamicValue` с `CURRENT_DEVICE`.
@@ -731,8 +781,10 @@ Alarm evaluation: 1480 devices × 12 rules → 2 created, 0 escalated, 1 cleared
 
 ## 6. Правила связи: устройства и шлюзы
 
-**Готовых правил в системе нет.** Профили нового тенанта создаются пустыми, и каждый тенант
-заводит свои правила сам — через [`PUT` профиля](#82-правила). Ниже — пара правил связи целиком:
+**Готовых правил в системе нет.** Профили нового тенанта создаются без правил, и каждый тенант
+заводит свои сам — через [CRUD правил](#82-правила). Эти два правила отдаются как шаблоны
+(`GET /api/v1/alarms/rule-templates/`, см. [8.2](#82-правила)), поэтому в панели они добавляются
+кнопкой, а не копипастой. Ниже — та же пара целиком:
 она закрывает журнал отключений устройств и шлюзов и снимает каскад шлюза. Температурные пороги —
 в [рецепте 7.1](#71-порог-температуры-на-номер-и-тенант-только-для-устройств-на-связи).
 
@@ -872,8 +924,9 @@ sequenceDiagram
 
 ## 7. Рецепты
 
-Каждый рецепт — элемент массива `profile_data["alarms"]`. Как отправить массив в профиль —
-в [8.2](#82-правила). Перед сохранением прогоняйте правила через [`preview`](#preview).
+Каждый рецепт — тело одного правила: `POST /api/v1/alarms/rules/` вместе с полем
+`device_profile`, либо элемент массива в `rules/bulk/` (см. [8.2](#82-правила)). Перед сохранением
+прогоняйте правила через [`preview`](#preview).
 
 ### 7.1. Порог температуры на номер и тенант, только для устройств на связи
 
@@ -1306,7 +1359,8 @@ LIMIT 10;
 
 | Способ | Что будет с уже активными авариями |
 |---|---|
-| Удалить элемент из `profile_data["alarms"]` | Остаются активными навсегда: вычислитель этот тип больше не обрабатывает. Закройте их `bulk/clear/` |
+| `PUT /api/v1/alarms/rules/<id>/` с `{"enabled": false}` | Новые не создаются; активные остаются и снимаются только вручную — `clearRule` выключенного правила тоже не работает |
+| `DELETE /api/v1/alarms/rules/<id>/` | Остаются активными навсегда: вычислитель этот тип больше не обрабатывает. Закройте их `bulk/clear/` |
 | Расписание правил создания, которое никогда не активно, например `{"type": "CUSTOM", "timezone": "UTC", "items": [{"enabled": false, "dayOfWeek": 1}]}` | Новые не создаются, а активные снимутся по `clearRule` как обычно |
 | `notify_on_offline: false` на устройстве | Только для `Device Offline` и только для этого устройства |
 | `ALARMS_ENABLED=false` | Выключает вычислитель и уведомления целиком на всей инсталляции |
@@ -1337,8 +1391,11 @@ LIMIT 10;
 | `alarms.ack_alarm` | `ack`, `bulk/ack` |
 | `alarms.clear_alarm` | `clear`, `bulk/clear` |
 | `alarms.assign_alarm` | `assign` |
-| `main.view_deviceprofile` | Чтение профиля, `available-keys`, `preview` |
-| `main.change_deviceprofile` | Сохранение правил (`PUT` профиля) |
+| `alarms.view_alarmrule` | Список и карточка правил, `rules/preview/` |
+| `alarms.add_alarmrule` | Создание правила |
+| `alarms.change_alarmrule` | Изменение правила и массовая замена (`rules/bulk/`) |
+| `alarms.delete_alarmrule` | Удаление правила |
+| `main.view_deviceprofile` | `available-keys` |
 | `main.view_notificationsettings` / `main.change_notificationsettings` | Настройки уведомлений |
 
 Нет права — `403 {"detail": "You do not have permission to perform this action."}`.
@@ -1358,91 +1415,133 @@ LIMIT 10;
 | `GET /api/v1/alarms/summary/` | Счётчики для дашборда |
 | `GET /api/v1/alarms/types/` | Типы аварий, встречающиеся у тенанта |
 | `GET /api/v1/alarms/available-keys/` | Ключи для конструктора правил |
-| `GET`, `PUT /api/v1/main/device-profile/<id>/` | Чтение и сохранение правил |
-| `POST /api/v1/main/device-profile/<id>/alarms/preview/` | Сухой прогон правил |
+| `GET`, `POST /api/v1/alarms/rules/` | Список правил и создание правила |
+| `GET`, `PUT`, `DELETE /api/v1/alarms/rules/<id>/` | Карточка правила, частичное изменение, удаление |
+| `POST /api/v1/alarms/rules/bulk/` | Заменить все правила профиля разом |
+| `POST /api/v1/alarms/rules/preview/` | Сухой прогон правил |
+| `GET /api/v1/alarms/rule-templates/` | Каталог шаблонов для конструктора |
 | `GET`, `PUT /api/v1/main/notification-settings/` | Настройки Telegram тенанта |
 
-Swagger: теги `Alarms` и `Main, Device Profile`.
+Swagger: теги `Alarms` и `Alarm Rules`.
 
 ### 8.2. Правила
 
-Отдельного CRUD нет — правила живут в профиле. Рабочий цикл конструктора правил:
+У правил свой CRUD: правило — строка, менять его можно по одному, не пересохраняя профиль.
+Рабочий цикл конструктора:
 
 1. `GET /api/v1/alarms/available-keys/` — что можно выбрать в качестве ключа;
-2. `GET /api/v1/main/device-profile/<id>/` — текущие правила в `profile_data.alarms`;
-3. `POST …/alarms/preview/` с изменённым массивом — сколько устройств совпадёт прямо сейчас;
-4. `PUT /api/v1/main/device-profile/<id>/` — сохранить.
+2. `GET /api/v1/alarms/rules/?device_profile=<id>` — текущие правила профиля;
+3. `POST /api/v1/alarms/rules/preview/` — сколько устройств совпадёт прямо сейчас;
+4. `POST` или `PUT /api/v1/alarms/rules/…` — сохранить.
 
-**Сохранение.** `PUT` профиля — полный: передаются все поля, полученные в `GET`. `profile_data`
-заменяется целиком, поэтому остальные ключи `profile_data` нужно вернуть как есть. Массив
-`alarms` тоже заменяется целиком: чтобы добавить правило, отправьте старые и новое.
+**Список.** `GET /api/v1/alarms/rules/`
 
-```http
-PUT /api/v1/main/device-profile/7c1e2a8e-3b0f-4a8e-9f0d-51b7e0c7a4d2/
-Authorization: Bearer eyJhbGciOi...
-Content-Type: application/json
-```
+| Параметр | Значения |
+|---|---|
+| `device_profile` | UUID профиля |
+| `alarm_type` | строка, повторяемый |
+| `enabled` | `true` / `false` |
+| `search_value` | подстрока в типе аварии или имени профиля |
+| `sort_by` | `alarm_type`, `created_at`, с `-` для убывания. По умолчанию `alarm_type` |
+| `page`, `size` | `size` по умолчанию 50 |
+
+**Создание.** `POST /api/v1/alarms/rules/` — тело это объект `DeviceProfileAlarm` из
+[§4](#4-формат-правил) плюс `device_profile` и необязательный `enabled`:
 
 ```json
 {
-  "name": "Thermostats",
-  "type": "DEFAULT",
-  "transport_type": "DEFAULT",
-  "provision_type": "DISABLED",
-  "description": "",
-  "is_default": false,
-  "profile_data": {
-    "configuration": {"type": "DEFAULT"},
-    "alarms": [
-      {
-        "id": "myHighTemperature",
-        "alarmType": "High Temperature",
-        "createRules": {
-          "MINOR": {
-            "condition": {
-              "condition": [
-                {"key": {"type": "TIME_SERIES", "key": "Room Temperature"}, "valueType": "NUMERIC",
-                 "predicate": {"type": "NUMERIC", "operation": "GREATER", "value": {"defaultValue": 27}}}
-              ],
-              "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
-            },
-            "alarmDetails": "Температура ${Room Temperature}° в номере ${room}"
-          }
-        },
-        "clearRule": {
-          "condition": {
-            "condition": [
-              {"key": {"type": "TIME_SERIES", "key": "Room Temperature"}, "valueType": "NUMERIC",
-               "predicate": {"type": "NUMERIC", "operation": "LESS", "value": {"defaultValue": 26}}}
-            ]
-          }
-        }
-      }
-    ]
+  "device_profile": "7c1e2a8e-3b0f-4a8e-9f0d-51b7e0c7a4d2",
+  "enabled": true,
+  "alarmType": "High Temperature",
+  "createRules": {
+    "MINOR": {
+      "condition": {
+        "condition": [
+          {"key": {"type": "TIME_SERIES", "key": "Room Temperature"}, "valueType": "NUMERIC",
+           "predicate": {"type": "NUMERIC", "operation": "GREATER", "value": {"defaultValue": 27}}}
+        ],
+        "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
+      },
+      "alarmDetails": "Температура ${Room Temperature}° в номере ${room}"
+    }
+  },
+  "clearRule": {
+    "condition": {
+      "condition": [
+        {"key": {"type": "TIME_SERIES", "key": "Room Temperature"}, "valueType": "NUMERIC",
+         "predicate": {"type": "NUMERIC", "operation": "LESS", "value": {"defaultValue": 26}}}
+      ]
+    }
   }
 }
 ```
 
-(Поля профиля, кроме `profile_data`, и ключи `profile_data`, кроме `alarms`, показаны условно —
-отправляйте то, что вернул `GET`.)
+Ответ `201` — правило с дописанными значениями по умолчанию:
 
-Ответ `200` — профиль, где `profile_data.alarms` уже с дописанными значениями по умолчанию.
-Ошибка валидации — `400`, формат в [4.11](#411-валидация). Если в `profile_data` нет ключа
-`alarms`, правила не проверяются, а `profile_data` сохраняется как есть — **без правил**: профиль
-их потеряет. Изменения подхватываются на следующем проходе вычислителя.
+```json
+{
+  "id": "4f1c9a0b-62d7-4f1e-9b3a-5c8d7e6f0a12",
+  "device_profile": "7c1e2a8e-3b0f-4a8e-9f0d-51b7e0c7a4d2",
+  "device_profile_name": "Thermostats",
+  "enabled": true,
+  "alarmType": "High Temperature",
+  "createRules": {"MINOR": {"condition": {"condition": ["…"], "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}}, "alarmDetails": "Температура ${Room Temperature}° в номере ${room}"}},
+  "clearRule": {"condition": {"condition": ["…"], "spec": {"type": "SIMPLE"}}},
+  "propagate": false,
+  "propagateRelationTypes": [],
+  "propagateToOwner": false,
+  "propagateToTenant": false,
+  "created_at": 1789381080412,
+  "updated_at": 1789381080412
+}
+```
+
+`tenant` правила берётся из профиля и в теле не принимается. Профиль другого тенанта — `400`.
+Второе правило того же `alarm_type` на том же профиле — `400` (на разных профилях можно).
+
+**Изменение.** `PUT /api/v1/alarms/rules/<id>/` — **частичное**: отправляйте только то, что
+меняется. Выключить правило, не пересылая условия:
+
+```json
+{"enabled": false}
+```
+
+Если в теле есть `createRules` или `clearRule`, они проверяются целиком — валидатор не умеет
+проверять «половину дерева».
+
+**Удаление.** `DELETE /api/v1/alarms/rules/<id>/` → `204`. Уже поднятые этим правилом аварии
+остаются в журнале и больше никем не снимаются — закройте их `bulk/clear/`, если они не нужны.
+
+**Массовая замена.** `POST /api/v1/alarms/rules/bulk/` — тело это тот самый массив, который раньше
+лежал в `profile_data["alarms"]`, поэтому это же путь импорта профиля из ThingsBoard:
+
+```json
+{
+  "device_profile": "7c1e2a8e-3b0f-4a8e-9f0d-51b7e0c7a4d2",
+  "alarms": [{"alarmType": "Device Offline", "createRules": {"…": "…"}}]
+}
+```
+
+Сопоставление идёт по `alarmType`: правило из массива обновляет существующую строку того же типа
+(id и аудит сохраняются), новые типы создаются, отсутствующие в массиве — удаляются. Пустой
+массив очищает правила профиля. Ответ `200` — итоговый список правил профиля.
+
+Ошибка валидации — `400`, формат в [4.11](#411-валидация): для одного правила пути начинаются
+сразу с `createRules`, для `bulk` — с `alarms` и индекса.
+
+Изменения подхватываются вычислителем на следующем проходе, не позже
+`ALARMS_EVAL_INTERVAL_SEC` секунд.
 
 <a id="preview"></a>
 
-**Сухой прогон.** `POST /api/v1/main/device-profile/<id>/alarms/preview/`. Тело `{"alarms": […]}` —
-проверить несохранённые правила; пустое тело `{}` — проверить сохранённые. Ничего не пишет.
+**Сухой прогон.** `POST /api/v1/alarms/rules/preview/`
 
 ```json
-{"alarms": [{"alarmType": "High Temperature", "createRules": {"MINOR": {"condition": {"condition": [
-  {"key": {"type": "TIME_SERIES", "key": "Room Temperature"}, "valueType": "NUMERIC",
-   "predicate": {"type": "NUMERIC", "operation": "GREATER", "value": {"defaultValue": 27}}}]}}}}]}
+{"device_profile": "7c1e2a8e-3b0f-4a8e-9f0d-51b7e0c7a4d2", "alarms": [{"alarmType": "High Temperature", "createRules": {"…": "…"}}]}
 ```
 
-Ответ:
+Без `alarms` прогоняются **включённые** правила профиля, то есть «что сработает сейчас».
+Ничего не пишет.
 
 ```json
 {
@@ -1453,11 +1552,10 @@ Content-Type: application/json
       "create_rules": [
         {
           "severity": "MINOR",
-          "spec": "SIMPLE",
+          "spec": "DURATION",
           "matched_count": 2,
           "sample": [
-            {"id": "9a4d7c2e-1f3b-4c5d-8e6f-7a8b9c0d1e2f", "name": "Thermostat 305", "room": "305", "message": "Температура 27.6° в номере 305"},
-            {"id": "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9", "name": "Thermostat 412", "room": "412", "message": "Температура 28.1° в номере 412"}
+            {"id": "9a4d7c2e-1f3b-4c5d-8e6f-7a8b9c0d1e2f", "name": "Thermostat 305", "room": "305", "message": "Температура 27.6° в номере 305"}
           ]
         }
       ],
@@ -1467,14 +1565,40 @@ Content-Type: application/json
 }
 ```
 
-- `device_count` — активные устройства профиля;
-- `matched_count` — у скольких из них **все фильтры** условия истинны сейчас; `sample` — до пяти
-  примеров с отрендеренным сообщением;
+- `matched_count` — у скольких из `device_count` устройств **все фильтры** условия истинны сейчас;
+  `sample` — до пяти примеров с отрендеренным сообщением;
 - `spec` и `schedule` **игнорируются**: превью знает только «сейчас», а не «сколько держится»;
-- `clear_rule` — такой же объект `{"matched_count", "sample"}` или `null`.
+- `matched_count` близко к `device_count` — почти наверняка ошибка в пороге или операции.
 
-Если правило совпадает с большинством устройств профиля — почти наверняка ошибка в пороге или
-операции.
+<a id="rule-templates"></a>
+
+**Шаблоны.** `GET /api/v1/alarms/rule-templates/` — готовые правила для кнопки «добавить типовое
+правило». Право — `alarms.view_alarmrule`.
+
+```json
+{
+  "results": [
+    {
+      "id": "high-temperature",
+      "name": "Высокая температура",
+      "description": "Температура выше 30° дольше 5 минут. Порог можно переопределить на номере атрибутом «temperatureMax».",
+      "requires": {"attributes": [], "timeseries": ["Room Temperature"]},
+      "rule": {"alarmType": "High Temperature", "createRules": {"MINOR": {}}, "clearRule": {}}
+    }
+  ]
+}
+```
+
+- `rule` — готовый `DeviceProfileAlarm`: его можно отправить в `POST /alarms/rules/` как есть,
+  добавив `device_profile`;
+- `requires` — ключи, на которые опирается шаблон. Сверьте их с
+  [`available-keys`](#available-keys): правило на ключ, который тенант не присылает, не сработает
+  никогда, и узнать об этом иначе нельзя;
+- каталог живёт в `apps/alarms/templates.py`, тот же модуль используют тесты — кривой шаблон не
+  доедет до панели;
+- сейчас их четыре: два правила связи и два температурных.
+
+Ничего не засеивается автоматически: шаблон попадает к тенанту только когда его выбрали.
 
 <a id="available-keys"></a>
 
@@ -1493,7 +1617,6 @@ Content-Type: application/json
 - `entity_fields` — белый список, всегда целиком;
 - `search_value` — подстрока без учёта регистра, фильтрует `timeseries` и `attributes`;
 - кеш 5 минут на тенант: новый ключ появится в каталоге с задержкой.
-
 
 ### 8.3. Журнал и активные аварии
 
@@ -2000,12 +2123,15 @@ make logs s=celery-beat
 | Миграция | Что делает |
 |---|---|
 | `alarms/0001_initial` | Таблицы `alarms_alarm`, `alarms_alarm_comment`, `alarms_rule_state`, индексы, права |
+| `alarms/0002_alarmrule_…` | Таблица `alarms_alarm_rule`, уникальность `(device_profile, alarm_type)`, индексы, права `*_alarmrule` |
+| `alarms/0003_move_rules_out_of_device_profile` | Переносит правила из `DeviceProfile.profile_data["alarms"]` в строки и убирает ключ `alarms` из `profile_data`. Обратная операция возвращает их в профиль |
 | `shuttle/0028_alter_tskvlatest_entity_and_more` | Индекс `ix_ts_kv_latest_key` по ключу в `shuttle_ts_kv_latest` для выборок вычислителя |
 | `main/0066_alter_tenant_options` | Права `view/change_notificationsettings` |
 
-Data-миграций у приложения нет: существующим профилям правила, а существующим устройствам
-атрибуты `notifyOnOffline` / `gatewayActive` не засеваются — это разовые действия при внедрении,
-см. [6](#6-правила-связи-устройства-и-шлюзы) и
+`0003` идемпотентна по смыслу: после неё в `profile_data` ключа `alarms` нет, и повторный прогон
+переносить уже нечего. Правила и серверные атрибуты `notifyOnOffline` / `gatewayActive` никому
+не засеваются — это разовые действия при внедрении, см.
+[6](#6-правила-связи-устройства-и-шлюзы) и
 [6.1](#61-атрибуты-от-которых-зависят-offline-правила).
 
 ### 11.5. Ручные запуски
@@ -2056,17 +2182,19 @@ docker exec -it celery-low python manage.py shell -c \
 
 1. **Вычислитель работает?** В логе `celery-default` раз в интервал есть `Alarm evaluation: …`,
    `ALARMS_ENABLED` не `false`, `celery-beat` запущен.
-2. **Правило на нужном профиле?** Профиль активен, устройство активно и привязано к нему.
+2. **Правило на нужном профиле и включено?** `GET /api/v1/alarms/rules/?device_profile=<id>` —
+   `enabled: true`, профиль активен, устройство активно и привязано к этому профилю.
 3. **Условие выполняется прямо сейчас?** Прогоните [`preview`](#preview). Если `matched_count = 0`,
    разберите фильтры по одному на конкретном устройстве (только чтение, ничего не пишет):
 
    ```python
-   from alarms.services.engine import build_snapshots, collect_keys, profile_alarms
+   from alarms.services.engine import build_snapshots, collect_keys, load_rules
    from alarms.services.predicates import eval_filter
    from main.models import Device
 
    device = Device.objects.select_related("room", "device_profile").get(id="<device_id>")
-   rules = profile_alarms(device.device_profile)
+   # только включённые правила профиля — ровно то, что видит вычислитель
+   rules = load_rules([device.device_profile_id]).get(device.device_profile_id, [])
    ts_keys, attr_keys = collect_keys(rules)
    snapshot = build_snapshots([device], ts_keys, attr_keys)[device.id]
 
@@ -2112,7 +2240,8 @@ docker exec -it celery-low python manage.py shell -c \
 - Значение в зазоре между порогами создания и снятия.
 - Нет значения ключа снятия (устройство перестало присылать телеметрию) — предикат ложен.
 - У `clearRule` своё расписание или `DURATION`, которые ещё не выполнены.
-- Правило удалили из профиля — вычислитель этот тип больше не видит, закройте аварию вручную.
+- Правило удалили или выключили (`enabled: false`) — вычислитель этот тип больше не видит,
+  в том числе его `clearRule`; закройте аварию вручную.
 
 ### 12.3. Слишком много аварий
 
@@ -2168,6 +2297,7 @@ docker exec -it django python manage.py test apps/alarms
 | Файл | Что проверяет |
 |---|---|
 | `test_validation.py` | Отклонение кривых правил; документированная пара правил связи проходит валидатор |
+| `test_rules_api.py` | CRUD правил: создание и нормализация, уникальность типа в профиле, частичное изменение, `bulk`, изоляция тенантов, выключенное правило не срабатывает, каталог шаблонов |
 | `test_predicates.py` | Все операции, приведение типов, `COMPLEX`, отсутствующие значения |
 | `test_dynamic_value.py` | `defaultValue` / `dynamicValue`, `inherit` вверх по цепочке |
 | `test_spec.py` | `SIMPLE`, `DURATION` (единицы, сброс, длительность из атрибута), `REPEATING` |
@@ -2227,18 +2357,23 @@ class EmailChannel:
    перебирать каналы и строить текст под каждый. Отметки `notified_at` общие на аварию — если
    каналы должны доставляться независимо, отметки придётся развести по каналам.
 
-### 14.4. Набор правил «из коробки», если он всё-таки понадобится
+### 14.4. Новый шаблон и набор «из коробки»
 
-Сейчас правил по умолчанию нет сознательно: набор, навязанный всем профилям, приходится потом
-вычищать у каждого тенанта. Если набор нужен — например, для типовых объектов одной сети:
+**Добавить шаблон** в кнопку «типовое правило» — функция-строитель и запись в `TEMPLATES`
+(`apps/alarms/templates.py`): `id` (строковый ключ), `name`, `description`, `requires` и
+`rule`-строитель. Тест `test_every_shipped_template_passes_the_validator` прогонит его через
+валидатор автоматически.
 
-1. Модуль с правилами (например `apps/alarms/fixtures/default_alarms.py`), возвращающий список
-   правил с уникальными `id`.
-2. Новым тенантам — `defaults={"profile_data": {"alarms": default_alarms()}}` в
-   `DeviceProfile.objects.get_or_create` внутри `provision_tenant`
-   (`apps/main/services/tenant_provisioning.py`).
+**Засеивать правила всем** по умолчанию сознательно не делается: набор, навязанный всем профилям,
+приходится потом вычищать у каждого тенанта — для этого и есть шаблоны. Если засев всё же нужен,
+например для типовых объектов одной сети:
+
+1. Набор правил — те же строители из `templates.py`.
+2. Новым тенантам — создавать строки `AlarmRule` для профилей внутри `provision_tenant`
+   (`apps/main/services/tenant_provisioning.py`), по одной на правило из набора.
 3. Существующим профилям — скрипт или data-миграция
    (`./manage.py makemigrations --empty alarms`, затем `RunPython` с обратной операцией);
-   добавляйте правило только туда, где его `id` ещё нет, иначе перезатрёте правки тенанта.
+   создавайте правило только там, где его `alarm_type` ещё не занят, иначе упрётесь в
+   уникальное ограничение и перезатрёте правки тенанта.
 4. Прогоните набор через `validate_profile_alarms` в тесте — иначе кривое правило из набора
    разъедется с валидатором незаметно.

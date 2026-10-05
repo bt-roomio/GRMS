@@ -88,6 +88,19 @@
         - alarms
         - alarm
 
+      - - view_alarmrule
+        - alarms
+        - alarmrule
+      - - add_alarmrule
+        - alarms
+        - alarmrule
+      - - change_alarmrule
+        - alarms
+        - alarmrule
+      - - delete_alarmrule
+        - alarms
+        - alarmrule
+
       - - view_user
         - users
         - user

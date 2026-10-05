@@ -154,25 +154,3 @@ def available_keys_swagger():
             )
         },
     )
-
-
-def preview_swagger():
-    return swagger_auto_schema(
-        tags=["Main, Device Profile"],
-        responses={
-            200: openapi.Response(
-                description="How many devices the rules would match right now",
-                examples={
-                    "application/json": {
-                        "device_count": 120,
-                        "alarms": [
-                            {
-                                "alarmType": "High Temperature",
-                                "create_rules": [{"severity": "MINOR", "matched_count": 2, "sample": []}],
-                            }
-                        ],
-                    }
-                },
-            )
-        },
-    )

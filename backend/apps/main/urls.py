@@ -1,6 +1,5 @@
 from django.urls import include, path
 
-from alarms.views.preview import DeviceProfileAlarmPreviewView
 from main.views.admin_settings import AdminSettingsView
 from main.views.alarm_settings import AlarmSettingsDetailView
 from main.views.block_floor import BlockFloorsView
@@ -44,11 +43,6 @@ urlpatterns = [
     path("device/<uuid:pk>/", DeviceDetailView.as_view(), name="device-detail"),
     path("device-profile/", DeviceProfileListView.as_view(), name="device-profile-list"),
     path("device-profile/<uuid:pk>/", DeviceProfileDetailView.as_view(), name="device-profile-detail"),
-    path(
-        "device-profile/<uuid:pk>/alarms/preview/",
-        DeviceProfileAlarmPreviewView.as_view(),
-        name="device-profile-alarms-preview",
-    ),
     path("device/<str:token>/credentials/", DeviceCredentialsDetailView.as_view(), name="device-credentials-detail"),
     path("guest/", GuestListView.as_view(), name="guest-list"),
     path("guest/<uuid:pk>/", GuestDetailView.as_view(), name="guest-detail"),
