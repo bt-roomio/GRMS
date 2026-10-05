@@ -2,6 +2,7 @@ import json
 
 from channelsmultiplexer import AsyncJsonWebsocketDemultiplexer
 
+from alarms.v2_consumers.alarms import AlarmConsumer
 from shuttle.v2_consumers.attributes import AttributeConsumer
 from shuttle.v2_consumers.card_logs import CardLogConsumer
 from shuttle.v2_consumers.cards import CardConsumer
@@ -37,6 +38,7 @@ class Demultiplexer(AsyncJsonWebsocketDemultiplexer):
         "card_logs": CardLogConsumer.as_asgi(),
         "attributes": AttributeConsumer.as_asgi(),
         "current_alarms": InactiveDeviceAttributeConsumer.as_asgi(),
+        "alarms": AlarmConsumer.as_asgi(),
         "gateway_logs": GatewayLogsConsumer.as_asgi(),
         "gateways": GatewayConsumer.as_asgi(),
         "tag_logs": TagLogsConsumer.as_asgi(),

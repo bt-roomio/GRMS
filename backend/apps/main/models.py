@@ -78,6 +78,8 @@ class Tenant(ServiceBaseModel):
             ("change_generalsettings", "Can change general settings"),
             ("view_integrationsettings", "Can view integration settings"),
             ("change_integrationsettings", "Can change integration settings"),
+            ("view_notificationsettings", "Can view notification settings"),
+            ("change_notificationsettings", "Can change notification settings"),
         ]
 
 
@@ -322,6 +324,7 @@ class Device(BaseModel):
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", SET_NULL, "devices", null=True, blank=True)
+    room_id: UUID
     label = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
     device_data = models.JSONField(null=True, blank=True)
@@ -398,7 +401,7 @@ class DeviceProfile(BaseModel):
     provision_device_key = models.CharField(unique=True, blank=True, null=True)
     external_id = models.UUIDField(blank=True, null=True)
 
-    objects = DeviceProfileQuerySet.as_manager()
+    objects: ClassVar[DeviceProfileQuerySet] = cast(DeviceProfileQuerySet, DeviceProfileQuerySet.as_manager())
 
     # TYPE
     tenant_id: UUID

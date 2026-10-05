@@ -62,6 +62,32 @@
         - main
         - tenant
 
+      - - view_notificationsettings
+        - main
+        - tenant
+      - - change_notificationsettings
+        - main
+        - tenant
+
+      - - view_alarm
+        - alarms
+        - alarm
+      - - change_alarm
+        - alarms
+        - alarm
+      - - delete_alarm
+        - alarms
+        - alarm
+      - - ack_alarm
+        - alarms
+        - alarm
+      - - clear_alarm
+        - alarms
+        - alarm
+      - - assign_alarm
+        - alarms
+        - alarm
+
       - - view_user
         - users
         - user

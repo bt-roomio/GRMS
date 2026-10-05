@@ -1,6 +1,7 @@
 import os
 
 from celery import Celery
+from celery import signals as celery_signals
 from kombu import Queue
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -10,6 +11,23 @@ app = Celery("config")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
+
+
+@celery_signals.setup_logging.connect
+def configure_celery_logging(**kwargs):
+    """Отдаём настройку логирования Django вместо встроенной в Celery.
+
+    Без приёмника на этом сигнале Celery считает логирование своим: при
+    worker_hijack_root_logger (включён по умолчанию) он очищает обработчики
+    логгера ``celery`` и вешает обработчик только на root. А в settings.LOGGING
+    у ``celery`` стоит ``propagate: False``, поэтому после такой "настройки"
+    записи beat и воркеров не доходят никуда, и лог выглядит пустым.
+    """
+    from logging.config import dictConfig
+
+    from django.conf import settings
+
+    dictConfig(settings.LOGGING)
 
 
 @app.task(bind=True)
@@ -50,6 +68,9 @@ app.conf.task_routes = {
     "users.tasks.flush_expired_tokens": {"queue": "low"},
     "admin_panel.tasks.send_activation_email": {"queue": "low"},
     "mews.tasks.sync_access_tokens": {"queue": "low"},
+    "alarms.tasks.evaluate_alarm_rules": {"queue": "default"},
+    "alarms.tasks.dispatch_notifications": {"queue": "low"},
+    "alarms.tasks.purge_alarms": {"queue": "low"},
 }
 
 app.conf.update(

@@ -12,6 +12,21 @@ class PermissionsSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "codename", "content_type")
 
 
+class PermissionRelatedField(serializers.PrimaryKeyRelatedField):
+    """Accepts a bare permission id or the object shape returned by ``PermissionsSerializer``."""
+
+    default_error_messages = {
+        "missing_id": 'Expected a permission id or an object with an "id" key.',
+    }
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            if "id" not in data:
+                self.fail("missing_id")
+            data = data["id"]
+        return super().to_internal_value(data)
+
+
 class RoleSimpleSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -26,7 +41,7 @@ class RoleSimpleSerializer(serializers.ModelSerializer):
 
 
 class RoleSerializer(serializers.ModelSerializer):
-    permissions = serializers.PrimaryKeyRelatedField(queryset=Permission.objects.all(), many=True, required=True)
+    permissions = PermissionRelatedField(queryset=Permission.objects.all(), many=True, required=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

@@ -2,7 +2,26 @@ from django.db.models import Case, Exists, OuterRef, Prefetch, Q, Value, When
 from django.db.models.fields import IntegerField
 
 from access_manager.models import NeedSyncDevice
+from alarms.constants import ATTR_NOTIFY_ON_OFFLINE
 from core.querysets.base_queryset import BaseQuerySet
+
+
+def notify_on_offline_prefetch() -> Prefetch:
+    """
+    The "notify me when this device drops" toggle is a server attribute, not a
+    column, so the list view has to fetch it in one go or pay an extra query per
+    device.
+    """
+    from shuttle.models import AttributeKv
+
+    return Prefetch(
+        "attribute_kvs",
+        queryset=AttributeKv.objects.filter(
+            attribute_type=AttributeKv.SERVER_SCOPE,
+            attribute_key=ATTR_NOTIFY_ON_OFFLINE,
+        ),
+        to_attr="notify_attrs",
+    )
 
 
 class DeviceQuerySet(BaseQuerySet):
@@ -18,7 +37,7 @@ class DeviceQuerySet(BaseQuerySet):
     ):
         query = (
             self.select_related("credentials", "device_profile")
-            .prefetch_related("device_public_spaces__public_space")
+            .prefetch_related("device_public_spaces__public_space", notify_on_offline_prefetch())
             .filter(tenant=tenant, is_active=True)
         )
         if search_field and search_value:
