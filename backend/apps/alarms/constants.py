@@ -4,8 +4,8 @@ The ThingsBoard alarm-rule vocabulary, ported verbatim.
 Names and values match the TB classes one for one (``AlarmSeverity``,
 ``AlarmConditionKeyType``, ``EntityKeyValueType``, ``FilterPredicateType``,
 ``AlarmConditionSpecType``, ``AlarmScheduleType``, ``DynamicValueSourceType``),
-so a rule exported from a TB device profile can be pasted into
-``DeviceProfile.profile_data["alarms"]`` unchanged.
+so a rule exported from a TB device profile can be posted to
+``/api/v1/alarms/rules/`` unchanged.
 """
 
 from django.db import models

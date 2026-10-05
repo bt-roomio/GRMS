@@ -10,6 +10,7 @@ from django.utils import timezone
 from alarms.constants import AlarmSeverity, AlarmStatus
 from alarms.querysets.alarm import AlarmQuerySet
 from alarms.querysets.alarm_comment import AlarmCommentQuerySet
+from alarms.querysets.rule import AlarmRuleQuerySet
 from alarms.querysets.rule_state import AlarmRuleStateQuerySet
 from core.models import BaseModel, UpdateByModel
 
@@ -141,6 +142,86 @@ class AlarmComment(BaseModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=["alarm", "-created_at"], name="ix_alarm_comment_alarm"),
+        ]
+
+
+class AlarmRule(BaseModel, UpdateByModel):
+    """
+    One alarm type on one device profile — the port of TB's ``DeviceProfileAlarm``.
+
+    ThingsBoard keeps these inside ``DeviceProfile.profile_data["alarms"]``; here
+    every rule is a row instead, which buys per-rule CRUD, an ``enabled`` switch,
+    an audit trail and uniqueness enforced by the database rather than by a
+    serializer. The condition trees stay JSON on purpose: they are recursive
+    (``COMPLEX`` predicates) and polymorphic (``spec``, ``schedule``), the
+    evaluator reads them as dicts, and keeping the TB shape means a rule exported
+    from ThingsBoard still pastes in unchanged.
+
+    ``alarm_type`` stays the runtime key: ``Alarm`` dedupes on
+    (originator, alarm_type) and ``AlarmRuleState`` counts per
+    (device, alarm_type), exactly as when the rules lived in the profile.
+    """
+
+    tenant = models.ForeignKey("main.Tenant", CASCADE, related_name="alarm_rules")
+    device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, related_name="alarm_rules")
+
+    alarm_type = models.CharField(max_length=255)
+    # Turning a rule off beats deleting it: the journal keeps referring to its
+    # alarm type, and a rule comes back without being retyped.
+    enabled = models.BooleanField(default=True)
+
+    # ``{"CRITICAL": {condition, schedule, alarmDetails}, ...}`` and one clear
+    # rule, both camelCase inside, as TB writes them.
+    create_rules = models.JSONField(default=dict)
+    clear_rule = models.JSONField(null=True, blank=True)
+
+    propagate = models.BooleanField(default=False)
+    propagate_relation_types = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    propagate_to_owner = models.BooleanField(default=False)
+    propagate_to_tenant = models.BooleanField(default=False)
+
+    # TYPING
+    tenant_id: UUID
+    device_profile_id: UUID
+
+    objects: ClassVar[AlarmRuleQuerySet] = cast(AlarmRuleQuerySet, AlarmRuleQuerySet.as_manager())
+
+    def __str__(self) -> str:
+        return f"{self.alarm_type} ({self.device_profile_id})"
+
+    def as_rule(self) -> dict:
+        """
+        The dict the evaluator and the rule validators speak.
+
+        One place converts a row back into TB's ``DeviceProfileAlarm`` shape, so
+        neither the engine nor the serializers need to know rules became rows.
+        """
+        return {
+            "id": str(self.id),
+            "alarmType": self.alarm_type,
+            "createRules": self.create_rules or {},
+            "clearRule": self.clear_rule,
+            "propagate": self.propagate,
+            "propagateRelationTypes": self.propagate_relation_types or [],
+            "propagateToOwner": self.propagate_to_owner,
+            "propagateToTenant": self.propagate_to_tenant,
+        }
+
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
+        db_table = "alarms_alarm_rule"
+        ordering = ("alarm_type",)
+        constraints = [
+            # Two rules of one type on one profile would fight over the same
+            # active alarm row, which the partial unique index on ``Alarm``
+            # would then reject at random.
+            models.UniqueConstraint(
+                fields=["device_profile", "alarm_type"],
+                name="uniq_alarm_rule_profile_type",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "enabled"], name="ix_alarm_rule_tenant"),
+            models.Index(fields=["device_profile", "enabled"], name="ix_alarm_rule_profile"),
         ]
 
 

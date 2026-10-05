@@ -339,13 +339,13 @@ class PreviewTest(AlarmAPITestCase):
     fixtures = (*AlarmAPITestCase.fixtures, "ts_dictionary.yaml", "ts_kv_latest.yaml")
 
     def url(self):
-        return reverse("main:device-profile-alarms-preview", args=[PROFILE_ID])
+        return reverse("alarms:rule-preview")
 
     def test_preview_counts_matching_devices_without_writing_anything(self):
         rule = temperature_rule(threshold=0, attribute=None)
         rule["createRules"]["MINOR"]["condition"]["condition"][0]["key"]["key"] = "humidity"
 
-        response = self.post(self.url(), data={"alarms": [rule]}, format="json")
+        response = self.post(self.url(), data={"device_profile": PROFILE_ID, "alarms": [rule]}, format="json")
 
         self.assertEqual(response.status_code, 200)
         alarm = response.data["alarms"][0]
@@ -357,18 +357,5 @@ class PreviewTest(AlarmAPITestCase):
         broken = offline_rule(minutes=0)
         broken["createRules"]["MAJOR"]["condition"]["condition"][0]["valueType"] = "NUMERIC"
 
-        response = self.post(self.url(), data={"alarms": [broken]}, format="json")
-        self.assertEqual(response.status_code, 400)
-
-
-class DeviceProfileRuleValidationTest(AlarmAPITestCase):
-    def test_saving_a_profile_validates_its_rules(self):
-        url = reverse("main:device-profile-detail", args=[PROFILE_ID])
-        payload = {
-            "name": "default",
-            "type": "DEFAULT",
-            "profile_data": {"alarms": [{"alarmType": "Broken", "createRules": {}}]},
-        }
-
-        response = self.put(url, data=payload, format="json")
+        response = self.post(self.url(), data={"device_profile": PROFILE_ID, "alarms": [broken]}, format="json")
         self.assertEqual(response.status_code, 400)

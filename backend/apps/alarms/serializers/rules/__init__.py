@@ -1,11 +1,11 @@
 """
 DRF mirrors of the ThingsBoard alarm-rule classes.
 
-Field names stay camelCase on purpose: rules live in
-``DeviceProfile.profile_data["alarms"]`` in exactly the shape TB writes them, so
-a profile exported from ThingsBoard can be pasted in unchanged and anyone who
-read the TB docs already knows the contract. ``validated_data`` therefore comes
-back camelCase too and is stored verbatim — no lossy snake_case round trip.
+Field names stay camelCase on purpose: a rule travels in exactly the shape TB
+writes it, so a profile exported from ThingsBoard can be pasted in unchanged and
+anyone who read the TB docs already knows the contract. ``validated_data``
+therefore comes back camelCase too and is stored verbatim in the rule's JSON
+columns — no lossy snake_case round trip.
 """
 
 from alarms.serializers.rules.alarm_condition import AlarmConditionSerializer

@@ -14,12 +14,24 @@ from alarms.views.alarm import (
     AlarmTypeView,
     AvailableKeysView,
 )
+from alarms.views.rule import (
+    AlarmRuleBulkView,
+    AlarmRuleDetailView,
+    AlarmRuleListView,
+    AlarmRulePreviewView,
+    AlarmRuleTemplateView,
+)
 
 urlpatterns = [
     path("", AlarmListView.as_view(), name="alarm-list"),
     path("summary/", AlarmSummaryView.as_view(), name="alarm-summary"),
     path("types/", AlarmTypeView.as_view(), name="alarm-types"),
     path("available-keys/", AvailableKeysView.as_view(), name="alarm-available-keys"),
+    path("rules/", AlarmRuleListView.as_view(), name="rule-list"),
+    path("rules/bulk/", AlarmRuleBulkView.as_view(), name="rule-bulk"),
+    path("rule-templates/", AlarmRuleTemplateView.as_view(), name="rule-templates"),
+    path("rules/preview/", AlarmRulePreviewView.as_view(), name="rule-preview"),
+    path("rules/<uuid:pk>/", AlarmRuleDetailView.as_view(), name="rule-detail"),
     path("bulk/ack/", AlarmBulkAckView.as_view(), name="alarm-bulk-ack"),
     path("bulk/clear/", AlarmBulkClearView.as_view(), name="alarm-bulk-clear"),
     path("<uuid:pk>/", AlarmDetailView.as_view(), name="alarm-detail"),

@@ -24,10 +24,10 @@ from alarms.constants import (
     KEY_TIME_SERIES,
     SOURCE_CURRENT_DEVICE,
 )
-from alarms.models import Alarm, AlarmRuleState
+from alarms.models import Alarm, AlarmRule, AlarmRuleState
 from alarms.services import state as rule_state
 from alarms.services.snapshot import DataSnapshot
-from main.models import Device, DeviceProfile, Tenant
+from main.models import Device, Tenant
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
 logger = logging.getLogger(__name__)
@@ -61,11 +61,19 @@ class EvaluationResult:
 # --------------------------------------------------------------------------
 
 
-def profile_alarms(profile: DeviceProfile) -> list[dict]:
-    alarms = (profile.profile_data or {}).get("alarms") if isinstance(profile.profile_data, dict) else None
-    if not isinstance(alarms, list):
-        return []
-    return [alarm for alarm in alarms if isinstance(alarm, dict) and alarm.get("alarmType")]
+def load_rules(profile_ids=None) -> dict[UUID, list[dict]]:
+    """
+    Enabled rules of live profiles, grouped by profile.
+
+    GRMS deviation: TB keeps rules in ``DeviceProfile.profile_data["alarms"]``.
+    Here they are rows, so one query returns exactly the rules that may fire —
+    ``enabled`` and ``active`` are filtered in SQL instead of in Python after
+    loading every profile.
+    """
+    grouped: dict[UUID, list[dict]] = {}
+    for rule in AlarmRule.objects.active().for_profiles(profile_ids):
+        grouped.setdefault(rule.device_profile_id, []).append(rule.as_rule())
+    return grouped
 
 
 def iter_rules(alarm: dict) -> Iterator[dict]:
@@ -249,22 +257,14 @@ def chunked(items: list, size: int) -> Iterator[list]:
         yield chunk
 
 
-def active_profiles(profile_ids=None) -> list[DeviceProfile]:
-    query = DeviceProfile.objects.filter(active=True)
-    if profile_ids:
-        query = query.filter(id__in=profile_ids)
-    return [profile for profile in query if profile_alarms(profile)]
-
-
 def evaluate(now: datetime | None = None, profile_ids=None, device_ids=None) -> EvaluationResult:
     now = now or timezone.now()
     result = EvaluationResult()
 
-    profiles = active_profiles(profile_ids)
-    if not profiles:
+    rules_by_profile = load_rules(profile_ids)
+    if not rules_by_profile:
         return result
 
-    rules_by_profile = {profile.id: profile_alarms(profile) for profile in profiles}
     result.rules = sum(len(rules) for rules in rules_by_profile.values())
 
     devices_query = Device.objects.filter(is_active=True, device_profile_id__in=rules_by_profile).select_related("room")
