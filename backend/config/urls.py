@@ -36,6 +36,7 @@ urlpatterns = [
                 path("services/", include(("services.urls", "services"), namespace="services")),
                 path("admin/", include(("admin_panel.urls", "admin_panel"), namespace="admin_panel")),
                 path("fleet/", include(("fleet.urls", "fleet"), namespace="fleet")),
+                path("alarms/", include(("alarms.urls", "alarms"), namespace="alarms")),
             ]
         ),
     ),

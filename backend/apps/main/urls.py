@@ -1,5 +1,6 @@
 from django.urls import include, path
 
+from alarms.views.preview import DeviceProfileAlarmPreviewView
 from main.views.admin_settings import AdminSettingsView
 from main.views.alarm_settings import AlarmSettingsDetailView
 from main.views.block_floor import BlockFloorsView
@@ -13,6 +14,7 @@ from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.integration_settings import IntegrationSettingsDetailView
 from main.views.knx_from_conf import KnxDeviceFromConfListView
+from main.views.notification_settings import NotificationSettingsDetailView
 from main.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_from_conf import RoomFromConfListView
@@ -27,6 +29,7 @@ urlpatterns = [
     path("general-settings/", GeneralSettingsDetailView.as_view(), name="general-settings-detail"),
     path("integration-settings/", IntegrationSettingsDetailView.as_view(), name="integration-settings-detail"),
     path("alarm-settings/", AlarmSettingsDetailView.as_view(), name="alarm-settings"),
+    path("notification-settings/", NotificationSettingsDetailView.as_view(), name="notification-settings"),
     path("admin-settings/<str:key>/", AdminSettingsView.as_view(), name="admin-settings"),
     path("room/", RoomListView.as_view(), name="room-list"),
     path("room/<uuid:pk>/", RoomDetailView.as_view(), name="room-detail"),
@@ -41,6 +44,11 @@ urlpatterns = [
     path("device/<uuid:pk>/", DeviceDetailView.as_view(), name="device-detail"),
     path("device-profile/", DeviceProfileListView.as_view(), name="device-profile-list"),
     path("device-profile/<uuid:pk>/", DeviceProfileDetailView.as_view(), name="device-profile-detail"),
+    path(
+        "device-profile/<uuid:pk>/alarms/preview/",
+        DeviceProfileAlarmPreviewView.as_view(),
+        name="device-profile-alarms-preview",
+    ),
     path("device/<str:token>/credentials/", DeviceCredentialsDetailView.as_view(), name="device-credentials-detail"),
     path("guest/", GuestListView.as_view(), name="guest-list"),
     path("guest/<uuid:pk>/", GuestDetailView.as_view(), name="guest-detail"),

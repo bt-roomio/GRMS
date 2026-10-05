@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "admin_panel",
     "hoteza",
     "fleet",
+    "alarms",
 ]
 
 MIDDLEWARE = [
@@ -327,7 +328,7 @@ SWAGGER_SETTINGS = {
 
 COMPANY_NAME = os.getenv("COMPANY_NAME", "Room.io")
 
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 
 
@@ -462,7 +463,39 @@ CELERY_BEAT_SCHEDULE = {
         "task": "fleet.tasks.poll_fleet_peers",
         "schedule": 60.0,
     },
+    "evaluate-alarm-rules": {
+        "task": "alarms.tasks.evaluate_alarm_rules",
+        "schedule": float(os.getenv("ALARMS_EVAL_INTERVAL_SEC", "30")),
+    },
+    "dispatch-alarm-notifications": {
+        "task": "alarms.tasks.dispatch_notifications",
+        "schedule": 60.0,
+    },
+    "purge-alarms": {
+        "task": "alarms.tasks.purge_alarms",
+        "schedule": crontab(hour=4, minute=30),
+    },
 }
+
+# ---------------------------------------------------------------------------
+# Alarms — ThingsBoard-style alarm rules on device profiles
+# ---------------------------------------------------------------------------
+# Kill switch: turns off the evaluator and the dispatcher without rolling back
+# the image, for when a hand-written rule misbehaves in production.
+ALARMS_ENABLED = os.getenv("ALARMS_ENABLED", "true").lower() in ("1", "true", "yes")
+# How often the evaluator sweeps TsKvLatest/AttributeKv. This is also the
+# worst-case delay between a condition becoming true and its alarm appearing.
+ALARMS_EVAL_INTERVAL_SEC = int(os.getenv("ALARMS_EVAL_INTERVAL_SEC", "30"))
+# Cleared alarms older than this are purged nightly; open ones never are.
+ALARMS_TTL_DAYS = int(os.getenv("ALARMS_TTL_DAYS", "365"))
+
+# One bot for the whole installation, a chat id per tenant — the token never
+# leaves the server, and tenants only ever configure where messages land.
+# Unrelated to the TELEGRAM_* pair in deploy/monitoring: that is Alertmanager's
+# own compose stack and its own env file.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_API_URL = os.getenv("TELEGRAM_API_URL", "https://api.telegram.org").rstrip("/")
+TELEGRAM_TIMEOUT = float(os.getenv("TELEGRAM_TIMEOUT", "10"))
 
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
 
@@ -556,6 +589,8 @@ LOGGING = {
             "level": _LOG_LEVEL,
             "propagate": False,
         },
+        "celery.app.trace": {"level": "WARNING"},
+        "celery.worker.strategy": {"level": "WARNING"},
         "main": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
@@ -587,6 +622,11 @@ LOGGING = {
             "propagate": False,
         },
         "core": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "alarms": {
             "handlers": ["console"],
             "level": _LOG_LEVEL,
             "propagate": False,

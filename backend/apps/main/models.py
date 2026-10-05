@@ -71,13 +71,15 @@ class Tenant(ServiceBaseModel):
 
     class Meta(ServiceBaseModel.Meta):
         db_table = "main_tenant"
-        permissions = [
+        permissions: ClassVar = [
             ("view_alarmsettings", "Can view alarms"),
             ("change_alarmsettings", "Can change alarms"),
             ("view_generalsettings", "Can view general settings"),
             ("change_generalsettings", "Can change general settings"),
             ("view_integrationsettings", "Can view integration settings"),
             ("change_integrationsettings", "Can change integration settings"),
+            ("view_notificationsettings", "Can view notification settings"),
+            ("change_notificationsettings", "Can change notification settings"),
         ]
 
 
@@ -159,11 +161,10 @@ class Room(BaseModel, UpdateByModel):
 
     def clean(self):
         super().clean()
-        if self.state is not None:
-            if self.Available in self.state and self.CheckedIn in self.state:
-                raise ValidationError(
-                    {"state": "Поле state не может содержать одновременно состояния Available и CheckedIn."}
-                )
+        if self.state is not None and self.Available in self.state and self.CheckedIn in self.state:
+            raise ValidationError(
+                {"state": "Поле state не может содержать одновременно состояния Available и CheckedIn."}
+            )
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -238,12 +239,12 @@ class Room(BaseModel, UpdateByModel):
 
     class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "main_room"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 fields=["number", "floor", "block", "tenant"], condition=Q(active=True), name="unique_active_room"
             )
         ]
-        permissions = [
+        permissions: ClassVar = [
             ("add_roomfromconf", "Can add room from conf"),
             ("view_roomstatus", "Can view room status"),
         ]
@@ -318,6 +319,7 @@ class Device(BaseModel):
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", SET_NULL, "devices", null=True, blank=True)
+    room_id: UUID
     label = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
     device_data = models.JSONField(null=True, blank=True)
@@ -356,7 +358,7 @@ class Device(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_device"
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 Lower("name"), "tenant", condition=Q(is_active=True), name="unique_device_name_tenant_is_active"
             ),
@@ -394,7 +396,7 @@ class DeviceProfile(BaseModel):
     provision_device_key = models.CharField(unique=True, blank=True, null=True)
     external_id = models.UUIDField(blank=True, null=True)
 
-    objects = DeviceProfileQuerySet.as_manager()
+    objects: ClassVar[DeviceProfileQuerySet] = cast(DeviceProfileQuerySet, DeviceProfileQuerySet.as_manager())
 
     def clean(self):
         super().clean()

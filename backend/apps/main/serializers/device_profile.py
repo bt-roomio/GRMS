@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from alarms.serializers.rules import validate_profile_alarms
 from core.utils.serializers import ValidatorSerializer
 from main.models import DeviceProfile
 
@@ -36,6 +37,17 @@ class DeviceProfileSerializer(serializers.ModelSerializer):
             "external_id",
         )
         read_only_fields = ("active",)
+
+    def validate_profile_data(self, value):
+        """
+        Alarm rules live in ``profile_data["alarms"]``, as in ThingsBoard, so
+        this is the only place they are ever written — and the only chance to
+        stop a malformed rule before the evaluator meets it inside Celery.
+        """
+        if not isinstance(value, dict) or "alarms" not in value:
+            return value
+
+        return {**value, "alarms": validate_profile_alarms(value["alarms"])}
 
 
 class DeviceProfileFilterParams(ValidatorSerializer):

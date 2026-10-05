@@ -61,7 +61,6 @@ def auto_block():
         check_out__lte=time.time(),
         auto_check_out=False,
     ).select_related("tenant")
-    print("guests selected: ", candidates)
 
     guest_ids = [
         guest.id

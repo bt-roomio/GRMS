@@ -228,7 +228,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-critical
-    command: celery -A config worker -Q critical -n critical@%h -l warning -c 2 --max-tasks-per-child=50
+    command: celery -A config worker -Q critical -n critical@%h -c 2 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
     labels:
@@ -247,7 +247,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
-    command: celery -A config worker -Q default -n default@%h -l warning -c 8 --max-tasks-per-child=100
+    command: celery -A config worker -Q default -n default@%h -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
     labels:
@@ -266,7 +266,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-realtime
-    command: celery -A config worker -Q realtime -n realtime@%h -l warning -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
+    command: celery -A config worker -Q realtime -n realtime@%h -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
     tmpfs:
       - /prom_mp
     labels:
@@ -285,7 +285,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
-    command: celery -A config worker -Q low -n low@%h -l warning -c 1 --max-tasks-per-child=50
+    command: celery -A config worker -Q low -n low@%h -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
     labels:
@@ -304,7 +304,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-beat
-    command: celery -A config beat --loglevel=warning
+    command: celery -A config beat
     tmpfs:
       - /prom_mp
 

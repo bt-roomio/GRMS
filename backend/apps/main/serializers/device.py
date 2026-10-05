@@ -3,12 +3,15 @@ import logging
 from rest_framework import serializers
 
 from access_manager.models import NeedSyncDevice
+from alarms.constants import ATTR_GATEWAY_ACTIVE, ATTR_NOTIFY_ON_OFFLINE
+from alarms.services.attributes import set_server_attribute
 from core.utils.random_letter import get_random_letter
 from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DeviceCredentials, Tenant
 from main.serializers.device_credentials import DeviceCredentialsSerializer
 from main.serializers.device_profile import SimpleDeviceProfileSerializer
 from main.utils.has_roomio_node import has_roomio_node
+from shuttle.models import AttributeKv
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +80,16 @@ class DeviceSerializer(serializers.ModelSerializer):
     credentials = serializers.PrimaryKeyRelatedField(queryset=DeviceCredentials.objects.all(), required=False)
     public_spaces = serializers.SerializerMethodField(read_only=True)
     as_door_lock_room = serializers.UUIDField(read_only=True)
+    # Write-through onto the ``notifyOnOffline`` server attribute the offline
+    # alarm rule filters on. The front end keeps an ordinary boolean toggle and
+    # the rule keeps an ordinary condition — no extra column, the TB way.
+    notify_on_offline = serializers.BooleanField(required=False)
 
     def to_representation(self, instance):
         from main.serializers.room import SimpleRoomSerializer
 
         data = super().to_representation(instance)
+        data["notify_on_offline"] = self.get_notify_on_offline(instance)
         data["credentials"] = (
             DeviceCredentialsSerializer(instance=instance.credentials).data
             if hasattr(instance, "credentials")
@@ -100,11 +108,27 @@ class DeviceSerializer(serializers.ModelSerializer):
         qs = rel_mgr.select_related("public_space")
         return [SimplePublicSpaceSerializer(space.public_space).data for space in qs]
 
+    def get_notify_on_offline(self, instance):
+        prefetched = getattr(instance, "notify_attrs", None)
+        attribute = (
+            next(iter(prefetched), None)
+            if prefetched is not None
+            else instance.attribute_kvs.filter(
+                attribute_type=AttributeKv.SERVER_SCOPE,
+                attribute_key=ATTR_NOTIFY_ON_OFFLINE,
+            ).first()
+        )
+        # Devices predating the toggle are notified about; the migration writes
+        # the attribute for them, this is only the belt to that braces.
+        return True if attribute is None or attribute.bool_v is None else bool(attribute.bool_v)
+
     def create(self, validated_data):
         if validated_data.get("additional_info", {}).get("roomio_node") and has_roomio_node(
             validated_data.get("tenant_id")
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
+
+        notify_on_offline = validated_data.pop("notify_on_offline", True)
 
         instance = super().create(validated_data)
         DeviceCredentials.objects.create(
@@ -112,6 +136,12 @@ class DeviceSerializer(serializers.ModelSerializer):
             credentials_id=get_random_letter(32),
             credentials_type="ACCESS_TOKEN",
         )
+        set_server_attribute(instance.id, ATTR_NOTIFY_ON_OFFLINE, notify_on_offline)
+        # The offline rule reads ``gatewayActive`` as an ordinary filter, and a
+        # missing attribute makes that filter false. A device with no gateway
+        # would otherwise never be able to raise the alarm at all; the watchdog
+        # takes the flag over from here.
+        set_server_attribute(instance.id, ATTR_GATEWAY_ACTIVE, True)
         return instance
 
     def update(self, instance, validated_data):
@@ -120,9 +150,13 @@ class DeviceSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError({"detail": "You already have a device with a 'roomio_node'."})
 
+        notify_on_offline = validated_data.pop("notify_on_offline", None)
         old_room_id = instance.room_id if instance.pk else None
 
         updated_instance = super().update(instance, validated_data)
+
+        if notify_on_offline is not None:
+            set_server_attribute(updated_instance.id, ATTR_NOTIFY_ON_OFFLINE, notify_on_offline)
 
         new_room_id = updated_instance.room_id
 
@@ -167,6 +201,7 @@ class DeviceSerializer(serializers.ModelSerializer):
             "device_data",
             "external_id",
             "credentials",
+            "notify_on_offline",
         )
 
 
