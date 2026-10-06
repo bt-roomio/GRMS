@@ -1,7 +1,9 @@
 from djangochannelsrestframework.mixins import action
 
-from main.models import Room
+from rest_framework import serializers
+
 from services.consumers.base import TenantScopedConsumer
+from services.querysets.room import room_list
 from services.serializers.room import RoomFilterSerializer, RoomSerializer
 
 
@@ -17,7 +19,10 @@ class RoomsConsumer(TenantScopedConsumer):
         sort_by = params.get("sort_by", "number")
         if sort_by not in RoomFilterSerializer.SORT_CHOICES:
             sort_by = "number"
-        return Room.objects.by_tenant(self.tenant).values("id", "number").order_by(sort_by)
+        room_type = params.get("room_type")
+        if room_type:
+            room_type = serializers.UUIDField().run_validation(room_type)
+        return room_list(self.tenant, room_type=room_type, sort_by=sort_by)
 
     @action()
     def list(self, query_params=None, **kwargs):

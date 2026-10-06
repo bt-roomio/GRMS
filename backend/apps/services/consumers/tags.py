@@ -1,4 +1,5 @@
 from asgiref.sync import sync_to_async
+from django.db.models import F
 from djangochannelsrestframework.mixins import action
 
 from rest_framework.exceptions import NotFound, ValidationError
@@ -26,7 +27,7 @@ class RoomTagsConsumer(TenantScopedConsumer):
         await super().accept(*args, **kwargs)
 
     def get_room(self, room_id):
-        room = Room.objects.by_tenant(self.tenant).filter(pk=room_id).first()
+        room = Room.objects.by_tenant(self.tenant).annotate(type_name=F("type__title")).filter(pk=room_id).first()
         if room is None:
             raise ValidationError("Room not found!")
         return room
