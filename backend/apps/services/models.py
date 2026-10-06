@@ -1,10 +1,11 @@
 import uuid
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 
 from services.querysets.integration import IntegrationQuerySet
+from services.querysets.tag import TagTypeGroupQuerySet, TagTypeQuerySet
 
 
 class BaseModel(models.Model):
@@ -60,3 +61,57 @@ class Integration(BaseModel):
                 name="unique_integration_integrator_tenant_is_active",
             ),
         ]
+
+
+class TagTypeGroup(BaseModel):
+    name = models.CharField(max_length=255)
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE, "tag_type_groups", null=True, blank=True)
+
+    objects: ClassVar[TagTypeGroupQuerySet] = cast(TagTypeGroupQuerySet, TagTypeGroupQuerySet.as_manager())
+
+    def __str__(self):
+        return str(self.name)
+
+    class Meta(BaseModel.Meta):
+        db_table = "services_tag_type_group"
+        constraints: ClassVar[list] = [
+            UniqueConstraint(fields=("name", "tenant"), nulls_distinct=False, name="unique_tag_type_group_name_tenant"),
+        ]
+
+
+class TagType(BaseModel):
+    name = models.CharField(max_length=255)
+    tenant = models.ForeignKey(
+        "main.Tenant",
+        models.CASCADE,
+        "tag_types",
+        null=True,
+        blank=True,
+        help_text="Empty for a type shared by all tenants.",
+    )
+    group = models.ForeignKey("services.TagTypeGroup", models.PROTECT, "tag_types")
+
+    objects: ClassVar[TagTypeQuerySet] = cast(TagTypeQuerySet, TagTypeQuerySet.as_manager())
+
+    def __str__(self):
+        return str(self.name)
+
+    class Meta(BaseModel.Meta):
+        db_table = "services_tag_type"
+        constraints: ClassVar[list] = [
+            # nulls_distinct=False: shared types (tenant is NULL) must have unique names too.
+            UniqueConstraint(fields=("name", "tenant"), nulls_distinct=False, name="unique_tag_type_name_tenant"),
+        ]
+
+
+class TagRange(BaseModel):
+    tag_type = models.ForeignKey("services.TagType", models.CASCADE, "tag_ranges")
+    range_value = models.JSONField(
+        null=True, blank=True, help_text='Range definition as JSON, e.g. {"min": 16, "max": 30}.'
+    )
+
+    def __str__(self):
+        return str(self.range_value)
+
+    class Meta(BaseModel.Meta):
+        db_table = "services_tag_range"

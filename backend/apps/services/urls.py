@@ -7,6 +7,8 @@ from services.views.room import RoomListView
 from services.views.room_type import RoomTypeListView
 from services.views.sber_get_room import SberGetRoomDetailView
 from services.views.sber_window import SberWindowView
+from services.views.tag_type import TagTypeDetailView, TagTypeListView
+from services.views.tag_type_group import TagTypeGroupDetailView, TagTypeGroupListView
 from services.views.tags import TagDetailView, TagsByRoomListView
 
 urlpatterns = [
@@ -21,4 +23,9 @@ urlpatterns = [
     path("room-types/", RoomTypeListView.as_view(), name="room-type-list"),
     path("tags/<uuid:room_id>/", TagsByRoomListView.as_view(), name="tags-by-room-list"),
     path("tag/<uuid:tag_id>/", TagDetailView.as_view(), name="tag-detail"),
+    # Only for Hoteza
+    path("tag-types/", TagTypeListView.as_view(), name="tag-type-list"),
+    path("tag-type/<uuid:pk>/", TagTypeDetailView.as_view(), name="tag-type-detail"),
+    path("tag-type-groups/", TagTypeGroupListView.as_view(), name="tag-type-group-list"),
+    path("tag-type-group/<uuid:pk>/", TagTypeGroupDetailView.as_view(), name="tag-type-group-detail"),
 ]
