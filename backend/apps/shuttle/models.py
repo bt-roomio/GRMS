@@ -34,7 +34,7 @@ class TsKv(models.Model):
     def save(self, *args, **kwargs):
         if self.ts is None:
             self.ts = get_mil_sec()
-        super(TsKv, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     class Meta(BaseModelTs.Meta):
         # Double check the migration for this model, it is not managed from django.
@@ -118,26 +118,26 @@ class AttributeKv(BaseModel):
     def save(self, *args, **kwargs):
         if self.pk:
             self.last_update_ts = get_mil_sec()
-        return super(AttributeKv, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return str(self.id)
 
     class Meta(BaseModel.Meta):
         db_table = "shuttle_attribute_kv"
-        constraints = [
+        constraints: ClassVar = [
             models.UniqueConstraint(
                 fields=["entity_type", "attribute_type", "entity_id", "attribute_key"],
                 name="unique_attrkv_type_scope_entity_key",
             ),
         ]
-        indexes = [
+        indexes: ClassVar = [
             models.Index(
                 fields=["entity_id", "attribute_type", "attribute_key"],
                 name="ix_attrkv_entity_type_key",
             ),
         ]
-        permissions = [
+        permissions: ClassVar = [
             ("view_attributelist", "Can view attribute lists"),
             ("add_attributelist", "Can add attribute lists"),
             ("add_attributerpc", "Can add attribute rpc"),
@@ -171,7 +171,7 @@ class RPCMessage(models.Model):
 
     class Meta:
         db_table = "shuttle_rpc_message"
-        permissions = [
+        permissions: ClassVar = [
             ("send_jsonrpc", "Can send json rpc request"),
         ]
 
