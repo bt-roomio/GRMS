@@ -12,6 +12,7 @@ from access_manager.utilits.card_deactivate import (
     deactivate_staff_card,
 )
 from access_manager.utilits.need_sync import need_sync
+from access_manager.utilits.pin_to_card import pin_to_card_number
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
 from core.utils.str_to_dict import str_to_dict
@@ -23,6 +24,12 @@ TIMEOUT = 10
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False, is_pwd=False):
+    from main.models import Device
+
+    if is_pwd and Device.objects.filter(id=device_id, device_profile__name__iexact="default").exists():
+        cards = [pin_to_card_number(card) for card in cards]
+        is_pwd = False
+
     request_params = prepare_rpc_request(device_id, cards, access, guest_id, staff_id, is_pwd=is_pwd)
 
     message = request_params.get("message")
@@ -34,20 +41,15 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
     device = request_params.get("device")
     fail_response = request_params.get("fail_response")
 
+    logger.info(f"Message: {message}")
+
+
     if not cards:
         logger.info("Cards are not provided ! ")
         return {
             "success": True,
             "cards_empty": True,
             "message": "Cards are not provided ! ",
-        }
-
-    if is_pwd and device and device.device_profile.name.lower() == "default":
-        logger.info(f"PIN codes are not assigned to Default-profile device {device.id}; skipping.")
-        return {
-            "success": True,
-            "skipped_default_profile": True,
-            "message": "PIN codes are not assigned to Default-profile devices.",
         }
 
     if device and not device.status:
