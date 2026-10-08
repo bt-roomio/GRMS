@@ -24,6 +24,24 @@ _tag_object_schema = openapi.Schema(
     },
 )
 
+_room_tag_object_schema = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        **_tag_object_schema.properties,
+        "tag_type": openapi.Schema(
+            type=openapi.TYPE_STRING,
+            x_nullable=True,
+            description="Tag type name from the device's TAG_TYPES attribute; null if the tag is not mapped there.",
+        ),
+        # Swagger 2 has no "any type" items, so the item type is described in text.
+        "tag_ranges": openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(type=openapi.TYPE_STRING),
+            x_nullable=True,
+            description="Range values (any JSON) from the device's TAG_TYPES attribute; null when tag_type is null.",
+        ),
+    },
+)
 
 _tags_list_response = openapi.Response(
     description="Room info with its CLIENT_SCOPE attributes and latest telemetry as a unified tag list.",
@@ -41,12 +59,16 @@ _tags_list_response = openapi.Response(
                     "key_name": "targetTemperature",
                     "value": 22.5,
                     "updated_at": "2026-09-11T08:15:42.103000Z",
+                    "tag_type": "Temperature",
+                    "tag_ranges": ["15-25", 30],
                 },
                 {
                     "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
                     "key_name": "temperature",
                     "value": 21.8,
                     "updated_at": "2026-09-11T08:16:01.871000Z",
+                    "tag_type": None,
+                    "tag_ranges": None,
                 },
             ],
         }
@@ -63,7 +85,7 @@ _tags_list_response = openapi.Response(
                     "type_name": openapi.Schema(type=openapi.TYPE_STRING, x_nullable=True),
                 },
             ),
-            "tags": openapi.Schema(type=openapi.TYPE_ARRAY, items=_tag_object_schema),
+            "tags": openapi.Schema(type=openapi.TYPE_ARRAY, items=_room_tag_object_schema),
         },
     ),
 )

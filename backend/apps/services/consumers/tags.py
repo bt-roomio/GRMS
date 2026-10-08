@@ -7,7 +7,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from main.models import Room
 from services.consumers.base import TenantScopedConsumer
 from services.serializers.room import RoomSerializer
-from services.serializers.tag import RoomAttributeTagSerializer, RoomTelemetryTagSerializer, TagSerializer
+from services.serializers.tag import TagSerializer
+from services.utils.room_tags import room_tags
 from shuttle.models import AttributeKv, TsKvLatest
 
 
@@ -34,13 +35,8 @@ class RoomTagsConsumer(TenantScopedConsumer):
 
     def build_payload(self, room_id):
         room = self.get_room(room_id)
-        attributes = AttributeKv.objects.get_attributes_by_room(room, AttributeKv.CLIENT_SCOPE)
-        telemetry = TsKvLatest.objects.get_ts_kv_latest_by_room(room, self.tenant)
         device_ids = [str(device_id) for device_id in room.devices.values_list("id", flat=True)]
-        tags = [
-            *RoomAttributeTagSerializer(attributes, many=True).data,
-            *RoomTelemetryTagSerializer(telemetry, many=True).data,
-        ]
+        tags = room_tags(room, self.tenant)
         payload = {
             "room": RoomSerializer(room).data,
             "tags": tags,
