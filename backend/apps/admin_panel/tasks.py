@@ -13,7 +13,7 @@ def send_activation_email(user_id):
     try:
         user = User.objects.get(id=user_id, is_active=True)
         send_reset_link_email(user, send_activation_mail=True)
-        logger.info(f"Activation email sent to user {user_id}")
+        logger.info("Activation email sent to user %s", user_id)
     except User.DoesNotExist:
-        logger.error(f"User {user_id} not found or inactive")
+        logger.error("User %s not found or inactive", user_id)
         raise

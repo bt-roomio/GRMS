@@ -107,4 +107,4 @@ class Command(BaseCommand):
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"✗ Sync failed: {e}"))
-            logger.error(f"PMS sync error: {e}", exc_info=True)
+            logger.exception("PMS sync error")

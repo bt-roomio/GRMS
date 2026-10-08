@@ -40,8 +40,11 @@ class AdminUserLockView(APIView):
         result = unlock_account(user.email)
 
         logger.warning(
-            f"Account unlocked: {user.email} (by {request.user.email}, "
-            f"ips={result['cleared_ips']}, keys={result['cleared_keys']})"
+            "Account unlocked: %s (by %s, ips=%s, keys=%s)",
+            user.email,
+            request.user.email,
+            result["cleared_ips"],
+            result["cleared_keys"],
         )
 
         return Response({"message": "Account unlocked.", **result})

@@ -241,15 +241,15 @@ def sync_telemetry_batch(batch: list[tuple]):
         try:
             unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
             _upsert_latest(list(unique.values()))
-        except Exception as e:
-            logger.exception("Failed to upsert TsKvLatest in batch: %s", e)
+        except Exception:
+            logger.exception("Failed to upsert TsKvLatest in batch")
 
     if card_logs:
         try:
             _upsert_card_logs(card_logs)
             publish_card_log_updates_batch(card_logs)
-        except Exception as e:
-            logger.exception("Failed to create CardLog entries in batch: %s", e)
+        except Exception:
+            logger.exception("Failed to create CardLog entries in batch")
 
     # One Celery task for all devices instead of N separate dispatches
     if device_ids:

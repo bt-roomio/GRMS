@@ -30,7 +30,7 @@ def deduplicate_ts_kv(key: int | None = None, entity_id: str | None = None):
         extra_filter += " AND entity_id = %(entity_id)s"
 
     filter_params = {"key": key, "entity_id": entity_id}
-    logger.info(f"Dedup ts_kv: key={key}, entity_id={entity_id}")
+    logger.info("Dedup ts_kv: key=%s, entity_id=%s", key, entity_id)
 
     with connection.cursor() as cursor:
         cursor.execute("SET statement_timeout = 0")
@@ -44,7 +44,7 @@ def deduplicate_ts_kv(key: int | None = None, entity_id: str | None = None):
             """
         )
         chunks = cursor.fetchall()
-        logger.info(f"Dedup ts_kv: total chunks={len(chunks)}")
+        logger.info("Dedup ts_kv: total chunks=%s", len(chunks))
 
         total_deleted = 0
 
@@ -100,11 +100,15 @@ def deduplicate_ts_kv(key: int | None = None, entity_id: str | None = None):
 
             if chunk_deleted > 0:
                 logger.info(
-                    f"Dedup ts_kv [{chunk_idx}/{len(chunks)}] {chunk_start.date()} "
-                    f"| chunk_deleted={chunk_deleted} | total={total_deleted}"
+                    "Dedup ts_kv [%s/%s] %s | chunk_deleted=%s | total=%s",
+                    chunk_idx,
+                    len(chunks),
+                    chunk_start.date(),
+                    chunk_deleted,
+                    total_deleted,
                 )
 
-    logger.info(f"Dedup ts_kv done. Total deleted: {total_deleted}")
+    logger.info("Dedup ts_kv done. Total deleted: %s", total_deleted)
     return total_deleted
 
 
@@ -112,7 +116,7 @@ def deduplicate_ts_kv(key: int | None = None, entity_id: str | None = None):
 def aggregate_table_ts_kv():
     logger.info("Task aggregating table shuttle_ts_kv")
     deleted = deduplicate_ts_kv()
-    logger.info(f"The aggregating table task completed. Deleted: {deleted}")
+    logger.info("The aggregating table task completed. Deleted: %s", deleted)
 
 
 @shared_task
@@ -120,9 +124,9 @@ def delete_old_logs():
     keys = TsKvDictionary.objects.filter(
         Q(key__endswith="_LOGS") | Q(key__contains="Events") | Q(key__contains="ERRORS")
     )
-    logger.info(f"Keys: {', '.join(keys.values_list('key', flat=True))}")
+    logger.info("Keys: %s", ", ".join(keys.values_list("key", flat=True)))
     logs = TsKv.objects.filter(key__in=keys, ts__lte=(timezone.now() - timedelta(days=7)))
-    logger.info(f" {logs.delete()[0]} log(s) deleted!")
+    logger.info(" %s log(s) deleted!", logs.delete()[0])
 
 
 @shared_task

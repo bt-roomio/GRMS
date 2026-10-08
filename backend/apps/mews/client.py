@@ -72,7 +72,7 @@ class MewsAPIClient:
             try:
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 30))
-                    logger.warning(f"Rate limited. Waiting {retry_after}s...")
+                    logger.warning("Rate limited. Waiting %ss...", retry_after)
                     time.sleep(retry_after)
                     continue
 
@@ -85,7 +85,7 @@ class MewsAPIClient:
                 error_msg = error_data.get("Message", str(e))
                 request_id = error_data.get("RequestId")
 
-                logger.error(f"Mews API Error: {error_msg} (Request ID: {request_id})")
+                logger.error("Mews API Error: %s (Request ID: %s)", error_msg, request_id)
 
                 # Don't retry client errors
                 if response.status_code in [400, 401, 403, 404]:
@@ -94,13 +94,13 @@ class MewsAPIClient:
                 # Retry server errors with backoff
                 if attempt < max_retries - 1:
                     wait_time = 2**attempt
-                    logger.info(f"Retrying in {wait_time}s ({attempt + 1}/{max_retries})...")
+                    logger.info("Retrying in %ss (%s/%s)...", wait_time, attempt + 1, max_retries)
                     time.sleep(wait_time)
                 else:
                     raise
 
             except requests.exceptions.RequestException as e:
-                logger.error(f"Request failed: {e}")
+                logger.error("Request failed: %s", e)
                 if attempt < max_retries - 1:
                     wait_time = 2**attempt
                     time.sleep(wait_time)

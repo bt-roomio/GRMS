@@ -81,7 +81,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             return None
 
         if ip in self.blacklist_ips:
-            logger.warning(f"Blacklisted IP blocked: {ip} (path: {scope})")
+            logger.warning("Blacklisted IP blocked: %s (path: %s)", ip, scope)
             return self._blocked_response("IP blacklisted")
 
         body_data = self._parse_request_body(request)
@@ -89,7 +89,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
 
         is_blocked, reason, retry_after = self._check_lockout(scope, ip, email)
         if is_blocked:
-            logger.warning(f"Blocked request: {request.method} {scope} from {ip} (email: {email}) - {reason}")
+            logger.warning("Blocked request: %s %s from %s (email: %s) - %s", request.method, scope, ip, email, reason)
             response = self._blocked_response(reason)
             if retry_after:
                 response["Retry-After"] = str(retry_after)
@@ -176,7 +176,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             count = security_cache.get(bf.window_key(window_name, scope, email, ip), 0)
             if count >= window_config["max_attempts"]:
                 logger.critical(
-                    f"Extended window limit exceeded: {count} attempts in {window_name} for {email} from {ip}"
+                    "Extended window limit exceeded: %s attempts in %s for %s from %s", count, window_name, email, ip
                 )
                 return True, f"Too many attempts in {window_name} period", 0
 
@@ -202,7 +202,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             return None
 
         if not captcha_token:
-            logger.warning(f"CAPTCHA required but not provided: {email} from {ip}")
+            logger.warning("CAPTCHA required but not provided: %s from %s", email, ip)
             return self._captcha_response(
                 "CAPTCHA required",
                 "Too many failed attempts. Please complete the CAPTCHA challenge.",
@@ -214,11 +214,11 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
             is_valid = verify_turnstile_token(captcha_token, remote_ip=ip)
         except TurnstileVerificationError:
             # Fail open on infrastructure trouble — brute force protection is still active
-            logger.error(f"Turnstile verification failed (infrastructure), allowing request: {email} from {ip}")
+            logger.error("Turnstile verification failed (infrastructure), allowing request: %s from %s", email, ip)
             return None
 
         if not is_valid:
-            logger.warning(f"Invalid CAPTCHA token: {email} from {ip}")
+            logger.warning("Invalid CAPTCHA token: %s from %s", email, ip)
             return self._captcha_response("Invalid CAPTCHA", "CAPTCHA verification failed. Please try again.")
 
         return None
@@ -259,7 +259,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         # otherwise an exponential delay. The TTL equals the pause, so the key expires on its own.
         if attempt_count >= self.max_attempts:
             block_for = self.lockout_duration
-            logger.critical(f"LOCKOUT TRIGGERED: {email} from {ip} - {attempt_count} failed attempts")
+            logger.critical("LOCKOUT TRIGGERED: %s from %s - %s failed attempts", email, ip, attempt_count)
         elif self.enable_progressive_delays:
             block_for = min(self.base_delay * (2**attempt_count), self.max_delay)
         else:
@@ -276,7 +276,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         # since the lockout keys include the IP and the administrator does not know it.
         bf.remember_ip(email, ip, cache=security_cache)
 
-        logger.warning(f"Failed login attempt #{attempt_count}: {email} from {ip} (path: {scope})")
+        logger.warning("Failed login attempt #%s: %s from %s (path: %s)", attempt_count, email, ip, scope)
 
         return attempt_count
 
@@ -289,7 +289,7 @@ class APIBruteForceProtectionMiddleware(MiddlewareMixin):
         ]
         security_cache.delete_many(keys)
 
-        logger.info(f"Successful login: {email} from {ip} - counters reset")
+        logger.info("Successful login: %s from %s - counters reset", email, ip)
 
     def _annotate_response(self, response, attempt_count: int) -> None:
         if not response.get("Content-Type", "").startswith("application/json"):

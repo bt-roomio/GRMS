@@ -86,8 +86,8 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
 
         except Exception as err:
             tb = traceback.format_exc()
-            logger.warning(f"Error occurred: {err}")
-            logger.warning(f"Traceback: {tb}")
+            logger.warning("Error occurred: %s", err)
+            logger.warning("Traceback: %s", tb)
             await self.send_json(response({}, None, 500, str(err)))
 
     async def check_auth(self, data={}):
@@ -253,7 +253,7 @@ class BaseConsumer(AsyncJsonWebsocketConsumer):
         if self.tasks.get(task_key):
             self.tasks[task_key].cancel()
             del self.tasks[task_key]
-            logger.warning(f"Периодическая задача '{task_key}' отменена")
+            logger.warning("Периодическая задача '%s' отменена", task_key)
 
     async def validate_auth(self):
         """

@@ -47,8 +47,8 @@ def periodic_task():
                         try:
                             # Вызов обработчика
                             await func(self, cmd, *args, **kwargs)
-                        except Exception as e:
-                            logger.exception("Ошибка в периодическом задании '%s': %s", func.__name__, e)
+                        except Exception:
+                            logger.exception("Ошибка в периодическом задании '%s'", func.__name__)
                         # Задержка между вызовами
                         await asyncio.sleep(sleep_time)
                 except asyncio.CancelledError:

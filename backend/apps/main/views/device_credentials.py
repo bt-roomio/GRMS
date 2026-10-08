@@ -16,8 +16,8 @@ class DeviceCredentialsDetailView(APIView):
 
     @swagger_auto_schema(tags=["Main, Device Credentials"])
     def get(self, request, token):
-        logger.debug(f"Fetching device credentials for token: {token}")
+        logger.debug("Fetching device credentials for token: %s", token)
         instance = get_object_or_404(DeviceCredentials, credentials_id=token)
         serializer = DeviceCredentialsDetailSerializer(instance)
-        logger.debug(f"Device credentials retrieved: {serializer.data}")
+        logger.debug("Device credentials retrieved: %s", serializer.data)
         return Response(serializer.data)

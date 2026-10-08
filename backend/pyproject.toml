@@ -133,7 +133,9 @@ line-length = 120
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-extend-select = ["I", "F401", "F841"]
+# G: lazy %-style logging args (no f-strings), logger.exception over exc_info=True.
+# LOG: logging API misuse (root logger calls, getLogger misuse, …).
+extend-select = ["I", "F401", "F841", "G", "LOG"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

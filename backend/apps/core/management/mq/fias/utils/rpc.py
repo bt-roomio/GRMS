@@ -49,8 +49,8 @@ def send_card_operation_confirmation(device, operation_id, status="OK", text="")
         channel.connection.close()
 
         logger.info("confirmCardOperation operationId=%s status=%s", operation_id, status)
-    except Exception as exc:
-        logger.exception("Failed confirmCardOperation operationId=%s: %s", operation_id, exc)
+    except Exception:
+        logger.exception("Failed confirmCardOperation operationId=%s", operation_id)
         raise
 
 

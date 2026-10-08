@@ -29,15 +29,15 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
     """
     try:
         if ts_kv_latest.key.key != "MUR Relay":
-            logger.debug(f"Skipping non-MUR relay event: {ts_kv_latest.key.key}")
+            logger.debug("Skipping non-MUR relay event: %s", ts_kv_latest.key.key)
             return
 
         if str(ts_kv_latest.get_value) != "1":
-            logger.debug(f"Skipping MUR relay with value: {ts_kv_latest.get_value}")
+            logger.debug("Skipping MUR relay with value: %s", ts_kv_latest.get_value)
             return
 
         if not ts_kv_latest.entity or not ts_kv_latest.entity.room:
-            logger.warning(f"MUR relay event without room: entity_id={ts_kv_latest.entity_id}")
+            logger.warning("MUR relay event without room: entity_id=%s", ts_kv_latest.entity_id)
             return
 
         room = ts_kv_latest.entity.room
@@ -57,12 +57,12 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
         mews_pms_send_tasks = mews_integration and (mews_integration.additional_info or {}).get("send_tasks")
 
         if not mews_pms_send_tasks:
-            logger.info(f"Mews PMS integration or task sending not enabled for tenant {tenant.title}")
+            logger.info("Mews PMS integration or task sending not enabled for tenant %s", tenant.title)
             return
 
         guest = room.guests.filter(is_active=True).first()
         if not guest:
-            logger.info(f"No active guest in room {room.number}, skipping MUR relay")
+            logger.info("No active guest in room %s, skipping MUR relay", room.number)
             return
 
         if not guest.additional_info:
@@ -75,21 +75,23 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
                 last_mur_time = datetime.fromisoformat(last_mur_relay.replace("Z", "+00:00"))
                 if timezone.now() < last_mur_time + timedelta(minutes=3):
                     logger.info(
-                        f"MUR relay triggered too soon for room {room.number}. Last trigger: {last_mur_relay}, skipping"
+                        "MUR relay triggered too soon for room %s. Last trigger: %s, skipping",
+                        room.number,
+                        last_mur_relay,
                     )
                     return
             except (ValueError, TypeError) as e:
-                logger.warning(f"Invalid mews_mur_relay timestamp format: {e}")
+                logger.warning("Invalid mews_mur_relay timestamp format: %s", e)
 
         try:
             mews_config = MewsConfigAdapter(mews_integration)
         except MewsConfiguration.DoesNotExist:
-            logger.info(f"Mews integration not configured or inactive for tenant {ts_kv_latest.entity.tenant.title}")
+            logger.info("Mews integration not configured or inactive for tenant %s", ts_kv_latest.entity.tenant.title)
             return
 
         mews_reservation_id = guest.additional_info.get("mews_reservation_id")
         if not mews_reservation_id:
-            logger.warning(f"Guest {guest.id} in room {room.number} has no mews_reservation_id")
+            logger.warning("Guest %s in room %s has no mews_reservation_id", guest.id, room.number)
             return
 
         client = MewsAPIClient(
@@ -107,17 +109,20 @@ def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
         }
 
         logger.info(
-            f"Sending MUR task to Mews for room {room.number}, guest {guest.name}, reservation {mews_reservation_id}"
+            "Sending MUR task to Mews for room %s, guest %s, reservation %s",
+            room.number,
+            guest.name,
+            mews_reservation_id,
         )
 
         response = client._make_request("tasks/add", params)
 
-        logger.info(f"MUR task successfully created in Mews: {response}")
+        logger.info("MUR task successfully created in Mews: %s", response)
 
         guest.additional_info["mews_mur_relay"] = timezone.now().isoformat()
         guest.save(update_fields=["additional_info"])
 
-        logger.info(f"Updated mews_mur_relay timestamp for guest {guest.id}")
+        logger.info("Updated mews_mur_relay timestamp for guest %s", guest.id)
 
-    except Exception as e:
-        logger.error(f"Error publishing MUR relay to Mews: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Error publishing MUR relay to Mews")

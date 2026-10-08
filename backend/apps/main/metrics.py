@@ -45,8 +45,8 @@ def update_device_metrics() -> None:
         all_combinations = _clear_metrics()
         _update_device_status_metrics()
         _zero_stale_metrics(all_combinations)
-    except Exception as e:
-        logger.error(f"Ошибка при обновлении метрик: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Ошибка при обновлении метрик")
 
 
 def _clear_metrics():
@@ -57,7 +57,7 @@ def _clear_metrics():
     excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
 
     if excluded_gateways:
-        logger.info(f"Исключено gateway устройств из мониторинга: {len(excluded_gateways)} ({excluded_gateways})")
+        logger.info("Исключено gateway устройств из мониторинга: %s (%s)", len(excluded_gateways), excluded_gateways)
 
     # Получаем все активные gateway устройства (включая excluded — чтобы сбросить stale данные)
     all_combinations = list(
@@ -110,7 +110,7 @@ def _zero_stale_metrics(current_combinations) -> None:
         devices_offline_total.labels(
             tenant_id=info["tenant_id"], tenant_name=info["tenant_name"], device_id=device_id
         ).set(0)
-        logger.info(f"Обнулена устаревшая метрика для удалённого/деактивированного gateway устройства {device_id}")
+        logger.info("Обнулена устаревшая метрика для удалённого/деактивированного gateway устройства %s", device_id)
 
     cache.set(KNOWN_GATEWAY_IDS_CACHE_KEY, current_known, timeout=None)
 

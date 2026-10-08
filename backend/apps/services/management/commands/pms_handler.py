@@ -51,7 +51,7 @@ class Command(BaseCommand):
             connection.close()
             self.stdout.write(self.style.SUCCESS(f"Queue '{PMS_MESSAGES_QUEUE}' setup completed"))
         except Exception as e:
-            logger.error(f"✗ Failed to setup queue '{PMS_MESSAGES_QUEUE}': {e!s}")
+            logger.error("✗ Failed to setup queue '%s': %s", PMS_MESSAGES_QUEUE, e)
             self.stdout.write(self.style.ERROR(f"✗ Failed to setup queue '{PMS_MESSAGES_QUEUE}': {e}"))
             return
 
@@ -83,13 +83,13 @@ class Command(BaseCommand):
                             ch.basic_ack(delivery_tag=method.delivery_tag)
                     except ValidationError as e:
                         error_msg = e.detail[0] if isinstance(e.detail, list) else str(e.detail)
-                        logger.error(f"[{queue_name}] ✗ Validation failed: {error_msg}")
+                        logger.error("[%s] ✗ Validation failed: %s", queue_name, error_msg)
                         self.stdout.write(self.style.ERROR(f"[{queue_name}] ✗ {error_msg}"))
                         # Acknowledge message - validation errors won't be fixed by retrying
                         if method.delivery_tag:
                             ch.basic_ack(delivery_tag=method.delivery_tag)
-                    except Exception as e:
-                        logger.error(f"[{queue_name}] ✗ Unexpected error: {e!s}", exc_info=True)
+                    except Exception:
+                        logger.exception("[%s] ✗ Unexpected error", queue_name)
                         # Acknowledge to prevent requeue loop
                         if method.delivery_tag:
                             ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -103,7 +103,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("\nShutting down gracefully..."))
                 break
             except Exception as err:
-                logger.error(f"[{queue_name}] ✗ Connection error: {err!s}. Retrying in 5 seconds...")
+                logger.error("[%s] ✗ Connection error: %s. Retrying in 5 seconds...", queue_name, err)
                 self.stdout.write(self.style.ERROR(f"[{queue_name}] Connection lost. Retrying in 5 seconds..."))
                 time.sleep(5)
 
@@ -115,9 +115,9 @@ class Command(BaseCommand):
             channel.queue_declare(queue="pmsUnhandled", durable=True)
             send_to_rabbitmq(channel, message, routing_key="pmsUnhandled")
             channel.connection.close()
-            logger.info(f"✓ Republished unhandled event_type={event_type!r} to pmsUnhandled")
+            logger.info("✓ Republished unhandled event_type=%r to pmsUnhandled", event_type)
         except Exception as e:
-            logger.error(f"✗ Failed to republish unhandled message: {e}")
+            logger.error("✗ Failed to republish unhandled message: %s", e)
 
     def process_pms_message(self, body: bytes):
         """Process PMS message - implement business logic here"""
@@ -125,10 +125,10 @@ class Command(BaseCommand):
             message = json.loads(body.decode("utf-8"))
             event_type = message.get("topic")  # e.g., "checkin", "checkout"
             reservation_data = message.get("data")
-            logger.info(f"✓ Received message: {message}")
+            logger.info("✓ Received message: %s", message)
 
             if event_type not in ROUTES:
-                logger.warning(f"⚠ Unhandled event type: {event_type!r}")
+                logger.warning("⚠ Unhandled event type: %r", event_type)
                 self._republish_unhandled(message, event_type)
                 return
 
@@ -136,7 +136,7 @@ class Command(BaseCommand):
             ROUTES[event_type](validated_data)
 
         except json.JSONDecodeError as e:
-            logger.error(f"✗ Failed to decode message: {e!s}")
+            logger.error("✗ Failed to decode message: %s", e)
             raise ValidationError("Invalid JSON format")
         except (ValidationError, Exception):
             raise
@@ -156,7 +156,7 @@ class Command(BaseCommand):
         )
 
         if not tenant:
-            logger.error(f"✗ Tenant not found for tenant_id: {data.get('tenant_id')}")
+            logger.error("✗ Tenant not found for tenant_id: %s", data.get("tenant_id"))
             raise ValidationError("Tenant not found!")
 
         if data.get("event_type") != "canceled":
@@ -170,7 +170,7 @@ class Command(BaseCommand):
             room = Room.objects.filter(tenant=tenant, number=data.get("room_number")).first()
 
             if not room:
-                logger.error(f"✗ Room not found: {data.get('room_number')} for tenant: {tenant.title}")
+                logger.error("✗ Room not found: %s for tenant: %s", data.get("room_number"), tenant.title)
                 raise ValidationError("Room not found!")
 
             data["room"] = room
@@ -184,7 +184,7 @@ def checkup_guest(data):
     try:
         guest: Guest = Guest.objects.get(pms_id=data.get("pms_id"))
         if guest and guest.room != room:
-            logger.info(f"→ Guest needs to be moved from room {guest.room.number} to {room.number}")
+            logger.info("→ Guest needs to be moved from room %s to %s", guest.room.number, room.number)
             handle_guest_move(guest, data)
             return None
     except Guest.DoesNotExist:
@@ -235,14 +235,20 @@ def handle_reservation(data):
             },
         )
         logger.info(
-            f"✓ Guest reserved successfully: {guest.name} {guest.lastname}, room: {guest.room}, pms_id: {validated_data.get('pms_id')}"
+            "✓ Guest reserved successfully: %s %s, room: %s, pms_id: %s",
+            guest.name,
+            guest.lastname,
+            guest.room,
+            validated_data.get("pms_id"),
         )
 
         publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
         new_room.save(update_fields=["state"])
 
         if old_room:
-            logger.info(f"→ Guest moved from room {old_room.number} to {new_room.number}, recalculating old room state")
+            logger.info(
+                "→ Guest moved from room %s to %s, recalculating old room state", old_room.number, new_room.number
+            )
             old_room.refresh_from_db()
             old_room.save(update_fields=["state"])
     except Exception:
@@ -294,7 +300,11 @@ def handle_checkin(validated_data):
             },
         )
         logger.info(
-            f"✓ Guest checked in successfully: {guest.name} {guest.lastname}, room: {guest.room}, pms_id: {validated_data.get('pms_id')}"
+            "✓ Guest checked in successfully: %s %s, room: %s, pms_id: %s",
+            guest.name,
+            guest.lastname,
+            guest.room,
+            validated_data.get("pms_id"),
         )
 
         publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
@@ -304,7 +314,9 @@ def handle_checkin(validated_data):
             move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
 
         if old_room:
-            logger.info(f"→ Guest moved from room {old_room.number} to {new_room.number}, recalculating old room state")
+            logger.info(
+                "→ Guest moved from room %s to %s, recalculating old room state", old_room.number, new_room.number
+            )
             old_room.refresh_from_db()
             old_room.save(update_fields=["state"])
     except Exception:
@@ -321,13 +333,17 @@ def handle_checkout(validated_data):
         guest.mark_checked_out(Guest.SOURCE.MEWS)
         guest.save()
         logger.info(
-            f"✓ Guest checked out successfully: {guest.name} {guest.lastname}, room: {guest.room.number if guest.room else 'N/A'}, pms_id: {validated_data.get('pms_id')}"
+            "✓ Guest checked out successfully: %s %s, room: %s, pms_id: %s",
+            guest.name,
+            guest.lastname,
+            guest.room.number if guest.room else "N/A",
+            validated_data.get("pms_id"),
         )
         publish_guest_changes(guest)
         guest.room.save(update_fields=["state"])
         revoke_guest_cards(guest, old_guest_context)
     except Guest.DoesNotExist:
-        logger.warning(f"⚠ No active guests found with pms_id: {validated_data.get('pms_id')}")
+        logger.warning("⚠ No active guests found with pms_id: %s", validated_data.get("pms_id"))
     return {"success": True}
 
 
@@ -337,7 +353,7 @@ def handle_canceled(data):
     try:
         guest: Guest = Guest.objects.get(pms_id=data.get("pms_id"), is_active=True, is_reservation=True)
     except Guest.DoesNotExist:
-        logger.warning(f"⚠ No active reservation found for pms_id: {data.get('pms_id')}, skipping cancel")
+        logger.warning("⚠ No active reservation found for pms_id: %s, skipping cancel", data.get("pms_id"))
         return
 
     room = guest.room
@@ -346,7 +362,11 @@ def handle_canceled(data):
     guest.save()
 
     logger.info(
-        f"✓ Reservation canceled successfully: {guest.name} {guest.lastname}, room: {room}, pms_id: {data.get('pms_id')}"
+        "✓ Reservation canceled successfully: %s %s, room: %s, pms_id: %s",
+        guest.name,
+        guest.lastname,
+        room,
+        data.get("pms_id"),
     )
 
     publish_guest_changes(guest)
@@ -382,7 +402,12 @@ def handle_guest_move(guest: Guest, data: dict):
         guest.save()
 
         logger.info(
-            f"✓ Guest moved successfully: {guest.name} {guest.lastname} from Room {old_room.number if old_room else 'N/A'} to Room {new_room.number}, pms_id: {guest.pms_id}"  # pyright: ignore
+            "✓ Guest moved successfully: %s %s from Room %s to Room %s, pms_id: %s",
+            guest.name,
+            guest.lastname,
+            old_room.number if old_room else "N/A",
+            new_room.number,
+            guest.pms_id,  # pyright: ignore
         )
 
         # Room state first: publishing hits the channel layer and card dispatch enqueues
@@ -396,7 +421,7 @@ def handle_guest_move(guest: Guest, data: dict):
         publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
         move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
     except Exception as e:
-        logger.error(f"✗ Failed to move guest: {e!s}")
+        logger.error("✗ Failed to move guest: %s", e)
         raise
 
 

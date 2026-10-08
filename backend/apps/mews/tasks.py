@@ -20,8 +20,8 @@ def sync_reservations():
         logger.info("Starting Mews reservation sync task")
         call_command("mews_sync")
         logger.info("Mews reservation sync task completed successfully")
-    except Exception as e:
-        logger.error(f"Mews reservation sync task failed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Mews reservation sync task failed")
         raise
 
 
@@ -35,6 +35,6 @@ def sync_access_tokens():
         logger.info("Starting Mews access tokens sync task")
         call_command("mews_access_tokens")
         logger.info("Mews access tokens sync task completed successfully")
-    except Exception as e:
-        logger.error(f"Mews access tokens sync task failed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Mews access tokens sync task failed")
         raise

@@ -43,7 +43,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         }
 
     if is_pwd and device and device.device_profile.name.lower() == "default":
-        logger.info(f"PIN codes are not assigned to Default-profile device {device.id}; skipping.")
+        logger.info("PIN codes are not assigned to Default-profile device %s; skipping.", device.id)
         return {
             "success": True,
             "skipped_default_profile": True,
@@ -57,7 +57,7 @@ def send_rpc_request(device_id, cards, access, user=None, guest_id=None, staff_i
         return fail_response
 
     channel = connect_to_rabbitmq()
-    logger.info(f"Message: {message}")
+    logger.info("Message: %s", message)
     send_to_rabbitmq(channel, message)
 
     start_time = time.time()

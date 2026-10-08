@@ -42,7 +42,7 @@ def resolve_card_holder_and_access_group(tenant_id, card_uid, open_result=None):
                 access_group_from_holder = open_result
 
     except Exception as e:
-        logger.warning(f"Error resolving holder for card {card_uid}: {e}")
+        logger.warning("Error resolving holder for card %s: %s", card_uid, e)
     return staff, guest, access_group_from_holder
 
 
@@ -56,7 +56,7 @@ def handle_card_event(device, value, ts_dt):
         device_id = device.get("id")
 
         if not event_ts_unix:
-            logger.warning(f"Missing event_ts in RFID event: {value}")
+            logger.warning("Missing event_ts in RFID event: %s", value)
             return None
 
         try:
@@ -71,7 +71,7 @@ def handle_card_event(device, value, ts_dt):
             access_group_str = value.get("access_group", "").upper().replace(" ", "_")
 
             if not all([access_group_str, card_uid]):
-                logger.warning(f"Missing required fields in RFID event: {value}")
+                logger.warning("Missing required fields in RFID event: %s", value)
                 return None
 
             access_group_value = getattr(AccessGroupChoices, access_group_str, AccessGroupChoices.FAILED)
@@ -84,7 +84,7 @@ def handle_card_event(device, value, ts_dt):
             update_lock_last_log_id(tenant_id, access_log_id, lock_type, device_id)
 
             if raw_open_result is None:
-                logger.warning(f"Missing openResult in Fanvil RFID event: {value}")
+                logger.warning("Missing openResult in Fanvil RFID event: %s", value)
                 return None
 
             open_result = AccessGroupChoices.SUCCESS if raw_open_result else AccessGroupChoices.DENIED
@@ -126,13 +126,16 @@ def handle_card_event(device, value, ts_dt):
             created_at=timezone.now(),
             additional_info=additional_info,
         )
-        logger.info(f"card : {card_log}")
+        logger.info("card : %s", card_log)
 
         return card_log
 
     except Exception as e:
-        logger.error(f"Error processing RFID card event: {e}")
+        logger.error("Error processing RFID card event: %s", e)
         logger.error(
-            f"Device: {device.get('id') if isinstance(device, dict) else device}, Value: {value}, Timestamp: {ts_dt}"
+            "Device: %s, Value: %s, Timestamp: %s",
+            device.get("id") if isinstance(device, dict) else device,
+            value,
+            ts_dt,
         )
         return None

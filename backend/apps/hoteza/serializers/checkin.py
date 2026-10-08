@@ -68,7 +68,7 @@ class CheckInSerializer(serializers.Serializer):
         return {ret[key]: value for key, value in attrs.items() if key in ret}
 
     def validate(self, attrs):
-        logger.info(f"CheckInSerializer validate called with attrs: {attrs}")
+        logger.info("CheckInSerializer validate called with attrs: %s", attrs)
         attrs = self.convert_fields(attrs)
         tenant = None
         if attrs.get("hotel_id"):
@@ -93,7 +93,7 @@ class CheckInSerializer(serializers.Serializer):
             additional_info__pms_reg_num=attrs.get("pms_reg_num"),
             is_active=True,
         ).first()
-        logger.info(f"Existing guest found: {guest}")
+        logger.info("Existing guest found: %s", guest)
 
         if guest:
             # Check if any changes are needed, we need update existing guest
@@ -165,7 +165,7 @@ class CheckInSerializer(serializers.Serializer):
                     },
                 )
             except Exception as e:
-                logger.error(f"Error updating guest: {e}")
+                logger.error("Error updating guest: %s", e)
                 raise JsonValidationError({"result": 9, "message": "Failed to update guest."})
         else:
             logger.info("Creating new guest with data: %s", validated_data)
@@ -185,10 +185,10 @@ class CheckInSerializer(serializers.Serializer):
                     }
                 )
             except Exception as e:
-                logger.error(f"Error creating guest: {e}")
+                logger.error("Error creating guest: %s", e)
                 raise JsonValidationError({"result": 9, "message": "Failed to create guest."})
 
-        logger.info(f"Guest check-in processed: {instance.name}")  # pyright: ignore
+        logger.info("Guest check-in processed: %s", instance.name)  # pyright: ignore
 
         pin = validated_data.get("pin") or None
         if pin:

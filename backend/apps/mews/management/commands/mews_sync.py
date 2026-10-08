@@ -156,7 +156,7 @@ class Command(BaseCommand):
 
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"✗ Sync failed for {tenant.title}: {e}"))
-                logger.error(f"Sync error for tenant {tenant.title}: {e}", exc_info=True)
+                logger.exception("Sync error for tenant %s", tenant.title)
 
         self.stdout.write(self.style.SUCCESS(f"\n{'=' * 60}"))
         self.stdout.write(self.style.SUCCESS("All syncs completed"))

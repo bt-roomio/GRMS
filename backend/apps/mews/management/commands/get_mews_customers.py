@@ -76,7 +76,7 @@ class Command(BaseCommand):
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error: {e}"))
-            logger.error(f"Error getting customers: {e}", exc_info=True)
+            logger.exception("Error getting customers")
 
     def _get_customers_by_reservation(self, client: MewsAPIClient, reservation_id: str, pretty: bool):
         """Get customers for a specific reservation"""
