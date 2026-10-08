@@ -15,9 +15,8 @@ from django.utils.deprecation import MiddlewareMixin
 from core.utils import brute_force as bf
 from core.utils.ip import get_client_ip
 
-# Logger "security" rather than __name__: __name__ resolves to `core.middleware.…`,
-# which LOGGING routes through the `core` logger with propagate=False, so lockout
-# records never reached the security handler.
+# Logger "security" rather than __name__: it is the dedicated channel for auth and
+# lockout events, kept at INFO in LOGGING regardless of DJANGO_LOG_LEVEL.
 logger = logging.getLogger("security")
 
 security_cache = caches["security"]

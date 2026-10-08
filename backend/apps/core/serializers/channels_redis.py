@@ -1,5 +1,4 @@
 import json
-import uuid
 
 from channels_redis.serializers import BaseMessageSerializer
 
@@ -13,9 +12,7 @@ class UUIDSafeJSONSerializer(BaseMessageSerializer):
 
     def as_bytes(self, message):
         def default(o):
-            if isinstance(o, uuid.UUID):
-                print(o)
-                return str(o)
+            # uuid.UUID and anything else json can't encode -> str
             return str(o)
 
         text = json.dumps(

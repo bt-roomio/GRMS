@@ -1,11 +1,12 @@
+import logging
+
 from celery import shared_task
-from celery.utils.log import get_task_logger
 
 from access_manager.models import Group
 from access_manager.utilits.process_multi_devices_rpc import process_devices_parallel
 from main.models import Device
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})

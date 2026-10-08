@@ -107,8 +107,8 @@ class Command(BaseCommand):
             for client in clients:
                 try:
                     client.disconnect()
-                except Exception as e:
-                    logger.error("Error disconnecting client: %s", e)
+                except Exception:
+                    logger.exception("Error disconnecting client")
             self.stdout.write(self.style.SUCCESS("Shutdown complete"))
             sys.exit(0)
 

@@ -2,7 +2,7 @@ import logging
 
 from shuttle.consumers.base import BaseConsumer
 
-logger = logging.getLogger("django")
+logger = logging.getLogger(__name__)
 
 
 class ReceiverConsumer(BaseConsumer):

@@ -120,8 +120,8 @@ def _remove_duplicate_states(room: Room) -> None:
     """
     try:
         Room.objects.filter(id=room.id).update(state=list(set(room.state)))
-    except Exception as e:
-        logger.error("✗ Failed to remove duplicate states for room %s: %s", room.number, e)
+    except Exception:
+        logger.exception("✗ Failed to remove duplicate states for room %s", room.number)
 
 
 def make_stable_room_state(room: Room) -> None:
@@ -177,8 +177,8 @@ def send_room_status_websocket(room: Room) -> None:
             f"room_status_{room.tenant_id}", {"type": "get_latest_activity", **message}
         )
         logger.debug("✓ Sent WebSocket notification for room %s", room.number)
-    except Exception as e:
-        logger.error("✗ Failed to send WebSocket notification for room %s: %s", room.number, e)
+    except Exception:
+        logger.exception("✗ Failed to send WebSocket notification for room %s", room.number)
 
 
 def _get_tenant_general_settings(room: Room) -> dict:
@@ -215,8 +215,8 @@ def _update_room_devices_status(room: Room) -> None:
         for attr_data, attr_type, device_id, device_name in update_room_device_attributes(room, attrs):
             if not is_swap_flag:
                 send_msg_status_room(channel, attr_type, attr_data, device_id, device_name)
-    except Exception as e:
-        logger.error("✗ Failed to update room devices for room %s: %s", room.number, e)
+    except Exception:
+        logger.exception("✗ Failed to update room devices for room %s", room.number)
 
 
 def send_msg_status_room(channel, attr_type, attr, device_id, device_name):

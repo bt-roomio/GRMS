@@ -3,7 +3,7 @@ from typing import List
 
 from access_manager.models import ALL_DAYS, WEEK_DAYS, CardDeviceSlot, Group, GuestCard, StaffCard
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 
 
 def find_or_assign_slot(card_number: str, device, connect) -> int:

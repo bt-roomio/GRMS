@@ -11,6 +11,8 @@ TRUSTED_IP_HEADERS = trusted_ip_headers_from_env()
 CORS_ORIGIN_WHITELIST = env_list("DJANGO_CORS_ORIGIN_WHITELIST")
 CORS_ALLOWED_ORIGIN_REGEXES = [r"^http://localhost:\d+$"]
 CORS_ALLOW_CREDENTIALS = True
+# Lets the frontend read the request id (core.log.middleware) to show it in error reports.
+CORS_EXPOSE_HEADERS = ["X-Request-ID"]
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 

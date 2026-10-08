@@ -14,7 +14,7 @@ from core.utils.snake_case import convert_to_snake
 from shuttle.utils.response import response
 from users.utils.get_user import get_user
 
-logger = logging.getLogger("django")
+logger = logging.getLogger(__name__)
 
 
 class BaseConsumer(AsyncJsonWebsocketConsumer):

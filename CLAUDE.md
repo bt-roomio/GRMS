@@ -15,7 +15,7 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 - **Task Queue**: Celery on a dedicated `redis-broker` instance (separate from the `redis` cache/channel layer)
 - **Message Queue**: RabbitMQ for device communication, MQTT broker
 - **Auth**: JWT (djangorestframework-simplejwt), django-allauth (Google, Microsoft, Keycloak SSO)
-- **Monitoring**: Prometheus metrics (django-prometheus); standalone Prometheus + Grafana + Alertmanager stack under `deploy/monitoring/`
+- **Monitoring**: Prometheus metrics (django-prometheus); stdout logging with request/task context (text or JSON, `core/log/`); standalone Prometheus + Grafana + Alertmanager stack under `deploy/monitoring/`
 - **Process Management**: Each process runs as its own Docker Compose service (no supervisord); orchestrated via `deploy/Makefile`
 
 ## Development Commands
@@ -224,6 +224,14 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 - Database metrics updated every 60s via Celery task
 - Standalone observability stack under `deploy/monitoring/` (Prometheus + Grafana + Alertmanager + node-exporter + blackbox), with Grafana dashboards and alert rules; alerts route to Telegram. Runs on the shared external `roomio_net` network.
 - Celery workers/queues can be inspected via Flower (`celery-flower` service, port 5555)
+
+### Logging
+
+- Config: `config/settings/components/logging.py`. One `console` handler on the root logger (stdout; Docker rotates it); loggers below it only set levels, so never give a logger its own handler (duplicate lines)
+- Always `logger = logging.getLogger(__name__)`; the only named channel is `security` (auth/lockout events, always INFO). Don't use `get_task_logger` or `getLogger("django"/"main"/...)`
+- `%s`-style args, never f-strings; in `except` blocks use `logger.exception(...)` without the exception in the message (ruff `G`/`LOG` rules enforce this)
+- Knobs: `DJANGO_LOG_LEVEL`, `DJANGO_LOG_FORMATTER` (`simple`/`verbose`/`verbose_with_location`/`json`), `DJANGO_LOG_SQL`. Celery workers/beat use the same config (`core/log/celery.py`), their `-l` flag has no effect. Chatty third-party libs are capped at WARNING (`_QUIET_LOGGERS`)
+- Log context (`core/log/`): every record carries `request_id` (HTTP: `RequestContextMiddleware`, echoed in the `X-Request-ID` header; passed to Celery tasks via task headers), `user_id`/`tenant_id` (once DRF has authenticated), `task_id`/`task` in Celery, `device_id`/`topic` in mq-async per-message handlers. Add your own with `with log_context(key=value):` from `core.log.context`
 
 ## Configuration
 

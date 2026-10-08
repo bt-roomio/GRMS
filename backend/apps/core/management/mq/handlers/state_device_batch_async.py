@@ -20,7 +20,7 @@ from shuttle.utils.has_changed_and_update import (
     set_cached_attributes,
 )
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 
 async def sync_state_device_batch_async(batch: list[tuple]):

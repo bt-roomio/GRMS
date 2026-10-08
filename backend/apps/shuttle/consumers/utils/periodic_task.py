@@ -3,7 +3,7 @@ import functools
 import logging
 from functools import wraps
 
-logger = logging.getLogger("django")
+logger = logging.getLogger(__name__)
 
 
 def periodic_task_legacy():

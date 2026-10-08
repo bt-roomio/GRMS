@@ -1,9 +1,9 @@
+import logging
 import subprocess
 import time
 from datetime import time as time_cls
 
 from celery import shared_task
-from celery.utils.log import get_task_logger
 from django.db.models import Count, Q
 
 from access_manager.tasks.send_rpc import send_rpc_request
@@ -13,7 +13,7 @@ from main.models import Guest, Room
 from main.services.nodered import deprovision_nodered, provision_nodered
 from main.utils.access_context import get_guest_access_context
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @shared_task(name="main.tasks.auto_check_out")
@@ -64,7 +64,6 @@ def auto_block():
         check_out__lte=time.time(),
         auto_check_out=False,
     ).select_related("tenant")
-    print("guests selected: ", candidates)
 
     guest_ids = [
         guest.id
@@ -72,6 +71,7 @@ def auto_block():
         if _block_time_reached((guest.tenant.additional_info or {}).get("general_settings", {}), now_epoch)
     ]
 
+    logger.info("Auto block: %d guests to block", len(guest_ids))
     guests = Guest.objects.filter(id__in=guest_ids)
     access_context = get_guest_access_context(guests)  # ty: ignore
     guest_cards = access_context.get("guest_cards")

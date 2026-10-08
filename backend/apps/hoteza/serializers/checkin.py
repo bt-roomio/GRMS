@@ -164,8 +164,8 @@ class CheckInSerializer(serializers.Serializer):
                         "additional_info": existing_additional_info,
                     },
                 )
-            except Exception as e:
-                logger.error("Error updating guest: %s", e)
+            except Exception:
+                logger.exception("Error updating guest")
                 raise JsonValidationError({"result": 9, "message": "Failed to update guest."})
         else:
             logger.info("Creating new guest with data: %s", validated_data)
@@ -184,8 +184,8 @@ class CheckInSerializer(serializers.Serializer):
                         "additional_info": validated_data,
                     }
                 )
-            except Exception as e:
-                logger.error("Error creating guest: %s", e)
+            except Exception:
+                logger.exception("Error creating guest")
                 raise JsonValidationError({"result": 9, "message": "Failed to create guest."})
 
         logger.info("Guest check-in processed: %s", instance.name)  # pyright: ignore

@@ -1,7 +1,7 @@
 import json
 import logging
 
-logger = logging.getLogger("django")
+logger = logging.getLogger(__name__)
 
 
 def str_to_dict(msg):

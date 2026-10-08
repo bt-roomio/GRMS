@@ -35,8 +35,8 @@ def update_lock_last_log_id(tenant_id: str, access_log_id, lock_type: str, devic
             new_value=new_ts,
         )
 
-    except Exception as e:
-        logger.error("Error triggering last-log update for tenant %s: %s", tenant_id, e)
+    except Exception:
+        logger.exception("Error triggering last-log update for tenant %s", tenant_id)
 
 
 def update_device_shared_int_if_bigger(device: Device, attribute_key: str, new_value: int):
@@ -58,7 +58,7 @@ def update_device_shared_int_if_bigger(device: Device, attribute_key: str, new_v
                 attr.str_v = str(new_value)
                 attr.save(update_fields=["str_v"])
 
-    except Exception as e:
-        logger.error(
-            "Error updating shared attr %s for device %s: %s", attribute_key, getattr(device, "name", "unknown"), e
+    except Exception:
+        logger.exception(
+            "Error updating shared attr %s for device %s", attribute_key, getattr(device, "name", "unknown")
         )

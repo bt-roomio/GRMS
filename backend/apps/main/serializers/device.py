@@ -140,13 +140,11 @@ class DeviceSerializer(serializers.ModelSerializer):
             for group_room in group_rooms:
                 try:
                     card_room(group_id=group_room.group_id, room_id=room_id, action="connect")
-                except Exception as e:
-                    logger.error(
-                        "Error registering cards for group %s to room %s: %s", group_room.group_id, room_id, str(e)
-                    )
+                except Exception:
+                    logger.exception("Error registering cards for group %s to room %s", group_room.group_id, room_id)
 
-        except Exception as e:
-            logger.error("Error in _register_cards_for_room for room %s: %s", room_id, str(e))
+        except Exception:
+            logger.exception("Error in _register_cards_for_room for room %s", room_id)
 
     class Meta:
         model = Device

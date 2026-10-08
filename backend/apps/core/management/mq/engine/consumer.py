@@ -22,7 +22,7 @@ from core.management.mq.config import (
 from core.management.mq.engine.batch_processor import BatchAccumulator
 from core.management.mq.engine.publisher import Publisher
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 
 class AsyncMQConsumer:

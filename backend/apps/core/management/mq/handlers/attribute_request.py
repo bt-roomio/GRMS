@@ -16,7 +16,7 @@ from core.management.mq.devices.get_device import get_sub_device
 from shuttle.models import AttributeKv
 from shuttle.utils.get_non_null_field import get_non_null_field
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 
 async def get_attribute_response(device: DeviceType, data: dict, topic: str):

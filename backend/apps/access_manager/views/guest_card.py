@@ -10,7 +10,7 @@ from access_manager.swagger.guest_card import guest_card_swagger
 from access_manager.utilits.check_card_assignment import get_card_assignments
 from main.models import Guest
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 
 
 class GuestCardView(APIView):

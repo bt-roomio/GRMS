@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 import aio_pika
 import orjson
 
+from core.log.context import bind
 from core.management.mq.config import (
     TOPIC_ATTRIBUTES,
     TOPIC_DEVICES_ATTRIBUTES_REQUEST,
@@ -38,7 +39,7 @@ from core.management.mq.handlers.attribute_request import handle_attribute_reque
 from core.management.mq.handlers.state_device_batch_async import sync_state_device_batch_async
 from core.management.mq.mq_metrics import mq_keys_processed_total, mq_messages_processed_total
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 # Per-message processing outcome, keyed by delivery_tag.
 STATUS_SUCCESS = "success"
@@ -156,6 +157,8 @@ class BatchProcessor:
     async def _handle_other(self, entry: RoutedMessage, message_status: dict):
         """Dispatch a single non-batched message (attribute request / RPC)."""
         device, topic, data, message = entry
+        # gather() runs each call in its own task, so this context stays per message.
+        bind(tenant_id=device["tenant_id"], device_id=device["id"], topic=topic)
         try:
             if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(TOPIC_DEVICES_ATTRIBUTES_REQUEST):
                 await handle_attribute_request_async(topic, device, data, self.publisher)  # ty: ignore

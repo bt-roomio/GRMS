@@ -51,7 +51,7 @@ class Command(BaseCommand):
             connection.close()
             self.stdout.write(self.style.SUCCESS(f"Queue '{PMS_MESSAGES_QUEUE}' setup completed"))
         except Exception as e:
-            logger.error("✗ Failed to setup queue '%s': %s", PMS_MESSAGES_QUEUE, e)
+            logger.exception("✗ Failed to setup queue '%s'", PMS_MESSAGES_QUEUE)
             self.stdout.write(self.style.ERROR(f"✗ Failed to setup queue '{PMS_MESSAGES_QUEUE}': {e}"))
             return
 
@@ -116,8 +116,8 @@ class Command(BaseCommand):
             send_to_rabbitmq(channel, message, routing_key="pmsUnhandled")
             channel.connection.close()
             logger.info("✓ Republished unhandled event_type=%r to pmsUnhandled", event_type)
-        except Exception as e:
-            logger.error("✗ Failed to republish unhandled message: %s", e)
+        except Exception:
+            logger.exception("✗ Failed to republish unhandled message")
 
     def process_pms_message(self, body: bytes):
         """Process PMS message - implement business logic here"""
@@ -420,8 +420,8 @@ def handle_guest_move(guest: Guest, data: dict):
         # old_room_id lets subscribers of the room being left refresh too
         publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
         move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
-    except Exception as e:
-        logger.error("✗ Failed to move guest: %s", e)
+    except Exception:
+        logger.exception("✗ Failed to move guest")
         raise
 
 

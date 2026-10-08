@@ -1,6 +1,5 @@
+import logging
 import time
-
-from celery.utils.log import get_task_logger
 
 from rest_framework.fields import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -22,7 +21,7 @@ from access_manager.swagger.sync_device import (
 from access_manager.tasks.sync_device import sync_devices_task
 from main.models import Device
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SyncDeviceByDeviceDetailView(APIView):

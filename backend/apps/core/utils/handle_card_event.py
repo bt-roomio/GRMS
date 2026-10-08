@@ -130,10 +130,9 @@ def handle_card_event(device, value, ts_dt):
 
         return card_log
 
-    except Exception as e:
-        logger.error("Error processing RFID card event: %s", e)
-        logger.error(
-            "Device: %s, Value: %s, Timestamp: %s",
+    except Exception:
+        logger.exception(
+            "Error processing RFID card event (device: %s, value: %s, timestamp: %s)",
             device.get("id") if isinstance(device, dict) else device,
             value,
             ts_dt,
