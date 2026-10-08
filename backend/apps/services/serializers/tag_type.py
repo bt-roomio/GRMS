@@ -10,7 +10,7 @@ from services.models import TagRange, TagType, TagTypeGroup
 from services.serializers.tag_type_group import TagTypeGroupShortSerializer, TenantUniqueNameSerializer
 
 
-def _value_key(value) -> str:
+def range_value_key(value) -> str:
     """Identity of a range value: JSON keeps types apart (``true`` vs ``1`` vs ``"1"``)."""
     return json.dumps(value, sort_keys=True)
 
@@ -69,10 +69,10 @@ class TagTypeWriteSerializer(TenantUniqueNameSerializer):
 
     @staticmethod
     def _set_tag_ranges(instance, values, user):
-        existing = {_value_key(r.range_value): r for r in instance.tag_ranges.all()}
+        existing = {range_value_key(r.range_value): r for r in instance.tag_ranges.all()}
         ranges = {}
         for value in values:
-            key = _value_key(value)
+            key = range_value_key(value)
             if key not in ranges:
                 ranges[key] = existing.get(key) or instance.tag_ranges.create(created_by=user, range_value=value)
         TagRange.objects.filter(pk__in=[r.pk for key, r in existing.items() if key not in ranges]).delete()
