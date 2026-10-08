@@ -3,7 +3,7 @@ import uuid
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from main.models import Device
+from main.models import Device, Room, RoomType
 from shuttle.models import Relation, TsKvDictionary, TsKvLatest
 
 
@@ -133,6 +133,92 @@ class DeviceFromConfTest(BaseTestCase):
         }
         response = self.client.post(self.url, data=payload, format="json")
         self.assertEqual(response.status_code, 400)
+
+    # ── rooms ────────────────────────────────────────────────────────────
+    def _room_payload(self):
+        return self._valid_payload(
+            devices=[
+                {"macAddress": "AA:BB:CC:DD:EE:01", "addressMapId": 1, "roomNumber": "201", "roomType": "STD"},
+                {"macAddress": "AA:BB:CC:DD:EE:02", "addressMapId": 1, "roomNumber": "101", "roomType": "SUITE"},
+                {"macAddress": "AA:BB:CC:DD:EE:03", "addressMapId": 1},
+            ]
+        )
+
+    def test_post_uses_given_floor_and_block(self):
+        """POST creates new rooms with the optional floor/block when provided."""
+        payload = self._valid_payload(
+            devices=[
+                {
+                    "macAddress": "AA:BB:CC:DD:EE:01",
+                    "addressMapId": 1,
+                    "roomNumber": "501",
+                    "roomType": "STD",
+                    "floor": "5F",
+                    "block": "B",
+                }
+            ]
+        )
+        self.client.post(self.url, data=payload, format="json")
+
+        room = Room.objects.get(tenant_id=self.tenant_id, number="501")
+        self.assertEqual((room.floor, room.block), ("5F", "B"))
+
+    def test_post_response_includes_room(self):
+        """Response returns each device's room number, floor, block and type."""
+        response = self.client.post(self.url, data=self._room_payload(), format="json")
+
+        devices = {d["mac_address"]: d for d in response.data["devices"]}
+        linked = devices["AA:BB:CC:DD:EE:01"]
+        self.assertEqual(
+            (linked["room_number"], linked["floor"], linked["block"], linked["room_type"]),
+            ("201", "2", "A", "STD"),
+        )
+        self.assertNotIn("room_number", devices["AA:BB:CC:DD:EE:03"])
+
+    def test_post_creates_rooms_and_room_types(self):
+        """POST creates room types and new rooms, and links devices to them."""
+        response = self.client.post(self.url, data=self._room_payload(), format="json")
+        self.assertEqual(response.status_code, 200)
+
+        room = Room.objects.get(tenant_id=self.tenant_id, number="201")
+        self.assertEqual((room.floor, room.block, room.type.title), ("2", "A", "STD"))
+        self.assertTrue(RoomType.objects.filter(tenant_id=self.tenant_id, title="SUITE").exists())
+
+        dev = Device.objects.get(tenant_id=self.tenant_id, name="AA:BB:CC:DD:EE:01")
+        self.assertEqual(dev.room_id, room.id)
+        self.assertIsNone(Device.objects.get(tenant_id=self.tenant_id, name="AA:BB:CC:DD:EE:03").room_id)
+
+    def test_post_reuses_existing_room(self):
+        """POST links devices to an existing room with the same number and sets its type."""
+        self.client.post(self.url, data=self._room_payload(), format="json")
+
+        self.assertEqual(Room.objects.filter(tenant_id=self.tenant_id, number="101").count(), 1)
+        room = Room.objects.get(pk="df77f910-2dcd-45cf-b6be-054c744561a7")
+        self.assertEqual(room.type.title, "SUITE")
+        self.assertEqual(Device.objects.get(tenant_id=self.tenant_id, name="AA:BB:CC:DD:EE:02").room_id, room.id)
+
+    def test_post_rooms_idempotent(self):
+        """POST twice does not duplicate rooms or room types."""
+        self.client.post(self.url, data=self._room_payload(), format="json")
+        self.client.post(self.url, data=self._room_payload(), format="json")
+
+        self.assertEqual(Room.objects.filter(tenant_id=self.tenant_id, number="201").count(), 1)
+        self.assertEqual(RoomType.objects.filter(tenant_id=self.tenant_id, title="STD").count(), 1)
+
+    def test_post_snake_case_payload(self):
+        """POST accepts a snake_case payload and links devices to rooms."""
+        payload = {
+            "gateway_id": self.gateway_id,
+            "devices": [
+                {"mac_address": "AA:BB:CC:DD:EE:01", "address_map_id": 1, "room_number": "201", "room_type": "STD"}
+            ],
+            "address_maps": [{"address_map_id": 1, "timeseries": [{"tag": "temperature"}]}],
+        }
+        response = self.client.post(self.url, data=payload, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        room = Room.objects.get(tenant_id=self.tenant_id, number="201")
+        self.assertEqual(Device.objects.get(tenant_id=self.tenant_id, name="AA:BB:CC:DD:EE:01").room_id, room.id)
 
     # ── Permission / Auth ────────────────────────────────────────────────
     def test_post_unauthenticated_rejected(self):
