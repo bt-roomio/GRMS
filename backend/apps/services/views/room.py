@@ -14,7 +14,7 @@ class RoomListView(APIView):
     @room_list_swagger()
     def get(self, request):
         params = RoomFilterSerializer.parse(request.query_params)
-        queryset = room_list(request.tenant, room_type=params.room_type)
+        queryset = room_list(request.tenant, room_type=params.room_type, sort_by=params.sort_by)
         serializer = RoomSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.page, params.size)
         return Response(data)
