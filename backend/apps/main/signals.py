@@ -4,7 +4,7 @@ import time
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
@@ -79,6 +79,15 @@ def guest_update(instance: Guest, **kwargs):
     publish_guest_changes(instance)
 
 
+@receiver(pre_save, sender=Room)
+def remember_room_state(instance: Room, **kwargs) -> None:
+    """Remember the persisted state so post_save can tell a real check-in/check-out transition from a re-save."""
+    update_fields = kwargs.get("update_fields") or []
+    if "state" in update_fields:
+        persisted = Room.objects.filter(id=instance.id).values_list("state", flat=True).first()
+        instance.__dict__["_state_before_save"] = persisted
+
+
 @receiver(post_save, sender=Room)
 def room(instance: Room, **kwargs) -> None:
     """
@@ -101,12 +110,23 @@ def room(instance: Room, **kwargs) -> None:
     # 2. Send WebSocket notification
     send_room_status_websocket(instance)
 
-    # 3. Update devices via RabbitMQ (only if state changed)
+    # 3. Update devices via RabbitMQ (only on a real check-in/check-out transition).
+    # Re-sending the check-in trigger to an occupied room resets the controller from "guest inside" back to
+    # "checked in", so repeated PMS events and guest edits must not reach the devices.
     update_fields = kwargs.get("update_fields", []) or []
-    if not (settings.TESTING or settings.DEBUG or "state" not in update_fields):
+    old_state = instance.__dict__.pop("_state_before_save", None)
+    if not (settings.TESTING or settings.DEBUG or "state" not in update_fields) and _check_in_changed(
+        old_state, instance.state
+    ):
         _update_room_devices_status(instance)
 
     publish_room_detail_changes(instance)
+
+
+def _check_in_changed(old_state: list | None, new_state: list) -> bool:
+    if old_state is None:
+        return True
+    return (Room.CheckedIn in old_state) != (Room.CheckedIn in new_state)
 
 
 def _remove_duplicate_states(room: Room) -> None:
