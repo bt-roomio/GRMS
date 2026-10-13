@@ -20,7 +20,7 @@ from shuttle.querysets.ts_kv_latest import TsKvLatestQuerySet
 
 class TsKv(models.Model):
     ts: models.DateTimeField = models.DateTimeField(default=timezone.now, primary_key=True)
-    entity = models.ForeignKey("main.Device", models.DO_NOTHING)
+    entity = models.ForeignKey("main.Device", CASCADE)
     entity_id = UUID
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
@@ -56,7 +56,7 @@ class TsKvDictionary(models.Model):
 
 class TsKvLatest(BaseModelTs):
     entity_id: UUID
-    entity = models.ForeignKey("main.Device", models.DO_NOTHING, "ts_kvs_latest")
+    entity = models.ForeignKey("main.Device", CASCADE, "ts_kvs_latest")
     key = models.ForeignKey("shuttle.TsKvDictionary", models.DO_NOTHING, to_field="key_id", db_column="key")
     bool_v = models.BooleanField(blank=True, null=True)
     str_v = models.TextField(blank=True, null=True)
@@ -81,6 +81,12 @@ class TsKvLatest(BaseModelTs):
     class Meta(BaseModelTs.Meta):
         db_table = "shuttle_ts_kv_latest"
         unique_together = ("entity", "key")
+        indexes = [
+            # The alarm evaluator selects by key across every device each tick.
+            # ``unique_together`` leads with ``entity``, so it cannot serve that
+            # and the scan would go sequential over the whole table.
+            models.Index(fields=["key"], name="ix_ts_kv_latest_key"),
+        ]
 
 
 class AttributeKv(BaseModel):

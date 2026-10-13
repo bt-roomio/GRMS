@@ -1,4 +1,5 @@
 import logging
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -47,6 +48,17 @@ class GuestMoveRoomSerializer(serializers.Serializer):
 
 
 class GuestSerializer(serializers.ModelSerializer):
+    """
+    Check-in/check-out marks are taken from context: "source" (Guest.SOURCE, defaults to ROOMIO)
+    and "user" (the acting user, omitted for integrations).
+    """
+
+    def _actor(self):
+        user = self.context.get("user")
+        if not getattr(user, "is_authenticated", False):
+            user = None
+        return self.context.get("source", Guest.SOURCE.ROOMIO), user
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["room"] = str(instance.room_id) if instance.room_id else None
@@ -59,6 +71,8 @@ class GuestSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        if validated_data.get("is_active", True) and not validated_data.get("is_reservation", False):
+            validated_data["check_in_source"], validated_data["check_in_by"] = self._actor()
         try:
             instance = super().create(validated_data)
             room = instance.room
@@ -67,7 +81,7 @@ class GuestSerializer(serializers.ModelSerializer):
             return instance
         except Exception as e:
             logger.warning(e)
-            raise e
+            raise
 
     def update(self, instance: Guest, validated_data):
         logger.info(f"Updating Guest {instance.id} with data: {validated_data}")
@@ -97,6 +111,8 @@ class GuestSerializer(serializers.ModelSerializer):
         room_to_update = None
         if "is_reservation" in validated_data:
             room_to_update = instance.room
+            if instance.is_reservation and validated_data["is_reservation"] is False:
+                instance.mark_checked_in(*self._actor())
 
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
             logger.info(f"Deactivating Guest {instance.id}")
@@ -111,7 +127,7 @@ class GuestSerializer(serializers.ModelSerializer):
                 room_to_update = room
 
             self._deactivate_result = deactivate_result
-            instance.checkout_by = instance.CHECKOUT_BY.ROOMIO
+            instance.mark_checked_out(*self._actor())
 
         updated = super().update(instance, validated_data)
 
@@ -142,8 +158,13 @@ class GuestSerializer(serializers.ModelSerializer):
             "auto_check_out",
             "reservation_number",
             "additional_info",
+            "check_in_by",
+            "check_in_source",
+            "check_out_by",
+            "check_out_source",
         )
-        extra_kwargs = {
+        read_only_fields = ("check_in_by", "check_in_source", "check_out_by", "check_out_source")
+        extra_kwargs: ClassVar = {
             "check_in": {"required": True},
             "check_out": {"required": True},
             "is_active": {"default": True},

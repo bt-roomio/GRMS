@@ -17,9 +17,9 @@ class UUIDEncoder(json.JSONEncoder):
 class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
     pagination_class = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    async def accept(self, *args, **kwargs):
         self.subscribers = {}
+        await super().accept(*args, **kwargs)
 
     @classmethod
     async def encode_json(cls, content):

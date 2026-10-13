@@ -5,6 +5,7 @@ from django.test import TestCase
 from access_manager.models import Card, GuestCard, NeedSyncDevice
 from access_manager.serializers.guest_card import GuestCardRequestSerializer
 from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.pin_to_card import pin_to_card_number
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
 from main.models import Device, Guest
 
@@ -65,30 +66,22 @@ class GuestCardRequestSerializerPwdTest(TestCase):
         self.assertEqual(s.validated_data["cards"], ["48291"])
 
     def test_is_pwd_true_rejects_repeated_digits(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["1111"], "is_pwd": True}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["1111"], "is_pwd": True})
         self.assertFalse(s.is_valid())
         self.assertIn("cards", s.errors)
 
     def test_is_pwd_true_rejects_sequential_digits(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["1234"], "is_pwd": True}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["1234"], "is_pwd": True})
         self.assertFalse(s.is_valid())
         self.assertIn("cards", s.errors)
 
     def test_is_pwd_true_rejects_short_pin(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["12"], "is_pwd": True}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["12"], "is_pwd": True})
         self.assertFalse(s.is_valid())
         self.assertIn("cards", s.errors)
 
     def test_is_pwd_true_rejects_non_numeric(self):
-        s = GuestCardRequestSerializer(
-            data={"guest_id": "g", "cards": ["12ab5"], "is_pwd": True}
-        )
+        s = GuestCardRequestSerializer(data={"guest_id": "g", "cards": ["12ab5"], "is_pwd": True})
         self.assertFalse(s.is_valid())
         self.assertIn("cards", s.errors)
 
@@ -207,41 +200,52 @@ class SendRpcRequestPwdTest(TestCase):
         self.assertIsNotNone(sync_row)
         self.assertTrue(sync_row.card.is_pwd)
 
+    def test_pin_to_card_number(self):
+        self.assertEqual(pin_to_card_number(123456), "01 02 03 04 05 06")
+        self.assertEqual(pin_to_card_number("908172"), "09 00 08 01 07 02")
+        self.assertEqual(pin_to_card_number("111111"), "01 01 01 01 01 01")
+
+    @patch("access_manager.tasks.send_rpc.prepare_rpc_request", wraps=prepare_rpc_request)
     @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
     @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
-    def test_pwd_skipped_on_default_profile_device(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+    def test_pwd_sent_as_card_on_default_profile_device(self, mock_send_rabbitmq, mock_connect_rabbitmq, mock_prepare):
         # Device 47aef21b uses the "default" device profile in the fixtures.
         self.assertEqual(self.device.device_profile.name.lower(), "default")
 
-        result = send_rpc_request(
+        send_rpc_request(
             device_id=self.device_id,
-            cards=["55555"],
+            cards=["123456"],
             access=1,
             guest_id=self.guest_id,
             is_pwd=True,
         )
 
-        self.assertTrue(result["success"])
-        self.assertTrue(result["skipped_default_profile"])
-        mock_connect_rabbitmq.assert_not_called()
-        mock_send_rabbitmq.assert_not_called()
-        self.assertFalse(GuestCard.objects.filter(card__number="55555").exists())
-        self.assertFalse(NeedSyncDevice.objects.filter(card__number="55555", device=self.device).exists())
+        mock_prepare.assert_called_once_with(
+            self.device_id, ["01 02 03 04 05 06"], 1, self.guest_id, None, is_pwd=False
+        )
+        rpc_data = mock_send_rabbitmq.call_args[0][1]["data"]["data"]
+        self.assertEqual(rpc_data["method"], "writeRFID")
+        self.assertIn("01 02 03 04 05 06", [p["cardNumber"] for p in rpc_data["params"]])
 
+    @patch("access_manager.tasks.send_rpc.prepare_rpc_request", wraps=prepare_rpc_request)
     @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
     @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
-    def test_pwd_deactivation_skipped_on_default_profile_device(self, mock_send_rabbitmq, mock_connect_rabbitmq):
-        result = send_rpc_request(
+    def test_pwd_deactivation_sent_as_card_on_default_profile_device(
+        self, mock_send_rabbitmq, mock_connect_rabbitmq, mock_prepare
+    ):
+        send_rpc_request(
             device_id=self.device_id,
-            cards=["55555"],
+            cards=["908172"],
             access=0,
             guest_id=self.guest_id,
             is_pwd=True,
         )
 
-        self.assertTrue(result["success"])
-        self.assertTrue(result["skipped_default_profile"])
-        mock_send_rabbitmq.assert_not_called()
+        mock_prepare.assert_called_once_with(
+            self.device_id, ["09 00 08 01 07 02"], 0, self.guest_id, None, is_pwd=False
+        )
+        rpc_data = mock_send_rabbitmq.call_args[0][1]["data"]["data"]
+        self.assertEqual(rpc_data["method"], "writeRFID")
 
     @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
     @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")

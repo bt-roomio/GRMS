@@ -1,3 +1,5 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
@@ -25,6 +27,18 @@ class AdminTenantUsersListTest(BaseTestCase):
         ids = [u["id"] for u in response.data]
         self.assertIn(USER_ID, ids)
         self.assertIn(USER_ID_2, ids)
+
+    def test_list_query_count_does_not_grow_with_users(self):
+        url = reverse("admin_panel:admin-tenant-users", kwargs={"tenant_id": TENANT_ID})
+        with CaptureQueriesContext(connection) as before:
+            self.get(url)
+        for i in range(3):
+            User.objects.create(email=f"extra{i}@example.com", tenant_id=TENANT_ID)
+        with CaptureQueriesContext(connection) as after:
+            response = self.get(url)
+
+        self.assertEqual(len(response.data), 5)
+        self.assertEqual(len(after.captured_queries), len(before.captured_queries))
 
     def test_list_tenant_not_found(self):
         response = self.get(reverse("admin_panel:admin-tenant-users", kwargs={"tenant_id": NON_EXISTENT_ID}))

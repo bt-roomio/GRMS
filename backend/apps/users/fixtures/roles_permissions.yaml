@@ -62,9 +62,44 @@
         - main
         - tenant
 
-      - - unlock_user
+      - - view_notificationsettings
         - main
         - tenant
+      - - change_notificationsettings
+        - main
+        - tenant
+
+      - - view_alarm
+        - alarms
+        - alarm
+      - - change_alarm
+        - alarms
+        - alarm
+      - - delete_alarm
+        - alarms
+        - alarm
+      - - ack_alarm
+        - alarms
+        - alarm
+      - - clear_alarm
+        - alarms
+        - alarm
+      - - assign_alarm
+        - alarms
+        - alarm
+
+      - - view_alarmrule
+        - alarms
+        - alarmrule
+      - - add_alarmrule
+        - alarms
+        - alarmrule
+      - - change_alarmrule
+        - alarms
+        - alarmrule
+      - - delete_alarmrule
+        - alarms
+        - alarmrule
 
       - - view_user
         - users

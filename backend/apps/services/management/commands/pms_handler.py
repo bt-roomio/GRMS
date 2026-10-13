@@ -200,10 +200,14 @@ def handle_reservation(data):
 
     # Remember old room before update to recalculate its state if guest moves
     old_room: Room | None = None
+    # A reservation for an inactive record opens a new stay: drop the marks of the previous one
+    stay_marks: dict = {"check_in_by": None, "check_in_source": None, "check_out_by": None, "check_out_source": None}
     try:
         existing = Guest.objects.get(pms_id=data.get("pms_id"))
         if existing.room_id != new_room.id:
             old_room = existing.room
+        if existing.is_active:
+            stay_marks = {}
     except Guest.DoesNotExist:
         pass
 
@@ -220,6 +224,7 @@ def handle_reservation(data):
                 "auto_check_out": False,
                 "room": new_room,
                 "reservation_number": new_room.number,
+                **stay_marks,
                 "birthday": validated_data.get("birthday", None) or None,
                 "gender": validated_data.get("gender"),
                 "language": validated_data.get("language"),
@@ -249,11 +254,20 @@ def handle_checkin(validated_data):
 
     old_room: Room | None = None
     old_guest_context: dict | None = None
+    # Stamped only when the stay actually starts, not on a repeated check-in event for a guest already in
+    check_in_marks: dict = {
+        "check_in_by": None,
+        "check_in_source": Guest.SOURCE.MEWS,
+        "check_out_by": None,
+        "check_out_source": None,
+    }
     try:
         existing = Guest.objects.get(pms_id=validated_data.get("pms_id"))
         if existing.room_id != new_room.id:
             old_room = existing.room
             old_guest_context = get_guest_access_context(existing)
+        if existing.is_active and not existing.is_reservation:
+            check_in_marks = {}
     except Guest.DoesNotExist:
         pass
 
@@ -276,6 +290,7 @@ def handle_checkin(validated_data):
                 "tenant": validated_data.get("tenant"),
                 "pms_id": validated_data.get("pms_id"),
                 "additional_info": validated_data.get("additional_info"),
+                **check_in_marks,
             },
         )
         logger.info(
@@ -303,6 +318,7 @@ def handle_checkout(validated_data):
         old_guest_context = get_guest_access_context(guest)
 
         guest.is_active = False
+        guest.mark_checked_out(Guest.SOURCE.MEWS)
         guest.save()
         logger.info(
             f"✓ Guest checked out successfully: {guest.name} {guest.lastname}, room: {guest.room.number if guest.room else 'N/A'}, pms_id: {validated_data.get('pms_id')}"

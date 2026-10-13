@@ -78,7 +78,8 @@ class Tenant(ServiceBaseModel):
             ("change_generalsettings", "Can change general settings"),
             ("view_integrationsettings", "Can view integration settings"),
             ("change_integrationsettings", "Can change integration settings"),
-            ("unlock_user", "Can unlock user"),
+            ("view_notificationsettings", "Can view notification settings"),
+            ("change_notificationsettings", "Can change notification settings"),
         ]
 
 
@@ -323,6 +324,7 @@ class Device(BaseModel):
     device_profile = models.ForeignKey("main.DeviceProfile", CASCADE, "devices")
     status = models.BooleanField(default=False)
     room = models.ForeignKey("main.Room", SET_NULL, "devices", null=True, blank=True)
+    room_id: UUID
     label = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(null=True, blank=True)
     device_data = models.JSONField(null=True, blank=True)
@@ -399,7 +401,7 @@ class DeviceProfile(BaseModel):
     provision_device_key = models.CharField(unique=True, blank=True, null=True)
     external_id = models.UUIDField(blank=True, null=True)
 
-    objects = DeviceProfileQuerySet.as_manager()
+    objects: ClassVar[DeviceProfileQuerySet] = cast(DeviceProfileQuerySet, DeviceProfileQuerySet.as_manager())
 
     # TYPE
     tenant_id: UUID
@@ -517,14 +519,19 @@ class WidgetType(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "main_widget_type"
-        ordering = ["created_at"]
+        ordering = ("created_at",)
         unique_together = ("name", "tenant")
 
 
 class Guest(BaseModel):
-    class CHECKOUT_BY(models.TextChoices):
-        ROOMIO = "roomio", "Roomio"
-        PMS = "pms", "PMS"
+    class SOURCE(models.TextChoices):
+        """Channel a check-in/check-out came through; the acting user (if any) is in *_by."""
+
+        ROOMIO = "roomio", "Roomio"  # UI / REST API
+        MEWS = "mews", "Mews"
+        HOTEZA = "hoteza", "Hoteza"
+        FIAS = "fias", "FIAS"
+        AUTO = "auto", "Auto"  # scheduled tasks (auto_check_out)
 
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
@@ -543,21 +550,36 @@ class Guest(BaseModel):
     tenant = models.ForeignKey("main.Tenant", CASCADE)
     pms_id = models.CharField(max_length=255, null=True, blank=True)
     additional_info = models.JSONField(blank=True, null=True)
-    checkout_by = models.CharField(choices=CHECKOUT_BY.choices, max_length=50, null=True, blank=True)
+    check_in_by = models.ForeignKey("users.User", SET_NULL, "+", null=True, blank=True)
+    check_in_source = models.CharField(choices=SOURCE.choices, max_length=50, null=True, blank=True)
+    check_out_by = models.ForeignKey("users.User", SET_NULL, "+", null=True, blank=True)
+    check_out_source = models.CharField(choices=SOURCE.choices, max_length=50, null=True, blank=True)
 
     objects = GuestQuerySet.as_manager()
 
     tenant_id: UUID
+    room_id: UUID
 
     def __str__(self):
         return str(f"{self.name} {self.lastname} in {self.room}")
+
+    def mark_checked_in(self, source: str, user=None) -> None:
+        """Stamp a new stay; clears check-out marks left from a previous stay with the same record."""
+        self.check_in_source = source
+        self.check_in_by = user
+        self.check_out_source = None
+        self.check_out_by = None
+
+    def mark_checked_out(self, source: str, user=None) -> None:
+        self.check_out_source = source
+        self.check_out_by = user
 
     def get_name(self):
         return str(self.name + " " + self.lastname)
 
     class Meta(BaseModel.Meta):
         db_table = "main_guest"
-        ordering = ["created_at"]
+        ordering = ("created_at",)
         permissions: ClassVar = [
             ("change_guestmoveroom", "Can change guest move room"),
         ]

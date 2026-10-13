@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from django.core.management.base import BaseCommand
 
+from alarms.services.attributes import set_gateway_active
 from core.utils.get_time import get_mil_sec
 from shuttle.models import AttributeKv, Relation
 from shuttle.services.attribute_kv import publish_updates_attribute_batch
@@ -69,8 +70,8 @@ class Command(BaseCommand):
 
             logger.info("Completed active_attribute_server_scope command")
 
-        except Exception as e:
-            logger.error(f"Error in active_attribute_server_scope command: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error in active_attribute_server_scope command")
             raise
 
     def check_activity_time(self, gateway_active_attrs):
@@ -115,6 +116,7 @@ class Command(BaseCommand):
         attrs_to_update = []
         entities_to_update = []
         inactive_gateway_ids = []
+        live_gateway_ids = []
 
         # Identify inactive gateways
         for attr_active in gateway_active_attrs:
@@ -125,7 +127,9 @@ class Command(BaseCommand):
                 continue
 
             # Check if device is inactive
-            if last_activity_attr.long_v < threshold_time:
+            if last_activity_attr.long_v >= threshold_time:
+                live_gateway_ids.append(attr_active.entity_id)
+            else:
                 logger.warning(
                     f"Deactivated gateway device: {attr_active.entity_id} "
                     f"(last activity: {(current_time - last_activity_attr.long_v) / 1000:.0f}s ago)"
@@ -155,7 +159,33 @@ class Command(BaseCommand):
         if inactive_gateway_ids:
             related_deactivated = self._deactivate_related_devices(inactive_gateway_ids)
 
+        self._sync_gateway_active(inactive_gateway_ids, live_gateway_ids)
+
         return len(attrs_to_update), related_deactivated
+
+    def _sync_gateway_active(self, inactive_gateway_ids, live_gateway_ids):
+        """
+        Publish each gateway's state onto its devices as ``gatewayActive``.
+
+        The alarm rules read it as an ordinary condition filter, which is what
+        keeps a gateway outage to one alarm on the gateway instead of one per
+        device behind it. Only changed rows are written, so a healthy
+        installation costs two SELECTs every tick and no writes.
+        """
+        for gateway_ids, value in ((inactive_gateway_ids, False), (live_gateway_ids, True)):
+            if not gateway_ids:
+                continue
+
+            device_ids = list(Relation.objects.filter(from_id__in=gateway_ids).values_list("to_id_id", flat=True))
+            try:
+                changed = set_gateway_active(device_ids, value)
+            except Exception:
+                # Never let alarm bookkeeping break the watchdog itself.
+                logger.exception("Failed to sync gatewayActive for %s device(s)", len(device_ids))
+                continue
+
+            if changed:
+                logger.info("gatewayActive=%s applied to %s device(s)", value, changed)
 
     def _publish_deactivation_updates(self, attrs_to_update, current_time):
         """
@@ -191,8 +221,8 @@ class Command(BaseCommand):
             try:
                 publish_updates_attribute_batch(updates_by_device)
                 logger.debug(f"Published WebSocket updates for {len(updates_by_device)} deactivated gateway devices")
-            except Exception as e:
-                logger.error(f"Failed to publish WebSocket updates: {e}", exc_info=True)
+            except Exception:
+                logger.exception("Failed to publish WebSocket updates")
 
     def _deactivate_related_devices(self, gateway_ids):
         """

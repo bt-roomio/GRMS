@@ -21,10 +21,11 @@ from django.db import transaction
 
 from rest_framework import serializers
 
-from main.models import Device, DeviceProfile
+from main.models import Device, DeviceProfile, Room, RoomType
 from shuttle.models import AttributeKv, Relation, TsKvDictionary, TsKvLatest
 
 DEFAULT_PROFILE_NAME = "Default"
+DEFAULT_ROOM_BLOCK = "A"
 
 
 @dataclass
@@ -201,6 +202,72 @@ def create_devices_from_config(*, tenant, gateway: Device, devices: list[Canonic
         "attributes_created": attrs_created,
         "relations_created": len(relation_objs),
     }
+
+
+def _floor_from_room_number(number: str) -> str:
+    """Hotel convention: floor is the room number minus its last two digits ("201" -> "2")."""
+    return number[:-2] if number.isdigit() and len(number) > 2 else "1"
+
+
+@dataclass(frozen=True)
+class RoomSpec:
+    """Room a device belongs to; ``floor`` and ``block`` are optional."""
+
+    number: str
+    type: str | None = None
+    floor: str | None = None
+    block: str | None = None
+
+
+@transaction.atomic
+def link_devices_to_rooms(*, tenant, device_rooms: dict[str, RoomSpec]) -> dict[str, Room]:
+    """Create room types and rooms, then link devices to them.
+
+    Existing rooms are matched by number (and block, when given) and reused;
+    their type and floor are updated when provided.  New rooms fall back to a
+    floor derived from the number and the default block.  Returns each linked
+    device's room, keyed by device name.
+    """
+
+    type_map = {
+        title: RoomType.objects.get_or_create(tenant=tenant, title=title)[0]
+        for title in {spec.type for spec in device_rooms.values() if spec.type}
+    }
+
+    room_map: dict[RoomSpec, Room] = {}
+    for spec in set(device_rooms.values()):
+        room_type = type_map.get(spec.type)
+        rooms = Room.objects.filter(tenant=tenant, number=spec.number)
+        if spec.block:
+            rooms = rooms.filter(block=spec.block)
+        room = rooms.order_by("created_at").first()
+
+        if room is None:
+            room = Room.objects.create(
+                tenant=tenant,
+                number=spec.number,
+                floor=spec.floor or _floor_from_room_number(spec.number),
+                block=spec.block or DEFAULT_ROOM_BLOCK,
+                type=room_type,
+            )
+        else:
+            changes = {"type": room_type, "floor": spec.floor or None}
+            changes = {k: v for k, v in changes.items() if v is not None and getattr(room, k) != v}
+            if changes:
+                for field_name, value in changes.items():
+                    setattr(room, field_name, value)
+                room.save()
+        room_map[spec] = room
+
+    devices = list(Device.objects.filter(tenant=tenant, name__in=device_rooms, is_active=True))
+    for device in devices:
+        device.room = room_map[device_rooms[device.name]]
+    Device.objects.bulk_update(devices, ["room"])
+
+    for room in {device.room for device in devices}:
+        AttributeKv.objects.update_or_create_or_delete(list(room.devices.all()), room)
+
+    return {device.name: device.room for device in devices}
 
 
 def require_active_gateway(tenant, gateway_id) -> Device:

@@ -142,7 +142,7 @@ class CheckInSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         existing_guest = validated_data.pop("existing_guest", None)
-        guest_serializer = GuestSerializer()
+        guest_serializer = GuestSerializer(context={"source": self.context.get("source", Guest.SOURCE.HOTEZA)})
 
         if existing_guest:
             try:
