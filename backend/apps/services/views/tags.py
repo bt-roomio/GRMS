@@ -1,3 +1,5 @@
+from django.db.models import F
+
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import JSONParser
@@ -8,13 +10,12 @@ from core.utils.get_time import get_mil_sec
 from main.models import Room
 from services.serializers.room import RoomSerializer
 from services.serializers.tag import (
-    RoomAttributeTagSerializer,
-    RoomTelemetryTagSerializer,
     TagSerializer,
     TagUpdateSerializer,
 )
 from services.swagger.tags import tag_detail_get_swagger, tag_detail_put_swagger, tags_by_room_get_swagger
 from services.utils.permissions import DoorLockPermission
+from services.utils.room_tags import room_tags
 from shuttle.models import AttributeKv, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.views.json_rpc import prepare_mqtt_request
@@ -40,13 +41,9 @@ class TagsByRoomListView(APIView):
 
     @tags_by_room_get_swagger()
     def get(self, request, room_id):
-        room = get_object_or_404(Room.objects.by_tenant(request.tenant), pk=room_id)
-        attributes = AttributeKv.objects.get_attributes_by_room(room, AttributeKv.CLIENT_SCOPE)
-        telemetry = TsKvLatest.objects.get_ts_kv_latest_by_room(room, request.tenant)
-        tags = [
-            *RoomAttributeTagSerializer(attributes, many=True).data,
-            *RoomTelemetryTagSerializer(telemetry, many=True).data,
-        ]
+        rooms = Room.objects.by_tenant(request.tenant).annotate(type_name=F("type__title"))
+        room = get_object_or_404(rooms, pk=room_id)
+        tags = room_tags(room, request.tenant)
         return Response(
             {
                 "room": RoomSerializer(room).data,

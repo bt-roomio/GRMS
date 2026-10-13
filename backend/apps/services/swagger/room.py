@@ -18,8 +18,18 @@ _room_list_response = openapi.Response(
         "application/json": {
             "count": 42,
             "results": [
-                {"id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f", "number": "101"},
-                {"id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", "number": "102"},
+                {
+                    "id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f",
+                    "number": "101",
+                    "type_id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+                    "type_name": "Standard",
+                },
+                {
+                    "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                    "number": "102",
+                    "type_id": None,
+                    "type_name": None,
+                },
             ],
         }
     },
@@ -34,6 +44,10 @@ _room_list_response = openapi.Response(
                     properties={
                         "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
                         "number": openapi.Schema(type=openapi.TYPE_STRING),
+                        "type_id": openapi.Schema(
+                            type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, x_nullable=True
+                        ),
+                        "type_name": openapi.Schema(type=openapi.TYPE_STRING, x_nullable=True),
                     },
                 ),
             ),

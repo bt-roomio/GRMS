@@ -4,6 +4,9 @@ from core.querysets.base_queryset import BaseQuerySet
 
 
 class RoomTypeQuerySet(BaseQuerySet):
+    def by_tenant(self, tenant):
+        return self.filter(tenant=tenant, active=True)
+
     def list(self, tenant, search_field=None, search_value=None):
         query = self.filter(tenant=tenant).prefetch_related(
             Prefetch(

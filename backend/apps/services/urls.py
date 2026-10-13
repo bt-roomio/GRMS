@@ -1,11 +1,15 @@
 from django.urls import path
 
+from services.views.device_tag_types import DeviceTagTypesView
 from services.views.integration import IntegrationDetailView, IntegrationListView
 from services.views.lockkeys import LockKeyDoorOpenView, LockKeyDoorsListView
 from services.views.mews_integration import MewsIntegrationView
 from services.views.room import RoomListView
+from services.views.room_type import RoomTypeListView
 from services.views.sber_get_room import SberGetRoomDetailView
 from services.views.sber_window import SberWindowView
+from services.views.tag_type import TagTypeDetailView, TagTypeListView
+from services.views.tag_type_group import TagTypeGroupDetailView, TagTypeGroupListView
 from services.views.tags import TagDetailView, TagsByRoomListView
 
 urlpatterns = [
@@ -17,6 +21,13 @@ urlpatterns = [
     path("lockkeys/doors/", LockKeyDoorsListView.as_view(), name="lockkeys-doors-list"),
     path("lockkeys/doors/<str:space_id>/open/", LockKeyDoorOpenView.as_view(), name="lockkeys-door-open"),
     path("rooms/", RoomListView.as_view(), name="room-list"),
+    path("room-types/", RoomTypeListView.as_view(), name="room-type-list"),
     path("tags/<uuid:room_id>/", TagsByRoomListView.as_view(), name="tags-by-room-list"),
     path("tag/<uuid:tag_id>/", TagDetailView.as_view(), name="tag-detail"),
+    # Only for Hoteza
+    path("tag-types/", TagTypeListView.as_view(), name="tag-type-list"),
+    path("tag-types/<uuid:pk>/", TagTypeDetailView.as_view(), name="tag-type-detail"),
+    path("tag-type-groups/", TagTypeGroupListView.as_view(), name="tag-type-group-list"),
+    path("tag-type-groups/<uuid:pk>/", TagTypeGroupDetailView.as_view(), name="tag-type-group-detail"),
+    path("device/<uuid:device_id>/tag-types/", DeviceTagTypesView.as_view(), name="device-tag-types"),
 ]

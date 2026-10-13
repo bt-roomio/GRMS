@@ -24,24 +24,51 @@ _tag_object_schema = openapi.Schema(
     },
 )
 
+_room_tag_object_schema = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        **_tag_object_schema.properties,
+        "tag_type": openapi.Schema(
+            type=openapi.TYPE_STRING,
+            x_nullable=True,
+            description="Tag type name from the device's TAG_TYPES attribute; null if the tag is not mapped there.",
+        ),
+        # Swagger 2 has no "any type" items, so the item type is described in text.
+        "tag_ranges": openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(type=openapi.TYPE_STRING),
+            x_nullable=True,
+            description="Range values (any JSON) from the device's TAG_TYPES attribute; null when tag_type is null.",
+        ),
+    },
+)
 
 _tags_list_response = openapi.Response(
     description="Room info with its CLIENT_SCOPE attributes and latest telemetry as a unified tag list.",
     examples={
         "application/json": {
-            "room": {"id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f", "number": "101"},
+            "room": {
+                "id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f",
+                "number": "101",
+                "type_id": "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f",
+                "type_name": "Standard",
+            },
             "tags": [
                 {
                     "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
                     "key_name": "targetTemperature",
                     "value": 22.5,
                     "updated_at": "2026-09-11T08:15:42.103000Z",
+                    "tag_type": "Temperature",
+                    "tag_ranges": ["15-25", 30],
                 },
                 {
                     "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
                     "key_name": "temperature",
                     "value": 21.8,
                     "updated_at": "2026-09-11T08:16:01.871000Z",
+                    "tag_type": None,
+                    "tag_ranges": None,
                 },
             ],
         }
@@ -54,9 +81,11 @@ _tags_list_response = openapi.Response(
                 properties={
                     "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
                     "number": openapi.Schema(type=openapi.TYPE_STRING),
+                    "type_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, x_nullable=True),
+                    "type_name": openapi.Schema(type=openapi.TYPE_STRING, x_nullable=True),
                 },
             ),
-            "tags": openapi.Schema(type=openapi.TYPE_ARRAY, items=_tag_object_schema),
+            "tags": openapi.Schema(type=openapi.TYPE_ARRAY, items=_room_tag_object_schema),
         },
     ),
 )

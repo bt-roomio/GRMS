@@ -300,7 +300,7 @@ class RoomType(BaseModel):
         "main.Dashboard", CASCADE, "engineering_room_types", null=True, blank=True
     )
 
-    objects = RoomTypeQuerySet.as_manager()
+    objects: ClassVar[RoomTypeQuerySet] = cast(RoomTypeQuerySet, RoomTypeQuerySet.as_manager())
 
     tenant_id: UUID
 
