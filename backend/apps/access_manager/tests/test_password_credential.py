@@ -301,3 +301,31 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
         self.assertEqual(pwd_calls[0].args[1], ["77777"])
         self.assertEqual(len(rfid_calls), 1)
         self.assertIn("11 22 33 44", rfid_calls[0].args[1])
+
+    @patch("access_manager.tasks.sync_device.sync_device_card_group.delay")
+    def test_replays_original_source_and_user(self, mock_dispatch):
+        from access_manager.tasks.sync_device import sync_devices_task
+
+        karina_id = "e1fcc1ff-cce1-47e9-9951-88665815a9bb"
+        card = Card.objects.create(number="55 66 77 88", tenant_id=self.tenant_id)
+        NeedSyncDevice.objects.create(
+            card=card,
+            device=self.device,
+            need_sync=True,
+            updated_by_id=karina_id,
+            additional_info={"message_params": {"access": 0, "source": Guest.SOURCE.FIAS}},
+        )
+
+        sync_devices_task(tenant_id=self.tenant_id)
+
+        mock_dispatch.assert_called_once()
+        self.assertEqual(mock_dispatch.call_args.kwargs, {"source": Guest.SOURCE.FIAS, "user": karina_id})
+
+    @patch("access_manager.tasks.sync_device.send_rpc_request", return_value={"success": True})
+    def test_requests_queued_without_source_replay_as_auto(self, mock_send):
+        from access_manager.tasks.sync_device import sync_device_card_group
+
+        sync_device_card_group(self.device_id, ["55 66 77 88"], 0)
+
+        self.assertEqual(mock_send.call_args.kwargs["source"], Guest.SOURCE.AUTO)
+        self.assertIsNone(mock_send.call_args.kwargs["user"])

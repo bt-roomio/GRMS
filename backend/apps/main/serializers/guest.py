@@ -8,6 +8,7 @@ from access_manager.utilits.move_guest_cards import move_guest_cards
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context
+from main.utils.actor import actor_from_context, actor_id
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,10 @@ class GuestMoveRoomSerializer(serializers.Serializer):
         from_room.refresh_from_db()
         from_room.save(update_fields=["state"])
 
-        move_guest_cards(guests, old_guest_context, get_guest_access_context(guests))
+        source, user = actor_from_context(self.context)
+        move_guest_cards(
+            guests, old_guest_context, get_guest_access_context(guests), source=source, user=actor_id(user)
+        )
 
         return guests
 
@@ -54,10 +58,7 @@ class GuestSerializer(serializers.ModelSerializer):
     """
 
     def _actor(self):
-        user = self.context.get("user")
-        if not getattr(user, "is_authenticated", False):
-            user = None
-        return self.context.get("source", Guest.SOURCE.ROOMIO), user
+        return actor_from_context(self.context)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -119,8 +120,11 @@ class GuestSerializer(serializers.ModelSerializer):
             room = instance.room
             devices = access_context.get("devices", [])
             cards = access_context.get("cards")
+            source, actor = self._actor()
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 0, guest_id=str(instance.id))
+                result = send_rpc_request(
+                    str(device.id), cards, 0, user=actor_id(actor), guest_id=str(instance.id), source=source
+                )
                 not result.get("success") and deactivate_result.update({"success": False})
 
             if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:
