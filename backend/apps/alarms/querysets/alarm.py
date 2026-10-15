@@ -22,7 +22,7 @@ class AlarmQuerySet(BaseQuerySet):
         return self.filter(Q(originator_id=device_id) | Q(propagate_entity_ids__contains=[device_id]))
 
     def with_related(self):
-        return self.select_related("originator", "room", "tenant", "assignee")
+        return self.select_related("originator", "room", "tenant", "assignee").prefetch_related("notifications")
 
     def list(
         self,

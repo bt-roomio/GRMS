@@ -33,7 +33,7 @@ class PublicSpaceListView(APIView):
     @check_perms(["main.add_publicspace"])
     def post(self, request):
         data = with_tenant(request)
-        serializer = PublicSpaceSerializer(data=data)
+        serializer = PublicSpaceSerializer(data=data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         serializer.save(created_by=request.user)
         return Response(serializer.data, 201)
@@ -53,7 +53,7 @@ class PublicSpaceDetailView(APIView):
     def put(self, request, pk):
         data = with_tenant(request)
         instance = get_object_or_404(PublicSpace, id=pk, tenant_id=request.user.tenant_id)
-        serializer = PublicSpaceSerializer(instance, data=data)
+        serializer = PublicSpaceSerializer(instance, data=data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

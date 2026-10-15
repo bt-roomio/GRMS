@@ -224,7 +224,7 @@ class RoomQuerySet(BaseQuerySet):
         cards = access_context.get("cards", [])
 
         for device in devices:
-            result = send_rpc_request(str(device.id), cards, 0, user=user)
+            result = send_rpc_request(str(device.id), cards, 0, user=user, source=Guest.SOURCE.ROOMIO)
             not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
         checked_out = guests.update(is_active=False, check_out_source=Guest.SOURCE.ROOMIO, check_out_by_id=user)

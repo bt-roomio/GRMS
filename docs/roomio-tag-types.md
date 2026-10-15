@@ -13,7 +13,7 @@ Tag types describe which device tags a property exposes to Hoteza and which valu
 - **Tag type groups** — a tenant's catalog of groups used to organise tag types.
 - **Tag types** — a tenant's catalog of tag types. Each type belongs to a group and carries a list of allowed **range values**.
 - **Device tag types** — the list of tags of a specific device, each mapped to a tag type and a subset of its range values. Stored on the device as the `TAG_TYPES` attribute (`SERVER_SCOPE`).
-- **Tag types in room tags** — the partner Rooms & Tags API shows each room tag together with its `tag_type` and `tag_ranges`.
+- **Tag types in room tags** — the partner Rooms & Tags API shows each room tag and each single tag together with its `tag_type` and `tag_ranges`.
 
 ```
 TagTypeGroup 1 ──< TagType 1 ──< TagRange (range_value)
@@ -25,7 +25,8 @@ Device ── AttributeKv(SERVER_SCOPE, key = "TAG_TYPES") = [ { tag_section, ta
                       │
                       │ matched to the device's tags (SERVER_SCOPE wins)
                       ▼
-GET /api/v1/services/tags/{room_id}/  →  tags[] { id, key_name, value, updated_at, tag_type, tag_ranges }
+GET /api/v1/services/tags/{room_id}/  →  results[] { id, key_name, value, updated_at, tag_type, tag_ranges }
+GET /api/v1/services/tag/{tag_id}/    →  { id, key_name, value, updated_at, tag_type, tag_ranges }
 ```
 
 All data is **tenant-scoped**: a user sees and changes only the objects of their own tenant. An object of another tenant is reported as `404`.
@@ -438,12 +439,14 @@ Errors are returned per entry, in request order, e.g. `[{}, {"tag_type": [...]}]
 
 ## Tag Types in Room Tags
 
-The partner Rooms & Tags API — `GET /api/v1/services/tags/{room_id}/` and the `room_tags` WebSocket stream (see `roomio-rooms-tags-integration.md`) — adds two fields to **every** room tag:
+The partner Rooms & Tags API (see `roomio-rooms-tags-integration.md`) adds two fields to **every** tag it returns: in `GET /api/v1/services/tags/{room_id}/` and the `room_tags` WebSocket stream, and in `GET` / `PUT /api/v1/services/tag/{tag_id}/` and the `tag` stream:
 
 | Field        | Type           | Description                                                    |
 | ------------ | -------------- | -------------------------------------------------------------- |
 | `tag_type`   | string \| null | `tag_type` of the matching entry; `null` if there is no match. |
 | `tag_ranges` | array \| null  | `tag_ranges` of the matching entry; `null` when `tag_type` is. |
+
+Both are `null` as well when the matching entry is malformed (`tag_type` not a non-empty string or `tag_ranges` not a list) — possible only in a device-reported `CLIENT_SCOPE` entry.
 
 ```json
 {
@@ -476,11 +479,11 @@ A tag matches an entry of **its own device** only (two devices of a room may bot
 | `CLIENT_SCOPE` attribute `k` | `tag_section = ATTRIBUTE`, `tag_sub_section = CLIENT_SCOPE`, `tag_name = k` |
 | latest telemetry `k`         | `tag_section = TELEMETRY`, `tag_name = k`                                   |
 
-`tag_name` must equal the tag key exactly (case and spaces included: `AC/ON OFF` does not match `AC ON OFF`). Room tags list only `CLIENT_SCOPE` attributes, so `SERVER_SCOPE` / `SHARED_SCOPE` entries never appear there.
+`tag_name` must equal the tag key exactly (case and spaces included: `AC/ON OFF` does not match `AC ON OFF`). Room tags list only `CLIENT_SCOPE` attributes, so `SERVER_SCOPE` / `SHARED_SCOPE` entries never appear there. A single tag (`GET /tag/{tag_id}/`) is matched by its own scope, so a `SERVER_SCOPE` / `SHARED_SCOPE` attribute fetched by id uses the entry with that `tag_sub_section`.
 
 ### Updates
 
-Saving `TAG_TYPES` (either scope) is an attribute change of the device, so active `room_tags` subscriptions of its room receive the updated payload. **Get Tag** and the `tag` stream do not include `tag_type` / `tag_ranges`.
+Saving `TAG_TYPES` (either scope) is an attribute change of the device, so active `room_tags` subscriptions of its room and `tag` subscriptions of its tags receive the updated payload.
 
 ---
 
@@ -497,6 +500,6 @@ Saving `TAG_TYPES` (either scope) is an attribute change of the device, so activ
                                                     "tag_type": "Temperature",
                                                     "tag_ranges": ["15-25"] } ]
 4. GET  /device/{device_id}/tag-types/          → the stored TAG_TYPES list
-5. GET  /tags/{room_id}/                        → the device's targetTemperature tag carries
+5. GET  /tags/{room_id}/                        → the device's targetTemperature tag in results[] carries
                                                   "tag_type": "Temperature", "tag_ranges": ["15-25"]
 ```

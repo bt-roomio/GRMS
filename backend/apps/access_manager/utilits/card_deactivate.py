@@ -3,7 +3,7 @@ from django.db.models import Q
 from access_manager.models import CardDeviceSlot, GuestCard, NeedSyncDevice, StaffCard
 
 
-def deactivate_guest_card(cards, device, sync):
+def deactivate_guest_card(cards, device, sync, user=None, source=None):
     error_cards = []
     for card in cards:
         try:
@@ -13,7 +13,9 @@ def deactivate_guest_card(cards, device, sync):
             if instance:
                 instance.is_active = False
                 instance.is_blocked = False
-                instance.save(update_fields=["is_active", "is_blocked"])
+                instance.updated_by_id = user
+                instance.updated_source = source
+                instance.save(update_fields=["is_active", "is_blocked", "updated_at", "updated_by", "updated_source"])
             CardDeviceSlot.objects.filter(card_number=card, device=device).delete()
             NeedSyncDevice.objects.filter(card__number=card, device=device).update(need_sync=False)
         except Exception:

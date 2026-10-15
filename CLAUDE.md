@@ -128,7 +128,7 @@ The Django project is organized into specialized apps under `backend/apps/`:
 - **services**: External service integrations (PMS systems)
 - **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, not in INSTALLED_APPS, routes at root level)
 - **admin_panel**: Multi-tenant admin operations (tenant management, user management, user impersonation), routes under `/api/v1/admin/`
-- **alarms**: ThingsBoard-style alarm rules — rules live in `DeviceProfile.profile_data["alarms"]` (no table of their own), a periodic Celery evaluator walks `TsKvLatest`/`AttributeKv`, and one `Alarm` row per incident doubles as the journal. Also holds the Telegram notification dispatcher. Routes under `/api/v1/alarms/`
+- **alarms**: ThingsBoard-style alarm rules — rules live in `DeviceProfile.profile_data["alarms"]` (no table of their own), a periodic Celery evaluator walks `TsKvLatest`/`AttributeKv`, and one `Alarm` row per incident doubles as the journal. Also holds the notification dispatcher (Telegram + email channels). Routes under `/api/v1/alarms/`
 - **mews**: Mews PMS integration
   - Real-time WebSocket client for Mews events
   - Reservation synchronization

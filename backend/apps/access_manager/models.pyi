@@ -107,14 +107,17 @@ class StaffCard(BaseModel):
         db_table: str
         constraints: Incomplete
 
-class GuestCard(BaseModel):
+def guest_sources() -> list[tuple[str, str]]: ...
+
+class GuestCard(BaseModel, UpdateByModel):
     guest: Incomplete
     card: Incomplete
     is_active: Incomplete
     is_blocked: Incomplete
+    updated_source: Incomplete
     objects: GuestCardQuerySet
 
-    class Meta(BaseModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table: str
         constraints: Incomplete
 

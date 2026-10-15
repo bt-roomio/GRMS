@@ -59,12 +59,9 @@ class Alarm(BaseModel, UpdateByModel):
     assignee = models.ForeignKey("users.User", SET_NULL, null=True, blank=True, related_name="assigned_alarms")
     assign_ts = models.DateTimeField(null=True, blank=True)
 
-    # Outside the TB model: bookkeeping for the notification dispatcher.
-    notified_at = models.DateTimeField(null=True, blank=True)
-    notified_clear_at = models.DateTimeField(null=True, blank=True)
-
     # TYPING
     tenant_id: UUID
+    room_id: UUID | None
 
     objects: ClassVar[AlarmQuerySet] = cast(AlarmQuerySet, AlarmQuerySet.as_manager())
 
@@ -142,6 +139,39 @@ class AlarmComment(BaseModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=["alarm", "-created_at"], name="ix_alarm_comment_alarm"),
+        ]
+
+
+class AlarmNotification(BaseModel):
+    """
+    What one notification channel already told about one alarm.
+
+    Outside the TB model: bookkeeping for the notification dispatcher. A row per
+    (alarm, channel) rather than a column pair per channel on ``Alarm``, so each
+    channel delivers independently and a new channel needs no migration. No row
+    means the raise was never announced on that channel.
+    """
+
+    alarm = models.ForeignKey("alarms.Alarm", CASCADE, related_name="notifications")
+    channel = models.CharField(max_length=32)  # NotificationChannel.name
+    raised_at = models.DateTimeField()
+    cleared_at = models.DateTimeField(null=True, blank=True)
+
+    # TYPING
+    alarm_id: UUID
+
+    def __str__(self) -> str:
+        return f"{self.channel} for {self.alarm_id}"
+
+    class Meta(BaseModel.Meta):
+        db_table = "alarms_alarm_notification"
+        ordering = ("channel",)
+        constraints = [
+            models.UniqueConstraint(fields=["alarm", "channel"], name="uniq_alarm_notification_channel"),
+        ]
+        indexes = [
+            # The clear lookup: announced on this channel, resolution not yet.
+            models.Index(fields=["channel", "cleared_at"], name="ix_alarm_notification_pending"),
         ]
 
 

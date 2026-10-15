@@ -6,22 +6,26 @@ from django.db.models import Exists, OuterRef
 
 from access_manager.models import NeedSyncDevice
 from access_manager.tasks.send_rpc import send_rpc_request
-from main.models import DevicePublicSpaces, Room
+from main.models import DevicePublicSpaces, Guest, Room
 
 logger = logging.getLogger("main")
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def sync_device_card_group(device_id, cards, access, is_pwd=False):
+def sync_device_card_group(device_id, cards, access, is_pwd=False, source=None, user=None):
+    # Replays the original request's source/user; requests queued before they were stored count as AUTO.
+    source = source or Guest.SOURCE.AUTO
     if is_pwd:
         for card_number in cards:
-            result = send_rpc_request(device_id, [card_number], access, sync=True, is_pwd=True)
+            result = send_rpc_request(
+                device_id, [card_number], access, user=user, sync=True, is_pwd=True, source=source
+            )
             if result.get("success", False):
-                NeedSyncDevice.objects.filter(
-                    device_id=device_id, card__number=card_number, need_sync=True
-                ).update(need_sync=False)
+                NeedSyncDevice.objects.filter(device_id=device_id, card__number=card_number, need_sync=True).update(
+                    need_sync=False
+                )
     else:
-        result = send_rpc_request(device_id, cards, access, sync=True)
+        result = send_rpc_request(device_id, cards, access, user=user, sync=True, source=source)
         if result.get("success", False):
             NeedSyncDevice.objects.filter(device_id=device_id, need_sync=True).update(need_sync=False)
 
@@ -70,12 +74,15 @@ def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
         grouped = defaultdict(list)
         for obj in connected_objects:
             device_id = obj.device_id
-            access = (obj.additional_info or {}).get("message_params", {}).get("access", "UNKNOWN")
+            message_params = (obj.additional_info or {}).get("message_params", {})
+            access = message_params.get("access", "UNKNOWN")
+            source = message_params.get("source")
+            user = obj.updated_by_id and str(obj.updated_by_id)
             is_pwd = bool(obj.card.is_pwd)
-            grouped[(device_id, access, is_pwd)].append(obj.card.number)
+            grouped[(device_id, access, is_pwd, source, user)].append(obj.card.number)
 
-        for (device_id, access, is_pwd), cards in grouped.items():
-            sync_device_card_group.delay(str(device_id), cards, access, is_pwd)
+        for (device_id, access, is_pwd, source, user), cards in grouped.items():
+            sync_device_card_group.delay(str(device_id), cards, access, is_pwd, source=source, user=user)
 
         return {"success": True, "dispatched": len(grouped)}
 

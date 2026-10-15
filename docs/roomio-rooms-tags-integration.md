@@ -1,7 +1,7 @@
 # Roomio Rooms & Tags — Integration Guide
 
-**Version:** 1.1
-**Date:** 07.10.2026
+**Version:** 1.2
+**Date:** 15.10.2026
 **Confidentiality:** Partner Use Only
 
 ---
@@ -15,7 +15,7 @@ This document describes the Roomio Rooms & Tags API, which allows PMS and third-
 - Read and update a single tag value (with the change pushed to the physical device).
 - Subscribe over WebSocket to receive the same data in real time as it changes.
 
-A **tag** is a single named value of a room device, backed by either a device attribute or its latest telemetry. Both are exposed through one uniform shape: `{ id, key_name, value, updated_at }`; room tag lists add `tag_type` and `tag_ranges`.
+A **tag** is a single named value of a room device, backed by either a device attribute or its latest telemetry. Both are exposed through one uniform shape: `{ id, key_name, value, updated_at, tag_type, tag_ranges }`.
 
 All API calls require two tokens issued by Roomio per integration (see [Authentication](#authentication)).
 
@@ -212,7 +212,7 @@ AccessToken: <your_access_token>
 
 ### 3. List Room Tags
 
-Retrieve a room together with its tags (CLIENT_SCOPE attributes and latest telemetry) as a single unified list.
+Retrieve a room together with its tags (CLIENT_SCOPE attributes and latest telemetry) as a single unified list. The tag list is paginated: attributes come first, then telemetry, each ordered by key.
 
 ```
 GET /api/v1/services/tags/{room_id}/
@@ -224,6 +224,13 @@ GET /api/v1/services/tags/{room_id}/
 | --------- | ---- | -------------------------------------------------- |
 | `room_id` | UUID | The `id` returned from the **List Rooms** endpoint |
 
+#### Query Parameters
+
+| Name   | Required | Default | Description            |
+| ------ | -------- | ------- | ---------------------- |
+| `page` | No       | `1`     | Page number (1-based). |
+| `size` | No       | `50`    | Page size, `1`–`500`.  |
+
 #### Headers
 
 | Name          | Required | Value                      |
@@ -234,7 +241,7 @@ GET /api/v1/services/tags/{room_id}/
 #### Sample Request
 
 ```http
-GET /api/v1/services/tags/3249b092-68b6-4891-80d4-42aee4e1743d/ HTTP/1.1
+GET /api/v1/services/tags/3249b092-68b6-4891-80d4-42aee4e1743d/?page=1&size=50 HTTP/1.1
 Host: api.room.io
 ClientToken: <your_client_token>
 AccessToken: <your_access_token>
@@ -250,7 +257,8 @@ AccessToken: <your_access_token>
     "type_id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f",
     "type_name": "Standard"
   },
-  "tags": [
+  "count": 2,
+  "results": [
     {
       "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
       "key_name": "roomCard",
@@ -273,26 +281,28 @@ AccessToken: <your_access_token>
 
 #### Response Fields
 
-| Field               | Type           | Description                                                                                                                               |
-| ------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `room.id`           | UUID           | Room identifier.                                                                                                                          |
-| `room.number`       | string         | Room number.                                                                                                                              |
-| `room.type_id`      | UUID \| null   | Id of the room's type; `null` if the room has no type.                                                                                    |
-| `room.type_name`    | string \| null | Title of the room's type; `null` if the room has no type.                                                                                 |
-| `tags`              | array          | The room's tags (attributes + latest telemetry combined).                                                                                 |
-| `tags[].id`         | UUID           | Tag identifier. Use this value as `tag_id` in the **Get / Update Tag** requests.                                                          |
-| `tags[].key_name`   | string         | Tag key (e.g. `DND Relay`, `roomCard`).                                                                                                   |
-| `tags[].value`      | any            | Current value; native JSON type (boolean / number / string / object).                                                                     |
-| `tags[].updated_at` | datetime       | When the value was last written, ISO 8601 (UTC).                                                                                          |
-| `tags[].tag_type`   | string \| null | Tag type name; `null` if the tag is not mapped to a tag type in Roomio.                                                                   |
-| `tags[].tag_ranges` | array \| null  | Allowed values of the tag: any JSON values, a string `"low-high"` is a numeric range (bounds included); `null` when `tag_type` is `null`. |
+| Field                  | Type           | Description                                                                                                                               |
+| ---------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `room.id`              | UUID           | Room identifier.                                                                                                                          |
+| `room.number`          | string         | Room number.                                                                                                                              |
+| `room.type_id`         | UUID \| null   | Id of the room's type; `null` if the room has no type.                                                                                    |
+| `room.type_name`       | string \| null | Title of the room's type; `null` if the room has no type.                                                                                 |
+| `count`                | integer        | Total number of the room's tags (across all pages).                                                                                       |
+| `results`              | array          | The room's tags on the current page (attributes + latest telemetry combined).                                                             |
+| `results[].id`         | UUID           | Tag identifier. Use this value as `tag_id` in the **Get / Update Tag** requests.                                                          |
+| `results[].key_name`   | string         | Tag key (e.g. `DND Relay`, `roomCard`).                                                                                                   |
+| `results[].value`      | any            | Current value; native JSON type (boolean / number / string / object).                                                                     |
+| `results[].updated_at` | datetime       | When the value was last written, ISO 8601 (UTC).                                                                                          |
+| `results[].tag_type`   | string \| null | Tag type name; `null` if the tag is not mapped to a tag type in Roomio.                                                                   |
+| `results[].tag_ranges` | array \| null  | Allowed values of the tag: any JSON values, a string `"low-high"` is a numeric range (bounds included); `null` when `tag_type` is `null`. |
 
-> `tag_type` and `tag_ranges` come from the tag mapping of the tag's device — configured in Roomio, or reported by the device itself (the Roomio configuration takes precedence). Both are `null` for a tag without a mapping. **Get Tag** and the `tag` stream do not include them.
+> `tag_type` and `tag_ranges` come from the tag mapping of the tag's device — configured in Roomio, or reported by the device itself (the Roomio configuration takes precedence). Both are `null` for a tag without a mapping. The same fields are returned by **Get Tag**, **Update Tag Value** and the `tag` stream.
 
 #### Error Responses
 
 | HTTP Status | Description                                            |
 | ----------- | ------------------------------------------------------ |
+| `400`       | Invalid `page` / `size`                                |
 | `401`       | Missing or invalid `ClientToken` / `AccessToken`       |
 | `404`       | The specified `room_id` was not found for the property |
 
@@ -328,11 +338,15 @@ AccessToken: <your_access_token>
   "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
   "key_name": "DND Relay",
   "value": 1,
-  "updated_at": "2026-10-07T09:15:02.031000Z"
+  "updated_at": "2026-10-07T09:15:02.031000Z",
+
+  "tag_type": "DND",
+
+  "tag_ranges": [0, 1]
 }
 ```
 
-The fields are the same as in `tags[]` of **List Room Tags**.
+The fields are the same as in `results[]` of **List Room Tags**.
 
 #### Error Responses
 
@@ -393,7 +407,11 @@ The device accepted the change and the new value was persisted.
     "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
     "key_name": "DND Relay",
     "value": 1,
-    "updated_at": "2026-10-07T09:20:11.204000Z"
+    "updated_at": "2026-10-07T09:20:11.204000Z",
+
+    "tag_type": "DND",
+
+    "tag_ranges": [0, 1]
   },
   "rpc": { "device": "38:0c:6e:41:02:80", "data": { "success": true } }
 }
@@ -409,7 +427,11 @@ The device rejected the command or did not respond. The stored value is **unchan
     "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
     "key_name": "DND Relay",
     "value": 0,
-    "updated_at": "2026-10-07T09:15:02.031000Z"
+    "updated_at": "2026-10-07T09:15:02.031000Z",
+
+    "tag_type": "DND",
+
+    "tag_ranges": [0, 1]
   },
   "rpc": {
     "device": "38:0c:6e:41:02:80",
@@ -420,10 +442,10 @@ The device rejected the command or did not respond. The stored value is **unchan
 
 #### Response Fields
 
-| Field | Type   | Description                                                                                 |
-| ----- | ------ | ------------------------------------------------------------------------------------------- |
-| `tag` | object | The tag after the operation (value and `updated_at` updated on `200`, unchanged on `502`).  |
-| `rpc` | object | Raw device RPC result. `rpc.data.success` indicates whether the device accepted the change. |
+| Field | Type   | Description                                                                                                            |
+| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `tag` | object | The tag after the operation (value and `updated_at` updated on `200`, unchanged on `502`); same fields as **Get Tag**. |
+| `rpc` | object | Raw device RPC result. `rpc.data.success` indicates whether the device accepted the change.                            |
 
 #### Error Responses
 
@@ -564,11 +586,13 @@ Response:
 
 A room together with its tags — the WebSocket equivalent of **List Room Tags**; `data` has the same shape as that REST response.
 
-| Action        | `query_params`       | Description                                                                                                              |
-| ------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `list`        | `room_id` (required) | Returns `{ room, tags }` once.                                                                                           |
-| `subscribe`   | `room_id` (required) | Returns `{ room, tags }`, then re-sends the whole payload whenever any tag or tag mapping of the room's devices changes. |
-| `unsubscribe` | —                    | Stops updates for the given `request_id`.                                                                                |
+| Action        | `query_params`                       | Description                                                                                                                    |
+| ------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `list`        | `room_id` (required), `page`, `size` | Returns `{ room, count, results }` once.                                                                                       |
+| `subscribe`   | `room_id` (required), `page`, `size` | Returns `{ room, count, results }`, then re-sends the same page whenever any tag or tag mapping of the room's devices changes. |
+| `unsubscribe` | —                                    | Stops updates for the given `request_id`.                                                                                      |
+
+`page` and `size` work as in the REST request (defaults `1` and `50`).
 
 #### Example — `subscribe`
 
@@ -580,7 +604,11 @@ Request:
   "payload": {
     "action": "subscribe",
     "request_id": 3,
-    "query_params": { "room_id": "3249b092-68b6-4891-80d4-42aee4e1743d" }
+    "query_params": {
+      "room_id": "3249b092-68b6-4891-80d4-42aee4e1743d",
+      "page": 1,
+      "size": 50
+    }
   }
 }
 ```
@@ -599,7 +627,8 @@ Response (and every later push):
         "type_id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f",
         "type_name": "Standard"
       },
-      "tags": [
+      "count": 2,
+      "results": [
         {
           "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
           "key_name": "roomCard",
@@ -631,11 +660,11 @@ Response (and every later push):
 
 A single tag — the WebSocket equivalent of **Get Tag**.
 
-| Action        | `query_params`      | Description                                                              |
-| ------------- | ------------------- | ------------------------------------------------------------------------ |
-| `retrieve`    | `tag_id` (required) | Returns the tag once.                                                    |
-| `subscribe`   | `tag_id` (required) | Returns the tag, then re-sends it whenever **this** tag's value changes. |
-| `unsubscribe` | —                   | Stops updates for the given `request_id`.                                |
+| Action        | `query_params`      | Description                                                                                          |
+| ------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `retrieve`    | `tag_id` (required) | Returns the tag once.                                                                                |
+| `subscribe`   | `tag_id` (required) | Returns the tag, then re-sends it whenever **this** tag's value or its device's tag mapping changes. |
+| `unsubscribe` | —                   | Stops updates for the given `request_id`.                                                            |
 
 #### Example — `subscribe`
 
@@ -663,7 +692,11 @@ Response (and every later push):
       "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
       "key_name": "DND Relay",
       "value": 1,
-      "updated_at": "2026-10-07T09:15:02.031000Z"
+      "updated_at": "2026-10-07T09:15:02.031000Z",
+
+      "tag_type": "DND",
+
+      "tag_ranges": [0, 1]
     },
     "action": "subscribe",
     "response_status": 200,
@@ -682,7 +715,7 @@ Response (and every later push):
 1. Receive ClientToken and AccessToken from Roomio.
 2. Optionally call GET /api/v1/services/room-types/ to retrieve the room types.
 3. Call GET /api/v1/services/rooms/ (optionally ?room_type={id}) to retrieve the room list.
-4. For a room, call GET /api/v1/services/tags/{room_id}/ to read its tags.
+4. For a room, call GET /api/v1/services/tags/{room_id}/ to read its tags (paginated: count, results).
 5. To change a value: PUT /api/v1/services/tag/{tag_id}/ with { "value": ... }
    and verify the response is 200 (rpc.data.success == true) before trusting the change.
 6. For live data: open wss://api.room.io/api/ws/v1/services/?client_token=...&access_token=...

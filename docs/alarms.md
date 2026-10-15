@@ -57,6 +57,7 @@ flowchart LR
     ALARM --> REST[REST /api/v1/alarms/]
     ALARM --> WS[WS-стрим alarms]
     ALARM --> DISP[dispatch_notifications<br/>каждые 60 с] --> TG[Telegram]
+    DISP --> MAIL[Email]
 ```
 
 ### Словарь
@@ -101,7 +102,7 @@ flowchart LR
 | `apps/alarms/templates.py` | Каталог шаблонов правил: то, что конструктор предлагает кнопкой «добавить типовое» |
 | `apps/alarms/services/attributes.py` | Запись серверных атрибутов `notifyOnOffline`, `gatewayActive` |
 | `apps/alarms/notifications/` | Диспетчер уведомлений и настройки тенанта |
-| `apps/alarms/channels/`, `apps/alarms/telegram/` | Канал доставки и HTTP-клиент Bot API |
+| `apps/alarms/channels/`, `apps/alarms/telegram/` | Каналы доставки (Telegram, email) и HTTP-клиент Bot API |
 | `apps/alarms/views/`, `urls.py`, `swagger/` | REST API |
 | `apps/alarms/v2_consumers/alarms.py` | WS-стрим `alarms` |
 | `apps/alarms/observables/alarm.py` | Пуш изменений в группу `alarms_<tenant_id>` |
@@ -166,10 +167,13 @@ UniqueConstraint(fields=["device_profile", "alarm_type"], name="uniq_alarm_rule_
 | `propagate`, `propagate_relation_types`, `propagate_to_owner`, `propagate_to_tenant` | | Копия настроек распространения из правила |
 | `propagate_entity_ids` | UUID[] (GIN) | Сущности, на которых авария тоже видна |
 | `assignee`, `assign_ts` | FK `users.User`, datetime | Назначенный исполнитель |
-| `notified_at`, `notified_clear_at` | datetime | Служебные отметки диспетчера уведомлений |
 | `created_at`, `created_by`, `updated_at`, `updated_by` | | Из `BaseModel` / `UpdateByModel` (`created_at` — Unix-мс) |
 
 Вычисляемые свойства: `status` и `duration_ms` (`(clear_ts или end_ts) - start_ts`).
+
+Что о ней уже сообщили каналы уведомлений — не в самой аварии, а в `AlarmNotification`
+(`alarms_alarm_notification`): `alarm`, `channel` (`telegram`, `email`, …), `raised_at`,
+`cleared_at`, уникальность `(alarm, channel)`. В API аварии это список `notifications`.
 
 Индексы: `(tenant, cleared, -start_ts)`, `(originator, -start_ts)`, `(alarm_type, -start_ts)`,
 `(severity, -start_ts)`, GIN по `propagate_entity_ids`.
@@ -682,7 +686,7 @@ TB не выражается — нужны два разных правила.
 | `CURRENT_USER`, `CURRENT_CUSTOMER` | Не поддерживаются; добавлен `CURRENT_ROOM` |
 | `ENTITY_FIELD` — любое поле | Белый список, включая `is_gateway` и `room.*` |
 | Связь «авария ↔ сущность» в таблице `relation` | Массив `Alarm.propagate_entity_ids` |
-| Notification Center | Упрощённый диспетчер с каналом Telegram |
+| Notification Center | Упрощённый диспетчер с каналами Telegram и email |
 
 В коде такие места помечены комментарием `GRMS deviation:`.
 
@@ -1692,7 +1696,10 @@ GET /api/v1/alarms/?search_value=305
         "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9",
         "9a4d7c2e-1f3b-4c5d-8e6f-7a8b9c0d1e2f"
       ],
-      "notified_at": "2026-09-14T10:24:00.017733Z",
+      "notifications": [
+        {"channel": "telegram", "raised_at": "2026-09-14T10:24:00.017733Z", "cleared_at": null},
+        {"channel": "email", "raised_at": "2026-09-14T10:24:00.017733Z", "cleared_at": null}
+      ],
       "created_at": 1789381080412
     }
   ]
@@ -1800,27 +1807,33 @@ GET /api/v1/alarms/?search_value=305
 ```json
 {
   "tenant_id": "28c81921-f78e-4864-87d2-cec674f19d1c",
-  "telegram_enabled": true,
-  "telegram_chat_id": "-1002345678901",
-  "telegram_last_error": null,
   "notify_delay_sec": 300,
-  "min_severity": "MINOR"
+  "min_severity": "MINOR",
+  "channels": {
+    "telegram": {"enabled": true, "chat_id": "-1002345678901", "last_error": null},
+    "email": {"enabled": true, "recipients": ["ops@hotel.uz", "engineer@hotel.uz"], "last_error": null}
+  }
 }
 ```
 
-`PUT` — **частичный**: можно отправить только меняющиеся поля.
+`PUT` — **частичный**: можно отправить только меняющиеся поля, в том числе внутри блока канала —
+блоки сливаются по ключам, соседние каналы и поля не затрагиваются.
 
 ```json
-{"telegram_enabled": true, "telegram_chat_id": "-1002345678901", "min_severity": "MAJOR"}
+{"min_severity": "MAJOR", "channels": {"telegram": {"enabled": true, "chat_id": "-1002345678901"}}}
 ```
 
 | Поле | Тип | По умолчанию | Смысл |
 |---|---|---|---|
-| `telegram_enabled` | bool | `false` | Главный выключатель уведомлений тенанта |
-| `telegram_chat_id` | строка до 64 | `""` | Id чата или группы |
-| `telegram_last_error` | строка, только чтение | `null` | Последняя постоянная ошибка Telegram. Сбрасывается при любом `PUT` с `telegram_chat_id` |
-| `notify_delay_sec` | 0…86400 | `300` | Задержка перед уведомлением о новой аварии (защита от флаппинга) |
-| `min_severity` | severity | `MINOR` | Нижняя граница: уведомлять об этой severity и выше |
+| `notify_delay_sec` | 0…86400 | `300` | Задержка перед уведомлением о новой аварии (защита от флаппинга), общая для каналов |
+| `min_severity` | severity | `MINOR` | Нижняя граница: уведомлять об этой severity и выше, общая для каналов |
+| `channels.<канал>.enabled` | bool | `false` | Выключатель канала |
+| `channels.<канал>.last_error` | строка, только чтение | `null` | Последняя постоянная ошибка канала. Сбрасывается при любом `PUT`, затрагивающем блок этого канала |
+| `channels.telegram.chat_id` | строка до 64 | `""` | Id чата или группы |
+| `channels.email.recipients` | список email, до 20 | `[]` | Получатели. Приводятся к нижнему регистру, дубли убираются |
+
+В ответе всегда есть все каналы, которые знает сервер (`alarms/channels/registry.py`), с
+умолчаниями для ненастроенных.
 
 Хранится в `Tenant.additional_info["notification_settings"]`, другие блоки `additional_info` не
 затрагиваются.
@@ -1907,7 +1920,7 @@ GET /api/v1/alarms/?search_value=305
           "assignee": null,
           "assign_ts": null,
           "propagate_entity_ids": ["1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9"],
-          "notified_at": null,
+          "notifications": [],
           "created_at": 1789381080412
         }
       ]
@@ -1984,7 +1997,7 @@ GET /api/v1/alarms/?search_value=305
    PUT /api/v1/main/notification-settings/
    Content-Type: application/json
 
-   {"telegram_enabled": true, "telegram_chat_id": "-1002345678901"}
+   {"channels": {"telegram": {"enabled": true, "chat_id": "-1002345678901"}}}
    ```
 
 6. Проверьте доставку вручную (сообщение уйдёт, только если есть аварии к отправке):
@@ -1995,26 +2008,29 @@ GET /api/v1/alarms/?search_value=305
    # {'tenants': 1, 'raised': 2, 'cleared': 0, 'failed': 0}
    ```
 
-   Если после этого `GET /api/v1/main/notification-settings/` показывает `telegram_last_error` —
+   Если после этого `GET /api/v1/main/notification-settings/` показывает `channels.telegram.last_error` —
    Telegram отверг чат (см. 10.5).
 
 ### 10.2. Как работает диспетчер
 
 Задача `alarms.tasks.dispatch_notifications` — beat раз в 60 с, очередь `low`. Состояние хранится
-в самой таблице `Alarm` (`notified_at`, `notified_clear_at`), поэтому повторный запуск ничего не
-отправит повторно.
+в таблице `alarms_alarm_notification` (`AlarmNotification`): строка на пару (авария, канал) с
+`raised_at` — когда канал сообщил о срабатывании — и `cleared_at` — когда о снятии. Нет строки —
+канал об аварии не сообщал. Повторный запуск ничего не отправит повторно, а каналы доставляются
+независимо: ошибка почты не задерживает Telegram и наоборот, и
+канал, который восстановился, догоняет пропущенное, не дублируя другой.
 
-Для каждого тенанта с `telegram_enabled = true` и непустым `telegram_chat_id`:
+Для каждого тенанта и каждого включённого у него канала (Telegram — `enabled` и непустой
+`chat_id`; email — `enabled` и непустой `recipients`), по строкам этого канала:
 
-1. **Новые** — аварии, у которых `cleared = false`, `notified_at IS NULL`,
+1. **Новые** — аварии, у которых `cleared = false`, нет строки `AlarmNotification` канала,
    `start_ts ≤ now − notify_delay_sec` и severity не ниже `min_severity`.
-2. **Снятые** — аварии, у которых `cleared = true`, `notified_at IS NOT NULL`,
-   `notified_clear_at IS NULL`. Уведомление о снятии уходит только для аварий, о которых
+2. **Снятые** — аварии, у которых `cleared = true`, а строка канала есть и её `cleared_at IS NULL`. Уведомление о снятии уходит только для аварий, о которых
    сообщали.
 3. Нет ни тех, ни других — тенант пропускается.
-4. Одно сообщение на тенант за тик: обе секции, до 20 строк в каждой, плюс «… и ещё N».
-5. После успешной отправки проставляются `notified_at` / `notified_clear_at`. При ошибке отметки
-   не ставятся, и аварии уйдут на следующем тике.
+4. Одно сообщение на тенант и канал за тик: обе секции, до 20 строк в каждой, плюс «… и ещё N».
+5. После успешной отправки создаются строки канала (новые) или проставляется `cleared_at`
+   (снятые). При ошибке ничего не пишется, и аварии уйдут на следующем тике.
 
 ### 10.3. Как выглядит сообщение
 
@@ -2068,15 +2084,45 @@ Grand Hotel Tashkent
 
 | Ситуация | Реакция |
 |---|---|
-| Пустой `TELEGRAM_BOT_TOKEN` | Тик прерывается, в логе `Telegram notifications skipped: TELEGRAM_BOT_TOKEN is not set`, ничего не отмечается |
-| `telegram_enabled = false` или пустой `telegram_chat_id` | Тенант молча пропускается |
-| `400` / `401` / `403` / `404` — неверный чат, бот удалён из группы, неверный токен | Текст ошибки пишется в `telegram_last_error` тенанта, в логе `Telegram rejected tenant … permanently`. Аварии не отмечаются, попытка повторяется каждую минуту, пока чат или токен не исправят |
+| Пустой `TELEGRAM_BOT_TOKEN` | Канал Telegram пропускается до конца тика (email продолжает работать), в логе `telegram notifications skipped: TELEGRAM_BOT_TOKEN must be set …`, ничего не отмечается |
+| `channels.telegram.enabled = false` или пустой `chat_id` | Канал тенанта молча пропускается |
+| `400` / `401` / `403` / `404` — неверный чат, бот удалён из группы, неверный токен | Текст ошибки пишется в `channels.telegram.last_error` тенанта, в логе `telegram rejected tenant … permanently`. Аварии не отмечаются, попытка повторяется каждую минуту, пока чат или токен не исправят |
 | Другой ответ с ошибкой (`5xx`, `ok: false`) | Предупреждение в логе, повтор на следующем тике |
 | `429 Too Many Requests` | Задача перезапускается через `retry_after` из ответа (до 5 раз); уже отправленное отмечено |
-| Сетевая ошибка или таймаут (`TELEGRAM_TIMEOUT`) | Задача падает с ошибкой, оставшиеся тенанты этого тика ждут следующего |
+| Сетевая ошибка или таймаут (`TELEGRAM_TIMEOUT`) | Предупреждение в логе, повтор на следующем тике; остальные тенанты и каналы тика отправляются |
 | Собственный лимит — больше 10 сообщений в минуту на тенант (счётчик в Redis) | Тенант пропускается до следующего тика |
 
 Токен бота в логах и текстах исключений маскируется (`/bot***`).
+
+### 10.6. Уведомления на почту
+
+Второй канал, устроен так же, как Telegram: те же `notify_delay_sec` и `min_severity`, та же
+группировка, свой лимит 10 писем в минуту на тенант. Письма уходят через SMTP проекта — те же
+`EMAIL_*`, что и для сброса пароля, — так что на уровне инсталляции настраивать ничего нового не
+нужно; тенант указывает только получателей.
+
+```http
+PUT /api/v1/main/notification-settings/
+Content-Type: application/json
+
+{"channels": {"email": {"enabled": true, "recipients": ["ops@hotel.uz", "engineer@hotel.uz"]}}}
+```
+
+Письмо — одно на тенант за тик, всем получателям в `To`:
+
+- тема: `<название тенанта>: аварии — новых 2, снятых 1`;
+- тело — `text/plain` с теми же строками, что в Telegram, и `text/html`-версия таблицей
+  (severity цветом, время, номер, текст).
+
+| Ситуация | Реакция |
+|---|---|
+| Пустые `EMAIL_HOST` или `DEFAULT_FROM_EMAIL` (и `EMAIL_HOST_USER`) | Канал email пропускается до конца тика, в логе `email notifications skipped: …`, ничего не отмечается |
+| SMTP отверг логин или отправителя | То же: проблема инсталляции, а не тенанта |
+| SMTP отверг **всех** получателей | Текст пишется в `channels.email.last_error` тенанта, аварии не отмечаются, попытка каждую минуту, пока список не исправят. Если отклонена только часть адресов, письмо считается отправленным |
+| Сетевая ошибка, таймаут (`EMAIL_TIMEOUT`), прочие ошибки SMTP | Предупреждение в логе, повтор на следующем тике |
+
+Первое включение email отправит все активные аварии старше задержки, о которых **по почте** ещё
+не сообщали, — даже если в Telegram они уже ушли.
 
 ---
 
@@ -2094,6 +2140,8 @@ Grand Hotel Tashkent
 | `TELEGRAM_BOT_TOKEN` | `""` | Токен бота; пусто — уведомления не отправляются | `celery-low` |
 | `TELEGRAM_API_URL` | `https://api.telegram.org` | Адрес Bot API (для прокси или локального Bot API server) | `celery-low` |
 | `TELEGRAM_TIMEOUT` | `10` | Таймаут HTTP-запроса к Telegram, секунды | `celery-low` |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | см. `env.example` | SMTP проекта, через него уходят и письма об авариях | `celery-low`, `backend` |
+| `EMAIL_TIMEOUT` | `30` | Таймаут SMTP-соединения, секунды | `celery-low`, `backend` |
 
 ```bash
 cd deploy
@@ -2125,6 +2173,7 @@ make logs s=celery-beat
 | `alarms/0001_initial` | Таблицы `alarms_alarm`, `alarms_alarm_comment`, `alarms_rule_state`, индексы, права |
 | `alarms/0002_alarmrule_…` | Таблица `alarms_alarm_rule`, уникальность `(device_profile, alarm_type)`, индексы, права `*_alarmrule` |
 | `alarms/0003_move_rules_out_of_device_profile` | Переносит правила из `DeviceProfile.profile_data["alarms"]` в строки и убирает ключ `alarms` из `profile_data`. Обратная операция возвращает их в профиль |
+| `alarms/0004_alarm_notification` | Таблица `alarms_alarm_notification` с уникальностью `(alarm, channel)`; переносит `Alarm.notified_at` / `notified_clear_at` в строки канала `telegram` и плоские ключи `telegram_*` настроек тенанта в `channels.telegram`, затем удаляет эти две колонки из `alarms_alarm`. Обратимая |
 | `shuttle/0028_alter_tskvlatest_entity_and_more` | Индекс `ix_ts_kv_latest_key` по ключу в `shuttle_ts_kv_latest` для выборок вычислителя |
 | `main/0066_alter_tenant_options` | Права `view/change_notificationsettings` |
 
@@ -2166,9 +2215,10 @@ docker exec -it celery-low python manage.py shell -c \
 | `Alarm evaluation skipped: ALARMS_ENABLED is off` | `celery-default` | Рубильник выключен |
 | `Alarm rule '<type>' failed on device <id>` + traceback | `celery-default` | Правило падает на этом устройстве, остальные работают |
 | `Alarm notifications: {...}` | `celery-low` | Что-то отправлено |
-| `Telegram rejected tenant <id> permanently: <описание>` | `celery-low` | Постоянная ошибка, см. `telegram_last_error` |
-| `Telegram delivery to tenant <id> failed: <описание>` | `celery-low` | Временная ошибка, повтор через минуту |
-| `Telegram rate limit reached for tenant <id>` | `celery-low` | Собственный лимит 10/мин |
+| `<канал> rejected tenant <id> permanently: <описание>` | `celery-low` | Постоянная ошибка, см. `channels.<канал>.last_error` |
+| `<канал> delivery to tenant <id> failed: <описание>` | `celery-low` | Временная ошибка, повтор через минуту |
+| `<канал> notifications skipped: <причина>` | `celery-low` | Канал не настроен на уровне инсталляции (токен, SMTP) |
+| `<канал> rate limit reached for tenant <id>` | `celery-low` | Собственный лимит 10/мин на канал |
 | `Purged N alarm row(s) cleared before <дата>` | `celery-low` | Ночная чистка |
 | `gatewayActive=<bool> applied to N device(s)` | `celery-default` (watchdog) | Шлюз упал или поднялся |
 
@@ -2268,10 +2318,10 @@ docker exec -it celery-low python manage.py shell -c \
 |---|---|
 | Токен задан в контейнере диспетчера | `docker exec celery-low env \| grep TELEGRAM_BOT_TOKEN` |
 | Уведомления тенанта включены, чат указан | `GET /api/v1/main/notification-settings/` |
-| Нет постоянной ошибки | `telegram_last_error` пусто; иначе исправьте чат и сохраните его заново |
+| Нет постоянной ошибки | `channels.telegram.last_error` пусто; иначе исправьте чат и сохраните его заново |
 | Авария старше `notify_delay_sec` и ещё не снята | `start_ts`, `cleared` у аварии |
 | Severity не ниже `min_severity` | |
-| О ней уже не сообщали | `notified_at IS NULL` |
+| О ней уже не сообщали | нет строки `AlarmNotification` с `channel = 'telegram'` |
 | Бот в группе и может писать | Отправьте тестовое сообщение через `sendMessage` тем же токеном |
 
 ```bash
@@ -2306,7 +2356,8 @@ docker exec -it django python manage.py test apps/alarms
 | `test_dedup.py` | Одна активная авария на (устройство, тип) |
 | `test_propagate.py` | `propagate_entity_ids`, каскад шлюза, тумблер устройства |
 | `test_details_template.py` | Подстановки `${…}` |
-| `test_dispatch.py` | Задержка, флаппинг, `min_severity`, группировка, ошибки Telegram |
+| `test_dispatch.py` | Задержка, флаппинг, `min_severity`, группировка, ошибки, независимость каналов |
+| `test_email_channel.py` | Письмо, получатели, экранирование, ошибки SMTP |
 | `test_telegram_client.py` | HTTP-клиент, `429`, маскирование токена |
 | `test_api.py` | Фильтры, изоляция тенантов, действия, комментарии, `bulk`, `summary`, ключи, `preview` |
 | `main/tests/test_notification_settings.py` | Настройки уведомлений тенанта |
@@ -2334,28 +2385,24 @@ docker exec -it django python manage.py test apps/alarms
 
 ### 14.3. Новый канал уведомлений
 
-Канал реализует протокол `alarms/channels/base.py`:
+Канал реализует протокол `alarms/channels/base.py`; образец — `channels/email.py`:
 
-```python
-from django.core.mail import send_mail
-
-
-class EmailChannel:
-    name = "email"
-
-    def is_configured(self, tenant_settings: dict) -> bool:
-        return bool(tenant_settings.get("email_enabled") and tenant_settings.get("email_recipients"))
-
-    def send(self, tenant_settings: dict, text: str) -> None:
-        send_mail("GRMS alarms", text, None, tenant_settings["email_recipients"])
-```
+- `name` — ключ канала: имя блока в `notification_settings["channels"]`, значение
+  `AlarmNotification.channel`, ключ лимита в Redis, префикс в логах;
+- `defaults` — блок настроек ненастроенного тенанта; обязательно `enabled` и `last_error`;
+- `is_configured(config)` и `send(tenant, config, raised, cleared)`, где `config` — блок этого
+  канала. Текст канал строит сам из строк `notifications/message.py`. Ошибки —
+  `ChannelNotConfigured` (проблема инсталляции, канал пропускается до конца тика) или
+  `DeliveryError(description, permanent=…)`; постоянная пишется в `channels.<name>.last_error`.
 
 Дальше:
 
-1. Поля настроек — в `DEFAULTS` (`notifications/settings.py`) и в `NotificationSettingsSerializer`.
-2. Диспетчер сейчас создаёт только `TelegramChannel` и форматирует HTML под Telegram: нужно
-   перебирать каналы и строить текст под каждый. Отметки `notified_at` общие на аварию — если
-   каналы должны доставляться независимо, отметки придётся развести по каналам.
+1. Класс — в `CHANNELS` (`alarms/channels/registry.py`).
+2. Сериализатор блока — по образцу `EmailSettingsSerializer` и поле в `ChannelsSerializer`
+   (`main/serializers/notification_settings.py`).
+3. Тесты — по образцу `test_email_channel.py` и `MultiChannelDispatchTest`.
+
+Миграции не нужны: отметки доставки — строки `AlarmNotification`, настройки — JSON тенанта.
 
 ### 14.4. Новый шаблон и набор «из коробки»
 

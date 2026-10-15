@@ -4,11 +4,13 @@ from djangochannelsrestframework.mixins import action
 
 from rest_framework.exceptions import NotFound, ValidationError
 
+from core.serializers.pagination import PaginationSerializer
 from main.models import Room
 from services.consumers.base import TenantScopedConsumer
+from services.serializers.device_tag_types import TAG_TYPES_KEY
 from services.serializers.room import RoomSerializer
 from services.serializers.tag import TagSerializer
-from services.utils.room_tags import room_tags
+from services.utils.room_tags import paginated_room_tags, tag_with_type
 from shuttle.models import AttributeKv, TsKvLatest
 
 
@@ -33,26 +35,23 @@ class RoomTagsConsumer(TenantScopedConsumer):
             raise ValidationError("Room not found!")
         return room
 
-    def build_payload(self, room_id):
-        room = self.get_room(room_id)
+    def build_payload(self, query_params):
+        room = self.get_room(query_params.get("room_id"))
+        params = PaginationSerializer.parse(query_params)
         device_ids = [str(device_id) for device_id in room.devices.values_list("id", flat=True)]
-        tags = room_tags(room, self.tenant)
-        payload = {
-            "room": RoomSerializer(room).data,
-            "tags": tags,
-        }
-        return payload, device_ids
+        tags = paginated_room_tags(room, self.tenant, params.page, params.size)
+        return {"room": RoomSerializer(room).data, **tags}, device_ids
 
     @action()
     async def list(self, request_id, query_params=None, **kwargs):  # pyright: ignore
-        payload, _ = await sync_to_async(self.build_payload)((query_params or {}).get("room_id"))
+        payload, _ = await sync_to_async(self.build_payload)(query_params or {})
         await self.reply(data=payload, action="list", request_id=request_id)
 
     @action()
     async def subscribe(self, request_id, query_params=None, **kwargs):
-        room_id = (query_params or {}).get("room_id")
-        payload, device_ids = await sync_to_async(self.build_payload)(room_id)
-        self.subscribers[request_id] = {"room_id": room_id, "device_ids": device_ids}
+        query_params = query_params or {}
+        payload, device_ids = await sync_to_async(self.build_payload)(query_params)
+        self.subscribers[request_id] = {"query_params": query_params, "device_ids": device_ids}
 
         await self.add_group(f"attribute_kv_updates_{self.tenant_id}")
         for device_id in device_ids:
@@ -75,7 +74,7 @@ class RoomTagsConsumer(TenantScopedConsumer):
         for request_id, sub in self.subscribers.items():
             if entities and entities.isdisjoint(sub["device_ids"]):
                 continue
-            payload, _ = await sync_to_async(self.build_payload)(sub["room_id"])
+            payload, _ = await sync_to_async(self.build_payload)(sub["query_params"])
             await self.reply(data=payload, action="subscribe", request_id=request_id)
 
     async def get_latest_activity(self, message, **kwargs):
@@ -105,7 +104,7 @@ class TagDetailConsumer(TenantScopedConsumer):
     def build_payload(self, tag_id):
         tag = self.get_tag(tag_id)
         key_name = tag.attribute_key if isinstance(tag, AttributeKv) else tag.key.key
-        return TagSerializer(tag).data, str(tag.entity_id), key_name
+        return tag_with_type(tag), str(tag.entity_id), key_name
 
     @action()
     async def retrieve(self, request_id, query_params=None, **kwargs):  # pyright: ignore
@@ -136,8 +135,10 @@ class TagDetailConsumer(TenantScopedConsumer):
     async def _resend(self, message):
         updates = _updates_in_message(message)
         for request_id, sub in self.subscribers.items():
+            # The tag's own value or its device's TAG_TYPES (tag_type / tag_ranges) changed.
             matched = any(
-                str(u.get("entity")) == sub["entity_id"] and sub["key_name"] in (u.get("key"), u.get("key_name"))
+                str(u.get("entity")) == sub["entity_id"]
+                and {sub["key_name"], TAG_TYPES_KEY} & {u.get("key"), u.get("key_name")}
                 for u in updates
             )
             if not matched:

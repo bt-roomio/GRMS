@@ -25,7 +25,11 @@ class GuestMoveRoomListView(APIView):
         if not instance.exists():
             return Response({"detail": "`from_room` guests doesn't exist!"}, 404)
 
-        serializer = GuestMoveRoomSerializer(instance, data={"to_room": to_room.id, "from_room": from_room.id})  # ty: ignore
+        serializer = GuestMoveRoomSerializer(
+            instance,
+            data={"to_room": to_room.id, "from_room": from_room.id},  # ty: ignore
+            context={"user": request.user},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 

@@ -1,14 +1,23 @@
 from rest_framework import serializers
 
 from alarms.constants import AlarmSeverity, AlarmStatus
-from alarms.models import Alarm, AlarmComment
+from alarms.models import Alarm, AlarmComment, AlarmNotification
 from core.utils.serializers import ValidatorSerializer
 from users.serializers.user import SimpleUserSerializer
 
 STATUS_CHOICES = ("ACTIVE", "CLEARED", "UNACK", "ACK", *AlarmStatus.values)
 
 
+class AlarmNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AlarmNotification
+        fields = ("channel", "raised_at", "cleared_at")
+        read_only_fields = fields
+
+
 class AlarmSerializer(serializers.ModelSerializer):
+    # One entry per channel that announced the alarm; absent channel = not sent.
+    notifications = AlarmNotificationSerializer(many=True, read_only=True)
     status = serializers.CharField(read_only=True)
     duration_ms = serializers.IntegerField(read_only=True)
     originator_name = serializers.CharField(source="originator.name", read_only=True)
@@ -38,7 +47,7 @@ class AlarmSerializer(serializers.ModelSerializer):
             "assignee",
             "assign_ts",
             "propagate_entity_ids",
-            "notified_at",
+            "notifications",
             "created_at",
         )
         read_only_fields = fields

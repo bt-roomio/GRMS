@@ -8,7 +8,8 @@ from shuttle.services.publish_updates import publish_updates
 logger = get_task_logger(__name__)
 
 
-def need_sync(cards: List[str], device, access, user=None, reason=""):
+def need_sync(cards: List[str], device, access, user=None, reason="", source=None):
+    """Queue the request for sync_devices_task; `user` and `source` are replayed with it."""
     from access_manager.models import Card, NeedSyncDevice
 
     if not device:
@@ -25,7 +26,7 @@ def need_sync(cards: List[str], device, access, user=None, reason=""):
         try:
             card = Card.objects.get(number=card_num, tenant=device.tenant)
 
-            message_params = {"access": access, "reason": reason}
+            message_params = {"access": access, "reason": reason, "source": source}
 
             sync_obj, created = NeedSyncDevice.objects.get_or_create(
                 card=card,
