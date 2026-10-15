@@ -1,23 +1,26 @@
+from alarms.channels.base import ChannelNotConfigured, DeliveryError
+
+
 class TelegramError(Exception):
     """Base class for every failure talking to the Telegram Bot API."""
 
 
-class TelegramNotConfigured(TelegramError):
+class TelegramNotConfigured(TelegramError, ChannelNotConfigured):
     """TELEGRAM_BOT_TOKEN missing from the environment."""
 
 
-class TelegramUnavailable(TelegramError):
+class TelegramUnavailable(TelegramError, DeliveryError):
     """Network-level failure — timeout, DNS, connection refused."""
 
 
-class TelegramAPIError(TelegramError):
+class TelegramAPIError(TelegramError, DeliveryError):
     """The Bot API answered, but not with success."""
 
     def __init__(self, status_code, description, payload=None):
+        super().__init__(f"Telegram API {status_code}: {description}")
         self.status_code = status_code
         self.description = description
         self.payload = payload or {}
-        super().__init__(f"Telegram API {status_code}: {description}")
 
     @property
     def is_permanent(self) -> bool:

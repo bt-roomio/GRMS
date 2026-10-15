@@ -69,7 +69,7 @@ curl -s "https://<api-host>/api/v1/alarms/?status=ACTIVE&size=20" \
 | **Вкладка «Аварии» в карточке устройства**  | Аварии устройства, включая аварию его шлюза                                       | `GET alarms/?device=<id>`                                                                                          |
 | **Вкладка «Аварии» в карточке номера**      | Аварии устройств номера                                                           | `GET alarms/?room=<id>`                                                                                            |
 | **Конструктор правил** | Редактор правил: условия, пороги, расписания | `GET/POST alarms/rules/`, `GET/PUT/DELETE alarms/rules/<id>/`, `POST alarms/rules/bulk/`, `POST alarms/rules/preview/`, `GET alarms/rule-templates/`, `GET alarms/available-keys/` |
-| **Настройки → Уведомления**                 | Telegram тенанта                                                                  | `GET/PUT main/notification-settings/`                                                                              |
+| **Настройки → Уведомления**                 | Telegram и email тенанта                                                          | `GET/PUT main/notification-settings/`                                                                              |
 | **Тумблер в карточке устройства**           | «Уведомлять о потере связи»                                                       | поле `notify_on_offline` в `GET/PUT main/device/<id>/`                                                             |
 
 Минимальный объём, который уже полезен: таблица аварий + карточка + `ack`/`clear`. Конструктор
@@ -258,7 +258,7 @@ GET /api/v1/alarms/?status=ACTIVE&severity=CRITICAL&severity=MAJOR&page=1&size=2
       "assignee": null,
       "assign_ts": null,
       "propagate_entity_ids": ["1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9"],
-      "notified_at": null,
+      "notifications": [],
       "created_at": 1789381080412
     }
   ]
@@ -1181,37 +1181,48 @@ GET /api/v1/main/notification-settings/
 ```json
 {
   "tenant_id": "28c81921-f78e-4864-87d2-cec674f19d1c",
-  "telegram_enabled": true,
-  "telegram_chat_id": "-1002345678901",
-  "telegram_last_error": null,
   "notify_delay_sec": 300,
-  "min_severity": "MINOR"
+  "min_severity": "MINOR",
+  "channels": {
+    "telegram": {"enabled": true, "chat_id": "-1002345678901", "last_error": null},
+    "email": {"enabled": true, "recipients": ["ops@hotel.uz", "engineer@hotel.uz"], "last_error": null}
+  }
 }
 ```
 
-`PUT` — **частичный**, можно отправить только изменённые поля:
+`PUT` — **частичный**, можно отправить только изменённые поля, в том числе внутри блока канала —
+блоки сливаются по ключам, соседние каналы не затрагиваются:
 
 ```http
 PUT /api/v1/main/notification-settings/
 Content-Type: application/json
 
-{"telegram_enabled": true, "telegram_chat_id": "-1002345678901", "min_severity": "MAJOR"}
+{"min_severity": "MAJOR", "channels": {"telegram": {"enabled": true, "chat_id": "-1002345678901"}}}
 ```
 
-| Поле                  | Контрол               | Диапазон  | Подпись для пользователя                                                               |
-| --------------------- | --------------------- | --------- | -------------------------------------------------------------------------------------- |
-| `telegram_enabled`    | Переключатель         |           | «Присылать аварии в Telegram»                                                          |
-| `telegram_chat_id`    | Текст, до 64 символов |           | «Id чата или группы». У групп отрицательный, у супергрупп начинается с `-100`          |
-| `notify_delay_sec`    | Число                 | `0…86400` | «Не сообщать об авариях, которые закрылись быстрее, чем за N секунд». По умолчанию 300 |
-| `min_severity`        | Селектор severity     |           | «Сообщать об этой важности и выше»                                                     |
-| `telegram_last_error` | Только чтение         |           | Текст последней постоянной ошибки Telegram                                             |
+| Поле                          | Контрол               | Диапазон  | Подпись для пользователя                                                               |
+| ----------------------------- | --------------------- | --------- | -------------------------------------------------------------------------------------- |
+| `notify_delay_sec`            | Число                 | `0…86400` | «Не сообщать об авариях, которые закрылись быстрее, чем за N секунд». По умолчанию 300 |
+| `min_severity`                | Селектор severity     |           | «Сообщать об этой важности и выше»                                                     |
+| `channels.telegram.enabled`   | Переключатель         |           | «Присылать аварии в Telegram»                                                          |
+| `channels.telegram.chat_id`   | Текст, до 64 символов |           | «Id чата или группы». У групп отрицательный, у супергрупп начинается с `-100`          |
+| `channels.email.enabled`      | Переключатель         |           | «Присылать аварии на почту»                                                            |
+| `channels.email.recipients`   | Список email (теги)   | до 20     | «Получатели». Сервер приводит адреса к нижнему регистру и убирает дубли                |
+| `channels.<канал>.last_error` | Только чтение         |           | Текст последней постоянной ошибки канала                                               |
+
+Удобно рисовать по карточке на каждый ключ `channels`: общие для всех поля — `enabled` и
+`last_error`, остальные — свои у каждого канала. Позже могут появиться новые каналы;
+незнакомый ключ можно просто не показывать.
 
 Как это показывать:
 
-- `telegram_last_error` непустой — выведите предупреждение рядом с полем чата: «Telegram отклонил
-  отправку: `<текст>`». Типичные причины — бот не добавлен в группу, бот удалён из неё, неверный
-  id чата. Поле сбрасывается в `null` при любом сохранении `telegram_chat_id`, так что после
-  исправления предупреждение исчезнет само.
+- `last_error` канала непустой — предупреждение в его карточке. Telegram: «Telegram отклонил
+  отправку: `<текст>`» (бот не добавлен в группу, удалён из неё, неверный id чата). Email:
+  «Почтовый сервер отклонил все адреса: `<текст>`». Поле сбрасывается в `null` при любом
+  сохранении блока этого канала, так что после исправления предупреждение исчезнет само.
+- Неверный адрес даёт `400` с ошибкой по индексу элемента:
+  `{"channels": {"email": {"recipients": {"1": ["Enter a valid email address."]}}}}`.
+- Каналы независимы: можно включить оба, задержка и `min_severity` у них общие.
 - Задержка объясняется проще всего так: авария появится в журнале сразу, а в Telegram — через
   `notify_delay_sec`; если она закроется раньше, сообщения не будет вовсе.
 - Токен бота задаётся на сервере в переменных окружения и через API не виден. Если он не задан,
@@ -1273,6 +1284,12 @@ export interface AlarmDetails {
   values?: Record<string, unknown>;
 }
 
+export interface AlarmNotification {
+  channel: "telegram" | "email" | string;
+  raised_at: string;
+  cleared_at: string | null;
+}
+
 export interface Alarm {
   id: string;
   alarm_type: string;
@@ -1295,7 +1312,8 @@ export interface Alarm {
   assignee: UserRef | null;
   assign_ts: string | null;
   propagate_entity_ids: string[];
-  notified_at: string | null;
+  /** Каналы, которые уже сообщили об аварии; канала нет в списке — не сообщал. */
+  notifications: AlarmNotification[];
   /** Unix-время в миллисекундах, в отличие от остальных дат. */
   created_at: number;
 }
@@ -1562,11 +1580,26 @@ export interface PreviewResult {
 
 export interface NotificationSettings {
   tenant_id: string;
-  telegram_enabled: boolean;
-  telegram_chat_id: string;
-  telegram_last_error: string | null;
   notify_delay_sec: number;
   min_severity: AlarmSeverity;
+  channels: {
+    telegram: TelegramChannelSettings;
+    email: EmailChannelSettings;
+  };
+}
+
+export interface ChannelSettings {
+  enabled: boolean;
+  /** Только чтение. */
+  last_error: string | null;
+}
+
+export interface TelegramChannelSettings extends ChannelSettings {
+  chat_id: string;
+}
+
+export interface EmailChannelSettings extends ChannelSettings {
+  recipients: string[];
 }
 
 /* ---------------------------- WebSocket -------------------------------- */
@@ -1661,6 +1694,6 @@ export interface WsResponse {
 
 **Настройки и устройство**
 
-- [ ] `telegram_last_error` показан как предупреждение;
+- [ ] `last_error` каждого канала показан как предупреждение;
 - [ ] `notify_delay_sec` объяснён словами, а не только числом;
 - [ ] тумблер `notify_on_offline` сохраняется полным телом устройства.
