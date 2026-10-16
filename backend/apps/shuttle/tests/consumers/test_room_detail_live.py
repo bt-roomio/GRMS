@@ -43,7 +43,7 @@ class TestRoomDetailLive:
     async def test_ts_kv_latest_activity_updates_any_room_device(
         self, ws_connect, karina_token, test_room, device_index
     ):
-        """Телеметрия должна доходить с любого устройства комнаты, а не только с первого."""
+        """Telemetry must arrive from any device of the room, not just the first one."""
         comm = await ws_connect(karina_token)
         try:
             data = await self._subscribe(comm, test_room, "live1")

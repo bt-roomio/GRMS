@@ -112,7 +112,7 @@ class DataSnapshot:
     attrs: dict[str, dict] = field(default_factory=dict)
 
     # DynamicValue sources above the device. Plain dicts, because in GRMS only
-    # devices have an attribute_kv row (see "Отличия GRMS от ThingsBoard").
+    # devices have an attribute_kv row (see "GRMS vs ThingsBoard differences").
     room_attrs: dict[str, Any] = field(default_factory=dict)
     tenant_attrs: dict[str, Any] = field(default_factory=dict)
 

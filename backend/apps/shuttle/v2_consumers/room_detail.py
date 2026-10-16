@@ -71,7 +71,7 @@ class RoomDetailConsumer(BaseGenericAsyncAPIConsumer):
         return serializer.data
 
     async def ts_kv_latest_activity(self, message, **kwargs):
-        # Поддерживаем оба формата: батч ("updates": [...]) и одиночный ("update": {...}).
+        # Support both formats: batch ("updates": [...]) and single ("update": {...}).
         single = message.get("update")
         updates = message.get("updates") or ([single] if single else [])
         if not updates:

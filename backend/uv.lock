@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.12.*"
 
 [[package]]
@@ -252,15 +252,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/ab/69/fd3407ad407a80e72
 wheels = [
     { url = "https://files.pythonhosted.org/packages/df/fe/b7224a401ad227b263e5ba84753ffb5a88df048f3b15efd2797903543ce4/channels_redis-4.3.0-py3-none-any.whl", hash = "sha256:48f3e902ae2d5fef7080215524f3b4a1d3cea4e304150678f867a1a822c0d9f5", size = 20641, upload-time = "2025-07-22T13:48:44.545Z" },
 ]
-
-[[package]]
-name = "channelsmultiplexer"
-version = "0.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "channels" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8f/c9/1323f14fbf6916259266f0f7f749749dd0cabc59edd6fcc524a041b40a8d/channelsmultiplexer-0.0.3.tar.gz", hash = "sha256:98e674110f07b1d41940a32d0a921156d17bf9176a65f19f71f703e3bb38f50e", size = 5955, upload-time = "2020-11-24T08:25:11.959Z" }
 
 [[package]]
 name = "charset-normalizer"
@@ -796,7 +787,6 @@ dependencies = [
     { name = "channels" },
     { name = "channels-demultiplexer" },
     { name = "channels-redis" },
-    { name = "channelsmultiplexer" },
     { name = "charset-normalizer" },
     { name = "click" },
     { name = "click-didyoumean" },
@@ -919,7 +909,6 @@ requires-dist = [
     { name = "channels", specifier = "==4.3.1" },
     { name = "channels-demultiplexer", specifier = "==2.2.0" },
     { name = "channels-redis", specifier = "==4.3.0" },
-    { name = "channelsmultiplexer", specifier = "==0.0.3" },
     { name = "charset-normalizer", specifier = "==3.4.1" },
     { name = "click", specifier = "==8.1.7" },
     { name = "click-didyoumean", specifier = "==0.3.1" },

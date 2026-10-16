@@ -1,17 +1,17 @@
 # =============================================================================
 # roomio GRMS — docker-compose.yml
 # =============================================================================
-# Группы сервисов (используются в Makefile):
+# Service groups (used in the Makefile):
 #   infra     — postgres, pgbouncer, redis, redis-broker, rabbitmq
 #   app       — backend (django), celery-*, mq-async, mews-websocket, pms-handler
 #   iot       — mqtt
 #   front     — frontend
 #   proxy     — proxy, letsencrypt
 #
-# Запуск:
-#   make up-infra       # только инфраструктура
-#   make up-app         # инфра + приложение
-#   make up-all         # всё
+# Start:
+#   make up-infra       # infrastructure only
+#   make up-app         # infra + application
+#   make up-all         # everything
 # =============================================================================
 
 x-logging: &default-logging
@@ -56,8 +56,8 @@ x-celery-env: &celery-env
   CELERY_BROKER_URL: redis://redis-broker:6379/0
   CELERY_RESULT_BACKEND: redis://redis-broker:6379/1
 
-# Воркеры ходят на ноды по SSH тем же ключом, что и Django: fleet-джобы
-# выполняются в celery-critical, и без этого монта каждая задача падает с
+# Workers reach the nodes over SSH with the same key as Django: fleet jobs
+# run in celery-critical, and without this mount every task fails with
 # "Fleet private key not found".
 x-celery-volumes: &celery-volumes
   - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
@@ -325,9 +325,9 @@ services:
     tmpfs:
       - /prom_mp
 
-  # Перезапускает контейнеры со статусом unhealthy (label autoheal=true).
-  # Docker restart policy на healthcheck не реагирует — этот сайдкар закрывает
-  # разрыв: зависший celery-воркер (не отвечает на inspect ping) будет пересоздан.
+  # Restarts containers with unhealthy status (label autoheal=true).
+  # Docker restart policy doesn't react to healthchecks; this sidecar closes
+  # the gap: a hung celery worker (not answering inspect ping) gets recreated.
   autoheal:
     image: willfarrell/autoheal:1.2.0
     container_name: autoheal

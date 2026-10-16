@@ -1,30 +1,30 @@
 # =============================================================================
-# docker-compose.override.yml — локальная разработка
+# docker-compose.override.yml: local development
 # =============================================================================
-# Применяется АВТОМАТИЧЕСКИ при `docker compose up` (без флагов).
-# НЕ коммитить секреты — используй .env.local
+# Applied AUTOMATICALLY on `docker compose up` (without flags).
+# DO NOT commit secrets: use .env.local
 #
-# Что добавляет этот файл:
-#   - Открытые порты для прямого доступа к сервисам
-#   - Bind-mount кода для hot-reload
-#   - Отключение лишних сервисов (proxy, letsencrypt)
-#   - Упрощённые healthcheck (быстрее старт)
-#   - Более подробные логи
+# What this file adds:
+#   - Open ports for direct access to services
+#   - Bind-mounted code for hot reload
+#   - Disabled extra services (proxy, letsencrypt)
+#   - Simplified healthchecks (faster startup)
+#   - More verbose logs
 # =============================================================================
 
 services:
 
-  # --- Postgres: открыт напрямую для локальных инструментов ---
+  # --- Postgres: exposed directly for local tools ---
   postgres:
     ports:
       - "${POSTGRES_EXTERNAL_PORT:-5433}:5432"
 
-  # --- PgBouncer: открыт для диагностики (слушает 5432 внутри) ---
+  # --- PgBouncer: exposed for diagnostics (listens on 5432 inside) ---
   pgbouncer:
     ports:
       - "${PGBOUNCER_EXTERNAL_PORT:-6432}:5432"
 
-  # --- Redis: открыт для redis-insight / redis-cli ---
+  # --- Redis: exposed for redis-insight / redis-cli ---
   redis:
     ports:
       - "${REDIS_EXTERNAL_PORT:-6379}:6379"
@@ -39,7 +39,7 @@ services:
       - "15672:15672"
       - "5672:5672"
 
-  # --- Django: bind-mount кода + verbose логи + dev-сервер ---
+  # --- Django: bind-mounted code + verbose logs + dev server ---
   backend:
     volumes:
       - ../backend:/app
@@ -63,7 +63,7 @@ services:
       retries: 3
       start_period: 20s
 
-  # --- Celery: verbose логи в dev ---
+  # --- Celery: verbose logs in dev ---
   celery-critical:
     volumes:
       - ../backend:/app
@@ -116,12 +116,12 @@ services:
       - ../backend:/app
       - /app/.venv
 
-  # --- Frontend: dev-сервер с hot-reload вместо сборки ---
+  # --- Frontend: dev server with hot reload instead of a build ---
   frontend:
     command: sh -c "yarn && yarn dev --host 0.0.0.0 --port 5173"
     ports:
       - "5173:5173"
-    # healthcheck из docker-compose.yml проверяет :80/healthz — Vite dev-сервер
-    # слушает :5173 и не отдаёт /healthz, поэтому в dev он отключён
+    # the healthcheck from docker-compose.yml checks :80/healthz, but the Vite dev server
+    # listens on :5173 and doesn't serve /healthz, so it is disabled in dev
     healthcheck:
       test: ["NONE"]

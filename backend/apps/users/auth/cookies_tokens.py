@@ -3,20 +3,20 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class CookieJWTAuthentication(JWTAuthentication):
     """
-    Кастомный вариант, который сначала пробует Authorization header,
-    а если нет — достаёт access_token из HttpOnly cookies.
+    Custom variant that first tries the Authorization header,
+    and if there is none, takes access_token from HttpOnly cookies.
     """
 
     def authenticate(self, request):
-        # 1. Сначала обычная проверка через Authorization header
+        # 1. First the regular check via the Authorization header
         header_auth = super().authenticate(request)
         if header_auth:
             return header_auth
 
-        # 2. Попробуем достать токен из cookies
+        # 2. Try to get the token from cookies
         access_token = request.COOKIES.get("access_token")
         if not access_token:
-            return None  # токена нет вообще
+            return None  # no token at all
 
         validated_token = self.get_validated_token(access_token)
         user = self.get_user(validated_token)

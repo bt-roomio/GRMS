@@ -51,11 +51,11 @@ async def test_response_caches_within_ttl():
     second = await c.response()
 
     assert first == second == {"v": 1}
-    assert state["n"] == 1  # второй вызов обслужен из кеша
+    assert state["n"] == 1  # the second call was served from the cache
 
 
 async def test_concurrent_first_computes_coalesce_to_one():
-    """N подписчиков, кеш пуст: один пересчёт под локом, остальные переиспользуют."""
+    """N subscribers, empty cache: one recompute under the lock, the rest reuse it."""
     c = _consumer()
     state, c._compute_response = _counting_compute()
 
@@ -66,24 +66,24 @@ async def test_concurrent_first_computes_coalesce_to_one():
 
 
 async def test_force_reuses_fresh_cache():
-    """Ключ коалесцирования trailing: force НЕ пересчитывает, если кеш свеж."""
+    """Trailing coalescing key: force does NOT recompute if the cache is fresh."""
     c = _consumer()
     state, c._compute_response = _counting_compute()
 
-    await c.response()  # заполнили кеш, n=1
+    await c.response()  # cache filled, n=1
     forced = await c.response(force=True)
 
     assert forced == {"v": 1}
-    assert state["n"] == 1  # force переиспользовал свежий кеш
+    assert state["n"] == 1  # force reused the fresh cache
 
 
 async def test_force_recomputes_when_cache_stale():
-    """force обязан увидеть свежее состояние, когда окно кеша истекло."""
+    """force must see fresh state once the cache window has expired."""
     c = _consumer()
     state, c._compute_response = _counting_compute()
 
     await c.response()  # n=1
-    # Искусственно состариваем метку кеша за пределы TTL.
+    # Artificially age the cache timestamp beyond the TTL.
     _ts, data = rs._response_cache["t1"]
     rs._response_cache["t1"] = (time.monotonic() - rs._RESPONSE_TTL - 1, data)
 
@@ -112,7 +112,7 @@ async def test_get_latest_activity_broadcasts_and_schedules_trailing():
 
     await c.get_latest_activity({})
 
-    c.reply.assert_awaited_once()  # изменение доставлено подписчику
+    c.reply.assert_awaited_once()  # the change was delivered to the subscriber
     assert c.subscribers["r1"]["response"] == {"v": 1}
     assert c._trailing is not None and not c._trailing.done()
 
@@ -136,7 +136,7 @@ async def test_broadcast_dedups_unchanged_response():
     c.reply = AsyncMock()
     c.subscribers = {"r1": {"action": "a", "response": {"v": 1}}}
 
-    await c._broadcast({"v": 1})  # то же значение — повторно не шлём
+    await c._broadcast({"v": 1})  # same value: don't send again
 
     c.reply.assert_not_awaited()
 
@@ -150,11 +150,11 @@ async def test_ensure_trailing_refresh_is_idempotent_while_pending():
     c._trailing_refresh = _never
     c._ensure_trailing_refresh()
     task1 = c._trailing
-    c._ensure_trailing_refresh()  # уже висит — не плодим вторую задачу
+    c._ensure_trailing_refresh()  # already pending: don't spawn a second task
     assert c._trailing is task1
 
     c._cancel_trailing()
-    await asyncio.sleep(0)  # даём циклу обработать отмену (она кооперативная)
+    await asyncio.sleep(0)  # let the loop process the cancellation (it is cooperative)
     assert task1.cancelled()
 
 
@@ -164,7 +164,7 @@ async def test_trailing_refresh_broadcasts_forced_response():
     c.response = AsyncMock(return_value={"v": 9})
     c.subscribers = {"r1": {}}
 
-    # Не ждём реальный TTL.
+    # Don't wait for the real TTL.
     real_sleep = asyncio.sleep
 
     async def _fast_sleep(_):
@@ -208,7 +208,7 @@ async def test_disconnect_cancels_trailing():
     c._ensure_trailing_refresh()
     task = c._trailing
 
-    # Патчим родительский disconnect в MRO, чтобы не дёргать реальный канальный слой.
+    # Patch the parent disconnect in the MRO so the real channel layer isn't touched.
     parent = next(k for k in RoomStatusConsumer.__mro__[1:] if "disconnect" in k.__dict__)
     orig = parent.disconnect
     parent.disconnect = AsyncMock()
@@ -217,6 +217,6 @@ async def test_disconnect_cancels_trailing():
     finally:
         parent.disconnect = orig
 
-    await asyncio.sleep(0)  # отмена кооперативная — даём циклу её обработать
+    await asyncio.sleep(0)  # cancellation is cooperative: let the loop process it
     assert task.cancelled()
     assert c._trailing is None

@@ -1,10 +1,10 @@
 # =============================================================================
 # roomio GRMS — backend Makefile
 # =============================================================================
-# Использование:
-#   make build                         # локальная сборка (текущая платформа)
-#   make push                          # сборка + push (TAG=dev)
-#   make push TAG=latest PLATFORM=...  # с кастомными параметрами
+# Usage:
+#   make build                         # local build (current platform)
+#   make push                          # build + push (TAG=dev)
+#   make push TAG=latest PLATFORM=...  # with custom parameters
 # =============================================================================
 
 REGISTRY   = registry.gitlab.com/yroomio/grms
@@ -55,7 +55,7 @@ buildx-setup:
 	docker buildx use $(BUILDER)
 	@echo "Builder '$(BUILDER)' готов"
 
-# --- Сборка ---
+# --- Build ---
 
 build:
 	docker buildx build \

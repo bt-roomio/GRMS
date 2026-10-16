@@ -1,24 +1,24 @@
 # =============================================================================
-# docker-compose.prod.yml — продакшн-специфика
+# docker-compose.prod.yml: production specifics
 # =============================================================================
-# Использование:
+# Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 #     --profile infra --profile app --profile front --profile proxy up -d
 #
-# Или через Makefile: make up-all ENV=prod
+# Or via the Makefile: make up-all ENV=prod
 #
-# Что добавляет этот файл:
-#   - Resource limits (CPU, memory) для всех сервисов
-#   - Закрытые порты (убираем проброс наружу)
-#   - Prod-образы (без :dev тегов)
-#   - ulimits для высоконагруженных сервисов
-#   - read_only файловые системы где возможно
+# What this file adds:
+#   - Resource limits (CPU, memory) for all services
+#   - Closed ports (no publishing to the outside)
+#   - Prod images (no :dev tags)
+#   - ulimits for high-load services
+#   - read_only filesystems where possible
 # =============================================================================
 
 services:
 
   # ---------------------------------------------------------------------------
-  # INFRA — убираем внешние порты, добавляем лимиты
+  # INFRA: remove external ports, add limits
   # ---------------------------------------------------------------------------
 
   postgres:
@@ -193,7 +193,7 @@ services:
   # ---------------------------------------------------------------------------
 
   mqtt:
-    ports: []   # закрываем наружу, mqtt доступен только через внутреннюю сеть
+    ports: []   # closed to the outside, mqtt is reachable only via the internal network
     deploy:
       resources:
         limits:

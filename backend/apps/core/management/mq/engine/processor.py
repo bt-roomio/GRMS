@@ -105,9 +105,9 @@ class BatchProcessor:
     def _route(self, parsed, device_map: dict, message_status: dict) -> RoutedBatch:
         """Group parsed messages by topic, emit metrics, and mark unknown devices."""
         grouped = RoutedBatch()
-        # Аккумулируем счётчики по батчу: один label-lookup на топик (их немного)
-        # вместо одного на каждое сообщение, и без серии на каждый gateway_id
-        # (эта метка убрана, чтобы не плодить кардинальность).
+        # Accumulate counters per batch: one label lookup per topic (there are few of them)
+        # instead of one per message, and no series per gateway_id
+        # (that label was removed to avoid cardinality blow-up).
         topic_counts: dict[str, int] = defaultdict(int)
         key_count = 0
         for message, msg in parsed:

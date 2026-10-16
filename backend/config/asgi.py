@@ -1,3 +1,4 @@
+import logging
 import os
 
 from channels.routing import ProtocolTypeRouter, URLRouter
@@ -13,6 +14,9 @@ django_asgi_app = get_asgi_application()
 
 from services.router import websocket_urlpatterns as services_websocket_urlpatterns  # noqa: E402
 from shuttle.router import websocket_urlpatterns as shuttle_websocket_urlpatterns  # noqa: E402
+from shuttle.utils.log_filters import RedactTokenFilter  # noqa: E402
+
+logging.getLogger("uvicorn.error").addFilter(RedactTokenFilter())
 
 application = ProtocolTypeRouter(
     {

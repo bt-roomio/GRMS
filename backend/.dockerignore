@@ -28,18 +28,18 @@ static/
 *.log
 logs/
 
-# Тесты и конфиги разработки
+# Tests and dev configs
 conftest.py
 pytest.ini
 
-# Документация
+# Documentation
 docs/
 *.md
 
-# Docker (не нужен внутри образа)
+# Docker (not needed inside the image)
 docker/
 
-# Прочее
+# Misc
 Makefile
 requirements.txt
 .gitlab-ci.yml

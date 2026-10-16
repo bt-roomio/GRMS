@@ -1,4 +1,4 @@
-"""Async версии функций публикации для использования в асинхронном контексте (mq_async.py)"""
+"""Async versions of the publish functions for use in an async context (mq_async.py)"""
 
 import asyncio
 
@@ -9,8 +9,8 @@ from shuttle.utils.has_changed_and_update import has_changed_attrs
 
 async def publish_updates_attribute_batch_async(updates_by_device: dict[str, list[dict]]):
     """
-    Асинхронная версия publish_updates_attribute_batch для использования в async контексте.
-    Отправляем пачками: для каждого device_id шлём в каждую группу только изменившиеся данные.
+    Async version of publish_updates_attribute_batch for use in an async context.
+    Sent in batches: for each device_id, only changed data is sent to each group.
     updates_by_device: { device_id_tenant_id: [ {entity, key, ts, bool_v...}, ... ] }
     """
     channel_layer = get_channel_layer()
@@ -26,7 +26,6 @@ async def publish_updates_attribute_batch_async(updates_by_device: dict[str, lis
         payload = {"type": "get_latest_activity", "updates": changed_messages}
         groups_payloads.extend(
             [
-                ("attribute_kv_updates", payload),
                 (f"attribute_kv_updates_{tenant_id}", payload),
                 (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}),
             ]

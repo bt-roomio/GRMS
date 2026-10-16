@@ -219,15 +219,15 @@ class Room(BaseModel, UpdateByModel):
 
     def ts_kvs_latest_values(self, keys: Iterable[TsKvDictionary] | Iterable[str]) -> dict[str, Any]:
         """
-        Возвращает словарь {key_name: value} для всех ключей из списка keys.
-        keys может быть списком объектов TsKvDictionary или списка строк-имен ключей.
+        Returns a dict {key_name: value} for all keys in the keys list.
+        keys may be a list of TsKvDictionary objects or a list of key-name strings.
         """
-        # если передали строки, отфильтруем по названиям
+        # if strings were passed, filter by name
         filter_kwargs = {}
         if keys and isinstance(next(iter(keys)), str):
-            filter_kwargs["key__key__in"] = keys  # ключ.key – это строковое имя
+            filter_kwargs["key__key__in"] = keys  # key.key is the string name
         else:
-            filter_kwargs["key__in"] = keys  # ключ – полноценный объект
+            filter_kwargs["key__in"] = keys  # key is a full object
 
         qs = (
             TsKvLatest.objects.filter(entity__room=self, **filter_kwargs)
@@ -236,7 +236,7 @@ class Room(BaseModel, UpdateByModel):
         )
         result: dict[str, Any] = {}
         for key_name, long_v, dbl_v in qs:
-            # приоритет – long_v, если его нет, то dbl_v
+            # long_v takes priority, otherwise dbl_v
             result[key_name] = long_v if long_v is not None else dbl_v
         return result
 
