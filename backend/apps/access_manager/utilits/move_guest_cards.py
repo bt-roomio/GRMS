@@ -35,7 +35,7 @@ def move_guest_cards(
     `get_guest_access_context()` for the same `guests`,
     captured before and after the change (e.g. a room move). Only the "devices"
     key is read from each context. `source` (Guest.SOURCE) and `user` are recorded
-    on the guest cards the removals deactivate.
+    on the guest cards the removals deactivate and the assignments activate.
     """
     if isinstance(guests, Guest):
         guests = [guests]
@@ -64,4 +64,6 @@ def move_guest_cards(
                     device_id, [card.number], 0, user=user, guest_id=guest_id, is_pwd=is_pwd, source=source
                 )
             for device_id in assign_ids:
-                send_rpc_request.delay(device_id, [card.number], 1, guest_id=guest_id, is_pwd=is_pwd)
+                send_rpc_request.delay(
+                    device_id, [card.number], 1, user=user, guest_id=guest_id, is_pwd=is_pwd, source=source
+                )

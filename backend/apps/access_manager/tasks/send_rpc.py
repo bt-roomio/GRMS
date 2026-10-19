@@ -26,7 +26,7 @@ TIMEOUT = 10
 def send_rpc_request(
     device_id, cards, access, user=None, guest_id=None, staff_id=None, sync=False, is_pwd=False, source=None
 ):
-    """`user` and `source` (Guest.SOURCE) are recorded on the guest cards a removal deactivates."""
+    """`user` and `source` (Guest.SOURCE) are recorded on the guest cards this activates or deactivates."""
     from main.models import Device
 
     if is_pwd and Device.objects.filter(id=device_id, device_profile__name__iexact="default").exists():
@@ -97,7 +97,7 @@ def send_rpc_request(
             result = (
                 activate_staff_card(cards, staff, device)
                 if staff_id
-                else activate_guest_card(cards, device, guest, is_pwd=is_pwd)
+                else activate_guest_card(cards, device, guest, is_pwd=is_pwd, user=user, source=source)
             )
             result.update({"room": room_number, "public_spaces": public_spaces})
             return result
