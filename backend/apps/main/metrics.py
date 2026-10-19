@@ -34,8 +34,8 @@ offline_gateway_devices_count = Gauge(
 
 def update_device_metrics() -> None:
     """
-    Основная функция обновления всех метрик устройств
-    Вызывается автоматически при каждом запросе к /metrics
+    Main function that updates all device metrics
+    Called automatically on every request to /metrics
     """
     if not settings.DJANGO_IS_MONITORING_GATEWAYS:
         logger.debug("Мониторинг gateway устройств отключен (DJANGO_IS_MONITORING_GATEWAYS=False)")
@@ -51,15 +51,15 @@ def update_device_metrics() -> None:
 
 def _clear_metrics():
     """
-    Очистка всех метрик перед обновлением
-    Note: .clear() не работает в multiprocess mode, поэтому мы явно обнуляем метрики
+    Clear all metrics before updating
+    Note: .clear() doesn't work in multiprocess mode, so we zero the metrics explicitly
     """
     excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
 
     if excluded_gateways:
         logger.info(f"Исключено gateway устройств из мониторинга: {len(excluded_gateways)} ({excluded_gateways})")
 
-    # Получаем все активные gateway устройства (включая excluded — чтобы сбросить stale данные)
+    # Get all active gateway devices (including excluded ones, to reset stale data)
     all_combinations = list(
         Device.objects.filter(is_active=True, additional_info__gateway=True)
         .select_related("tenant")
@@ -67,7 +67,7 @@ def _clear_metrics():
         .distinct()
     )
 
-    # Явно обнуляем все известные метрики (включая excluded, чтобы stale значения не оставались)
+    # Explicitly zero all known metrics (including excluded ones, so stale values don't linger)
     for combo in all_combinations:
         tenant_id = str(combo["tenant_id"])
         tenant_name = _sanitize_label(combo["tenant__title"] or "Unknown")
@@ -75,7 +75,7 @@ def _clear_metrics():
 
         devices_offline_total.labels(tenant_id=tenant_id, tenant_name=tenant_name, device_id=device_id).set(0)
 
-    # Обнуляем агрегированную метрику
+    # Zero the aggregated metric
     offline_gateway_devices_count.set(0)
 
     return all_combinations
@@ -83,15 +83,15 @@ def _clear_metrics():
 
 def _zero_stale_metrics(current_combinations) -> None:
     """
-    Обнуляет devices_offline_total для gateway устройств, которые были удалены
-    или деактивированы с прошлого обновления.
+    Zeroes devices_offline_total for gateway devices that were deleted
+    or deactivated since the previous update.
 
-    prometheus_client в multiprocess-режиме не умеет удалять лейблсеты
-    (.remove() — no-op), поэтому метрика устройства, которое было offline,
-    после удаления из БД навсегда "застревает" со значением 1 в gauge_*.db.
-    Здесь мы помним предыдущий набор gateway устройств в Redis и при исчезновении
-    устройства явно перезаписываем его метрику в 0 — это перекрывает stale-запись
-    благодаря multiprocess_mode="mostrecent" (выигрывает запись с более новым timestamp).
+    prometheus_client in multiprocess mode can't remove label sets
+    (.remove() is a no-op), so the metric of a device that was offline
+    gets "stuck" at 1 in gauge_*.db forever after it is deleted from the DB.
+    Here we remember the previous set of gateway devices in Redis and, when a device
+    disappears, explicitly overwrite its metric with 0; this overrides the stale entry
+    thanks to multiprocess_mode="mostrecent" (the entry with the newer timestamp wins).
     """
     cache = caches["default"]
 
@@ -116,11 +116,11 @@ def _zero_stale_metrics(current_combinations) -> None:
 
 
 def _update_device_status_metrics():
-    """Обновление метрик статуса устройств"""
+    """Update device status metrics"""
 
     excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
 
-    # Получаем все offline gateway устройства
+    # Get all offline gateway devices
     query = Device.objects.filter(
         is_active=True,
         status=False,
@@ -130,7 +130,7 @@ def _update_device_status_metrics():
         additional_info__excluded_monitoring=True,
     )
 
-    # Исключаем gateway из списка исключений (если список не пустой)
+    # Drop gateways in the exclusion list (if the list is not empty)
     if excluded_gateways:
         query = query.exclude(id__in=excluded_gateways)
 
@@ -141,10 +141,10 @@ def _update_device_status_metrics():
         tenant_name = _sanitize_label(device["tenant__title"] or "Unknown")
         device_id = str(device["id"])
 
-        # Устанавливаем метрику в 1 для offline устройства
+        # Set the metric to 1 for an offline device
         devices_offline_total.labels(tenant_id=tenant_id, tenant_name=tenant_name, device_id=device_id).set(1)
 
-    # Обновляем агрегированную метрику (общее количество offline gateway устройств)
-    # Переиспользуем тот же query, чтобы не рассинхронизировать фильтры/исключения
+    # Update the aggregated metric (total number of offline gateway devices)
+    # Reuse the same query so filters/exclusions don't drift apart
     total_offline = query.count()
     offline_gateway_devices_count.set(total_offline)

@@ -30,7 +30,6 @@ def _flush_attribute_kv_batch():
         payload = {"type": "get_latest_activity", "updates": messages}
         groups_payloads.extend(
             [
-                ("attribute_kv_updates", payload),
                 (f"attribute_kv_updates_{tenant_id}", payload),
                 (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": messages}),
             ]

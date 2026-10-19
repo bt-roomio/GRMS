@@ -59,6 +59,7 @@ class GatewayLogsConsumer(BaseGenericAsyncAPIConsumer):
 
     @action()
     async def subscribe(self, request_id, action, query_params):
+        await self.check_device_access(query_params.get("device"))
         await self.add_group(f"tskv_updates_{query_params.get('device')}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action}
 

@@ -8,10 +8,10 @@ from shuttle.utils.has_changed_and_update import has_changed_and_update
 
 logger = logging.getLogger(__name__)
 
-# Целевые каналы для рассылки изменений телеметрии.
-# (базовое имя группы, тип-обработчик, scope)
-#   scope="device" → группа f"{base}_{device_id}"
-#   scope="tenant" → группа f"{base}_{tenant_id}"
+# Target channels for broadcasting telemetry changes.
+# (base group name, handler type, scope)
+#   scope="device" -> group f"{base}_{device_id}"
+#   scope="tenant" -> group f"{base}_{tenant_id}"
 GROUP_TARGETS = (
     ("tskv_latest_updates", "ts_kv_latest_activity", "device"),
     ("tskv_updates", "ts_kv_activity", "device"),
@@ -31,13 +31,13 @@ def publish_updates_batch(updates_by_device: dict[str, list[dict]]):
 
     logger.info("publish_updates_batch: %d device(s)", len(updates_by_device))
 
-    # Апдейты для tenant-групп копим по арендатору, чтобы отправить один group_send
-    # на весь батч, а не по одному на каждое устройство (иначе room_status пересчитывает
-    # тяжёлые агрегаты из БД N раз, а emergency_status шлёт N сообщений вместо одного).
+    # Updates for tenant groups are accumulated per tenant to send a single group_send
+    # for the whole batch rather than one per device (otherwise room_status recomputes
+    # heavy aggregates from the DB N times, and emergency_status sends N messages instead of one).
     tenant_updates: dict[str, list[dict]] = defaultdict(list)
-    # Собираем все (группа, payload) в sync-части, а фанаут делаем ОДНИМ пересечением
-    # границы sync↔async: async_to_sync на каждый group_send стоит ~9.4 мс (поднятие
-    # event loop), серийный await в одном контексте — ~0.9 мс (10.8x на доминирующей статье).
+    # Collect all (group, payload) pairs in the sync part and do the fan-out in ONE
+    # sync<->async boundary crossing: async_to_sync per group_send costs ~9.4 ms (spinning
+    # up the event loop), a serial await in one context ~0.9 ms (10.8x on the dominant cost).
     sends: list[tuple[str, dict]] = []
 
     for device_id_tenant_id, messages in updates_by_device.items():

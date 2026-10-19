@@ -9,7 +9,7 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 ## Technology Stack
 
 - **Backend**: Django 5.0.4 with Django REST Framework
-- **Package manager**: uv (`pyproject.toml` + `uv.lock`; `requirements.txt` is a generated mirror)
+- **Package manager**: uv (`pyproject.toml` + `uv.lock`; there is no `requirements.txt`, generate one with `uv export --frozen --no-dev --no-hashes` if a tool needs it)
 - **Real-time**: Django Channels (WebSockets), served via Gunicorn/Uvicorn ASGI workers
 - **Database**: PostgreSQL 16 with TimescaleDB extension for time-series data, fronted by PgBouncer (transaction pooling)
 - **Task Queue**: Celery on a dedicated `redis-broker` instance (separate from the `redis` cache/channel layer)

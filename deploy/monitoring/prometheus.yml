@@ -51,7 +51,7 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox:9115
 
-  # Домены берутся из targets/blackbox-https.yml (gitignored)
+  # Domains come from targets/blackbox-https.yml (gitignored)
   # cp targets/blackbox-https.example.yml targets/blackbox-https.yml
   - job_name: blackbox-https
     metrics_path: /probe

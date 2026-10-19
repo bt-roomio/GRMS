@@ -41,24 +41,24 @@ async def test_drain_remaining_takes_everything_then_empty():
 
 
 async def test_collect_batch_lingers_for_message_after_queue_empties():
-    """Суть правки: сообщение, пришедшее в окне batch_timeout уже ПОСЛЕ того как
-    очередь опустела, всё равно попадает в батч — не закрываемся на первой пустоте."""
+    """The point of the fix: a message arriving within the batch_timeout window AFTER the
+    queue went empty still lands in the batch; we don't close on the first empty read."""
     acc = _acc(batch_size=10, batch_timeout=0.2)
     await acc.message_queue.put("m0")
 
     async def _late_put():
-        # Очередь опустеет после первого get; докидываем позже, но внутри окна.
+        # The queue empties after the first get; add more later, but within the window.
         await asyncio.sleep(0.05)
         await acc.message_queue.put("m1")
 
     asyncio.create_task(_late_put())
     batch = await acc._collect_batch()
-    assert batch == ["m0", "m1"]  # старое поведение вернуло бы только ["m0"]
+    assert batch == ["m0", "m1"]  # the old behaviour would return only ["m0"]
 
 
 async def test_collect_batch_stops_at_deadline_when_underfilled():
-    """Не набрав batch_size и не дождавшись новых сообщений, батч закрывается по
-    истечении batch_timeout от первого сообщения (а не висит бесконечно)."""
+    """Without reaching batch_size or receiving new messages, the batch closes once
+    batch_timeout has elapsed since the first message (instead of hanging forever)."""
     acc = _acc(batch_size=100, batch_timeout=0.05)
     await acc.message_queue.put("only")
 
@@ -67,5 +67,5 @@ async def test_collect_batch_stops_at_deadline_when_underfilled():
     elapsed = time.monotonic() - started
 
     assert batch == ["only"]
-    assert elapsed >= 0.05  # дождались дедлайна, а не вышли мгновенно
-    assert elapsed < 0.5  # но и не зависли
+    assert elapsed >= 0.05  # waited for the deadline instead of returning instantly
+    assert elapsed < 0.5  # but didn't hang either

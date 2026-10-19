@@ -359,6 +359,9 @@ CHANNEL_LAYERS = {
     },
 }
 
+WS_SYNC_THREADS = int(os.getenv("WS_SYNC_THREADS", "8"))
+WS_DB_CONN_MAX_AGE = 0 if TESTING else int(os.getenv("WS_DB_CONN_MAX_AGE", "300"))
+
 RABBIT_HOST = os.getenv("RABBIT_HOST", "rabbitmq")
 RABBIT_PORT = os.getenv("RABBIT_PORT", 5672)
 RABBIT_LOGIN = os.getenv("RABBIT_LOGIN", "guest")

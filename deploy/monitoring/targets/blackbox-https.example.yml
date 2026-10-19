@@ -1,8 +1,8 @@
-# Скопируй и заполни своими доменами:
+# Copy and fill in your domains:
 #   cp targets/blackbox-https.example.yml targets/blackbox-https.yml
 #
-# Prometheus перечитывает этот файл каждые 5 минут автоматически.
-# Рестарт не нужен.
+# Prometheus re-reads this file automatically every 5 minutes.
+# No restart needed.
 
 - targets:
     - https://api.domain.com

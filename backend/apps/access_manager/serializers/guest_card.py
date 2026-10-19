@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-
 PIN_MIN_LENGTH = 4
 PIN_MAX_LENGTH = 10
 

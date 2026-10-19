@@ -3,13 +3,13 @@ from typing import List
 
 def parse_room_numbers(room_string: str) -> List[str]:
     """
-    Преобразует строки вида:
+    Converts strings like:
       "100-102;104;106;" -> ["100", "101", "102", "104", "106"]
-    Дополнительно:
-      - Разделители: ';' или ',' (и пробелы игнорируем)
-      - Диапазоны: 'A-B' (A <= B), иначе ошибка
-      - Пустые части игнорируются
-      - Номер без диапазона может содержать суффикс букв (например: '104ab')
+    Additionally:
+        - Separators: ';' or ',' (spaces are ignored)
+        - Ranges: 'A-B' (A <= B), otherwise an error
+        - Empty parts are ignored
+        - A number without a range may have a letter suffix (e.g. '104ab')
     """
     if not isinstance(room_string, str):
         raise ValueError("rooms must be a string")

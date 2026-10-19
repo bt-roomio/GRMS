@@ -121,7 +121,7 @@ def _resolve_device_profile_id(tenant_id, profile_name: str) -> str:
                     name=profile_name, tenant_id=tenant_id, active=True, type="DEFAULT"
                 )
         except IntegrityError:
-            # Параллельный поток/реплика создал профиль — берём существующий (unique_active_device_profile).
+            # A concurrent thread/replica created the profile: take the existing one (unique_active_device_profile).
             profile = DeviceProfile.objects.filter(name__iexact=profile_name, tenant_id=tenant_id, active=True).first()
             if not profile:
                 raise
@@ -176,8 +176,8 @@ def get_or_create_device(name, from_device):
                 device=obj,
             )
     except (IntegrityError, ValidationError):
-        # Параллельный поток/реплика создал устройство с тем же (name, tenant) —
-        # берём существующее (unique_device_name_tenant_is_active) вместо падения батча.
+        # A concurrent thread/replica created a device with the same (name, tenant):
+        # take the existing one (unique_device_name_tenant_is_active) instead of failing the batch.
         existing = Device.objects.filter(name__iexact=name, tenant_id=tenant_id, is_active=True).first()
         if existing:
             return existing

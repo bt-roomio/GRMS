@@ -15,13 +15,13 @@ app.autodiscover_tasks()
 
 @celery_signals.setup_logging.connect
 def configure_celery_logging(**kwargs):
-    """Отдаём настройку логирования Django вместо встроенной в Celery.
+    """Hand Celery the Django logging config instead of its built-in one.
 
-    Без приёмника на этом сигнале Celery считает логирование своим: при
-    worker_hijack_root_logger (включён по умолчанию) он очищает обработчики
-    логгера ``celery`` и вешает обработчик только на root. А в settings.LOGGING
-    у ``celery`` стоит ``propagate: False``, поэтому после такой "настройки"
-    записи beat и воркеров не доходят никуда, и лог выглядит пустым.
+    Without a receiver for this signal Celery considers logging its own: with
+    worker_hijack_root_logger (on by default) it clears the handlers of the
+    ``celery`` logger and attaches a handler only to root. But settings.LOGGING
+    sets ``propagate: False`` for ``celery``, so after such "configuration"
+    beat and worker records go nowhere, and the log looks empty.
     """
     from logging.config import dictConfig
 
@@ -38,8 +38,8 @@ def debug_task(self):
 app.conf.task_queues = [
     Queue("critical", routing_key="critical"),
     Queue("default", routing_key="default"),
-    # Отдельная очередь под высокочастотную WebSocket-публикацию из mq-async,
-    # чтобы всплеск телеметрии не голодал остальные задачи default и наоборот.
+    # A dedicated queue for high-frequency WebSocket publishing from mq-async,
+    # so a telemetry burst doesn't starve the other default tasks and vice versa.
     Queue("realtime", routing_key="realtime"),
     Queue("low", routing_key="low"),
 ]
@@ -56,10 +56,10 @@ app.conf.task_routes = {
     "fleet.tasks.run_fleet_job": {"queue": "critical"},
     "main.tasks.auto_check_out": {"queue": "critical"},
     "main.tasks.auto_block": {"queue": "critical"},
-    # Только celery-low смонтирован с docker.sock и deploy/; -c 1 исключает гонки за env-файлы.
+    # Only celery-low is mounted with docker.sock and deploy/; -c 1 rules out races over env files.
     "main.tasks.provision_nodered_task": {"queue": "low"},
     "main.tasks.deprovision_nodered_task": {"queue": "low"},
-    # WebSocket-публикация и обновление активности устройств из mq-async.
+    # WebSocket publishing and device activity updates from mq-async.
     "shuttle.tasks.publish_updates_batch_task": {"queue": "realtime"},
     "shuttle.tasks.publish_updates_attribute_batch_task": {"queue": "realtime"},
     "shuttle.tasks.update_activity_devices_batch_task": {"queue": "realtime"},
@@ -79,19 +79,19 @@ app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
-    # При обрыве соединения с брокером отменяем выполняемые acks_late-задачи и
-    # переподключаемся чисто, вместо залипания consumer loop (это тот самый
-    # CPendingDeprecationWarning в логах). Отменённые задачи будут повторно
-    # доставлены после visibility_timeout.
+    # When the broker connection drops, cancel running acks_late tasks and
+    # reconnect cleanly instead of the consumer loop getting stuck (that is the
+    # CPendingDeprecationWarning in the logs). Cancelled tasks will be redelivered
+    # after visibility_timeout.
     worker_cancel_long_running_tasks_on_connection_loss=True,
-    # Продолжать переподключение к брокеру на старте воркера (в Celery 5.3+ это
-    # вынесено из broker_connection_retry и без него сыплется предупреждение).
+    # Keep retrying the broker connection on worker startup (in Celery 5.3+ this
+    # was split out of broker_connection_retry, and without it a warning is emitted).
     broker_connection_retry_on_startup=True,
     broker_transport_options={
         "visibility_timeout": 43200,
         "retry_on_timeout": True,
-        # Периодический PING, чтобы redis-транспорт замечал мёртвый сокет
-        # (например, после рестарта redis-broker) и переподключался, а не висел.
+        # Periodic PING so the redis transport notices a dead socket
+        # (e.g. after a redis-broker restart) and reconnects instead of hanging.
         "health_check_interval": 10,
     },
 )

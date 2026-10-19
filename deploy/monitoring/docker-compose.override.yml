@@ -1,16 +1,16 @@
 # =============================================================================
-# docker-compose.override.yml — локальная разработка
+# docker-compose.override.yml: local development
 # =============================================================================
-# Применяется АВТОМАТИЧЕСКИ при `docker compose up` (без флагов).
+# Applied AUTOMATICALLY on `docker compose up` (without flags).
 #
-# Что добавляет этот файл:
-#   - Открытые порты для прямого доступа к UI сервисов
-#   - Grafana доступна напрямую без nginx-proxy
+# What this file adds:
+#   - Open ports for direct access to service UIs
+#   - Grafana reachable directly without nginx-proxy
 # =============================================================================
 
 services:
 
-  # --- Grafana: прямой доступ без proxy ---
+  # --- Grafana: direct access without proxy ---
   grafana:
     ports:
       - "3000:3000"
@@ -18,17 +18,17 @@ services:
       - GF_SERVER_ROOT_URL=http://localhost:3000
       - GF_SERVER_DOMAIN=localhost
 
-  # --- Alertmanager: прямой доступ для диагностики ---
+  # --- Alertmanager: direct access for diagnostics ---
   alertmanager:
     ports:
       - "127.0.0.1:9093:9093"
 
-  # --- Blackbox: прямой доступ для диагностики ---
+  # --- Blackbox: direct access for diagnostics ---
   blackbox:
     ports:
       - "127.0.0.1:9115:9115"
 
-  # --- Node exporter: прямой доступ для диагностики ---
+  # --- Node exporter: direct access for diagnostics ---
   node-exporter:
     ports:
       - "127.0.0.1:9100:9100"

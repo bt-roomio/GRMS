@@ -138,7 +138,7 @@ def publish_updates_batch_task(updates_by_device: dict[str, list[dict]]):
 @shared_task
 def publish_updates_attribute_batch_task(updates_by_device: dict[str, list[dict]]):
     """
-    Асинхронная отправка обновлений атрибутов через WebSocket.
-    Уменьшает блокировку RabbitMQ воркеров.
+    Asynchronously send attribute updates over WebSocket.
+    Reduces blocking of RabbitMQ workers.
     """
     publish_updates_attribute_batch(updates_by_device)

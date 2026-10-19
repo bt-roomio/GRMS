@@ -29,7 +29,7 @@ def kc_begin(request):
     code_verifier = _b64url(os.urandom(32))
     code_challenge = _b64url(hashlib.sha256(code_verifier.encode()).digest())
 
-    # Сохраним в HttpOnly cookies
+    # Store in HttpOnly cookies
     resp = HttpResponseRedirect(
         f"{KC_BASE}/realms/{KC_REALM}/protocol/openid-connect/auth?"
         + urlencode(
@@ -42,7 +42,7 @@ def kc_begin(request):
                 "nonce": nonce,
                 "code_challenge": code_challenge,
                 "code_challenge_method": "S256",
-                # "prompt": "login", # опционально
+                # "prompt": "login", # optional
             }
         )
     )
@@ -100,7 +100,7 @@ def kc_callback(request):
 
 def kc_logout(request):
     id_token = request.COOKIES.get("kc_id_token")
-    # чистим свои JWT-куки
+    # clear our JWT cookies
     resp = redirect(REDIRECT_URI)
     resp.delete_cookie("access")
     resp.delete_cookie("refresh")

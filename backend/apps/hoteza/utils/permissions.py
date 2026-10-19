@@ -4,6 +4,8 @@ from django.conf import settings
 
 from rest_framework import exceptions, permissions
 
+from core.utils.ip import get_client_ip
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,14 +18,8 @@ class WhiteListPermission(permissions.BasePermission):
         if not isinstance(admin_settings_hoteza_whitelist, list):
             admin_settings_hoteza_whitelist = []
 
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            # The X-Forwarded-For header can contain multiple IPs.
-            # The first IP is usually the client’s public IP.
-            remote_addr = x_forwarded_for.split(",")[0].strip()
-        else:
-            # If no proxy header is found, use REMOTE_ADDR.
-            remote_addr = request.META.get("REMOTE_ADDR")
+        # Never read X-Forwarded-For here: its leftmost entry is client-controlled.
+        remote_addr = get_client_ip(request)
 
         for valid_ip in [*settings.HOTEZA_WHITELIST, *admin_settings_hoteza_whitelist]:
             if remote_addr == valid_ip or remote_addr.startswith(valid_ip):

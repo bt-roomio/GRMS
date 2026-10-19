@@ -6,9 +6,9 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    # CREATE INDEX CONCURRENTLY нельзя выполнять внутри транзакции, поэтому миграция
-    # неатомарна. Это позволяет не брать блокировку на запись в горячую таблицу
-    # shuttle_attribute_kv (в неё пишет каждый telemetry/attributes/state-батч).
+    # CREATE INDEX CONCURRENTLY can't run inside a transaction, so the migration
+    # is non-atomic. This avoids taking a write lock on the hot table
+    # shuttle_attribute_kv (every telemetry/attributes/state batch writes to it).
     atomic = False
 
     dependencies = [
