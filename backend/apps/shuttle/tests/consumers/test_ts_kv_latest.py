@@ -503,7 +503,7 @@ class TestTsKvLatestConsumer:
         finally:
             await comm.disconnect()
 
-    async def test_list_subscribe_empty_result(self, ws_connect, karina_token):
+    async def test_list_subscribe_foreign_device_rejected(self, ws_connect, karina_token):
         comm = await ws_connect(karina_token)
         try:
             other_device = await database_sync_to_async(
@@ -525,8 +525,9 @@ class TestTsKvLatestConsumer:
                 reply = await comm.receive_json_from()
                 payload = reply.get("payload") or {}
 
-                assert payload["response_status"] == 200
-                assert isinstance(payload["data"], list)
+                # Another tenant's device is rejected like a missing one.
+                assert payload["response_status"] == 400
+                assert "device" in str(payload["errors"])
         finally:
             await comm.disconnect()
 

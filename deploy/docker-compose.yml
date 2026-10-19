@@ -212,6 +212,9 @@ services:
       - LETSENCRYPT_HOST=${API_VIRTUAL_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     command: ["/app/entrypoint.sh"]
+    # Docker's default 10s would SIGKILL Gunicorn mid graceful shutdown
+    # (GUNICORN_GRACEFUL_TIMEOUT, 30s by default).
+    stop_grace_period: 35s
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/

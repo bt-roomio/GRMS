@@ -120,6 +120,10 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         super().cancel_background_tasks()
         self._cancel_trailing()
 
+    async def disconnect(self, code):
+        self._cancel_trailing()
+        await super().disconnect(code)
+
     @action()
     async def list_subscribe(self, request_id, action, query_params):
         try:

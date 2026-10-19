@@ -28,6 +28,7 @@ def _consumer(tenant="t1"):
     c.subscribers = {}
     c.scope = {"user": {"tenant_id": tenant}}
     c._trailing = None
+    c._state_lock = asyncio.Lock()
     return c
 
 

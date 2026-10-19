@@ -7,9 +7,7 @@ from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-# Initialise the Django ASGI application first. This populates the app registry,
-# so it must run before importing any code (the routers and their consumers) that
-# touches models.
+
 django_asgi_app = get_asgi_application()
 
 from services.router import websocket_urlpatterns as services_websocket_urlpatterns  # noqa: E402

@@ -10,7 +10,8 @@ from channels.exceptions import StopConsumer
 from django.core.exceptions import ValidationError as DjangoValidationError
 from djangochannelsrestframework.generics import GenericAsyncAPIConsumer
 
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import ValidationError
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from main.models import Device
 from users.models import User
@@ -122,7 +123,9 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
         """Prevent subscribing to a device of another tenant.
 
         ``*_{device_id}`` groups know nothing about tenants, and without this check a client got
-        live telemetry of any device whose id it knew.
+        live telemetry of any device whose id it knew. A foreign device is rejected exactly like
+        a missing one (the 400 the query-params validator returns), so the reply doesn't reveal
+        that the device exists.
         """
         if not device_id:
             return
@@ -134,7 +137,8 @@ class BaseGenericAsyncAPIConsumer(GenericAsyncAPIConsumer):
         except (DjangoValidationError, ValueError):
             allowed = False
         if not allowed:
-            raise NotFound("Device not found!")
+            message = PrimaryKeyRelatedField.default_error_messages["does_not_exist"].format(pk_value=key)
+            raise ValidationError({"device": [message]})
         self._tenant_devices.add(key)
 
     @classmethod

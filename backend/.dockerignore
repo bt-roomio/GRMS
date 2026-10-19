@@ -41,5 +41,4 @@ docker/
 
 # Misc
 Makefile
-requirements.txt
 .gitlab-ci.yml

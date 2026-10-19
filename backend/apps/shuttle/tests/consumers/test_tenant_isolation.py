@@ -37,7 +37,7 @@ class TestDeviceAccess:
             reply = await comm.receive_json_from(timeout=5)
             assert reply["stream"] == stream
             assert reply["payload"]["request_id"] == "r1"
-            assert reply["payload"]["response_status"] == 404
+            assert reply["payload"]["response_status"] == 400
         finally:
             await comm.disconnect()
 
