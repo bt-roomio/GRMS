@@ -9,6 +9,8 @@ from alarms.notifications.settings import (
     notification_settings,
     stored_settings,
 )
+from alarms.whatsapp.phone import normalize_phone
+from core.utils.secrets import encrypt
 
 
 class ChannelSettingsSerializer(serializers.Serializer):
@@ -37,10 +39,39 @@ class EmailSettingsSerializer(ChannelSettingsSerializer):
         return list(dict.fromkeys(address.lower() for address in value))
 
 
+class WhatsAppSettingsSerializer(ChannelSettingsSerializer):
+    # Phone numbers in international format; stored as E.164 digits without
+    # "+", which is what the Cloud API expects in "to".
+    recipients = serializers.ListField(child=serializers.CharField(max_length=32), max_length=20, required=False)
+    # The hotel's own sender — required: there is no shared number to fall back to.
+    phone_number_id = serializers.RegexField(r"^\d{5,32}$", required=False, allow_blank=True)
+    # Stored encrypted and never returned; an empty string removes it.
+    access_token = serializers.CharField(max_length=1024, required=False, allow_blank=True, write_only=True)
+    has_access_token = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        ref_name = "WhatsAppNotificationSettings"
+
+    def validate_access_token(self, value):
+        value = value.strip()
+        return encrypt(value) if value else ""
+
+    def validate_recipients(self, value):
+        numbers = []
+        for raw in value:
+            phone = normalize_phone(raw)
+            if phone is None:
+                raise serializers.ValidationError(f"{raw!r} is not a phone number in international format")
+            numbers.append(phone)
+        # The same number twice would pay for every message twice.
+        return list(dict.fromkeys(numbers))
+
+
 class ChannelsSerializer(serializers.Serializer):
     """One field per channel in ``alarms.channels.registry.CHANNELS``."""
 
     telegram = TelegramSettingsSerializer(required=False)
+    whatsapp = WhatsAppSettingsSerializer(required=False)
     email = EmailSettingsSerializer(required=False)
 
     class Meta:
@@ -63,6 +94,19 @@ class NotificationSettingsSerializer(serializers.Serializer):
 
     class Meta:
         ref_name = "NotificationSettings"
+
+    def validate(self, attrs):
+        whatsapp = (attrs.get(CHANNELS_KEY) or {}).get("whatsapp")
+        if whatsapp is not None and self.instance is not None:
+            # Checked against the merged block: the credentials may have been
+            # saved by an earlier PUT.
+            stored = channel_blocks(stored_settings(self.instance)).get("whatsapp") or {}
+            block = {**stored, **whatsapp}
+            if block.get("enabled") and not (block.get("phone_number_id") and block.get("access_token")):
+                raise serializers.ValidationError(
+                    {CHANNELS_KEY: {"whatsapp": {"enabled": ["phone_number_id and access_token are required"]}}}
+                )
+        return attrs
 
     def update(self, instance, validated_data):
         updated_by = validated_data.pop("updated_by", None)
@@ -91,4 +135,10 @@ class NotificationSettingsSerializer(serializers.Serializer):
         return instance
 
     def to_representation(self, instance):
-        return {"tenant_id": instance.id, **notification_settings(instance)}
+        data = notification_settings(instance)
+        whatsapp = data[CHANNELS_KEY].get("whatsapp")
+        if whatsapp is not None:
+            # Not even the ciphertext leaves the server; the screen only needs
+            # to know whether one is set.
+            whatsapp["has_access_token"] = bool(whatsapp.pop("access_token", ""))
+        return {"tenant_id": instance.id, **data}

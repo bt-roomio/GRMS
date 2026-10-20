@@ -21,7 +21,7 @@
 7. [Рецепты](#7-рецепты)
 8. [REST API](#8-rest-api)
 9. [WebSocket: стрим `alarms`](#9-websocket-стрим-alarms)
-10. [Уведомления в Telegram](#10-уведомления-в-telegram)
+10. [Уведомления в Telegram](#10-уведомления-в-telegram) (там же email и WhatsApp)
 11. [Настройка и эксплуатация](#11-настройка-и-эксплуатация)
 12. [Диагностика](#12-диагностика)
 13. [Тесты](#13-тесты)
@@ -57,6 +57,7 @@ flowchart LR
     ALARM --> REST[REST /api/v1/alarms/]
     ALARM --> WS[WS-стрим alarms]
     ALARM --> DISP[dispatch_notifications<br/>каждые 60 с] --> TG[Telegram]
+    DISP --> WA[WhatsApp]
     DISP --> MAIL[Email]
 ```
 
@@ -102,7 +103,7 @@ flowchart LR
 | `apps/alarms/templates.py` | Каталог шаблонов правил: то, что конструктор предлагает кнопкой «добавить типовое» |
 | `apps/alarms/services/attributes.py` | Запись серверных атрибутов `notifyOnOffline`, `gatewayActive` |
 | `apps/alarms/notifications/` | Диспетчер уведомлений и настройки тенанта |
-| `apps/alarms/channels/`, `apps/alarms/telegram/` | Каналы доставки (Telegram, email) и HTTP-клиент Bot API |
+| `apps/alarms/channels/`, `apps/alarms/telegram/`, `apps/alarms/whatsapp/` | Каналы доставки (Telegram, WhatsApp, email), HTTP-клиенты Bot API и WhatsApp Cloud API |
 | `apps/alarms/views/`, `urls.py`, `swagger/` | REST API |
 | `apps/alarms/v2_consumers/alarms.py` | WS-стрим `alarms` |
 | `apps/alarms/observables/alarm.py` | Пуш изменений в группу `alarms_<tenant_id>` |
@@ -172,8 +173,10 @@ UniqueConstraint(fields=["device_profile", "alarm_type"], name="uniq_alarm_rule_
 Вычисляемые свойства: `status` и `duration_ms` (`(clear_ts или end_ts) - start_ts`).
 
 Что о ней уже сообщили каналы уведомлений — не в самой аварии, а в `AlarmNotification`
-(`alarms_alarm_notification`): `alarm`, `channel` (`telegram`, `email`, …), `raised_at`,
-`cleared_at`, уникальность `(alarm, channel)`. В API аварии это список `notifications`.
+(`alarms_alarm_notification`): `alarm`, `channel`, `raised_at`, `cleared_at`, уникальность
+`(alarm, channel)`. В `channel` лежит ключ **цели** доставки: `telegram`, `email` или
+`whatsapp:<номер>` — у WhatsApp строка на каждого получателя. В API аварии это список
+`notifications`.
 
 Индексы: `(tenant, cleared, -start_ts)`, `(originator, -start_ts)`, `(alarm_type, -start_ts)`,
 `(severity, -start_ts)`, GIN по `propagate_entity_ids`.
@@ -686,7 +689,7 @@ TB не выражается — нужны два разных правила.
 | `CURRENT_USER`, `CURRENT_CUSTOMER` | Не поддерживаются; добавлен `CURRENT_ROOM` |
 | `ENTITY_FIELD` — любое поле | Белый список, включая `is_gateway` и `room.*` |
 | Связь «авария ↔ сущность» в таблице `relation` | Массив `Alarm.propagate_entity_ids` |
-| Notification Center | Упрощённый диспетчер с каналами Telegram и email |
+| Notification Center | Упрощённый диспетчер с каналами Telegram, WhatsApp и email |
 
 В коде такие места помечены комментарием `GRMS deviation:`.
 
@@ -1424,7 +1427,7 @@ LIMIT 10;
 | `POST /api/v1/alarms/rules/bulk/` | Заменить все правила профиля разом |
 | `POST /api/v1/alarms/rules/preview/` | Сухой прогон правил |
 | `GET /api/v1/alarms/rule-templates/` | Каталог шаблонов для конструктора |
-| `GET`, `PUT /api/v1/main/notification-settings/` | Настройки Telegram тенанта |
+| `GET`, `PUT /api/v1/main/notification-settings/` | Настройки уведомлений тенанта (Telegram, WhatsApp, email) |
 
 Swagger: теги `Alarms` и `Alarm Rules`.
 
@@ -1811,6 +1814,7 @@ GET /api/v1/alarms/?search_value=305
   "min_severity": "MINOR",
   "channels": {
     "telegram": {"enabled": true, "chat_id": "-1002345678901", "last_error": null},
+    "whatsapp": {"enabled": true, "recipients": ["998901234567"], "phone_number_id": "", "has_access_token": false, "last_error": null},
     "email": {"enabled": true, "recipients": ["ops@hotel.uz", "engineer@hotel.uz"], "last_error": null}
   }
 }
@@ -1830,6 +1834,10 @@ GET /api/v1/alarms/?search_value=305
 | `channels.<канал>.enabled` | bool | `false` | Выключатель канала |
 | `channels.<канал>.last_error` | строка, только чтение | `null` | Последняя постоянная ошибка канала. Сбрасывается при любом `PUT`, затрагивающем блок этого канала |
 | `channels.telegram.chat_id` | строка до 64 | `""` | Id чата или группы |
+| `channels.whatsapp.recipients` | список телефонов, до 20 | `[]` | Номера в международном формате. Хранятся цифрами E.164 без `+` (`998901234567`), пробелы, дефисы и скобки убираются, дубли тоже |
+| `channels.whatsapp.phone_number_id` | цифры | `""` | Phone number ID номера отеля (не сам номер). Обязателен для `enabled: true` |
+| `channels.whatsapp.access_token` | строка, только запись | — | Постоянный токен System User отеля. Обязателен для `enabled: true`. Хранится зашифрованным, в ответе не возвращается; `""` удаляет |
+| `channels.whatsapp.has_access_token` | bool, только чтение | `false` | Задан ли токен |
 | `channels.email.recipients` | список email, до 20 | `[]` | Получатели. Приводятся к нижнему регистру, дубли убираются |
 
 В ответе всегда есть все каналы, которые знает сервер (`alarms/channels/registry.py`), с
@@ -2021,16 +2029,29 @@ GET /api/v1/alarms/?search_value=305
 канал, который восстановился, догоняет пропущенное, не дублируя другой.
 
 Для каждого тенанта и каждого включённого у него канала (Telegram — `enabled` и непустой
-`chat_id`; email — `enabled` и непустой `recipients`), по строкам этого канала:
+`chat_id`; email и WhatsApp — `enabled` и непустой `recipients`) канал делится на **цели**:
+у Telegram и email одна цель (ключ `telegram` / `email`), у WhatsApp — по цели на номер
+(`whatsapp:<номер>`), потому что каждое сообщение — отдельный платный вызов. По строкам каждой
+цели:
 
 1. **Новые** — аварии, у которых `cleared = false`, нет строки `AlarmNotification` канала,
    `start_ts ≤ now − notify_delay_sec` и severity не ниже `min_severity`.
 2. **Снятые** — аварии, у которых `cleared = true`, а строка канала есть и её `cleared_at IS NULL`. Уведомление о снятии уходит только для аварий, о которых
    сообщали.
 3. Нет ни тех, ни других — тенант пропускается.
-4. Одно сообщение на тенант и канал за тик: обе секции, до 20 строк в каждой, плюс «… и ещё N».
-5. После успешной отправки создаются строки канала (новые) или проставляется `cleared_at`
-   (снятые). При ошибке ничего не пишется, и аварии уйдут на следующем тике.
+4. Одно сообщение на цель за тик: обе секции, до 20 строк в каждой, плюс «… и ещё N».
+5. Сразу после успешной отправки цели создаются её строки (новые) или проставляется
+   `cleared_at` (снятые). При ошибке ничего не пишется, и цель повторяется на следующем тике
+   **одна** — получатели, которым уже дошло, повторно сообщение не получат.
+6. Постоянные ошибки целей канала собираются вместе и пишутся в `last_error` канала.
+   `last_error` перед записью перечитывается из базы под блокировкой, так что настройки,
+   сохранённые во время тика (новый токен), не затираются.
+7. Проход ограничен `TIME_BUDGET_SEC` = 240 с (мягкий лимит Celery — 300 с). Исчерпав бюджет,
+   диспетчер останавливается **между** целями (`out_of_time` в статистике), остаток уходит на
+   следующем тике. Иначе Celery мог бы прервать задачу между отправкой и записью строки, и
+   сообщение ушло бы повторно.
+
+Лимит 10 сообщений в минуту считается на цель: у WhatsApp — на каждый номер.
 
 ### 10.3. Как выглядит сообщение
 
@@ -2124,6 +2145,94 @@ Content-Type: application/json
 Первое включение email отправит все активные аварии старше задержки, о которых **по почте** ещё
 не сообщали, — даже если в Telegram они уже ушли.
 
+### 10.7. Уведомления в WhatsApp
+
+Третий канал, устроен так же: те же `notify_delay_sec` и `min_severity`, та же группировка,
+свой лимит 10 отправок в минуту на тенант.
+
+**Общего номера нет.** Каждый отель отправляет со своего WhatsApp Business номера и сам платит
+Meta: она выставляет счёт аккаунту, с которого ушло сообщение. Отправить за счёт roomio отель не
+может — в коде нет номера инсталляции, на который можно было бы откатиться.
+
+#### Подключение отеля
+
+1. Отель создаёт WhatsApp Business Account в Meta Business Manager, добавляет и регистрирует
+   номер, указывает способ оплаты.
+2. Выпускает **постоянный** токен System User (Business Settings → System users, роль Admin,
+   доступ к приложению и WABA, права `whatsapp_business_messaging` и
+   `whatsapp_business_management`, срок Never). Временный 24-часовой токен из API Setup для
+   эксплуатации не годится.
+3. Проводит через модерацию шаблон **с тем же именем, языком и текстом**, что
+   `WA_ALARM_TEMPLATE` / `WA_TEMPLATE_LANGUAGE` (см. ниже). Шаблоны принадлежат аккаунту.
+4. Вводит в панели номер, токен и получателей:
+
+```http
+PUT /api/v1/main/notification-settings/
+Content-Type: application/json
+
+{"channels": {"whatsapp": {
+  "enabled": true,
+  "phone_number_id": "1295729336966479",
+  "access_token": "EAA...",
+  "recipients": ["+998 90 123-45-67"]
+}}}
+```
+
+- `phone_number_id` — это **ID** из WhatsApp Manager → API Setup, а не номер телефона. С номером
+  вместо ID Graph API отвечает `100` «Object with ID … does not exist».
+- Включить канал (`enabled: true`) без `phone_number_id` и токена нельзя: `400` с ошибкой в
+  `channels.whatsapp.enabled`. Проверяется с учётом уже сохранённого, так что поля можно
+  отправлять разными запросами. Удалить токен (`""`) у включённого канала тоже нельзя.
+- Токен шифруется Fernet (`core/utils/secrets.py`) ключом `SECRETS_ENCRYPTION_KEY`, а если он
+  пуст — ключом, выведенным из `DJANGO_SECRET_KEY`. В ответе API токена нет, только
+  `has_access_token`. Смена ключа делает сохранённые токены нечитаемыми: канал пишет в
+  `last_error` «enter it again», токен нужно ввести заново.
+
+#### Сообщение
+
+- **Только шаблон.** Свободный текст WhatsApp пропускает лишь в течение 24 часов после
+  последнего сообщения получателя, на это авария рассчитывать не может. Поэтому уходит
+  одобренный Meta шаблон категории Utility (`WA_ALARM_TEMPLATE`, язык `WA_TEMPLATE_LANGUAGE`).
+- **Сводка, а не список.** Параметр шаблона не может содержать переводы строк, поэтому вместо
+  полного списка приходят счётчики и одна главная авария:
+  самая серьёзная из новых, а если новых нет, первая из снятых (с ✅).
+- **Сообщение на каждого получателя.** Broadcast в Cloud API нет, каждое сообщение платное.
+
+Текст шаблона для модерации (имя `alarm_summary`, категория Utility, язык `ru`):
+
+```
+Объект «{{1}}»: обновление по авариям.
+Новых: {{2}}. Снятых: {{3}}.
+Главное: {{4}}
+Подробности в панели roomio.
+```
+
+Примеры для модерации: `{{1}}` = `Grand Hotel`, `{{2}}` = `2`, `{{3}}` = `1`,
+`{{4}}` = `🔴 14.10 09:12 · 512 — Шлюз GW-3 не на связи`. Если число или порядок переменных
+в одобренном шаблоне другие, Meta отвергнет каждую отправку (ошибка `132000`).
+
+#### Ошибки
+
+Все ошибки касаются одного отеля: остальные тенанты продолжают отправлять.
+
+| Ситуация | Реакция |
+|---|---|
+| Нет `phone_number_id` или токена (данные записаны в обход API) | Ничего не отправляется, ошибка в `channels.whatsapp.last_error` |
+| Токен не расшифровывается (сменили ключ) | То же, текст «enter it again» |
+| Токен истёк или отозван (`190`, `401`), нет прав, неверный `phone_number_id` (`100`/33), шаблона нет или он приостановлен (`132xxx`) | Ошибка в `last_error`, остальные номера этого отеля в этом тике не пробуются, аварии не отмечаются, попытка каждую минуту |
+| Номер получателя не в WhatsApp (`131026`) или не в списке разрешённых тестового номера (`131030`) | Постоянная ошибка этого номера: текст с номером пишется в `last_error`, этот номер повторяется каждую минуту, пока его не исправят или не удалят |
+| Часть номеров получила сообщение, часть нет | Каждый номер — отдельная цель: дошедшим строки пишутся сразу, остальные повторяются на следующем тике поодиночке. Постоянные ошибки номеров пишутся в `last_error` вместе, временные остаются только в логе |
+| Rate limit (`130429`, `131056`), `5xx`, сетевая ошибка, таймаут (`WA_TIMEOUT`) | Предупреждение в логе, повтор на следующем тике |
+
+Ответ `200` от Graph API значит только, что Meta приняла сообщение. Статусы доставки
+(`delivered`, `read`, `failed`) приходят на webhook **приложения отеля**. Наш
+`/api/v1/services/messengers/` получает их, только если отель укажет его в настройках webhook
+своего приложения; пока они только пишутся в лог — без номеров целиком (`***4567`) и без
+текста входящих сообщений.
+
+Проверка без ожидания аварии — `./manage.py playground <номер> [--alarm] [--tenant <uuid>]`:
+отправляет `hello_world` (или сводку по фейковым авариям) с номера тенанта.
+
 ---
 
 ## 11. Настройка и эксплуатация
@@ -2142,6 +2251,10 @@ Content-Type: application/json
 | `TELEGRAM_TIMEOUT` | `10` | Таймаут HTTP-запроса к Telegram, секунды | `celery-low` |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | см. `env.example` | SMTP проекта, через него уходят и письма об авариях | `celery-low`, `backend` |
 | `EMAIL_TIMEOUT` | `30` | Таймаут SMTP-соединения, секунды | `celery-low`, `backend` |
+| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `ru` | Имя и язык шаблона для аварий; такой шаблон должен быть одобрен в аккаунте каждого отеля. Номер и токен отправителя — не здесь, а в настройках тенанта | `celery-low` |
+| `WA_GRAPH_VERSION`, `WA_TIMEOUT` | `v21.0`, `10` | Версия Graph API и таймаут запроса, секунды | `celery-low` |
+| `SECRETS_ENCRYPTION_KEY` | `""` (выводится из `DJANGO_SECRET_KEY`) | Ключ Fernet для секретов, которые тенанты вводят в панели (токен WhatsApp отеля). Сменили — токены вводятся заново | `celery-low`, `backend` |
+| `WA_VERIFY_TOKEN`, `WA_APP_SECRET` | `""` | Webhook `/api/v1/services/messengers/`: строка подтверждения и секрет подписи. Пустые значения означают, что webhook отвечает `403` | `backend` |
 
 ```bash
 cd deploy

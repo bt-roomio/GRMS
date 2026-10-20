@@ -16,10 +16,16 @@ class ChannelNotConfigured(Exception):
 class DeliveryError(Exception):
     """The channel answered, but the message did not go out."""
 
-    def __init__(self, description: str, permanent: bool = False):
+    # The sender itself was refused (the tenant's token, its template): the
+    # channel's remaining targets for this tenant would fail the same way, so
+    # the dispatcher stops trying them this tick.
+    stop_channel: bool = False
+
+    def __init__(self, description: str, permanent: bool = False, stop_channel: bool = False):
         super().__init__(description)
         self.description = description
         self.permanent = permanent
+        self.stop_channel = stop_channel
 
     @property
     def is_permanent(self) -> bool:
@@ -38,6 +44,11 @@ class NotificationChannel(Protocol):
     ``notification_settings["channels"][name]``, and what it already announced
     is its own ``AlarmNotification`` rows, so a mail server being down never
     holds back Telegram and never makes it repeat itself.
+
+    A channel delivers to one or more *targets*, each with its own rows keyed
+    by the target: one chat or one mail for Telegram and email, one phone
+    number for WhatsApp, where every message is a separate paid API call. A
+    target that failed is retried alone, without repeating the others.
     """
 
     name: ClassVar[str]
@@ -47,5 +58,13 @@ class NotificationChannel(Protocol):
     defaults: ClassVar[dict[str, Any]]
 
     def is_configured(self, config: dict) -> bool: ...
+
+    def targets(self, config: dict) -> list[tuple[str, dict]]:
+        """
+        ``(key, config)`` per delivery unit. The key goes into
+        ``AlarmNotification.channel`` (32 characters at most) and the rate
+        limiter; the config is what ``send`` gets for that unit.
+        """
+        ...
 
     def send(self, tenant: "Tenant", config: dict, raised: list["Alarm"], cleared: list["Alarm"]) -> None: ...

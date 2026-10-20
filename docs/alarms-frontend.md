@@ -69,7 +69,7 @@ curl -s "https://<api-host>/api/v1/alarms/?status=ACTIVE&size=20" \
 | **Вкладка «Аварии» в карточке устройства**  | Аварии устройства, включая аварию его шлюза                                       | `GET alarms/?device=<id>`                                                                                          |
 | **Вкладка «Аварии» в карточке номера**      | Аварии устройств номера                                                           | `GET alarms/?room=<id>`                                                                                            |
 | **Конструктор правил** | Редактор правил: условия, пороги, расписания | `GET/POST alarms/rules/`, `GET/PUT/DELETE alarms/rules/<id>/`, `POST alarms/rules/bulk/`, `POST alarms/rules/preview/`, `GET alarms/rule-templates/`, `GET alarms/available-keys/` |
-| **Настройки → Уведомления**                 | Telegram и email тенанта                                                          | `GET/PUT main/notification-settings/`                                                                              |
+| **Настройки → Уведомления**                 | Telegram, WhatsApp и email тенанта                                                         | `GET/PUT main/notification-settings/`                                                                              |
 | **Тумблер в карточке устройства**           | «Уведомлять о потере связи»                                                       | поле `notify_on_offline` в `GET/PUT main/device/<id>/`                                                             |
 
 Минимальный объём, который уже полезен: таблица аварий + карточка + `ack`/`clear`. Конструктор
@@ -1185,6 +1185,7 @@ GET /api/v1/main/notification-settings/
   "min_severity": "MINOR",
   "channels": {
     "telegram": {"enabled": true, "chat_id": "-1002345678901", "last_error": null},
+    "whatsapp": {"enabled": true, "recipients": ["998901234567"], "phone_number_id": "", "has_access_token": false, "last_error": null},
     "email": {"enabled": true, "recipients": ["ops@hotel.uz", "engineer@hotel.uz"], "last_error": null}
   }
 }
@@ -1206,6 +1207,11 @@ Content-Type: application/json
 | `min_severity`                | Селектор severity     |           | «Сообщать об этой важности и выше»                                                     |
 | `channels.telegram.enabled`   | Переключатель         |           | «Присылать аварии в Telegram»                                                          |
 | `channels.telegram.chat_id`   | Текст, до 64 символов |           | «Id чата или группы». У групп отрицательный, у супергрупп начинается с `-100`          |
+| `channels.whatsapp.enabled`   | Переключатель         |           | «Присылать аварии в WhatsApp»                                                          |
+| `channels.whatsapp.recipients`| Список телефонов (теги)| до 20    | «Номера техменеджеров». Ввод с `+`, пробелами и дефисами; сервер хранит только цифры (`998901234567`) и убирает дубли |
+| `channels.whatsapp.phone_number_id` | Текст, только цифры |     | «Phone number ID». Обязателен, чтобы включить канал. Подсказка: ID из WhatsApp Manager → API Setup, а не сам номер |
+| `channels.whatsapp.access_token` | Пароль, только запись |      | «Постоянный токен». Обязателен, чтобы включить канал. Не приходит в ответе; отправлять только если пользователь ввёл новый. Кнопка «Удалить» шлёт `""` (у включённого канала — `400`) |
+| `channels.whatsapp.has_access_token` | Только чтение     |           | Показывать «Токен сохранён ••••» вместо пустого поля                                  |
 | `channels.email.enabled`      | Переключатель         |           | «Присылать аварии на почту»                                                            |
 | `channels.email.recipients`   | Список email (теги)   | до 20     | «Получатели». Сервер приводит адреса к нижнему регистру и убирает дубли                |
 | `channels.<канал>.last_error` | Только чтение         |           | Текст последней постоянной ошибки канала                                               |
@@ -1218,10 +1224,19 @@ Content-Type: application/json
 
 - `last_error` канала непустой — предупреждение в его карточке. Telegram: «Telegram отклонил
   отправку: `<текст>`» (бот не добавлен в группу, удалён из неё, неверный id чата). Email:
-  «Почтовый сервер отклонил все адреса: `<текст>`». Поле сбрасывается в `null` при любом
+  «Почтовый сервер отклонил все адреса: `<текст>`». WhatsApp: «WhatsApp не доставил на номера:
+  `<текст>`» (номер не зарегистрирован в WhatsApp или не добавлен в тестовый список). Поле сбрасывается в `null` при любом
   сохранении блока этого канала, так что после исправления предупреждение исчезнет само.
 - Неверный адрес даёт `400` с ошибкой по индексу элемента:
-  `{"channels": {"email": {"recipients": {"1": ["Enter a valid email address."]}}}}`.
+  `{"channels": {"email": {"recipients": {"1": ["Enter a valid email address."]}}}}`. Неверный
+  телефон в WhatsApp даёт `400` со списком: `{"channels": {"whatsapp": {"recipients": ["'12345' is not a phone number in international format"]}}}`.
+- WhatsApp отправляется **только с номера отеля**, общего номера roomio нет, Meta выставляет
+  счёт отелю. Переключатель без `phone_number_id` и токена даёт `400`
+  `{"channels": {"whatsapp": {"enabled": ["phone_number_id and access_token are required"]}}}` —
+  лучше сразу блокировать его, пока поля пустые и `has_access_token` = `false`.
+- В WhatsApp приходит короткая сводка (сколько новых и снятых плюс самая серьёзная авария), а не
+  полный список, как в Telegram и почте. Каждое сообщение платное, поэтому стоит подсказать в
+  интерфейсе, что номера лучше не дублировать с другими каналами без нужды.
 - Каналы независимы: можно включить оба, задержка и `min_severity` у них общие.
 - Задержка объясняется проще всего так: авария появится в журнале сразу, а в Telegram — через
   `notify_delay_sec`; если она закроется раньше, сообщения не будет вовсе.
@@ -1285,7 +1300,8 @@ export interface AlarmDetails {
 }
 
 export interface AlarmNotification {
-  channel: "telegram" | "email" | string;
+  /** Delivery target: "telegram", "email", or "whatsapp:<number>" — one row per WhatsApp recipient. */
+  channel: "telegram" | "email" | `whatsapp:${string}` | string;
   raised_at: string;
   cleared_at: string | null;
 }
@@ -1584,6 +1600,7 @@ export interface NotificationSettings {
   min_severity: AlarmSeverity;
   channels: {
     telegram: TelegramChannelSettings;
+    whatsapp: WhatsAppChannelSettings;
     email: EmailChannelSettings;
   };
 }
@@ -1596,6 +1613,15 @@ export interface ChannelSettings {
 
 export interface TelegramChannelSettings extends ChannelSettings {
   chat_id: string;
+}
+
+export interface WhatsAppChannelSettings extends ChannelSettings {
+  /** E.164 digits without "+", e.g. "998901234567". */
+  recipients: string[];
+  /** The hotel's own sender, required to enable the channel. */
+  phone_number_id: string;
+  /** Read only. The token itself is write-only (`access_token` in PUT). */
+  has_access_token: boolean;
 }
 
 export interface EmailChannelSettings extends ChannelSettings {

@@ -1,6 +1,7 @@
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
+from core.utils.secrets import decrypt
 from main.models import Tenant
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"
@@ -29,6 +30,13 @@ class NotificationSettingsTest(BaseTestCase):
             response.data["channels"],
             {
                 "telegram": {"enabled": False, "chat_id": "", "last_error": None},
+                "whatsapp": {
+                    "enabled": False,
+                    "recipients": [],
+                    "phone_number_id": "",
+                    "has_access_token": False,
+                    "last_error": None,
+                },
                 "email": {"enabled": False, "recipients": [], "last_error": None},
             },
         )
@@ -96,6 +104,66 @@ class NotificationSettingsTest(BaseTestCase):
         self.assertEqual(response.data["channels"]["email"]["recipients"], ["ops@hotel.uz", "eng@hotel.uz"])
 
         response = self.put(self.url, data={"channels": {"email": {"recipients": ["not-an-email"]}}}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_whatsapp_numbers_are_normalised_and_deduplicated(self):
+        response = self.put(
+            self.url,
+            data={"channels": {"whatsapp": {"recipients": ["+998 90 123-45-67", "998901234567", "(7) 9161234567"]}}},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["channels"]["whatsapp"]["recipients"], ["998901234567", "79161234567"])
+
+        for bad in ("12345", "0998901234567", "+998-90-ABC", "1234567890123456"):
+            response = self.put(self.url, data={"channels": {"whatsapp": {"recipients": [bad]}}}, format="json")
+            self.assertEqual(response.status_code, 400, bad)
+
+    def test_whatsapp_access_token_is_write_only_and_encrypted(self):
+        response = self.put(
+            self.url,
+            data={"channels": {"whatsapp": {"phone_number_id": "1295729336966479", "access_token": " EAAhotel "}}},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        block = response.data["channels"]["whatsapp"]
+        self.assertEqual(block["phone_number_id"], "1295729336966479")
+        self.assertTrue(block["has_access_token"])
+        self.assertNotIn("access_token", block)
+
+        stored = Tenant.objects.get(pk=TENANT_ID).additional_info["notification_settings"]["channels"]["whatsapp"]
+        self.assertNotIn("EAAhotel", stored["access_token"])
+        self.assertEqual(decrypt(stored["access_token"]), "EAAhotel")
+
+        # Editing something else keeps the token, and it satisfies "enabled".
+        response = self.put(self.url, data={"channels": {"whatsapp": {"enabled": True}}}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["channels"]["whatsapp"]["has_access_token"])
+
+        # Removing the token while enabled would leave the channel silent.
+        response = self.put(self.url, data={"channels": {"whatsapp": {"access_token": ""}}}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+        # An empty string removes it once the channel is off.
+        response = self.put(
+            self.url, data={"channels": {"whatsapp": {"enabled": False, "access_token": ""}}}, format="json"
+        )
+        self.assertFalse(response.data["channels"]["whatsapp"]["has_access_token"])
+
+    def test_whatsapp_cannot_be_enabled_without_the_hotels_own_number(self):
+        response = self.put(
+            self.url, data={"channels": {"whatsapp": {"enabled": True, "recipients": ["998901234567"]}}}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("enabled", response.data["channels"]["whatsapp"])
+
+    def test_whatsapp_phone_number_id_must_be_digits(self):
+        response = self.put(
+            self.url, data={"channels": {"whatsapp": {"phone_number_id": "+1 555 651 8868"}}}, format="json"
+        )
         self.assertEqual(response.status_code, 400)
 
     def test_an_invalid_severity_is_rejected(self):

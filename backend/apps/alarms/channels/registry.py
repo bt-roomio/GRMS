@@ -8,8 +8,9 @@ Adding a sender is a class here plus its settings serializer in
 from alarms.channels.base import NotificationChannel
 from alarms.channels.email import EmailChannel
 from alarms.channels.telegram import TelegramChannel
+from alarms.channels.whatsapp import WhatsAppChannel
 
-CHANNELS: tuple[type[NotificationChannel], ...] = (TelegramChannel, EmailChannel)
+CHANNELS: tuple[type[NotificationChannel], ...] = (TelegramChannel, WhatsAppChannel, EmailChannel)
 
 
 def default_channels() -> list[NotificationChannel]:

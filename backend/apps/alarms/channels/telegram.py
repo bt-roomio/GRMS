@@ -30,6 +30,10 @@ class TelegramChannel:
     def is_configured(self, config: dict) -> bool:
         return bool(config.get("enabled") and config.get("chat_id"))
 
+    def targets(self, config: dict) -> list[tuple[str, dict]]:
+        # One message for the whole block.
+        return [(self.name, config)]
+
     def send(self, tenant, config: dict, raised: list, cleared: list) -> None:
         self.client.send_message(str(config["chat_id"]), build_message(tenant, raised, cleared))
 

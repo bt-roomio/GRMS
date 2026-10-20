@@ -6,12 +6,16 @@ from django.utils import timezone
 from alarms.channels.base import ChannelNotConfigured, DeliveryError
 from alarms.channels.email import EmailChannel
 from alarms.channels.telegram import TelegramChannel, build_message
+from alarms.channels.whatsapp import WhatsAppChannel
 from alarms.models import Alarm, AlarmNotification
 from alarms.notifications.dispatcher import dispatch
 from alarms.notifications.settings import SETTINGS_KEY
 from alarms.telegram.exceptions import TelegramAPIError, TelegramUnavailable
 from alarms.tests.base import DEVICE_ID, TENANT_ID, AlarmTestCase
 from main.models import Tenant
+
+GOOD = "998901234567"
+BAD = "998907654321"
 
 
 class FakeChannel(TelegramChannel):
@@ -39,15 +43,32 @@ class FakeEmailChannel(EmailChannel):
         self.sent.append((config["recipients"], [alarm.id for alarm in raised + cleared]))
 
 
+class FakeWhatsAppChannel(WhatsAppChannel):
+    """Real targets (one per number), no network; ``errors`` maps a number to what it raises."""
+
+    def __init__(self, errors=None):
+        super().__init__()
+        self.sent = []
+        self.errors = errors or {}
+
+    def send(self, tenant, config, raised, cleared):
+        (phone,) = config["recipients"]
+        if phone in self.errors:
+            raise self.errors[phone]
+        self.sent.append((phone, [alarm.id for alarm in raised + cleared]))
+
+
 class DispatcherTestCase(AlarmTestCase):
     def setUp(self):
         self.now = timezone.now()
         # The per-tenant rate limiter lives in Redis and outlives a test case,
         # so a run of these would otherwise throttle itself.
-        caches["default"].delete_many([f"alarms:rate:{name}:{TENANT_ID}" for name in ("telegram", "email")])
+        caches["default"].delete_many(
+            [f"alarms:rate:{name}:{TENANT_ID}" for name in ("telegram", "email", f"whatsapp:{GOOD}", f"whatsapp:{BAD}")]
+        )
         self.configure()
 
-    def configure(self, telegram=None, email=None, **overrides):
+    def configure(self, telegram=None, email=None, whatsapp=None, **overrides):
         tenant = Tenant.objects.get(pk=TENANT_ID)
         info = tenant.additional_info or {}
         info[SETTINGS_KEY] = {
@@ -57,6 +78,7 @@ class DispatcherTestCase(AlarmTestCase):
             "channels": {
                 "telegram": {"enabled": True, "chat_id": "-100500", **(telegram or {})},
                 "email": {"enabled": False, "recipients": [], **(email or {})},
+                "whatsapp": {"enabled": False, "recipients": [], **(whatsapp or {})},
             },
         }
         Tenant.objects.filter(pk=TENANT_ID).update(additional_info=info)
@@ -273,3 +295,100 @@ class MultiChannelDispatchTest(DispatcherTestCase):
         self.assertEqual(stats["failed"], 0)
         self.assertIsNotNone(self.mark(alarm, "telegram"))
         self.assertIsNone(self.mark(alarm, "email"))
+
+
+class PerRecipientTest(DispatcherTestCase):
+    """WhatsApp: every number is its own target with its own AlarmNotification rows."""
+
+    def setUp(self):
+        super().setUp()
+        self.configure(whatsapp={"enabled": True, "recipients": [GOOD, BAD]})
+
+    def run_whatsapp(self, errors=None):
+        channel = FakeWhatsAppChannel(errors)
+        return channel, dispatch(now=self.now, channels=[channel])
+
+    def test_every_number_gets_the_alarm_and_its_own_row(self):
+        alarm = self.make_alarm()
+
+        channel, stats = self.run_whatsapp()
+
+        self.assertEqual(channel.sent, [(GOOD, [alarm.id]), (BAD, [alarm.id])])
+        self.assertEqual(stats["raised"], 2)
+        self.assertIsNotNone(self.mark(alarm, f"whatsapp:{GOOD}"))
+        self.assertIsNotNone(self.mark(alarm, f"whatsapp:{BAD}"))
+
+    def test_a_timed_out_number_is_retried_alone(self):
+        alarm = self.make_alarm()
+
+        self.run_whatsapp({BAD: DeliveryError(f"{BAD}: timed out")})
+
+        self.assertIsNotNone(self.mark(alarm, f"whatsapp:{GOOD}"))
+        self.assertIsNone(self.mark(alarm, f"whatsapp:{BAD}"))
+        self.assertIsNone(self.channel_settings("whatsapp").get("last_error"))
+
+        # Next tick: only the number that missed it, nobody pays twice.
+        channel, _ = self.run_whatsapp()
+        self.assertEqual(channel.sent, [(BAD, [alarm.id])])
+
+    def test_a_bad_number_is_recorded_even_when_another_timed_out(self):
+        self.make_alarm()
+
+        self.run_whatsapp(
+            {
+                GOOD: DeliveryError(f"{GOOD}: timed out"),
+                BAD: DeliveryError(f"{BAD}: not a WhatsApp number", permanent=True),
+            }
+        )
+
+        self.assertEqual(self.channel_settings("whatsapp")["last_error"], f"{BAD}: not a WhatsApp number")
+
+    def test_a_refused_sender_stops_the_remaining_numbers(self):
+        self.make_alarm()
+
+        channel, stats = self.run_whatsapp({GOOD: DeliveryError("token expired", permanent=True, stop_channel=True)})
+
+        self.assertEqual(channel.sent, [])
+        self.assertEqual(stats["failed"], 1)
+        self.assertEqual(self.channel_settings("whatsapp")["last_error"], "token expired")
+
+    def test_a_clear_goes_only_to_numbers_that_got_the_raise(self):
+        alarm = self.make_alarm()
+        self.run_whatsapp({BAD: DeliveryError(f"{BAD}: timed out")})
+
+        alarm.refresh_from_db()
+        alarm.cleared = True
+        alarm.clear_ts = self.now
+        alarm.save()
+
+        channel, stats = self.run_whatsapp()
+
+        self.assertEqual(channel.sent, [(GOOD, [alarm.id])])
+        self.assertEqual(stats["cleared"], 1)
+
+    def test_out_of_time_stops_before_sending_and_leaves_the_rest(self):
+        alarm = self.make_alarm()
+        channel = FakeWhatsAppChannel()
+
+        stats = dispatch(now=self.now, channels=[channel], budget_sec=-1)
+
+        self.assertTrue(stats["out_of_time"])
+        self.assertEqual(channel.sent, [])
+        self.assertIsNone(self.mark(alarm, f"whatsapp:{GOOD}"))
+
+    def test_recording_an_error_keeps_settings_saved_during_the_tick(self):
+        self.make_alarm()
+
+        class SettingsChangedMidTick(FakeWhatsAppChannel):
+            def send(inner, tenant, config, raised, cleared):
+                # A hotel saves a new token while the tick holds the old copy.
+                fresh = Tenant.objects.get(pk=TENANT_ID)
+                fresh.additional_info[SETTINGS_KEY]["channels"]["whatsapp"]["access_token"] = "new-token"
+                Tenant.objects.filter(pk=TENANT_ID).update(additional_info=fresh.additional_info)
+                raise DeliveryError("token expired", permanent=True, stop_channel=True)
+
+        dispatch(now=self.now, channels=[SettingsChangedMidTick()])
+
+        block = self.channel_settings("whatsapp")
+        self.assertEqual(block["access_token"], "new-token")
+        self.assertEqual(block["last_error"], "token expired")

@@ -510,6 +510,24 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_API_URL = os.getenv("TELEGRAM_API_URL", "https://api.telegram.org").rstrip("/")
 TELEGRAM_TIMEOUT = float(os.getenv("TELEGRAM_TIMEOUT", "10"))
 
+# WhatsApp Cloud API. Unlike Telegram there is no installation-wide sender:
+# every hotel sends from its own number, with credentials kept in its
+# notification settings, so Meta bills the hotel. WA_VERIFY_TOKEN is an
+# arbitrary string typed into the Meta webhook form (not an access token);
+# WA_APP_SECRET signs every webhook POST, and an empty one refuses them all.
+WA_APP_SECRET = os.getenv("WA_APP_SECRET", "")
+WA_VERIFY_TOKEN = os.getenv("WA_VERIFY_TOKEN", "")
+WA_GRAPH_VERSION = os.getenv("WA_GRAPH_VERSION", "v21.0")
+WA_TIMEOUT = float(os.getenv("WA_TIMEOUT", "10"))
+# The approved Utility template alarms go out with (see alarms.channels.whatsapp).
+WA_ALARM_TEMPLATE = os.getenv("WA_ALARM_TEMPLATE", "alarm_summary")
+WA_TEMPLATE_LANGUAGE = os.getenv("WA_TEMPLATE_LANGUAGE", "ru")
+
+# Fernet key for third-party secrets stored in JSON settings (a hotel's
+# WhatsApp token, see core.utils.secrets). Empty: derived from SECRET_KEY.
+# Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+SECRETS_ENCRYPTION_KEY = os.getenv("SECRETS_ENCRYPTION_KEY", "")
+
 HOTEZA_WHITELIST = list(filter(None, [*os.getenv("HOTEZA_WHITELIST", "").split(" ")]))
 
 CLIENT_TOKENS = os.getenv("CLIENT_TOKENS", "").split(" ")

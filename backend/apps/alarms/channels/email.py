@@ -38,6 +38,10 @@ class EmailChannel:
     def is_configured(self, config: dict) -> bool:
         return bool(config.get("enabled") and config.get("recipients"))
 
+    def targets(self, config: dict) -> list[tuple[str, dict]]:
+        # One message for the whole block.
+        return [(self.name, config)]
+
     def send(self, tenant, config: dict, raised: list, cleared: list) -> None:
         sender = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
         if not settings.EMAIL_HOST or not sender:
