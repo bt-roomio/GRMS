@@ -16,7 +16,7 @@ _tag_object_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
         "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-        "key_name": openapi.Schema(type=openapi.TYPE_STRING),
+        "tag_name": openapi.Schema(type=openapi.TYPE_STRING),
         "value": openapi.Schema(type=openapi.TYPE_STRING),
         "updated_at": openapi.Schema(
             type=openapi.TYPE_STRING,
@@ -59,7 +59,7 @@ _tags_list_response = openapi.Response(
             "results": [
                 {
                     "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-                    "key_name": "targetTemperature",
+                    "tag_name": "targetTemperature",
                     "value": 22.5,
                     "updated_at": "2026-09-11T08:15:42.103000Z",
                     "tag_type": "Temperature",
@@ -67,7 +67,7 @@ _tags_list_response = openapi.Response(
                 },
                 {
                     "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
-                    "key_name": "temperature",
+                    "tag_name": "temperature",
                     "value": 21.8,
                     "updated_at": "2026-09-11T08:16:01.871000Z",
                     "tag_type": None,

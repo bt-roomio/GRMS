@@ -25,8 +25,8 @@ Device ── AttributeKv(SERVER_SCOPE, key = "TAG_TYPES") = [ { tag_section, ta
                       │
                       │ matched to the device's tags (SERVER_SCOPE wins)
                       ▼
-GET /api/v1/services/tags/{room_id}/  →  results[] { id, key_name, value, updated_at, tag_type, tag_ranges }
-GET /api/v1/services/tag/{tag_id}/    →  { id, key_name, value, updated_at, tag_type, tag_ranges }
+GET /api/v1/services/tags/{room_id}/  →  results[] { id, tag_name, value, updated_at, tag_type, tag_ranges }
+GET /api/v1/services/tag/{tag_id}/    →  { id, tag_name, value, updated_at, tag_type, tag_ranges }
 ```
 
 All data is **tenant-scoped**: a user sees and changes only the objects of their own tenant. An object of another tenant is reported as `404`.
@@ -451,7 +451,7 @@ Both are `null` as well when the matching entry is malformed (`tag_type` not a n
 ```json
 {
   "id": "be81f8fc-0111-4826-b84a-906f4fe95ff3",
-  "key_name": "targetTemperature",
+  "tag_name": "targetTemperature",
   "value": 22,
   "updated_at": "2026-10-07T09:12:44.512000Z",
   "tag_type": "Temperature",

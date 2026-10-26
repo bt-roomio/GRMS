@@ -15,7 +15,7 @@ This document describes the Roomio Rooms & Tags API, which allows PMS and third-
 - Read and update a single tag value (with the change pushed to the physical device).
 - Subscribe over WebSocket to receive the same data in real time as it changes.
 
-A **tag** is a single named value of a room device, backed by either a device attribute or its latest telemetry. Both are exposed through one uniform shape: `{ id, key_name, value, updated_at, tag_type, tag_ranges }`.
+A **tag** is a single named value of a room device, backed by either a device attribute or its latest telemetry. Both are exposed through one uniform shape: `{ id, tag_name, value, updated_at, tag_type, tag_ranges }`.
 
 All API calls require two tokens issued by Roomio per integration (see [Authentication](#authentication)).
 
@@ -261,7 +261,7 @@ AccessToken: <your_access_token>
   "results": [
     {
       "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-      "key_name": "roomCard",
+      "tag_name": "roomCard",
       "value": true,
       "updated_at": "2026-10-07T09:12:44.512000Z",
       "tag_type": null,
@@ -269,7 +269,7 @@ AccessToken: <your_access_token>
     },
     {
       "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
-      "key_name": "DND Relay",
+      "tag_name": "DND Relay",
       "value": 1,
       "updated_at": "2026-10-07T09:15:02.031000Z",
       "tag_type": "DND",
@@ -290,7 +290,7 @@ AccessToken: <your_access_token>
 | `count`                | integer        | Total number of the room's tags (across all pages).                                                                                       |
 | `results`              | array          | The room's tags on the current page (attributes + latest telemetry combined).                                                             |
 | `results[].id`         | UUID           | Tag identifier. Use this value as `tag_id` in the **Get / Update Tag** requests.                                                          |
-| `results[].key_name`   | string         | Tag key (e.g. `DND Relay`, `roomCard`).                                                                                                   |
+| `results[].tag_name`   | string         | Tag key (e.g. `DND Relay`, `roomCard`).                                                                                                   |
 | `results[].value`      | any            | Current value; native JSON type (boolean / number / string / object).                                                                     |
 | `results[].updated_at` | datetime       | When the value was last written, ISO 8601 (UTC).                                                                                          |
 | `results[].tag_type`   | string \| null | Tag type name; `null` if the tag is not mapped to a tag type in Roomio.                                                                   |
@@ -336,7 +336,7 @@ AccessToken: <your_access_token>
 ```json
 {
   "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
-  "key_name": "DND Relay",
+  "tag_name": "DND Relay",
   "value": 1,
   "updated_at": "2026-10-07T09:15:02.031000Z",
 
@@ -405,7 +405,7 @@ The device accepted the change and the new value was persisted.
 {
   "tag": {
     "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
-    "key_name": "DND Relay",
+    "tag_name": "DND Relay",
     "value": 1,
     "updated_at": "2026-10-07T09:20:11.204000Z",
 
@@ -425,7 +425,7 @@ The device rejected the command or did not respond. The stored value is **unchan
 {
   "tag": {
     "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
-    "key_name": "DND Relay",
+    "tag_name": "DND Relay",
     "value": 0,
     "updated_at": "2026-10-07T09:15:02.031000Z",
 
@@ -631,7 +631,7 @@ Response (and every later push):
       "results": [
         {
           "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-          "key_name": "roomCard",
+          "tag_name": "roomCard",
           "value": true,
           "updated_at": "2026-10-07T09:12:44.512000Z",
           "tag_type": null,
@@ -639,7 +639,7 @@ Response (and every later push):
         },
         {
           "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
-          "key_name": "DND Relay",
+          "tag_name": "DND Relay",
           "value": 1,
           "updated_at": "2026-10-07T09:15:02.031000Z",
           "tag_type": "DND",
@@ -690,7 +690,7 @@ Response (and every later push):
     "errors": [],
     "data": {
       "id": "ba0b2f45-8219-42bc-9cb3-c1a83f4311c6",
-      "key_name": "DND Relay",
+      "tag_name": "DND Relay",
       "value": 1,
       "updated_at": "2026-10-07T09:15:02.031000Z",
 

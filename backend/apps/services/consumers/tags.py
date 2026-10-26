@@ -103,8 +103,8 @@ class TagDetailConsumer(TenantScopedConsumer):
 
     def build_payload(self, tag_id):
         tag = self.get_tag(tag_id)
-        key_name = tag.attribute_key if isinstance(tag, AttributeKv) else tag.key.key
-        return tag_with_type(tag), str(tag.entity_id), key_name
+        tag_name = tag.attribute_key if isinstance(tag, AttributeKv) else tag.key.key
+        return tag_with_type(tag), str(tag.entity_id), tag_name
 
     @action()
     async def retrieve(self, request_id, query_params=None, **kwargs):  # pyright: ignore
@@ -114,8 +114,8 @@ class TagDetailConsumer(TenantScopedConsumer):
     @action()
     async def subscribe(self, request_id, query_params=None, **kwargs):
         tag_id = (query_params or {}).get("tag_id")
-        payload, entity_id, key_name = await sync_to_async(self.build_payload)(tag_id)
-        self.subscribers[request_id] = {"tag_id": tag_id, "entity_id": entity_id, "key_name": key_name}
+        payload, entity_id, tag_name = await sync_to_async(self.build_payload)(tag_id)
+        self.subscribers[request_id] = {"tag_id": tag_id, "entity_id": entity_id, "tag_name": tag_name}
 
         await self.add_group(f"attribute_kv_updates_{self.tenant_id}")
         await self.add_group(f"tskv_latest_updates_{entity_id}")
@@ -138,7 +138,7 @@ class TagDetailConsumer(TenantScopedConsumer):
             # The tag's own value or its device's TAG_TYPES (tag_type / tag_ranges) changed.
             matched = any(
                 str(u.get("entity")) == sub["entity_id"]
-                and {sub["key_name"], TAG_TYPES_KEY} & {u.get("key"), u.get("key_name")}
+                and {sub["tag_name"], TAG_TYPES_KEY} & {u.get("key"), u.get("key_name")}
                 for u in updates
             )
             if not matched:
