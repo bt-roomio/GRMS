@@ -1,6 +1,6 @@
 from django.db.models import Q
 
-from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from main.models import Device
 
 
@@ -15,4 +15,4 @@ def access_cards_via_card_numbers(guests, room, cards, access=1):
         .distinct()
     )
     for device in devices:
-        send_rpc_request(str(device.id), cards, access)
+        dispatch_card_rpc(str(device.id), cards, access)

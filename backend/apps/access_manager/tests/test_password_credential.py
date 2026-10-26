@@ -301,3 +301,116 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
         self.assertEqual(pwd_calls[0].args[1], ["77777"])
         self.assertEqual(len(rfid_calls), 1)
         self.assertIn("11 22 33 44", rfid_calls[0].args[1])
+
+
+class SyncDeviceCardGroupClearsOnlySentRowsTest(TestCase):
+    fixtures = FIXTURES
+
+    def setUp(self):
+        self.device = Device.objects.get(id="47aef21b-6cc9-4ec5-8573-1a6f491940c0")
+        tenant_id = self.device.tenant_id
+        NeedSyncDevice.objects.filter(device=self.device).delete()
+        self.rows = {}
+        for number, is_pwd, access in (
+            ("11 22 33 44", False, 1),
+            ("55 66 77 88", False, 1),
+            ("99 88 77 66", False, 0),
+            ("482915", True, 1),
+        ):
+            card = Card.objects.create(number=number, tenant_id=tenant_id, is_pwd=is_pwd)
+            self.rows[number] = NeedSyncDevice.objects.create(
+                card=card,
+                device=self.device,
+                need_sync=True,
+                additional_info={"message_params": {"access": access}},
+            )
+
+    def _pending(self):
+        return set(
+            NeedSyncDevice.objects.filter(device=self.device, need_sync=True).values_list("card__number", flat=True)
+        )
+
+    @patch("access_manager.tasks.sync_device.send_rpc_request", return_value={"success": True})
+    def test_rfid_success_clears_only_sent_cards_with_same_access(self, _):
+        from access_manager.tasks.sync_device import sync_device_card_group
+
+        sync_device_card_group(str(self.device.id), ["11 22 33 44"], 1)
+
+        self.assertEqual(self._pending(), {"55 66 77 88", "99 88 77 66", "482915"})
+
+    @patch("access_manager.tasks.sync_device.send_rpc_request", return_value={"success": True})
+    def test_pwd_success_clears_only_that_pin(self, _):
+        from access_manager.tasks.sync_device import sync_device_card_group
+
+        sync_device_card_group(str(self.device.id), ["482915"], 1, True)
+
+        self.assertEqual(self._pending(), {"11 22 33 44", "55 66 77 88", "99 88 77 66"})
+
+    @patch("access_manager.tasks.sync_device.send_rpc_request", return_value={"success": False})
+    def test_failure_clears_nothing(self, _):
+        from access_manager.tasks.sync_device import sync_device_card_group
+
+        sync_device_card_group(str(self.device.id), ["11 22 33 44", "55 66 77 88"], 1)
+
+        self.assertEqual(len(self._pending()), 4)
+
+    @patch("access_manager.tasks.sync_device.send_rpc_request", return_value={"success": True})
+    def test_default_device_sends_rfid_in_one_request(self, mock_send):
+        from access_manager.tasks.sync_device import sync_device_card_group
+
+        sync_device_card_group(str(self.device.id), ["11 22 33 44", "55 66 77 88"], 1)
+
+        mock_send.assert_called_once_with(
+            str(self.device.id), ["11 22 33 44", "55 66 77 88"], 1, sync=True, is_pwd=False
+        )
+
+    @patch("access_manager.tasks.sync_device.send_rpc_request")
+    def test_non_default_device_sends_one_card_per_request(self, mock_send):
+        from access_manager.tasks.sync_device import sync_device_card_group
+
+        self.device.device_profile_id = SendRpcRequestPwdTest.NON_DEFAULT_PROFILE_ID
+        self.device.save(update_fields=["device_profile"])
+        mock_send.side_effect = [{"success": True}, {"success": False}]
+
+        sync_device_card_group(str(self.device.id), ["11 22 33 44", "55 66 77 88"], 1)
+
+        self.assertEqual(
+            [c.args[1] for c in mock_send.call_args_list],
+            [["11 22 33 44"], ["55 66 77 88"]],
+        )
+        self.assertEqual(self._pending(), {"55 66 77 88", "99 88 77 66", "482915"})
+
+
+class ProcessDeviceAllCardsTest(TestCase):
+    fixtures = FIXTURES
+
+    def setUp(self):
+        self.device = Device.objects.get(id="47aef21b-6cc9-4ec5-8573-1a6f491940c0")
+        self.cards = ["11 22 33 44", "55 66 77 88"]
+
+    @patch("access_manager.utilits.process_multi_devices_rpc.send_card_rpc_request", return_value={"success": True})
+    @patch("access_manager.utilits.process_multi_devices_rpc.prepare_rpc_request", return_value={})
+    def test_default_device_sends_all_cards_at_once(self, mock_prepare, mock_send):
+        from access_manager.utilits.process_multi_devices_rpc import process_device_all_cards
+
+        result = process_device_all_cards(self.device, self.cards, None, "connect")
+
+        mock_prepare.assert_called_once_with(self.device.id, self.cards, 1)
+        self.assertTrue(result["result"]["success"])
+
+    @patch("access_manager.utilits.process_multi_devices_rpc.send_card_rpc_request")
+    @patch("access_manager.utilits.process_multi_devices_rpc.prepare_rpc_request", return_value={})
+    def test_non_default_device_sends_one_card_per_request(self, mock_prepare, mock_send):
+        from access_manager.utilits.process_multi_devices_rpc import process_device_all_cards
+
+        self.device.device_profile_id = SendRpcRequestPwdTest.NON_DEFAULT_PROFILE_ID
+        self.device.save(update_fields=["device_profile"])
+        self.device.refresh_from_db()
+        mock_send.side_effect = [{"success": True, "message": "ok"}, {"success": False, "message": "rejected"}]
+
+        result = process_device_all_cards(self.device, self.cards, None, "disconnect")
+
+        self.assertEqual([c.args[1] for c in mock_prepare.call_args_list], [["11 22 33 44"], ["55 66 77 88"]])
+        self.assertEqual([c.args[2] for c in mock_send.call_args_list], [["11 22 33 44"], ["55 66 77 88"]])
+        self.assertFalse(result["result"]["success"])
+        self.assertEqual(result["result"]["message"], "rejected")

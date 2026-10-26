@@ -19,7 +19,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Cast, Coalesce
 
-from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from core.querysets.base_queryset import BaseQuerySet
 from shuttle.models import AttributeKv, TsKvDictionary, TsKvLatest
 
@@ -224,7 +224,7 @@ class RoomQuerySet(BaseQuerySet):
         cards = access_context.get("cards", [])
 
         for device in devices:
-            result = send_rpc_request(str(device.id), cards, 0, user=user)
+            result = dispatch_card_rpc(str(device.id), cards, 0, user=user)
             not result.get("success") and deactivate_result.update({"success": False})  # pyright: ignore
 
         guests.update(is_active=False)

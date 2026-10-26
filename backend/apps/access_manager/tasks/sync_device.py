@@ -6,24 +6,24 @@ from django.db.models import Exists, OuterRef
 
 from access_manager.models import NeedSyncDevice
 from access_manager.tasks.send_rpc import send_rpc_request
-from main.models import DevicePublicSpaces, Room
+from main.models import Device, DevicePublicSpaces, Room
 
 logger = logging.getLogger("main")
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
 def sync_device_card_group(device_id, cards, access, is_pwd=False):
-    if is_pwd:
-        for card_number in cards:
-            result = send_rpc_request(device_id, [card_number], access, sync=True, is_pwd=True)
-            if result.get("success", False):
-                NeedSyncDevice.objects.filter(
-                    device_id=device_id, card__number=card_number, need_sync=True
-                ).update(need_sync=False)
-    else:
-        result = send_rpc_request(device_id, cards, access, sync=True)
+    is_default = Device.objects.filter(id=device_id, device_profile__name__iexact="default").exists()
+    batches = [cards] if is_default and not is_pwd else [[card] for card in cards]
+
+    for batch in batches:
+        result = send_rpc_request(device_id, batch, access, sync=True, is_pwd=is_pwd)
         if result.get("success", False):
-            NeedSyncDevice.objects.filter(device_id=device_id, need_sync=True).update(need_sync=False)
+            NeedSyncDevice.objects.filter(
+                device_id=device_id,
+                card__number__in=batch,
+                need_sync=True,
+            ).update(need_sync=False)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})

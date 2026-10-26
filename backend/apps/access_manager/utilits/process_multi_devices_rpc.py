@@ -46,8 +46,26 @@ def process_devices_parallel(devices, cards: List[str], group: Group, action: st
 
 def process_device_all_cards(device: Device, cards: List[str], group: Group, action: str) -> Dict[str, Any]:
     access = 1 if action == "connect" else 0
-    request_params = prepare_rpc_request(device.id, cards, access)
-    result = send_card_rpc_request(device, request_params, cards, action)
+
+    if device.device_profile.name.lower() == "default":
+        batches = [cards]
+    else:
+        batches = [[card] for card in cards]
+
+    results = []
+    for batch in batches:
+        request_params = prepare_rpc_request(device.id, batch, access)
+        results.append(send_card_rpc_request(device, request_params, batch, action))
+
+    if len(results) == 1:
+        result = results[0]
+    else:
+        failed = [r for r in results if not r.get("success")]
+        result = {
+            "success": not failed,
+            "message": "; ".join(r.get("message", "") for r in (failed or results)),
+            "results": results,
+        }
 
     return {
         "device_id": str(device.id),

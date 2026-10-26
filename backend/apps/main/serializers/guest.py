@@ -2,7 +2,7 @@ import logging
 
 from rest_framework import serializers
 
-from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from access_manager.utilits.move_guest_cards import move_guest_cards
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
@@ -89,7 +89,7 @@ class GuestSerializer(serializers.ModelSerializer):
             blocked_guest_cards = access_context.get("blocked_guest_cards")
             if blocked_guest_cards:
                 for device in access_context.get("devices"):  # ty: ignore
-                    _ = send_rpc_request(
+                    _ = dispatch_card_rpc(
                         str(device.id), access_context.get("blocked_cards"), 1, guest_id=str(instance.id)
                     )
                 blocked_guest_cards.update(is_blocked=False)
@@ -104,7 +104,7 @@ class GuestSerializer(serializers.ModelSerializer):
             devices = access_context.get("devices", [])
             cards = access_context.get("cards")
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 0, guest_id=str(instance.id))
+                result = dispatch_card_rpc(str(device.id), cards, 0, guest_id=str(instance.id))
                 not result.get("success") and deactivate_result.update({"success": False})
 
             if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:
