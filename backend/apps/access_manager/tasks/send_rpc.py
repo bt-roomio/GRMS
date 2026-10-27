@@ -44,10 +44,8 @@ def send_rpc_request(
     device = request_params.get("device")
     fail_response = request_params.get("fail_response")
 
-    logger.info(f"Message: {message}")
-
     if not cards:
-        logger.info("Cards are not provided ! ")
+        logger.debug("Cards are not provided ! ")
         return {
             "success": True,
             "cards_empty": True,
@@ -57,7 +55,7 @@ def send_rpc_request(
     if device and not device.status:
         need_sync(cards, device, access, user=user, reason="Device is not connected", source=source)
         fail_response.update({"success": False, "message": "Device is not connected !"})
-        logger.info("Device is not connected ! ")
+        logger.debug("Device is not connected ! ")
         return fail_response
 
     channel = connect_to_rabbitmq()

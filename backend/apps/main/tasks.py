@@ -6,7 +6,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db.models import Count, Q
 
-from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from core.utils.cloudflare import CloudflareUnavailable
 from core.utils.helpers import safely_remove
 from main.models import Guest, Room
@@ -27,7 +27,7 @@ def auto_check_out():
     cards = access_context.get("cards")
     if access_context.get("cards"):
         for device in access_context.get("devices"):  # ty: ignore
-            _ = send_rpc_request(str(device.id), cards, 0, source=Guest.SOURCE.AUTO)
+            _ = dispatch_card_rpc(str(device.id), cards, 0, source=Guest.SOURCE.AUTO)
 
     guests.update(is_active=False, check_out_source=Guest.SOURCE.AUTO, check_out_by=None)
 
@@ -78,7 +78,7 @@ def auto_block():
     if access_context.get("cards"):
         guest_cards.update(is_blocked=True)  # ty: ignore
         for device in access_context.get("devices"):  # ty: ignore
-            _ = send_rpc_request(str(device.id), cards, 0, source=Guest.SOURCE.AUTO)
+            _ = dispatch_card_rpc(str(device.id), cards, 0, source=Guest.SOURCE.AUTO)
 
     logger.info("auto block task successfully finish.")
 
