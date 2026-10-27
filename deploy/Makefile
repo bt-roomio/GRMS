@@ -1,22 +1,22 @@
 # =============================================================================
 # roomio GRMS — Makefile
 # =============================================================================
-# Использование:
-#   make up-infra              # поднять только БД, Redis, RabbitMQ
-#   make up-app                # инфра + Django + Celery
-#   make up-all                # всё, включая proxy и frontend
-#   make up-all ENV=prod       # всё в продакшн-режиме (resource limits)
-#   make down                  # остановить всё
-#   make logs s=backend        # логи конкретного сервиса
-#   make shell s=backend       # exec bash в контейнер
+# Usage:
+#   make up-infra              # bring up only DB, Redis, RabbitMQ
+#   make up-app                # infra + Django + Celery
+#   make up-all                # everything, including proxy and frontend
+#   make up-all ENV=prod       # everything in production mode (resource limits)
+#   make down                  # stop everything
+#   make logs s=backend        # logs of a specific service
+#   make shell s=backend       # exec bash into the container
 #   make deploy                # git pull + docker pull + restart
 #
-#   На проде можно добавить ENV=prod в .bashrc
+#   In production you can add ENV=prod to .bashrc
 #
 # Node-RED (multi-tenant):
-#   make nodered-up-nines      # поднять тенанта "nines"
-#   make nodered-up-all        # поднять всех тенантов из NODERED_TENANTS
-#   make nodered-logs-nines    # логи тенанта
+#   make nodered-up-nines      # bring up tenant "nines"
+#   make nodered-up-all        # bring up all tenants from NODERED_TENANTS
+#   make nodered-logs-nines    # tenant logs
 # =============================================================================
 
 ENV ?= dev
@@ -33,7 +33,7 @@ else
 	COMPOSE = $(COMPOSE_BASE) -f docker-compose.override.yml
 endif
 
-# Группы сервисов
+# Service groups
 INFRA_SVCS   = postgres pgbouncer redis redis-broker rabbitmq
 APP_SVCS     = backend celery-critical celery-default celery-realtime celery-low celery-beat celery-flower mq-async mews-websocket pms-handler
 IOT_SVCS     = mqtt
@@ -43,7 +43,7 @@ ALL_SVCS     = $(INFRA_SVCS) $(APP_SVCS) $(IOT_SVCS) $(FRONT_SVCS) $(PROXY_SVCS)
 
 # Node-RED multi-tenant
 NODERED         = docker compose -f docker-compose.nodered.yml
-# По умолчанию — все .env.nodered.<name> рядом (включая созданные автоматически при создании тенанта)
+# By default: every .env.nodered.<name> alongside (including ones created automatically on tenant creation)
 NODERED_TENANTS ?= $(patsubst .env.nodered.%,%,$(filter-out .env.nodered.example %.removed,$(wildcard .env.nodered.*)))
 
 PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
@@ -105,7 +105,7 @@ help:
 	@echo "    make nodered-ps-all        Статус всех тенантов"
 	@echo ""
 
-# --- Запуск по уровням ---
+# --- Start by level ---
 
 up-infra:
 	$(COMPOSE) up -d  $(INFRA_SVCS)
@@ -132,12 +132,12 @@ endif
 	$(COMPOSE) up -d --no-deps $(s)
 
 
-# --- Остановка ---
+# --- Stop ---
 
 down:
 	$(COMPOSE) down
 
-down-v:  ## Остановить и удалить volumes (ОСТОРОЖНО: удалит данные!)
+down-v:  ## Stop and remove volumes (CAUTION: deletes data!)
 	$(COMPOSE) down -v
 
 down-infra:
@@ -158,7 +158,7 @@ down-proxy:
 down-nodered:
 	$(COMPOSE) down $(NODERED_SVCS)
 
-# --- Управление сервисами ---
+# --- Service management ---
 
 restart:
 ifndef s
@@ -190,7 +190,7 @@ migrate:
 collectstatic:
 	$(COMPOSE) exec backend python manage.py collectstatic --noinput
 
-# --- Деплой ---
+# --- Deploy ---
 
 update-backend:
 	$(COMPOSE) up -d --no-deps $(APP_SVCS)

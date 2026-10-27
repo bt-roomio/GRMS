@@ -67,7 +67,9 @@ class GuestCardView(APIView):
             success = []
 
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, 1, guest_id=guest_id, user=user, is_pwd=is_pwd)
+                result = send_rpc_request(
+                    str(device.id), cards, 1, guest_id=guest_id, user=user, is_pwd=is_pwd, source=Guest.SOURCE.ROOMIO
+                )
                 if not result.get("success", False):
                     errors.append(result)
                 else:

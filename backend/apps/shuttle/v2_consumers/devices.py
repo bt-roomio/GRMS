@@ -27,11 +27,11 @@ class DevicesListConsumer(BaseGenericAsyncAPIConsumer):
         return query
 
     async def device_latest_activity(self, message, **kwargs):
-        for update in message.get("updates", []) or []:
-            await self.device_latest_activity({"update": update}, **kwargs)
-            continue
+        # Previously a batch of N updates caused N+1 full list re-queries.
+        self.request_refresh(self.refresh_lists)
 
-        for request_id, params in self.subscribers.items():
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
             await self.send_list_paginated(params.get("action"), params.get("query_params"), request_id)
 
     @action()

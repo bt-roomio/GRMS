@@ -18,6 +18,8 @@ key is unnecessary. Extended windows are plain counters with the window TTL.
 
 import hashlib
 import time
+from collections.abc import Callable, Iterable
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import caches
@@ -133,44 +135,94 @@ def known_ips(email: str, cache=None) -> list[str]:
     return list(cache.get(ip_index_key(email), []))
 
 
-def get_lock_status(email: str, cache=None) -> dict:
-    """Returns whether the account is locked, from which IPs, and for how long."""
-    cache = cache or security_cache
-    email = normalize_email(email)
-    now = time.time()
-    locks = []
+def _lock_checks(email: str, ip: str, now: float) -> list[tuple[str, Callable[[Any], dict | None]]]:
+    """
+    Every key that can lock ``email`` out from ``ip``, paired with a function
+    turning the key's cached value into a lock description (or None).
 
-    for ip in known_ips(email, cache):
-        if cache.get(hard_block_key(ip)):
-            locks.append({"ip": ip, "endpoint": None, "reason": "hard_block", "seconds_left": None})
+    Keys are only listed here, not read, so a whole list of accounts can be
+    checked with a single ``get_many``.
+    """
+    checks: list[tuple[str, Callable[[Any], dict | None]]] = [
+        (
+            hard_block_key(ip),
+            lambda value: {"ip": ip, "endpoint": None, "reason": "hard_block", "seconds_left": None} if value else None,
+        )
+    ]
 
-        for scope in _scopes():
-            next_allowed = cache.get(key("next_allowed", scope, email, ip))
-            if next_allowed and next_allowed > now:
-                locks.append(
+    for scope in _scopes():
+        checks.append(
+            (
+                key("next_allowed", scope, email, ip),
+                lambda value, scope=scope: (
                     {
                         "ip": ip,
                         "endpoint": scope,
                         "reason": "lockout",
-                        "seconds_left": int(next_allowed - now),
+                        "seconds_left": int(value - now),
                     }
-                )
+                    if value and value > now
+                    else None
+                ),
+            )
+        )
 
-            # An extended-window block stays active until the window counter
-            # expires by TTL, so the exact time left is unknown.
-            for window_name, window_config in _windows().items():
-                count = cache.get(window_key(window_name, scope, email, ip), 0)
-                if count >= window_config["max_attempts"]:
-                    locks.append(
+        # An extended-window block stays active until the window counter
+        # expires by TTL, so the exact time left is unknown.
+        for window_name, window_config in _windows().items():
+            checks.append(
+                (
+                    window_key(window_name, scope, email, ip),
+                    lambda value, scope=scope, window_name=window_name, limit=window_config["max_attempts"]: (
                         {
                             "ip": ip,
                             "endpoint": scope,
                             "reason": f"window_{window_name}",
                             "seconds_left": None,
                         }
-                    )
+                        if (value or 0) >= limit
+                        else None
+                    ),
+                )
+            )
 
-    return {"email": email, "is_locked": bool(locks), "locks": locks, "known_ips": known_ips(email, cache)}
+    return checks
+
+
+def _collect_locks(email_ips: dict[str, list[str]], cache) -> dict[str, list[dict]]:
+    """Active locks per email, read with one ``get_many`` for all emails and IPs."""
+    now = time.time()
+    checks = {
+        email: [check for ip in ips for check in _lock_checks(email, ip, now)] for email, ips in email_ips.items()
+    }
+    values = cache.get_many({cache_key for email_checks in checks.values() for cache_key, _ in email_checks})
+    return {
+        email: [lock for cache_key, describe in email_checks if (lock := describe(values.get(cache_key)))]
+        for email, email_checks in checks.items()
+    }
+
+
+def get_lock_status(email: str, cache=None) -> dict:
+    """Returns whether the account is locked, from which IPs, and for how long."""
+    cache = cache or security_cache
+    email = normalize_email(email)
+    ips = known_ips(email, cache)
+    locks = _collect_locks({email: ips}, cache)[email]
+    return {"email": email, "is_locked": bool(locks), "locks": locks, "known_ips": ips}
+
+
+def locked_emails(emails: Iterable[str | None], cache=None) -> set[str]:
+    """
+    Normalized emails of the locked accounts among ``emails``.
+
+    Batch counterpart of ``get_lock_status()["is_locked"]`` for user lists: two
+    cache round trips in total instead of several per account.
+    """
+    cache = cache or security_cache
+    index_keys = {ip_index_key(email): email for email in {normalize_email(e) for e in emails}}
+    indexes = cache.get_many(list(index_keys))
+    email_ips = {index_keys[index_key]: list(ips) for index_key, ips in indexes.items() if ips}
+    return {email for email, locks in _collect_locks(email_ips, cache).items() if locks}
 
 
 def unlock_account(email: str, ips: list[str] | None = None, cache=None) -> dict:

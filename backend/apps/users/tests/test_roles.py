@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Permission
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
@@ -32,6 +33,36 @@ class RolesTest(BaseTestCase):
         assert response.data is not None
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name"], "UPDATED_ROLE")
+
+    def test_update_with_permission_objects(self):
+        permission = Permission.objects.first()
+        assert permission is not None
+        response = self.put(
+            reverse("users:roles-detail", kwargs={"pk": "d3c94703-ab5e-4926-ac52-a9bf8cf34ac6"}),
+            data={
+                "name": "UPDATED_ROLE",
+                "permissions": [
+                    {
+                        "id": permission.id,
+                        "name": permission.name,
+                        "codename": permission.codename,
+                        "content_type": permission.content_type_id,
+                    }
+                ],
+            },
+            format="json",
+        )
+        assert response.data is not None
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([perm["id"] for perm in response.data["permissions"]], [permission.id])
+
+    def test_update_with_permission_object_without_id(self):
+        response = self.put(
+            reverse("users:roles-detail", kwargs={"pk": "d3c94703-ab5e-4926-ac52-a9bf8cf34ac6"}),
+            data={"name": "UPDATED_ROLE", "permissions": [{"codename": "add_card"}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_get(self):
         response = self.get(reverse("users:roles-detail", kwargs={"pk": "d3c94703-ab5e-4926-ac52-a9bf8cf34ac6"}))

@@ -1,20 +1,19 @@
+from django.db.models import F
+
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.serializers.pagination import PaginationSerializer
 from core.utils.get_time import get_mil_sec
 from main.models import Room
 from services.serializers.room import RoomSerializer
-from services.serializers.tag import (
-    RoomAttributeTagSerializer,
-    RoomTelemetryTagSerializer,
-    TagSerializer,
-    TagUpdateSerializer,
-)
+from services.serializers.tag import TagUpdateSerializer
 from services.swagger.tags import tag_detail_get_swagger, tag_detail_put_swagger, tags_by_room_get_swagger
 from services.utils.permissions import DoorLockPermission
+from services.utils.room_tags import paginated_room_tags, tag_with_type
 from shuttle.models import AttributeKv, TsKvLatest
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.views.json_rpc import prepare_mqtt_request
@@ -40,19 +39,11 @@ class TagsByRoomListView(APIView):
 
     @tags_by_room_get_swagger()
     def get(self, request, room_id):
-        room = get_object_or_404(Room.objects.by_tenant(request.tenant), pk=room_id)
-        attributes = AttributeKv.objects.get_attributes_by_room(room, AttributeKv.CLIENT_SCOPE)
-        telemetry = TsKvLatest.objects.get_ts_kv_latest_by_room(room, request.tenant)
-        tags = [
-            *RoomAttributeTagSerializer(attributes, many=True).data,
-            *RoomTelemetryTagSerializer(telemetry, many=True).data,
-        ]
-        return Response(
-            {
-                "room": RoomSerializer(room).data,
-                "tags": tags,
-            }
-        )
+        rooms = Room.objects.by_tenant(request.tenant).annotate(type_name=F("type__title"))
+        room = get_object_or_404(rooms, pk=room_id)
+        params = PaginationSerializer.parse(request.query_params)
+        tags = paginated_room_tags(room, request.tenant, params.page, params.size)
+        return Response({"room": RoomSerializer(room).data, **tags})
 
 
 class TagDetailView(APIView):
@@ -75,7 +66,7 @@ class TagDetailView(APIView):
     @tag_detail_get_swagger()
     def get(self, request, tag_id):
         tag = self.get_tag(request, tag_id)
-        return Response(TagSerializer(tag).data)
+        return Response(tag_with_type(tag))
 
     @tag_detail_put_swagger()
     def put(self, request, tag_id):
@@ -98,7 +89,7 @@ class TagDetailView(APIView):
 
         if not _rpc_succeeded(rpc):
             # Device rejected or did not respond — keep the stored value unchanged.
-            return Response({"tag": TagSerializer(tag).data, "rpc": rpc}, status=502)
+            return Response({"tag": tag_with_type(tag), "rpc": rpc}, status=502)
 
         # 2. Device accepted — persist the new value.
         field, val = mapping[key]
@@ -109,4 +100,4 @@ class TagDetailView(APIView):
             tag.ts = get_mil_sec()  # TsKvLatest.save() does not refresh ts; AttributeKv.save() does
         tag.save()
 
-        return Response({"tag": TagSerializer(tag).data, "rpc": rpc})
+        return Response({"tag": tag_with_type(tag), "rpc": rpc})

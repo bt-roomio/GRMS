@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 def _publish_status_batch(devices):
-    """Публикация room_status/device для набора устройств одним пересечением границы
-    sync↔async, вместо async_to_sync на каждый publish (~9.4 мс на вызов из-за подъёма
-    event loop). room_status схлопываем по арендатору — это одна tenant-группа с
-    одинаковым payload, слать её по разу на устройство бессмысленно."""
+    """Publish room_status/device for a set of devices with a single sync<->async
+    boundary crossing instead of async_to_sync per publish (~9.4 ms per call due to
+    spinning up the event loop). room_status is collapsed per tenant: it is a single tenant
+    group with an identical payload, so sending it once per device is pointless."""
     channel_layer = get_channel_layer()
     if not channel_layer:
         return
@@ -52,9 +52,9 @@ def _publish_status_batch(devices):
 
 def update_activity_devices_batch(device_ids: list, connected: bool = True):
     """
-    Батч-обработка активности устройств: обрабатывает список device_ids одним проходом
-    (set-based запросы к БД и один WebSocket-паблиш) вместо N последовательных
-    Redis/DB round-trip'ов на устройство. Структура повторяет state_device_batch_async.py.
+    Batch processing of device activity: handles the list of device_ids in one pass
+    (set-based DB queries and a single WebSocket publish) instead of N sequential
+    Redis/DB round-trips per device. Mirrors the structure of state_device_batch_async.py.
     """
     if not device_ids:
         return
@@ -68,7 +68,7 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
     cached_status_by_device: dict = {}
     ids_needing_db = []
 
-    # Шаг 1: Redis кеш — один MGET на весь батч (как в state_device_batch_async)
+    # Step 1: Redis cache, one MGET for the whole batch (as in state_device_batch_async)
     cached_by_device = get_cached_attributes_batch(
         [str(device_id) for device_id in device_ids], ["active", "lastActivityTime"], AttributeKv.SERVER_SCOPE
     )
@@ -113,7 +113,7 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
             ids_needing_db.append(device_id)
             from_cache_by_device[device_id] = False
 
-    # Шаг 2: Один SELECT на все устройства с промахом кеша
+    # Step 2: One SELECT for all devices with a cache miss
     if ids_needing_db:
         attrs = AttributeKv.objects.filter(
             entity_id__in=ids_needing_db,
@@ -126,14 +126,14 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
         for device_id in ids_needing_db:
             attr_map_by_device[device_id] = by_device.get(str(device_id), {})
 
-    # Шаг 2.5: Один запрос Device (tenant_id, status) для устройств без кешированного tenant_id
+    # Step 2.5: One Device query (tenant_id, status) for devices without a cached tenant_id
     device_info_by_id: dict = {}
     ids_for_device_info = [d for d in device_ids if d not in cached_tenant_by_device]
     if ids_for_device_info:
         rows = Device.objects.filter(id__in=ids_for_device_info).values("id", "tenant_id", "status")
         device_info_by_id = {str(r["id"]): r for r in rows}
 
-    # Шаг 3: Подготовка bulk-операций
+    # Step 3: Prepare bulk operations
     to_update = []
     to_create = []
     connect_ids = []
@@ -141,8 +141,8 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
     devices_to_invalidate_cache = set()
     device_needs_update_map: dict = {}
     skip_devices = set()
-    devices_with_changes = set()  # устройства, у которых реально есть to_update/to_create
-    devices_with_creates = set()  # устройства с bulk_create — их id клиентские, не кешируем
+    devices_with_changes = set()  # devices that actually have to_update/to_create
+    devices_with_creates = set()  # devices with bulk_create: their ids are client-side, don't cache
 
     for device_id in device_ids:
         from_cache = from_cache_by_device[device_id]
@@ -214,7 +214,7 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
 
         device_needs_update_map[device_id] = device_needs_update
 
-    # Шаг 4: Bulk-запись в БД
+    # Step 4: Bulk write to the DB
     if to_update:
         AttributeKv.objects.bulk_update(to_update, fields=["bool_v", "long_v", "last_update_ts", "entity_type"])
 
@@ -231,7 +231,7 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
     for device_id_str in devices_to_invalidate_cache:
         invalidate_attributes_cache(device_id_str, AttributeKv.SERVER_SCOPE)
 
-    # Шаг 5: Один WebSocket-паблиш и обновление кеша на весь батч
+    # Step 5: One WebSocket publish and cache update for the whole batch
     if to_update or to_create:
         updates_by_device: dict = defaultdict(list)
 
@@ -239,7 +239,7 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
             if device_id in skip_devices:
                 continue
 
-            # Публикуем/кешируем только устройства с реальными изменениями (как в оригинале)
+            # Publish/cache only devices with actual changes (as in the original)
             if device_id not in devices_with_changes:
                 continue
 
@@ -288,16 +288,16 @@ def update_activity_devices_batch(device_ids: list, connected: bool = True):
 
                 cache_data[attr_key] = cache_attr
 
-            # У устройств с bulk_create(ignore_conflicts) id атрибута сгенерирован на клиенте
-            # и при гонке создания может не совпасть с реально сохранённой строкой. Не кешируем
-            # такой id — следующий вызов сделает cache-miss и перечитает настоящий id из БД.
+            # For devices with bulk_create(ignore_conflicts) the attribute id is generated client-side
+            # and on a creation race may not match the row actually saved. Don't cache
+            # such an id: the next call gets a cache miss and re-reads the real id from the DB.
             if cache_data and device_id not in devices_with_creates:
                 set_cached_attributes(str(device_id), cache_data, AttributeKv.SERVER_SCOPE, ttl=5)
 
         if updates_by_device:
             publish_updates_attribute_batch(updates_by_device)
 
-    # Шаг 6: Публикация room_status/device для устройств, у которых сменился статус
+    # Step 6: Publish room_status/device for devices whose status changed
     ids_for_room_status = [d for d in device_ids if device_needs_update_map.get(d)]
     if ids_for_room_status:
         _publish_status_batch(Device.objects.filter(id__in=ids_for_room_status))

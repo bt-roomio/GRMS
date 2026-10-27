@@ -142,7 +142,7 @@ class CheckInSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         existing_guest = validated_data.pop("existing_guest", None)
-        guest_serializer = GuestSerializer()
+        guest_serializer = GuestSerializer(context={"source": self.context.get("source", Guest.SOURCE.HOTEZA)})
 
         if existing_guest:
             try:
@@ -194,9 +194,11 @@ class CheckInSerializer(serializers.Serializer):
         if pin:
             context = get_guest_access_context(instance)
             for device in context.get("devices", []):
-                response = send_rpc_request(device.id, [pin], 1, guest_id=str(instance.id), is_pwd=True)
+                response = send_rpc_request(
+                    device.id, [pin], 1, guest_id=str(instance.id), is_pwd=True, source=Guest.SOURCE.HOTEZA
+                )
                 if response and isinstance(response, dict) and not response.get("success"):
-                    activate_guest_card([pin], device, instance, is_pwd=True)
-                    need_sync(pin, device, 1, reason=response.get("message"))
+                    activate_guest_card([pin], device, instance, is_pwd=True, source=Guest.SOURCE.HOTEZA)
+                    need_sync(pin, device, 1, reason=response.get("message"), source=Guest.SOURCE.HOTEZA)
 
         return instance

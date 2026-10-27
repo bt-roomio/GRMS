@@ -27,9 +27,9 @@ def auto_check_out():
     cards = access_context.get("cards")
     if access_context.get("cards"):
         for device in access_context.get("devices"):  # ty: ignore
-            _ = dispatch_card_rpc(str(device.id), cards, 0)
+            _ = dispatch_card_rpc(str(device.id), cards, 0, source=Guest.SOURCE.AUTO)
 
-    guests.update(is_active=False)
+    guests.update(is_active=False, check_out_source=Guest.SOURCE.AUTO, check_out_by=None)
 
     rooms_with_active_guest_counts = Room.objects.annotate(
         active_guest_count=Count(
@@ -64,7 +64,6 @@ def auto_block():
         check_out__lte=time.time(),
         auto_check_out=False,
     ).select_related("tenant")
-    print("guests selected: ", candidates)
 
     guest_ids = [
         guest.id
@@ -79,7 +78,7 @@ def auto_block():
     if access_context.get("cards"):
         guest_cards.update(is_blocked=True)  # ty: ignore
         for device in access_context.get("devices"):  # ty: ignore
-            _ = dispatch_card_rpc(str(device.id), cards, 0)
+            _ = dispatch_card_rpc(str(device.id), cards, 0, source=Guest.SOURCE.AUTO)
 
     logger.info("auto block task successfully finish.")
 

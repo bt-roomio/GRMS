@@ -15,17 +15,17 @@ logger = logging.getLogger(__name__)
 
 def publish_mur_relay_to_mews(ts_kv_latest: TsKvLatest):
     """
-    Обработчик срабатывания MUR (Make Up Room) реле
+    Handler for the MUR (Make Up Room) relay trigger
 
-    При срабатывании MUR:
-    1. Проверяет включена ли интеграция с PMS
-    2. Проверяет включена ли интеграция с Mews
-    3. Проверяет активирована ли опция создания задач уборки
-    4. Проверяет не было ли срабатывания MUR в последние 3 минуты
-    5. Отправляет задачу на уборку в Mews
+    When MUR is triggered:
+    1. Checks whether the PMS integration is enabled
+    2. Checks whether the Mews integration is enabled
+    3. Checks whether the cleaning task creation option is enabled
+    4. Checks that MUR wasn't triggered within the last 3 minutes
+    5. Sends a cleaning task to Mews
 
     Args:
-        ts_kv_latest: Последнее значение телеметрии с MUR Relay
+        ts_kv_latest: Latest telemetry value from the MUR Relay
     """
     try:
         if ts_kv_latest.key.key != "MUR Relay":

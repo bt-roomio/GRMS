@@ -2,7 +2,7 @@ import logging
 
 from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from core.rabbitmq.config import connect_to_rabbitmq, send_to_rabbitmq
-from main.models import Device
+from main.models import Device, Guest
 from main.utils.access_context import get_guest_access_context
 from shuttle.models import Relation, RPCMessage
 
@@ -66,7 +66,7 @@ def send_rpc_to_guest_devices(guest, card_uid, access):
     errors = []
     successes = []
     for dev in devices:
-        result = dispatch_card_rpc(str(dev.id), [card_uid], access, guest_id=str(guest.id))
+        result = dispatch_card_rpc(str(dev.id), [card_uid], access, guest_id=str(guest.id), source=Guest.SOURCE.FIAS)
         if result.get("success"):
             successes.append(result.get("message", "OK"))
         else:

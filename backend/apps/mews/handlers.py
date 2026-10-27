@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar
 
 from mews.client import MewsAPIClient
 
@@ -14,7 +14,7 @@ class ReservationEventHandler:
     """Handles reservation events from Mews WebSocket"""
 
     # Event type mapping
-    EVENT_TYPE_MAPPING = {
+    EVENT_TYPE_MAPPING: ClassVar = {
         "Confirmed": "reservation",
         "Started": "checkin",
         "Processed": "checkout",
@@ -36,7 +36,7 @@ class ReservationEventHandler:
             base_url=mews_config.api_base_url,
         )
 
-    def handle_event(self, event: Dict[str, Any]) -> None:
+    def handle_event(self, event: dict[str, Any]) -> None:
         """
         Process a reservation event from WebSocket
 
@@ -62,7 +62,7 @@ class ReservationEventHandler:
         except Exception as e:
             logger.error(f"Error handling event: {e}", exc_info=True)
 
-    def _process_reservation(self, event: Dict[str, Any]) -> None:
+    def _process_reservation(self, event: dict[str, Any]) -> None:
         """
         Process reservation event - fetch data from Mews and publish to RabbitMQ
         Processes all companions (guests) in the reservation
@@ -133,7 +133,7 @@ class ReservationEventHandler:
         except Exception as e:
             logger.error(f"Error processing reservation: {e}", exc_info=True)
 
-    def _validate_required_fields(self, event: Dict[str, Any], required_fields: List[str]) -> None:
+    def _validate_required_fields(self, event: dict[str, Any], required_fields: list[str]) -> None:
         """
         Validate that required fields exist and are not empty
 
@@ -156,7 +156,7 @@ class ReservationEventHandler:
             logger.warning(f"{error_msg} in event: {event.get('Id', 'unknown')}")
             raise ValueError(error_msg)
 
-    def _fetch_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
+    def _fetch_reservation(self, reservation_id: str) -> dict[str, Any] | None:
         """
         Fetch reservation details from Mews API
         Uses old API endpoint to get CompanionIds field
@@ -179,7 +179,7 @@ class ReservationEventHandler:
 
         return reservations[0]
 
-    def _fetch_resource(self, resource_id: str) -> Optional[Dict[str, Any]]:
+    def _fetch_resource(self, resource_id: str) -> dict[str, Any] | None:
         """
         Fetch resource (room) details from Mews API
 
@@ -198,7 +198,7 @@ class ReservationEventHandler:
 
         return resources[0]
 
-    def _fetch_customer(self, customer_id: str) -> Optional[Dict[str, Any]]:
+    def _fetch_customer(self, customer_id: str) -> dict[str, Any] | None:
         """
         Fetch customer details from Mews API
 
@@ -218,7 +218,7 @@ class ReservationEventHandler:
         logger.info(f"Found customer: {customers[0].get('Id')}")
         return customers[0]
 
-    def _fetch_customers(self, customer_ids: List[str]) -> List[Dict[str, Any]]:
+    def _fetch_customers(self, customer_ids: list[str]) -> list[dict[str, Any]]:
         """
         Fetch multiple customers details from Mews API
 
@@ -237,7 +237,7 @@ class ReservationEventHandler:
         logger.info(f"Found {len(customers)} customers out of {len(customer_ids)} requested")
         return customers
 
-    def _fetch_customers_by_resource(self, resource_id: str) -> List[Dict[str, Any]]:
+    def _fetch_customers_by_resource(self, resource_id: str) -> list[dict[str, Any]]:
         """
         Fetch all customers for a specific resource (room) from Mews API
         Uses customers/search endpoint to get currently assigned customers
@@ -259,12 +259,12 @@ class ReservationEventHandler:
 
     def _build_standardized_data(
         self,
-        event: Dict[str, Any],
-        customer: Dict[str, Any],
+        event: dict[str, Any],
+        customer: dict[str, Any],
         room_number: str,
         reservation_id: str,
         resource_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build standardized guest data from Mews API responses
 
@@ -313,7 +313,7 @@ class ReservationEventHandler:
 
         return standardized_data
 
-    def _publish_to_rabbitmq(self, data: Dict[str, Any]) -> None:
+    def _publish_to_rabbitmq(self, data: dict[str, Any]) -> None:
         """
         Publish standardized guest data to RabbitMQ
 
@@ -341,7 +341,7 @@ class ReservationEventHandler:
             logger.error(f"Error publishing to RabbitMQ: {e}", exc_info=True)
             # Don't raise - we don't want to fail check-in/check-out if RabbitMQ fails
 
-    def sync_reservations(self, start_utc: str, end_utc: str) -> Dict[str, Any]:
+    def sync_reservations(self, start_utc: str, end_utc: str) -> dict[str, Any]:
         """
         Sync reservations from Mews for a specific time period
         Handles check-in, check-out, and guest move scenarios
@@ -413,7 +413,7 @@ class ReservationEventHandler:
         self,
         customer_id: str,
         room_number: str,
-    ) -> Optional[Guest]:
+    ) -> Guest | None:
         """
         Check if guest already exists with different room (guest move scenario)
 
@@ -448,21 +448,23 @@ class ReservationEventHandler:
 
     def _checked_out_from_roomio(self, customer_id: str, reservation_id: str) -> bool:
         """
-        Check if guest was checked out from ROOMIO side
+        Check if guest was checked out from ROOMIO side within this reservation
 
         Args:
             customer_id: Mews customer ID (pms_id)
-            reservation_id: Mews reservation ID (for logging)
+            reservation_id: Mews reservation ID (matched against additional_info.mews_reservation_id)
 
         Returns:
-            True if guest was checked out from ROOMIO, False otherwise
+            True if guest was checked out from ROOMIO for this reservation, False otherwise
         """
         try:
-            # Look for inactive guest with this pms_id who was checked out from ROOMIO
+            # pms_id is the Mews customer id, shared by all their stays: scope to this reservation
+            # so a Roomio check-out doesn't block the customer's future reservations
             guest = Guest.objects.filter(
                 pms_id=customer_id,
                 is_active=False,
-                checkout_by=Guest.CHECKOUT_BY.ROOMIO,
+                check_out_source=Guest.SOURCE.ROOMIO,
+                additional_info__mews_reservation_id=reservation_id,
             ).first()
 
             if guest:
@@ -478,7 +480,7 @@ class ReservationEventHandler:
             logger.error(f"Error checking checkout source for customer {customer_id}: {e}", exc_info=True)
             return False
 
-    def _process_reservation_sync(self, reservation: Dict[str, Any], stats: Dict[str, Any]) -> None:
+    def _process_reservation_sync(self, reservation: dict[str, Any], stats: dict[str, Any]) -> None:
         """
         Process a single reservation during sync
         Handles check-in, check-out, and guest move scenarios

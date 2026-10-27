@@ -81,6 +81,7 @@ class GuestChangeSerializer(serializers.Serializer):
             serializer = GuestMoveRoomSerializer(
                 instance,
                 data={"from_room": validated_data.get("old_room").id, "to_room": validated_data.get("room").id},
+                context={"source": Guest.SOURCE.HOTEZA},
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()

@@ -66,14 +66,14 @@ class CardDetailView(APIView):
     @check_perms(["access_manager.delete_card"])
     def delete(self, request, pk):
         instance = get_object_or_404(Card, id=pk, tenant_id=request.user.tenant_id)
-        unplug.delay(str(instance.id))
+        unplug.delay(str(instance.id), str(request.user.id))
         return Response({"message": "Card deletion started."}, 202)
 
 
 class DisconnectCardView(APIView):
     @swagger_card_disconnect()
     def post(self, request):
-        serializer = DisconnectCardSerializer(data=request.data)
+        serializer = DisconnectCardSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
         status_code = 200 if result.get("success", True) else 400

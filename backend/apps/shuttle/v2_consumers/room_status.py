@@ -10,11 +10,11 @@ from main.serializers.room_status import RoomLiveStatusSerializer
 from shuttle.models import TsKvLatest
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
-# Один пересчёт агрегатов стоит ~24 мс и одинаков для всех подписчиков тенанта, а
-# group_send из publish_updates_batch прилетает на каждый батч mq-async. Без кеша
-# N открытых дашбордов множат нагрузку на БД в N раз и упираются в неё раньше, чем
-# в саму рассылку. Кеш процессный: воркеров uvicorn немного, а межпроцессный кеш
-# стоил бы round-trip в Redis на том же горячем пути.
+# One recompute of the aggregates costs ~24 ms and is the same for all of a tenant's
+# subscribers, while group_send from publish_updates_batch arrives on every mq-async
+# batch. Without a cache N open dashboards multiply the DB load N times and hit the DB
+# limit before the broadcast itself. The cache is per process: there are few uvicorn
+# workers, and a cross-process cache would cost a Redis round-trip on the same hot path.
 _RESPONSE_TTL = 1.0
 _response_cache: dict[str, tuple[float, dict]] = {}
 _response_locks: dict[str, asyncio.Lock] = {}
@@ -24,7 +24,7 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
     queryset = TsKvLatest.objects.all()
     serializer_class = RoomLiveStatusSerializer
 
-    # Отложенный пересчёт по спадающему фронту (см. _ensure_trailing_refresh).
+    # Deferred recompute on the falling edge (see _ensure_trailing_refresh).
     _trailing: asyncio.Task | None = None
 
     async def _compute_response(self, tenant_id):
@@ -43,11 +43,11 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         return serializer.data
 
     async def response(self, force: bool = False):
-        """Агрегаты тенанта, не чаще одного пересчёта в _RESPONSE_TTL на процесс.
+        """Tenant aggregates, at most one recompute per _RESPONSE_TTL per process.
 
-        ``force`` пропускает быстрый (до-локовый) хит кеша, чтобы отложенный пересчёт
-        всегда проходил через лок и переоценивал свежесть под ним. Сам пересчёт
-        при этом остаётся коалесцированным (см. проверку под локом).
+        ``force`` skips the fast (pre-lock) cache hit so the deferred recompute
+        always goes through the lock and re-evaluates freshness under it. The recompute
+        itself stays coalesced (see the check under the lock).
         """
         tenant_id = str(self.tenant_id)
         cached = _response_cache.get(tenant_id)
@@ -58,13 +58,13 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
         if lock is None:
             lock = _response_locks[tenant_id] = asyncio.Lock()
         async with lock:
-            # Под локом свежесть проверяем и для force-пути: если соседняя корутина
-            # уже пересчитала в этом окне, переиспользуем результат — так N дашбордов
-            # одного тенанта = 1 пересчёт даже на отложенном (trailing) пути.
-            # Корректность сохраняется: trailing просыпается через asyncio.sleep(TTL),
-            # то есть не раньше окна, а метка кеша сдвигается только при пересчёте —
-            # значит под локом возраст кеша ≥ TTL (→ пересчёт) либо кеш только что
-            # обновлён соседом (→ уже отражает изменения окна).
+            # Freshness is checked under the lock for the force path too: if a sibling coroutine
+            # already recomputed in this window, reuse the result, so N dashboards
+            # of one tenant = 1 recompute even on the deferred (trailing) path.
+            # Correctness holds: trailing wakes up via asyncio.sleep(TTL),
+            # i.e. not before the window ends, and the cache timestamp moves only on recompute,
+            # so under the lock the cache age is either >= TTL (-> recompute) or the cache was just
+            # refreshed by a sibling (-> it already reflects the window's changes).
             cached = _response_cache.get(tenant_id)
             if cached and time.monotonic() - cached[0] < _RESPONSE_TTL:
                 return cached[1]
@@ -81,11 +81,11 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
             params["response"] = data
 
     def _ensure_trailing_refresh(self):
-        """Досчитать состояние после закрытия окна кеша.
+        """Catch up on the state after the cache window closes.
 
-        Без этого последнее изменение могло бы не доехать: если оно попало в окно,
-        клиент получил закешированное значение, а телеметрия сразу стихла, то
-        следующего group_send не будет и дашборд останется со старой цифрой.
+        Without this the last change might never arrive: if it fell into the window,
+        the client got the cached value, and telemetry went quiet right after, then
+        there is no next group_send and the dashboard stays with the stale number.
         """
         if self._trailing and not self._trailing.done():
             return
@@ -96,7 +96,10 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
             await asyncio.sleep(_RESPONSE_TTL)
             if not self.subscribers:
                 return
-            await self._broadcast(await self.response(force=True))
+            data = await self.response(force=True)
+            async with self._state_lock:
+                if self.subscribers:
+                    await self._broadcast(data)
         except asyncio.CancelledError:
             raise
         except (ClientDisconnected, RuntimeError):
@@ -112,6 +115,10 @@ class RoomStatusConsumer(BaseGenericAsyncAPIConsumer):
             return
         await self._broadcast(await self.response())
         self._ensure_trailing_refresh()
+
+    def cancel_background_tasks(self):
+        super().cancel_background_tasks()
+        self._cancel_trailing()
 
     async def disconnect(self, code):
         self._cancel_trailing()

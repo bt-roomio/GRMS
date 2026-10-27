@@ -31,9 +31,9 @@ class TenantFilterParams(ValidatorSerializer):
 
 
 def _serialize_gateways(instance):
-    """Строит список gateway-устройств тенанта для представления сериализатора.
+    """Build the list of the tenant's gateway devices for the serializer representation.
 
-    Ожидает, что instance.gateways проставлен через prefetch_related(Prefetch("device_set", ..., "gateways")).
+    Expects instance.gateways to be set via prefetch_related(Prefetch("device_set", ..., "gateways")).
     """
     if not hasattr(instance, "gateways"):
         return None

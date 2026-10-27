@@ -34,9 +34,11 @@ class CardLogConsumer(BaseGenericAsyncAPIConsumer):
         return query
 
     async def get_list_activity(self, _, **kwargs):
-        for request_id, params in self.subscribers.items():
-            query_params = params.get("query_params")
-            data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
+        self.request_refresh(self.refresh_lists)
+
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
+            data = await sync_to_async(self.get_data_paginated)(query_params=params.get("query_params"))
             await self.reply(data=data, action="list_subscribe", request_id=request_id)
 
     @action()

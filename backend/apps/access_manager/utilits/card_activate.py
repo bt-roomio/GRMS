@@ -2,7 +2,8 @@ from access_manager.models import Card, GuestCard, NeedSyncDevice, StaffCard
 from access_manager.utilits.need_sync import need_sync
 
 
-def activate_guest_card(cards, device, guest, is_pwd=False):
+def activate_guest_card(cards, device, guest, is_pwd=False, user=None, source=None):
+    """`user` and `source` (Guest.SOURCE) are recorded on the guest cards this creates."""
     error_cards = []
     for card_number in cards:
         try:
@@ -17,10 +18,17 @@ def activate_guest_card(cards, device, guest, is_pwd=False):
 
             if GuestCard.objects.filter(guest=guest, card=card, is_active=True).exists():
                 continue
-            GuestCard.objects.create(guest=guest, card=card, is_active=True)
+            GuestCard.objects.create(
+                guest=guest,
+                card=card,
+                is_active=True,
+                created_by_id=user,
+                updated_by_id=user,
+                updated_source=source,
+            )
             NeedSyncDevice.objects.filter(card=card, device=device).update(need_sync=False)
         except Exception as e:
-            need_sync(cards, device, 1, reason=f"Card activation failed: {e}")
+            need_sync(cards, device, 1, user=user, reason=f"Card activation failed: {e}", source=source)
             error_cards.append({"card_number": card_number, "error": str(e)})
     message = "Some cards are not activated."
     return {

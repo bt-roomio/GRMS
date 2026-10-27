@@ -1,12 +1,12 @@
 # =============================================================================
 # roomio GRMS — Node-RED (multi-tenant)
 # =============================================================================
-# Запуск через Makefile:
-#   make nodered-up-<tenant>       # поднять одного тенанта
-#   make nodered-up-all            # поднять всех тенантов
+# Run via the Makefile:
+#   make nodered-up-<tenant>       # bring up one tenant
+#   make nodered-up-all            # bring up all tenants
 #
-# Требует файл .env.nodered.<tenant> рядом с этим файлом.
-# Шаблон: .env.nodered.example
+# Requires a .env.nodered.<tenant> file next to this file.
+# Template: .env.nodered.example
 # =============================================================================
 
 x-logging: &default-logging

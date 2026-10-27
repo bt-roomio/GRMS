@@ -1,4 +1,5 @@
 import logging
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -7,6 +8,7 @@ from access_manager.utilits.move_guest_cards import move_guest_cards
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest, Room
 from main.utils.access_context import get_guest_access_context
+from main.utils.actor import actor_from_context, actor_id
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +43,23 @@ class GuestMoveRoomSerializer(serializers.Serializer):
         from_room.refresh_from_db()
         from_room.save(update_fields=["state"])
 
-        move_guest_cards(guests, old_guest_context, get_guest_access_context(guests))
+        source, user = actor_from_context(self.context)
+        move_guest_cards(
+            guests, old_guest_context, get_guest_access_context(guests), source=source, user=actor_id(user)
+        )
 
         return guests
 
 
 class GuestSerializer(serializers.ModelSerializer):
+    """
+    Check-in/check-out marks are taken from context: "source" (Guest.SOURCE, defaults to ROOMIO)
+    and "user" (the acting user, omitted for integrations).
+    """
+
+    def _actor(self):
+        return actor_from_context(self.context)
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["room"] = str(instance.room_id) if instance.room_id else None
@@ -59,6 +72,8 @@ class GuestSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        if validated_data.get("is_active", True) and not validated_data.get("is_reservation", False):
+            validated_data["check_in_source"], validated_data["check_in_by"] = self._actor()
         try:
             instance = super().create(validated_data)
             room = instance.room
@@ -67,7 +82,7 @@ class GuestSerializer(serializers.ModelSerializer):
             return instance
         except Exception as e:
             logger.warning(e)
-            raise e
+            raise
 
     def update(self, instance: Guest, validated_data):
         logger.info(f"Updating Guest {instance.id} with data: {validated_data}")
@@ -97,21 +112,26 @@ class GuestSerializer(serializers.ModelSerializer):
         room_to_update = None
         if "is_reservation" in validated_data:
             room_to_update = instance.room
+            if instance.is_reservation and validated_data["is_reservation"] is False:
+                instance.mark_checked_in(*self._actor())
 
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
             logger.info(f"Deactivating Guest {instance.id}")
             room = instance.room
             devices = access_context.get("devices", [])
             cards = access_context.get("cards")
+            source, actor = self._actor()
             for device in devices:
-                result = dispatch_card_rpc(str(device.id), cards, 0, guest_id=str(instance.id))
+                result = dispatch_card_rpc(
+                    str(device.id), cards, 0, user=actor_id(actor), guest_id=str(instance.id), source=source
+                )
                 not result.get("success") and deactivate_result.update({"success": False})
 
             if room and len(room.guests.filter(is_active=True, is_reservation=False)) <= 1:
                 room_to_update = room
 
             self._deactivate_result = deactivate_result
-            instance.checkout_by = instance.CHECKOUT_BY.ROOMIO
+            instance.mark_checked_out(*self._actor())
 
         updated = super().update(instance, validated_data)
 
@@ -142,8 +162,13 @@ class GuestSerializer(serializers.ModelSerializer):
             "auto_check_out",
             "reservation_number",
             "additional_info",
+            "check_in_by",
+            "check_in_source",
+            "check_out_by",
+            "check_out_source",
         )
-        extra_kwargs = {
+        read_only_fields = ("check_in_by", "check_in_source", "check_out_by", "check_out_source")
+        extra_kwargs: ClassVar = {
             "check_in": {"required": True},
             "check_out": {"required": True},
             "is_active": {"default": True},

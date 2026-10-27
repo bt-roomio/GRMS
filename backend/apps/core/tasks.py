@@ -34,6 +34,6 @@ def active_attribute_server_scope_task():
         logger.info("Starting Active Attribute SERVER_SCOPE task")
         call_command("active_attribute_server_scope")
         logger.info("Active Attribute SERVER_SCOPE task completed successfully")
-    except Exception as e:
-        logger.error(f"Active Attribute SERVER_SCOPE task failed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Active Attribute SERVER_SCOPE task failed")
         raise

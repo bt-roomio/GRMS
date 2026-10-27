@@ -21,14 +21,14 @@ class JWTAuthMiddleware:
             token = parse_qs(scope["query_string"].decode("utf8"))["token"][0]
             data = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
             scope["user"] = await self.get_user(data["user_id"])
-        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError):
+        except (TypeError, KeyError, InvalidSignatureError, ExpiredSignatureError, DecodeError, User.DoesNotExist):
             await send({"type": "websocket.close", "code": 4001})
             return
         return await self.app(scope, receive, send)
 
     @database_sync_to_async
     def get_user(self, user_id):
-        return User.objects.get(id=user_id)
+        return User.objects.get(id=user_id, is_active=True)
 
 
 def JWTAuthMiddlewareStack(app):

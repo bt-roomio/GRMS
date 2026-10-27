@@ -43,7 +43,10 @@ class FleetNodeConsumer(BaseGenericAsyncAPIConsumer):
         self.subscribers.pop(request_id, None)
 
     async def fleet_node_update(self, message):
-        for request_id, params in self.subscribers.items():
+        self.request_refresh(self.refresh_lists)
+
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
             await self.send_list_paginated(
                 action=params.get("action"),
                 query_params=params.get("query_params", {}),

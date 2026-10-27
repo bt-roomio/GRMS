@@ -1,17 +1,17 @@
 # =============================================================================
 # roomio GRMS — docker-compose.yml
 # =============================================================================
-# Группы сервисов (используются в Makefile):
+# Service groups (used in the Makefile):
 #   infra     — postgres, pgbouncer, redis, redis-broker, rabbitmq
 #   app       — backend (django), celery-*, mq-async, mews-websocket, pms-handler
 #   iot       — mqtt
 #   front     — frontend
 #   proxy     — proxy, letsencrypt
 #
-# Запуск:
-#   make up-infra       # только инфраструктура
-#   make up-app         # инфра + приложение
-#   make up-all         # всё
+# Start:
+#   make up-infra       # infrastructure only
+#   make up-app         # infra + application
+#   make up-all         # everything
 # =============================================================================
 
 x-logging: &default-logging
@@ -56,8 +56,8 @@ x-celery-env: &celery-env
   CELERY_BROKER_URL: redis://redis-broker:6379/0
   CELERY_RESULT_BACKEND: redis://redis-broker:6379/1
 
-# Воркеры ходят на ноды по SSH тем же ключом, что и Django: fleet-джобы
-# выполняются в celery-critical, и без этого монта каждая задача падает с
+# Workers reach the nodes over SSH with the same key as Django: fleet jobs
+# run in celery-critical, and without this mount every task fails with
 # "Fleet private key not found".
 x-celery-volumes: &celery-volumes
   - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
@@ -212,6 +212,9 @@ services:
       - LETSENCRYPT_HOST=${API_VIRTUAL_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
     command: ["/app/entrypoint.sh"]
+    # Docker's default 10s would SIGKILL Gunicorn mid graceful shutdown
+    # (GUNICORN_GRACEFUL_TIMEOUT, 30s by default).
+    stop_grace_period: 35s
     volumes:
       - static_volume:/app/static/
       - media_volume:/app/media/
@@ -232,8 +235,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-critical
-    volumes: *celery-volumes
-    command: celery -A config worker -Q critical -n critical@%h -l warning -c 2 --max-tasks-per-child=50
+    command: celery -A config worker -Q critical -n critical@%h -c 2 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
     labels:
@@ -252,8 +254,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
-    volumes: *celery-volumes
-    command: celery -A config worker -Q default -n default@%h -l warning -c 8 --max-tasks-per-child=100
+    command: celery -A config worker -Q default -n default@%h -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
     labels:
@@ -272,8 +273,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-realtime
-    volumes: *celery-volumes
-    command: celery -A config worker -Q realtime -n realtime@%h -l warning -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
+    command: celery -A config worker -Q realtime -n realtime@%h -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
     tmpfs:
       - /prom_mp
     labels:
@@ -292,16 +292,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
-    # Сверх *celery-volumes: provision/deprovision Node-RED тенантов (main.services.nodered)
-    # пишет .env.nodered.<slug> в deploy/ и вызывает docker compose на хосте.
-    # ВНИМАНИЕ: доступ к docker.sock равносилен root на хосте — монтировать только сюда.
-    volumes:
-      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./:/deploy
-      # docker login к registry.gitlab.com для pull образа node-red-nodes (того, кто запускает make)
-      - ${DOCKER_CONFIG_DIR:-${HOME}/.docker}:/root/.docker:ro
-    command: celery -A config worker -Q low -n low@%h -l warning -c 1 --max-tasks-per-child=50
+    command: celery -A config worker -Q low -n low@%h -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
     labels:
@@ -320,7 +311,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-beat
-    command: celery -A config beat --loglevel=warning
+    command: celery -A config beat
     tmpfs:
       - /prom_mp
 
@@ -337,9 +328,9 @@ services:
     tmpfs:
       - /prom_mp
 
-  # Перезапускает контейнеры со статусом unhealthy (label autoheal=true).
-  # Docker restart policy на healthcheck не реагирует — этот сайдкар закрывает
-  # разрыв: зависший celery-воркер (не отвечает на inspect ping) будет пересоздан.
+  # Restarts containers with unhealthy status (label autoheal=true).
+  # Docker restart policy doesn't react to healthchecks; this sidecar closes
+  # the gap: a hung celery worker (not answering inspect ping) gets recreated.
   autoheal:
     image: willfarrell/autoheal:1.2.0
     container_name: autoheal

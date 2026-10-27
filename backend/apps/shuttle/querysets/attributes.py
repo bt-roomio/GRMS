@@ -28,7 +28,7 @@ class AttributeKvQuerySet(BaseQuerySet):
     def get_attributes_by_room(self, room, scope, sort_by=()):
         return (
             self.filter(entity__room=room, attribute_type=scope)
-            .values("id", "attribute_key", "last_update_ts", *self.VALUE_FIELDS)
+            .values("id", "entity_id", "attribute_key", "last_update_ts", *self.VALUE_FIELDS)
             .order_by(*sort_by)
         )
 

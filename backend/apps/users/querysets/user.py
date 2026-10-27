@@ -16,7 +16,7 @@ class UsersManager(BaseUserManager):
         if not tenant_id:
             return self.none()
 
-        query = self.prefetch_related("roles").filter(tenant_id=tenant_id, is_active=True)
+        query = self.select_related("tenant").prefetch_related("roles").filter(tenant_id=tenant_id, is_active=True)
 
         if sort_by:
             # INFO: nulls_last() in asc or desc can't help, we need sort empty fields

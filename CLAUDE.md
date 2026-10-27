@@ -9,7 +9,7 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 ## Technology Stack
 
 - **Backend**: Django 5.0.4 with Django REST Framework
-- **Package manager**: uv (`pyproject.toml` + `uv.lock`; `requirements.txt` is a generated mirror)
+- **Package manager**: uv (`pyproject.toml` + `uv.lock`; there is no `requirements.txt`, generate one with `uv export --frozen --no-dev --no-hashes` if a tool needs it)
 - **Real-time**: Django Channels (WebSockets), served via Gunicorn/Uvicorn ASGI workers
 - **Database**: PostgreSQL 16 with TimescaleDB extension for time-series data, fronted by PgBouncer (transaction pooling)
 - **Task Queue**: Celery on a dedicated `redis-broker` instance (separate from the `redis` cache/channel layer)
@@ -128,6 +128,7 @@ The Django project is organized into specialized apps under `backend/apps/`:
 - **services**: External service integrations (PMS systems)
 - **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, not in INSTALLED_APPS, routes at root level)
 - **admin_panel**: Multi-tenant admin operations (tenant management, user management, user impersonation), routes under `/api/v1/admin/`
+- **alarms**: ThingsBoard-style alarm rules — rules live in `DeviceProfile.profile_data["alarms"]` (no table of their own), a periodic Celery evaluator walks `TsKvLatest`/`AttributeKv`, and one `Alarm` row per incident doubles as the journal. Also holds the notification dispatcher (Telegram + email channels). Routes under `/api/v1/alarms/`
 - **mews**: Mews PMS integration
   - Real-time WebSocket client for Mews events
   - Reservation synchronization
@@ -203,6 +204,9 @@ Scheduled tasks in `config/settings.py` (`CELERY_BEAT_SCHEDULE`):
 - `active-attribute-server-scope` - 10s interval (core.tasks.active_attribute_server_scope_task)
 - `aggregate-ts-kv` - Daily at 03:00 (shuttle.tasks.aggregate_table_ts_kv)
 - `flush-expired-tokens` - Daily at 03:00 (users.tasks.flush_expired_tokens)
+- `evaluate-alarm-rules` - `ALARMS_EVAL_INTERVAL_SEC` interval, default 30s (alarms.tasks.evaluate_alarm_rules)
+- `dispatch-alarm-notifications` - 60s interval (alarms.tasks.dispatch_notifications)
+- `purge-alarms` - Daily at 04:30 (alarms.tasks.purge_alarms)
 
 Note: `mews-access-tokens` is currently commented out in the schedule.
 

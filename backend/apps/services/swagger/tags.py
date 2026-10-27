@@ -1,6 +1,8 @@
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
+from core.serializers.pagination import PaginationSerializer
+
 _auth_error_response = openapi.Response(
     description="Authentication credentials were not provided or are invalid.",
     examples={"application/json": {"detail": "Authentication credentials were not provided."}},
@@ -14,7 +16,7 @@ _tag_object_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
         "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-        "key_name": openapi.Schema(type=openapi.TYPE_STRING),
+        "tag_name": openapi.Schema(type=openapi.TYPE_STRING),
         "value": openapi.Schema(type=openapi.TYPE_STRING),
         "updated_at": openapi.Schema(
             type=openapi.TYPE_STRING,
@@ -24,24 +26,52 @@ _tag_object_schema = openapi.Schema(
     },
 )
 
+_room_tag_object_schema = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        **_tag_object_schema.properties,
+        "tag_type": openapi.Schema(
+            type=openapi.TYPE_STRING,
+            x_nullable=True,
+            description="Tag type name from the device's TAG_TYPES attribute; null if the tag is not mapped there.",
+        ),
+        # Swagger 2 has no "any type" items, so the item type is described in text.
+        "tag_ranges": openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(type=openapi.TYPE_STRING),
+            x_nullable=True,
+            description="Range values (any JSON) from the device's TAG_TYPES attribute; null when tag_type is null.",
+        ),
+    },
+)
 
 _tags_list_response = openapi.Response(
-    description="Room info with its CLIENT_SCOPE attributes and latest telemetry as a unified tag list.",
+    description="Room info with one page of its CLIENT_SCOPE attributes and latest telemetry as a unified tag list.",
     examples={
         "application/json": {
-            "room": {"id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f", "number": "101"},
-            "tags": [
+            "room": {
+                "id": "0f6c1d2e-3a4b-4c5d-8e9f-1a2b3c4d5e6f",
+                "number": "101",
+                "type_id": "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f",
+                "type_name": "Standard",
+            },
+            "count": 2,
+            "results": [
                 {
                     "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
-                    "key_name": "targetTemperature",
+                    "tag_name": "targetTemperature",
                     "value": 22.5,
                     "updated_at": "2026-09-11T08:15:42.103000Z",
+                    "tag_type": "Temperature",
+                    "tag_ranges": ["15-25", 30],
                 },
                 {
                     "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
-                    "key_name": "temperature",
+                    "tag_name": "temperature",
                     "value": 21.8,
                     "updated_at": "2026-09-11T08:16:01.871000Z",
+                    "tag_type": None,
+                    "tag_ranges": None,
                 },
             ],
         }
@@ -54,9 +84,12 @@ _tags_list_response = openapi.Response(
                 properties={
                     "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
                     "number": openapi.Schema(type=openapi.TYPE_STRING),
+                    "type_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, x_nullable=True),
+                    "type_name": openapi.Schema(type=openapi.TYPE_STRING, x_nullable=True),
                 },
             ),
-            "tags": openapi.Schema(type=openapi.TYPE_ARRAY, items=_tag_object_schema),
+            "count": openapi.Schema(type=openapi.TYPE_INTEGER, description="Total number of the room's tags."),
+            "results": openapi.Schema(type=openapi.TYPE_ARRAY, items=_room_tag_object_schema),
         },
     ),
 )
@@ -67,10 +100,11 @@ def tag_detail_get_swagger(**kwargs):
         operation_summary="Retrieve Tag",
         operation_description=(
             "Retrieve a single tag by its id. A tag is backed by either an attribute "
-            "(type=ATTRIBUTE) or latest telemetry (type=TELEMETRY)."
+            "(type=ATTRIBUTE) or latest telemetry (type=TELEMETRY). tag_type and tag_ranges come from "
+            "the device's TAG_TYPES, as in the room tag list."
         ),
         responses={
-            200: openapi.Response(description="Tag.", schema=_tag_object_schema),
+            200: openapi.Response(description="Tag.", schema=_room_tag_object_schema),
             401: _auth_error_response,
             404: openapi.Response(description="Tag not found for the current tenant."),
         },
@@ -101,7 +135,7 @@ def tag_detail_put_swagger(**kwargs):
                 description="Device accepted the change; the persisted tag and the device RPC result.",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
-                    properties={"tag": _tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
+                    properties={"tag": _room_tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
                 ),
             ),
             400: openapi.Response(description="Invalid request body."),
@@ -111,7 +145,7 @@ def tag_detail_put_swagger(**kwargs):
                 description="Device rejected the change or did not respond; the stored value is unchanged.",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
-                    properties={"tag": _tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
+                    properties={"tag": _room_tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
                 ),
             ),
         },
@@ -123,9 +157,11 @@ def tags_by_room_get_swagger(**kwargs):
     return swagger_auto_schema(
         operation_summary="List Room Tags",
         operation_description=(
-            "Retrieve the room together with its CLIENT_SCOPE attributes and latest telemetry "
-            "(SHARED_SCOPE and SERVER_SCOPE attributes are not exposed)."
+            "Retrieve the room together with one page of its CLIENT_SCOPE attributes and latest telemetry "
+            "(SHARED_SCOPE and SERVER_SCOPE attributes are not exposed). Attributes come first, then telemetry, "
+            "each ordered by key."
         ),
+        query_serializer=PaginationSerializer,
         responses={
             200: _tags_list_response,
             401: _auth_error_response,

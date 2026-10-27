@@ -7,6 +7,7 @@ from core.utils.serializers import ValidatorSerializer
 from main.models import Device, DevicePublicSpaces, PublicSpace
 from main.serializers.dashboard import SimpleDashboardSerializer
 from main.serializers.device import SimpleDeviceSerializer
+from main.utils.actor import actor_from_context, actor_id
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,11 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
             return False
         return all(device.status for device in devices)
 
+    def _card_actor(self):
+        """Who changes the public space's devices, recorded on the guest cards it revokes."""
+        source, user = actor_from_context(self.context)
+        return {"source": source, "user": actor_id(user)}
+
     def update(self, instance, validated_data):
         device_objects = validated_data.pop("device_ids", None)
 
@@ -69,7 +75,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
                 devices_to_remove = current_device_ids
 
             if devices_to_remove:
-                register_cards_for_public_space(instance.id, devices_to_remove, False)
+                register_cards_for_public_space(instance.id, devices_to_remove, False, **self._card_actor())
                 DevicePublicSpaces.objects.filter(public_space=instance, device_id__in=devices_to_remove).delete()
 
             if devices_to_add:
@@ -80,7 +86,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
                 for d in new_devices:
                     d.full_clean()
                 DevicePublicSpaces.objects.bulk_create(new_devices)
-                register_cards_for_public_space(instance.id, devices_to_add, True)
+                register_cards_for_public_space(instance.id, devices_to_add, True, **self._card_actor())
 
         return instance
 
@@ -93,7 +99,7 @@ class PublicSpaceSerializer(serializers.ModelSerializer):
                 [DevicePublicSpaces(device=device, public_space=instance) for device in device_objects]
             )
             devices = [device.id for device in device_objects]
-            register_cards_for_public_space(instance.id, devices, True)
+            register_cards_for_public_space(instance.id, devices, True, **self._card_actor())
 
         return instance
 
