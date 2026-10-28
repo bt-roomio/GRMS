@@ -3,6 +3,13 @@ from django.urls import path
 from services.views.device_tag_types import DeviceTagTypesView
 from services.views.integration import IntegrationDetailView, IntegrationListView
 from services.views.lockkeys import LockKeyDoorOpenView, LockKeyDoorsListView
+from services.views.mapping import (
+    MappingOverrideDetailView,
+    MappingOverrideListView,
+    MappingProfileDetailView,
+    MappingProfileListView,
+    MappingProfileTestView,
+)
 from services.views.messengers import MessengersView
 from services.views.mews_integration import MewsIntegrationView
 from services.views.room import RoomListView
@@ -31,6 +38,11 @@ urlpatterns = [
     path("tag-type-groups/", TagTypeGroupListView.as_view(), name="tag-type-group-list"),
     path("tag-type-groups/<uuid:pk>/", TagTypeGroupDetailView.as_view(), name="tag-type-group-detail"),
     path("device/<uuid:device_id>/tag-types/", DeviceTagTypesView.as_view(), name="device-tag-types"),
+    path("mapping-profiles/", MappingProfileListView.as_view(), name="mapping-profile-list"),
+    path("mapping-profiles/<uuid:pk>/", MappingProfileDetailView.as_view(), name="mapping-profile-detail"),
+    path("mapping-profiles/<uuid:pk>/test/", MappingProfileTestView.as_view(), name="mapping-profile-test"),
+    path("mapping-overrides/", MappingOverrideListView.as_view(), name="mapping-override-list"),
+    path("mapping-overrides/<uuid:pk>/", MappingOverrideDetailView.as_view(), name="mapping-override-detail"),
     # Messengers
     path("messengers/", MessengersView.as_view(), name="messengers"),
 ]

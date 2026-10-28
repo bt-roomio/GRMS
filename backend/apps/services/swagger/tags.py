@@ -45,6 +45,11 @@ _room_tag_object_schema = openapi.Schema(
     },
 )
 
+_MAPPING_DESCRIPTION = (
+    " When the integration has a mapping profile, value and tag_ranges of a tag whose tag_type has a rule "
+    "are in the integrator's form (a stored value the rule cannot convert is null)."
+)
+
 _tags_list_response = openapi.Response(
     description="Room info with one page of its CLIENT_SCOPE attributes and latest telemetry as a unified tag list.",
     examples={
@@ -101,7 +106,7 @@ def tag_detail_get_swagger(**kwargs):
         operation_description=(
             "Retrieve a single tag by its id. A tag is backed by either an attribute "
             "(type=ATTRIBUTE) or latest telemetry (type=TELEMETRY). tag_type and tag_ranges come from "
-            "the device's TAG_TYPES, as in the room tag list."
+            "the device's TAG_TYPES, as in the room tag list." + _MAPPING_DESCRIPTION
         ),
         responses={
             200: openapi.Response(description="Tag.", schema=_room_tag_object_schema),
@@ -118,7 +123,10 @@ def tag_detail_put_swagger(**kwargs):
         operation_description=(
             "Push the new value to the device first via MQTT RPC (setAttribute for attributes, "
             "setTelemetry for telemetry). Only if the device accepts the change is it persisted to "
-            "the type-compatible column; otherwise the stored value is left unchanged and 502 is returned."
+            "the type-compatible column; otherwise the stored value is left unchanged and 502 is returned. "
+            "When the integration has a mapping profile, value is in the integrator's form and is converted to the "
+            "GRMS value before the RPC; a value the rule rejects returns 400 with a code (type, direction, unmapped, "
+            "invalid), one it skips returns 200 with skipped: true and no RPC."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -138,7 +146,10 @@ def tag_detail_put_swagger(**kwargs):
                     properties={"tag": _room_tag_object_schema, "rpc": openapi.Schema(type=openapi.TYPE_OBJECT)},
                 ),
             ),
-            400: openapi.Response(description="Invalid request body."),
+            400: openapi.Response(
+                description="Invalid request body, or a value the mapping rule rejects.",
+                examples={"application/json": {"value": ["No enum pair for the value."], "code": "unmapped"}},
+            ),
             401: _auth_error_response,
             404: openapi.Response(description="Tag not found for the current tenant."),
             502: openapi.Response(
@@ -159,7 +170,7 @@ def tags_by_room_get_swagger(**kwargs):
         operation_description=(
             "Retrieve the room together with one page of its CLIENT_SCOPE attributes and latest telemetry "
             "(SHARED_SCOPE and SERVER_SCOPE attributes are not exposed). Attributes come first, then telemetry, "
-            "each ordered by key."
+            "each ordered by key." + _MAPPING_DESCRIPTION
         ),
         query_serializer=PaginationSerializer,
         responses={

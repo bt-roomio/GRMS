@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import RestrictedError
 
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
@@ -67,5 +68,11 @@ class TagTypeDetailView(APIView):
     @tag_type_swagger_delete()
     @check_perms(["services.delete_tagtype"])
     def delete(self, request, pk):
-        self.get_own_object(request, pk).delete()
+        try:
+            self.get_own_object(request, pk).delete()
+        except RestrictedError:  # MappingRule.tag_type is RESTRICT
+            return Response(
+                {"detail": "The tag type is used by mapping rules and cannot be deleted."},
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response(status=204)

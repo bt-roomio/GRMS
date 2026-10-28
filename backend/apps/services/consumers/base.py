@@ -3,6 +3,7 @@ from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 
+from services.mapping.resolver import TagMapper
 from services.models import Integration
 from shuttle.v2_consumers.base_generics import BaseGenericAsyncAPIConsumer
 
@@ -53,3 +54,8 @@ class TenantScopedConsumer(BaseGenericAsyncAPIConsumer):
     @property
     def tenant_id(self):
         return getattr(self.tenant, "id", None)
+
+    def get_mapper(self) -> TagMapper:
+        """The integration's tag mapping, with its current profile: the connection outlives
+        changes to the integration."""
+        return TagMapper(self.integration, reload=True)

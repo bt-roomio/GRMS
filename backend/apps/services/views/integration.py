@@ -36,7 +36,8 @@ class IntegrationDetailView(APIView):
     @check_perms(["services.change_integration"])
     def put(self, request, pk):
         instance = get_object_or_404(Integration, pk=pk, is_active=True, enable=True, tenant_id=request.user.tenant_id)
-        serializer = IntegrationSerializer(instance, data=request.data, partial=False)
+        context = {"tenant_id": request.user.tenant_id}
+        serializer = IntegrationSerializer(instance, data=request.data, partial=False, context=context)
         serializer.is_valid(raise_exception=True)
         serializer.save(updated_by=request.user)
         return Response(serializer.data)

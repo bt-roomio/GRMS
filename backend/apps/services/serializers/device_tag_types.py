@@ -15,6 +15,11 @@ _NUMERIC_RANGE = re.compile(rf"^{_NUMBER}-{_NUMBER}$")
 _NUMERIC_VALUE = re.compile(rf"^{_NUMBER}$")
 
 
+def is_numeric_range(value) -> bool:
+    """Whether a range value is a ``"low-high"`` string rather than a single point."""
+    return isinstance(value, str) and bool(_NUMERIC_RANGE.match(value))
+
+
 def numeric_bounds(value) -> tuple[float, float] | None:
     """``(low, high)`` of a numeric range value: ``"10-50"`` is ``(10, 50)``, a number or numeric
     string is a single point (``30`` / ``"30"`` is ``(30, 30)``). ``None`` for anything else."""

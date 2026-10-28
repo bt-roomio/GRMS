@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from core.querysets.base_queryset import BaseQuerySet
 
 
@@ -17,6 +19,10 @@ class TagTypeQuerySet(BaseQuerySet):
     def by_tenant(self, tenant_id):
         """Only the tenant's own tag types."""
         return self.filter(tenant_id=tenant_id)
+
+    def available(self, tenant_id):
+        """The tenant's own tag types and the shared ones (no tenant)."""
+        return self.filter(Q(tenant_id=tenant_id) | Q(tenant__isnull=True))
 
     def list(self, tenant_id, search=None, group=None, sort_by="name"):
         query = self.by_tenant(tenant_id).select_related("group").prefetch_related("tag_ranges")

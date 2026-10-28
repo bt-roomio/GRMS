@@ -79,6 +79,10 @@ def tag_type_swagger_delete(**kwargs):
     return swagger_auto_schema(
         operation_summary="Delete Tag Type",
         operation_description="Delete the tag type.",
-        responses={204: openapi.Response(description="Deleted."), 404: _not_found_response},
+        responses={
+            204: openapi.Response(description="Deleted."),
+            404: _not_found_response,
+            409: openapi.Response(description="The tag type is used by mapping rules."),
+        },
         tags=_TAGS,
     )

@@ -35,11 +35,11 @@ class RoomTagsConsumer(TenantScopedConsumer):
             raise ValidationError("Room not found!")
         return room
 
-    def build_payload(self, query_params):
+    def build_payload(self, query_params, mapper=None):
         room = self.get_room(query_params.get("room_id"))
         params = PaginationSerializer.parse(query_params)
         device_ids = [str(device_id) for device_id in room.devices.values_list("id", flat=True)]
-        tags = paginated_room_tags(room, self.tenant, params.page, params.size)
+        tags = paginated_room_tags(room, self.tenant, params.page, params.size, mapper or self.get_mapper())
         return {"room": RoomSerializer(room).data, **tags}, device_ids
 
     @action()
@@ -71,10 +71,12 @@ class RoomTagsConsumer(TenantScopedConsumer):
 
     async def _resend(self, message):
         entities = {str(u.get("entity")) for u in _updates_in_message(message) if u.get("entity")}
+        mapper = None  # one per update, shared by the subscriptions it reaches
         for request_id, sub in self.subscribers.items():
             if entities and entities.isdisjoint(sub["device_ids"]):
                 continue
-            payload, _ = await sync_to_async(self.build_payload)(sub["query_params"])
+            mapper = mapper or await sync_to_async(self.get_mapper)()
+            payload, _ = await sync_to_async(self.build_payload)(sub["query_params"], mapper)
             await self.reply(data=payload, action="subscribe", request_id=request_id)
 
     async def get_latest_activity(self, message, **kwargs):
@@ -92,19 +94,21 @@ class TagDetailConsumer(TenantScopedConsumer):
         await super().accept(*args, **kwargs)
 
     def get_tag(self, tag_id):
-        tag = AttributeKv.objects.select_related("entity").filter(entity__tenant=self.tenant, pk=tag_id).first()
+        tag = AttributeKv.objects.select_related("entity__room").filter(entity__tenant=self.tenant, pk=tag_id).first()
         if tag is None:
             tag = (
-                TsKvLatest.objects.select_related("entity", "key").filter(entity__tenant=self.tenant, pk=tag_id).first()
+                TsKvLatest.objects.select_related("entity__room", "key")
+                .filter(entity__tenant=self.tenant, pk=tag_id)
+                .first()
             )
         if tag is None:
             raise NotFound("Tag not found.")
         return tag
 
-    def build_payload(self, tag_id):
+    def build_payload(self, tag_id, mapper=None):
         tag = self.get_tag(tag_id)
         tag_name = tag.attribute_key if isinstance(tag, AttributeKv) else tag.key.key
-        return tag_with_type(tag), str(tag.entity_id), tag_name
+        return tag_with_type(tag, mapper or self.get_mapper()), str(tag.entity_id), tag_name
 
     @action()
     async def retrieve(self, request_id, query_params=None, **kwargs):  # pyright: ignore
@@ -134,6 +138,7 @@ class TagDetailConsumer(TenantScopedConsumer):
 
     async def _resend(self, message):
         updates = _updates_in_message(message)
+        mapper = None  # one per update, shared by the subscriptions it reaches
         for request_id, sub in self.subscribers.items():
             # The tag's own value or its device's TAG_TYPES (tag_type / tag_ranges) changed.
             matched = any(
@@ -143,7 +148,8 @@ class TagDetailConsumer(TenantScopedConsumer):
             )
             if not matched:
                 continue
-            payload, _, _ = await sync_to_async(self.build_payload)(sub["tag_id"])
+            mapper = mapper or await sync_to_async(self.get_mapper)()
+            payload, _, _ = await sync_to_async(self.build_payload)(sub["tag_id"], mapper)
             await self.reply(data=payload, action="subscribe", request_id=request_id)
 
     async def get_latest_activity(self, message, **kwargs):
