@@ -36,7 +36,7 @@ class StaffCardViewTest(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.url = reverse("access_manager:staff-card")
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_connect_cards_to_staff_success(self, mock_send_rpc):
         """Test successful connection of cards to staff"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -55,7 +55,7 @@ class StaffCardViewTest(BaseTestCase):
         # Verify RPC was called for each device
         self.assertTrue(mock_send_rpc.called)
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_connect_cards_partial_success(self, mock_send_rpc):
         """Test partial success when some RPC calls fail"""
         # Mock some successful and some failed RPC calls
@@ -177,7 +177,7 @@ class StaffCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("cards", response.data)
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_connect_cards_rpc_exception_handling(self, mock_send_rpc):
         """Test handling of RPC exceptions"""
         mock_send_rpc.side_effect = Exception("RPC connection failed")
@@ -189,7 +189,7 @@ class StaffCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)  # View returns 200 with error message
         self.assertIn("error", response.data)
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_connect_cards_device_filtering(self, mock_send_rpc):
         """Test that only active devices are considered"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -207,7 +207,7 @@ class StaffCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_connect_cards_with_engineering_group(self, mock_send_rpc):
         """Test connecting cards for staff in engineering group"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -222,7 +222,7 @@ class StaffCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_rpc_request_parameters(self, mock_send_rpc):
         """Test that RPC request is called with correct parameters"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -253,7 +253,7 @@ class StaffCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("staff_id", response.data)
 
-    @patch("access_manager.views.staff_card.send_rpc_request")
+    @patch("access_manager.views.staff_card.dispatch_card_rpc")
     def test_connect_multiple_cards_success(self, mock_send_rpc):
         """Test connecting multiple cards successfully"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}

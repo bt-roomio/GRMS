@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from celery.utils.log import get_task_logger
 
 from access_manager.models import Group
+from access_manager.utilits.merge_rpc_results import merge_rpc_results
 from access_manager.utilits.need_sync import need_sync
 from access_manager.utilits.not_need_sync import not_need_sync
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
@@ -47,7 +48,7 @@ def process_devices_parallel(devices, cards: List[str], group: Group, action: st
 def process_device_all_cards(device: Device, cards: List[str], group: Group, action: str) -> Dict[str, Any]:
     access = 1 if action == "connect" else 0
 
-    if device.device_profile.name.lower() == "default":
+    if not cards or device.device_profile.name.lower() == "default":
         batches = [cards]
     else:
         batches = [[card] for card in cards]
@@ -57,15 +58,7 @@ def process_device_all_cards(device: Device, cards: List[str], group: Group, act
         request_params = prepare_rpc_request(device.id, batch, access)
         results.append(send_card_rpc_request(device, request_params, batch, action))
 
-    if len(results) == 1:
-        result = results[0]
-    else:
-        failed = [r for r in results if not r.get("success")]
-        result = {
-            "success": not failed,
-            "message": "; ".join(r.get("message", "") for r in (failed or results)),
-            "results": results,
-        }
+    result = merge_rpc_results(results)
 
     return {
         "device_id": str(device.id),

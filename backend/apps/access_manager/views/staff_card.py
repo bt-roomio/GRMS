@@ -6,8 +6,8 @@ from rest_framework.views import APIView
 
 from access_manager.serializers.staff_card import StaffCardRequestData, StaffCardRequestSerializer
 from access_manager.swagger.staff_card import staff_card_swagger
-from access_manager.tasks.send_rpc import send_rpc_request
 from access_manager.utilits.check_card_assignment import get_card_assignments
+from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from main.utils.access_context import get_staff_access_context
 
 logger = logging.getLogger("main")
@@ -42,7 +42,7 @@ class StaffCardView(APIView):
                 return Response({"detail": "Not found device."}, 404)
 
             for device in devices:
-                result = send_rpc_request(str(device.id), cards, True, staff_id=str(staff.id), user=user)
+                result = dispatch_card_rpc(str(device.id), cards, True, staff_id=str(staff.id), user=user)
                 success.append(result) if result.get("success") else errors.append(result)
                 if not result.get("success", False):
                     errors.append(result)

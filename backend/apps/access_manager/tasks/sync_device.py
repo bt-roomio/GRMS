@@ -12,8 +12,8 @@ logger = logging.getLogger("main")
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def sync_device_card_group(device_id, cards, access, is_pwd=False, source=None, user=None):
-    # Replays the original request's source/user; requests queued before they were stored count as AUTO.
+def sync_device_card_group(device_id, cards, access, is_pwd=False, source=None, user_id=None):
+    # `source`/`user_id` are recorded on the guest cards; requests queued before the source was stored count as AUTO.
     source = source or Guest.SOURCE.AUTO
     # Default-profile devices take the full card list in one writeRFID; everything else
     # (PINs and non-default devices) is synced one card per request.
@@ -21,7 +21,7 @@ def sync_device_card_group(device_id, cards, access, is_pwd=False, source=None, 
     batches = [cards] if is_default and not is_pwd else [[card] for card in cards]
 
     for batch in batches:
-        result = send_rpc_request(device_id, batch, access, user=user, sync=True, is_pwd=is_pwd, source=source)
+        result = send_rpc_request(device_id, batch, access, user=user_id, sync=True, is_pwd=is_pwd, source=source)
         if result.get("success", False):
             NeedSyncDevice.objects.filter(
                 device_id=device_id,
@@ -31,7 +31,7 @@ def sync_device_card_group(device_id, cards, access, is_pwd=False, source=None, 
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
+def sync_devices_task(tenant_id=None, ids=None, device_ids=None, user_id=None):
     try:
         queryset = (
             NeedSyncDevice.objects.select_related("device", "card")
@@ -76,13 +76,15 @@ def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
             device_id = obj.device_id
             message_params = (obj.additional_info or {}).get("message_params", {})
             access = message_params.get("access", "UNKNOWN")
-            source = message_params.get("source")
-            user = obj.updated_by_id and str(obj.updated_by_id)
+            if user_id:
+                source, actor_id = Guest.SOURCE.ROOMIO, user_id
+            else:
+                source, actor_id = message_params.get("source"), obj.updated_by_id and str(obj.updated_by_id)
             is_pwd = bool(obj.card.is_pwd)
-            grouped[(device_id, access, is_pwd, source, user)].append(obj.card.number)
+            grouped[(device_id, access, is_pwd, source, actor_id)].append(obj.card.number)
 
-        for (device_id, access, is_pwd, source, user), cards in grouped.items():
-            sync_device_card_group.delay(str(device_id), cards, access, is_pwd, source=source, user=user)
+        for (device_id, access, is_pwd, source, actor_id), cards in grouped.items():
+            sync_device_card_group.delay(str(device_id), cards, access, is_pwd, source=source, user_id=actor_id)
 
         return {"success": True, "dispatched": len(grouped)}
 

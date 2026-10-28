@@ -6,6 +6,7 @@ from django.urls import reverse
 from access_manager.models import Card, NeedSyncDevice
 from core.tests.base import BaseTestCase
 from main.models import Device
+from users.models import User
 
 
 class SyncDeviceAPITest(BaseTestCase):
@@ -118,6 +119,7 @@ class SyncDeviceAPITest(BaseTestCase):
         self.assertEqual(str(args[0]), "28c81921-f78e-4864-87d2-cec674f19d1c")
         self.assertEqual(args[1], [nsd.id])
         self.assertEqual(args[2], [])
+        self.assertEqual(kwargs["user_id"], str(User.objects.get(email="karina@gmail.com").id))
 
     @patch("time.sleep", return_value=None)
     @patch("access_manager.tasks.sync_device.sync_devices_task.delay")

@@ -35,7 +35,7 @@ class GuestCardViewTest(BaseTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
         self.url = reverse("access_manager:guest-card")
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_connect_cards_to_guest_success(self, mock_send_rpc):
         """Test successful connection of cards to guest"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -62,7 +62,7 @@ class GuestCardViewTest(BaseTestCase):
             ).exists()
         )
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_connect_cards_without_public_spaces(self, mock_send_rpc):
         """Test connecting cards without specifying public spaces"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -102,7 +102,7 @@ class GuestCardViewTest(BaseTestCase):
 
     def test_connect_cards_same_guest_allowed(self):
         """Test that connecting cards to the same guest is allowed"""
-        with patch("access_manager.tasks.send_rpc.send_rpc_request") as mock_send_rpc:
+        with patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request") as mock_send_rpc:
             mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
 
             payload = {
@@ -172,7 +172,7 @@ class GuestCardViewTest(BaseTestCase):
 
         self.assertEqual(response.status_code, 400)
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_connect_cards_exception_handling(self, mock_send_rpc):
         """Test handling of exceptions during processing"""
         mock_send_rpc.side_effect = Exception("Database connection failed")
@@ -189,7 +189,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.data["message"], "Server error!")
         self.assertIn("error", response.data)
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_rpc_request_parameters(self, mock_send_rpc):
         """Test that RPC request is called with correct parameters"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -213,7 +213,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(call_args[0][2], 1)  # is_active parameter (1 for guest)
         self.assertEqual(call_args[1]["guest_id"], "5b66af57-fb27-4c26-9986-b9994e644605")
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_device_filtering_query(self, mock_send_rpc):
         """Test the device filtering query logic"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -229,7 +229,7 @@ class GuestCardViewTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_multiple_public_spaces(self, mock_send_rpc):
         """Test connecting cards with multiple public spaces"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -256,7 +256,7 @@ class GuestCardViewTest(BaseTestCase):
                 ).exists()
             )
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_connect_multiple_cards_success(self, mock_send_rpc):
         """Test connecting multiple cards successfully"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
@@ -287,7 +287,7 @@ class GuestCardViewTest(BaseTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(response.data["message"], "Incorrect data!")
 
-    @patch("access_manager.tasks.send_rpc.send_rpc_request")
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
     def test_device_inactive_filtering(self, mock_send_rpc):
         """Test that inactive devices are not included"""
         mock_send_rpc.return_value = {"success": True, "message": "Card added successfully"}
