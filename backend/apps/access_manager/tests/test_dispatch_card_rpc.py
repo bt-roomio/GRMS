@@ -27,7 +27,7 @@ class DispatchCardRpcTest(TestCase):
         self.assertEqual(
             mock_send.call_args_list,
             [
-                call(self.device_id, ["65 28 23 12"], 0, guest_id=self.guest_id),
+                call(self.device_id, ["65 28 23 12"], 0, is_pwd=False, guest_id=self.guest_id),
                 call(self.device_id, ["482915"], 0, is_pwd=True, guest_id=self.guest_id),
                 call(self.device_id, ["739264"], 0, is_pwd=True, guest_id=self.guest_id),
             ],
@@ -43,7 +43,7 @@ class DispatchCardRpcTest(TestCase):
     def test_rfid_only_returns_single_result(self, mock_send):
         result = dispatch_card_rpc(self.device_id, ["65 28 23 12"], 0)
 
-        mock_send.assert_called_once_with(self.device_id, ["65 28 23 12"], 0)
+        mock_send.assert_called_once_with(self.device_id, ["65 28 23 12"], 0, is_pwd=False)
         self.assertEqual(result, {"success": True})
 
     @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")

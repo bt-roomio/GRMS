@@ -70,6 +70,7 @@ class SyncDeviceView(APIView):
     @sync_device_swagger()
     def post(self, request):
         serializer = SyncDeviceSerializer(data=request.data)
+        user_id = str(request.user.id)
         if not serializer.is_valid():
             return Response(
                 {
@@ -89,7 +90,7 @@ class SyncDeviceView(APIView):
         if not need_sync_exists:
             return Response({"success": True, "message": "No devices need syncing"}, status=200)
 
-        sync_devices_task.delay(tenant_id, ids, device_ids)
+        sync_devices_task.delay(tenant_id, ids, device_ids, user_id=user_id)
 
         time.sleep(3)
         return Response(

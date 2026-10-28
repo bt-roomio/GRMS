@@ -8,6 +8,7 @@ from access_manager.tasks.send_rpc import send_rpc_request
 from access_manager.utilits.pin_to_card import pin_to_card_number
 from access_manager.utilits.prepare_rpc_request import prepare_rpc_request
 from main.models import Device, Guest
+from users.models import User
 
 FIXTURES = (
     "tenant_profile.yaml",
@@ -319,7 +320,27 @@ class SyncDevicesTaskPwdGroupingTest(TestCase):
         sync_devices_task(tenant_id=self.tenant_id)
 
         mock_dispatch.assert_called_once()
-        self.assertEqual(mock_dispatch.call_args.kwargs, {"source": Guest.SOURCE.FIAS, "user": karina_id})
+        self.assertEqual(mock_dispatch.call_args.kwargs, {"source": Guest.SOURCE.FIAS, "user_id": karina_id})
+
+    @patch("access_manager.tasks.sync_device.sync_device_card_group.delay")
+    def test_manual_sync_records_requesting_user_as_roomio(self, mock_dispatch):
+        from access_manager.tasks.sync_device import sync_devices_task
+
+        karina_id = "e1fcc1ff-cce1-47e9-9951-88665815a9bb"
+        requester_id = str(User.objects.exclude(id=karina_id).first().id)
+        card = Card.objects.create(number="55 66 77 88", tenant_id=self.tenant_id)
+        NeedSyncDevice.objects.create(
+            card=card,
+            device=self.device,
+            need_sync=True,
+            updated_by_id=karina_id,
+            additional_info={"message_params": {"access": 0, "source": Guest.SOURCE.FIAS}},
+        )
+
+        sync_devices_task(tenant_id=self.tenant_id, user_id=requester_id)
+
+        mock_dispatch.assert_called_once()
+        self.assertEqual(mock_dispatch.call_args.kwargs, {"source": Guest.SOURCE.ROOMIO, "user_id": requester_id})
 
     @patch("access_manager.tasks.sync_device.send_rpc_request", return_value={"success": True})
     def test_requests_queued_without_source_replay_as_auto(self, mock_send):
@@ -448,3 +469,88 @@ class ProcessDeviceAllCardsTest(TestCase):
         self.assertEqual([c.args[2] for c in mock_send.call_args_list], [["11 22 33 44"], ["55 66 77 88"]])
         self.assertFalse(result["result"]["success"])
         self.assertEqual(result["result"]["message"], "rejected")
+
+
+class DispatchCardRpcOneCardPerRequestTest(TestCase):
+    fixtures = FIXTURES
+
+    def setUp(self):
+        self.device = Device.objects.get(id="47aef21b-6cc9-4ec5-8573-1a6f491940c0")
+        self.device_id = str(self.device.id)
+        self.cards = ["65 28 23 12", "11 22 33 44"]
+
+    def _use_non_default_profile(self):
+        self.device.device_profile_id = SendRpcRequestPwdTest.NON_DEFAULT_PROFILE_ID
+        self.device.save(update_fields=["device_profile"])
+
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request", return_value={"success": True})
+    def test_default_device_sends_all_cards_in_one_request(self, mock_send):
+        from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
+
+        dispatch_card_rpc(self.device_id, self.cards, 1, user="u1")
+
+        mock_send.assert_called_once_with(self.device_id, self.cards, 1, is_pwd=False, user="u1")
+
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request")
+    def test_non_default_device_sends_one_card_per_request(self, mock_send):
+        from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
+
+        self._use_non_default_profile()
+        mock_send.side_effect = [{"success": True, "message": "ok"}, {"success": False, "message": "Time out error!"}]
+
+        result = dispatch_card_rpc(self.device_id, self.cards, 0, source=Guest.SOURCE.ROOMIO)
+
+        self.assertEqual([c.args[1] for c in mock_send.call_args_list], [["65 28 23 12"], ["11 22 33 44"]])
+        self.assertTrue(all(c.kwargs["source"] == Guest.SOURCE.ROOMIO for c in mock_send.call_args_list))
+        self.assertFalse(result["success"])
+        self.assertEqual(result["message"], "Time out error!")
+        self.assertEqual(len(result["results"]), 2)
+
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request", return_value={"success": True})
+    def test_forced_is_pwd_sends_every_card_as_pin(self, mock_send):
+        from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
+
+        self._use_non_default_profile()
+
+        dispatch_card_rpc(self.device_id, ["48291"], 1, is_pwd=True, guest_id="g1")
+
+        mock_send.assert_called_once_with(self.device_id, ["48291"], 1, is_pwd=True, guest_id="g1")
+
+    @patch("access_manager.utilits.dispatch_card_rpc.send_rpc_request", return_value={"success": True})
+    def test_empty_cards_still_sends_one_request(self, mock_send):
+        from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
+
+        self._use_non_default_profile()
+
+        dispatch_card_rpc(self.device_id, [], 0)
+
+        mock_send.assert_called_once_with(self.device_id, [], 0, is_pwd=False)
+
+
+class MergeRpcResultsTest(TestCase):
+    def test_single_result_is_returned_as_is(self):
+        from access_manager.utilits.merge_rpc_results import merge_rpc_results
+
+        result = {"success": True, "message": "ok"}
+        self.assertIs(merge_rpc_results([result]), result)
+
+    def test_any_failure_fails_and_keeps_failed_fields(self):
+        from access_manager.utilits.merge_rpc_results import merge_rpc_results
+
+        merged = merge_rpc_results(
+            [
+                {"success": True, "message": "ok", "room": "101"},
+                {"success": False, "message": "Time out error!", "room": "101", "cards": ["x"]},
+            ]
+        )
+        self.assertFalse(merged["success"])
+        self.assertEqual(merged["message"], "Time out error!")
+        self.assertEqual(merged["cards"], ["x"])
+        self.assertEqual(len(merged["results"]), 2)
+
+    def test_success_deduplicates_messages(self):
+        from access_manager.utilits.merge_rpc_results import merge_rpc_results
+
+        merged = merge_rpc_results([{"success": True, "message": "ok"}, {"success": True, "message": "ok"}])
+        self.assertTrue(merged["success"])
+        self.assertEqual(merged["message"], "ok")

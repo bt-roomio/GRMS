@@ -16,7 +16,7 @@ logger = logging.getLogger("main")
 class GuestCardView(APIView):
     @guest_card_swagger()
     def post(self, request):
-        from access_manager.tasks.send_rpc import send_rpc_request
+        from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
         from main.utils.access_context import get_guest_access_context
 
         serializer = GuestCardRequestSerializer(data=request.data)
@@ -67,7 +67,7 @@ class GuestCardView(APIView):
             success = []
 
             for device in devices:
-                result = send_rpc_request(
+                result = dispatch_card_rpc(
                     str(device.id), cards, 1, guest_id=guest_id, user=user, is_pwd=is_pwd, source=Guest.SOURCE.ROOMIO
                 )
                 if not result.get("success", False):
