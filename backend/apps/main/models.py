@@ -471,7 +471,7 @@ class Dashboard(BaseModel):
     image = models.ImageField(upload_to="dashboard", null=True, blank=True)
     external_id = models.UUIDField(blank=True, null=True)
 
-    objects = DashboardQuerySet.as_manager()
+    objects: ClassVar[DashboardQuerySet] = cast(DashboardQuerySet, DashboardQuerySet.as_manager())
 
     tenant_id: UUID
 

@@ -14,6 +14,10 @@ class DashboardQuerySet(BaseQuerySet):
 
         return query
 
+    def assigned(self):
+        """Dashboards handed out to at least one user or role, rather than to a room type."""
+        return self.filter(Q(users__is_active=True) | Q(roles__isnull=False)).distinct()
+
     def quick_list(self, tenant_id, search_value=None):
         query = self.filter(tenant_id=tenant_id)
         if search_value:

@@ -131,6 +131,13 @@ package = false
 [tool.ty.environment]
 root = ["apps"]
 
+# Django idioms ty reads as incompatible overrides: `class Meta(Parent.Meta)` and `objects` managers.
+[[tool.ty.overrides]]
+include = ["apps/**/models.py", "apps/**/models.pyi", "apps/**/serializers/**"]
+
+[tool.ty.overrides.rules]
+invalid-attribute-override = "ignore"
+
 [tool.ruff]
 line-length = 120
 extend-exclude = ["migrations"]

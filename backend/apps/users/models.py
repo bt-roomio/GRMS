@@ -58,6 +58,12 @@ class User(AbstractUser):
         related_name="users",
         help_text=_("Hotel chain this user manages. If set, the user may switch between all of its tenants."),
     )
+    dashboards = models.ManyToManyField(
+        "main.Dashboard",
+        blank=True,
+        related_name="users",
+        help_text=_("Dashboards shown to this user on top of the ones granted by their roles."),
+    )
     roles = models.ManyToManyField(
         "users.Role",
         verbose_name=_("roles"),
@@ -137,6 +143,12 @@ class Role(BaseModel):
         blank=True,
         help_text=_("Specific permissions granted to this role"),
     )
+    dashboards = models.ManyToManyField(
+        "main.Dashboard",
+        blank=True,
+        related_name="roles",
+        help_text=_("Dashboards shown to users of this role"),
+    )
     additional_info = models.JSONField(
         null=True,
         blank=True,
@@ -165,3 +177,28 @@ class Role(BaseModel):
             ),
         ]
         ordering = ("-created_at",)
+
+
+class DashboardPosition(BaseModel):
+    """Where a dashboard sits in a user's own ordering; dashboards without a row go last."""
+
+    user = models.ForeignKey(
+        User,
+        models.CASCADE,
+        related_name="dashboard_positions",
+        help_text=_("User this ordering belongs to"),
+    )
+    dashboard = models.ForeignKey(
+        "main.Dashboard",
+        models.CASCADE,
+        related_name="positions",
+        help_text=_("Dashboard being positioned"),
+    )
+    position = models.PositiveIntegerField(help_text=_("Zero-based place in the user's list"))
+
+    class Meta(BaseModel.Meta):
+        db_table = "users_dashboard_positions"
+        ordering = ("position",)
+        constraints: ClassVar = [
+            UniqueConstraint(fields=["user", "dashboard"], name="unique_dashboard_position_user"),
+        ]

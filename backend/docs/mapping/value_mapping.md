@@ -1,18 +1,18 @@
 # Hoteza ↔ GRMS: Value Mapping — реализация и API
 
-Oct 28, 2026 · @Bakhodir Umarov
+Oct 28, 2026 · <https://room.io>
 
 ## Обзор
 
 GRMS теперь отдаёт Hoteza значения тегов в формате Hoteza и принимает от неё значения в том же формате. Пересчёт задаётся профилем маппинга на уровне отеля, а не кодом. Готовы этапы 1–3, коммита пока нет.
 
-| Этап | Что сделано | Статус |
-| --- | --- | --- |
-| 1. Движок | Чистые функции пересчёта значений и проверка правил: `services/mapping/` | Готово |
-| 2. Модели и API | Профили, правила, переопределения по уровням, миграции, REST API, тестовый прогон правила | Готово |
-| 3. Подключение | Tags API (`GET`/`PUT`) и WebSocket (`room_tags`, `tag`) отдают и принимают значения в формате интегратора | Готово |
-| Ревью | 9 замечаний code review исправлены: общие `TagType`, `RESTRICT`, целые границы диапазонов и др. | Готово |
-| 4. Профиль Hoteza | Готовый профиль Hoteza как fixture или management command | Не начат |
+| Этап              | Что сделано                                                                                               | Статус   |
+| ----------------- | --------------------------------------------------------------------------------------------------------- | -------- |
+| 1. Движок         | Чистые функции пересчёта значений и проверка правил: `services/mapping/`                                  | Готово   |
+| 2. Модели и API   | Профили, правила, переопределения по уровням, миграции, REST API, тестовый прогон правила                 | Готово   |
+| 3. Подключение    | Tags API (`GET`/`PUT`) и WebSocket (`room_tags`, `tag`) отдают и принимают значения в формате интегратора | Готово   |
+| Ревью             | 9 замечаний code review исправлены: общие `TagType`, `RESTRICT`, целые границы диапазонов и др.           | Готово   |
+| 4. Профиль Hoteza | Готовый профиль Hoteza как fixture или management command                                                 | Не начат |
 
 Если у интеграции нет профиля, всё работает как раньше: значения уходят и приходят в формате GRMS.
 
@@ -49,24 +49,24 @@ flowchart LR
 
 Правило — JSON-объект в массиве `rules` профиля. В правилах «GRMS» — значение в нашей системе, «external» — значение для интегратора.
 
-| Поле | Обязательно | Значения |
-| --- | --- | --- |
-| `id` | да | Код правила, уникален в профиле, до 100 символов. На него ссылаются переопределения |
-| `tag_type` | да | Имя `TagType` отеля или общего. Одно правило на тип в профиле |
-| `external.value_type` | да | `integer`, `number`, `string`, `boolean` — тип значения у интегратора |
-| `transform` | да | Способ пересчёта, см. ниже |
-| `direction` | нет, `both` | `both` — в обе стороны; `to_external` — только чтение (PUT даст 400); `to_grms` — только запись (чтение отдаёт значение GRMS) |
-| `validate` | нет | Ограничения на значение интегратора: `min`, `max`, `step` (для чисел) или `allowed` (список) |
-| `on_invalid` | нет, `reject` | Что делать с недопустимым значением при записи: `reject` — 400; `skip` — пропустить; `clamp` — подтянуть к ближайшему допустимому (только для чисел) |
+| Поле                  | Обязательно   | Значения                                                                                                                                             |
+| --------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                  | да            | Код правила, уникален в профиле, до 100 символов. На него ссылаются переопределения                                                                  |
+| `tag_type`            | да            | Имя `TagType` отеля или общего. Одно правило на тип в профиле                                                                                        |
+| `external.value_type` | да            | `integer`, `number`, `string`, `boolean` — тип значения у интегратора                                                                                |
+| `transform`           | да            | Способ пересчёта, см. ниже                                                                                                                           |
+| `direction`           | нет, `both`   | `both` — в обе стороны; `to_external` — только чтение (PUT даст 400); `to_grms` — только запись (чтение отдаёт значение GRMS)                        |
+| `validate`            | нет           | Ограничения на значение интегратора: `min`, `max`, `step` (для чисел) или `allowed` (список)                                                         |
+| `on_invalid`          | нет, `reject` | Что делать с недопустимым значением при записи: `reject` — 400; `skip` — пропустить; `clamp` — подтянуть к ближайшему допустимому (только для чисел) |
 
 **Типы `transform`:**
 
-| `type` | Поля | Когда применять |
-| --- | --- | --- |
-| `enum` | `map`: список `{"grms": …, "external": …}` | Фиксированные значения: скорость вентилятора, режим, вкл/выкл. Значения `grms` должны быть в диапазонах `TagType` |
-| `range` | `grms`: `{min, max, step?}`, `external`: `{min, max, step?}`, `invert?` | Линейная шкала: диммер 0–255 ↔ 0–100. Диапазон `grms` должен лежать в диапазонах `TagType` |
-| `linear` | `ops`: список `{"op": "multiply"\|"divide"\|"add"\|"subtract", "value": число}` | Единицы измерения: десятые доли градуса → градусы. Обратный пересчёт строится сам |
-| `passthrough` | — | Значение совпадает, нужно только привести тип или проверить `validate` |
+| `type`        | Поля                                                                            | Когда применять                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `enum`        | `map`: список `{"grms": …, "external": …}`                                      | Фиксированные значения: скорость вентилятора, режим, вкл/выкл. Значения `grms` должны быть в диапазонах `TagType` |
+| `range`       | `grms`: `{min, max, step?}`, `external`: `{min, max, step?}`, `invert?`         | Линейная шкала: диммер 0–255 ↔ 0–100. Диапазон `grms` должен лежать в диапазонах `TagType`                        |
+| `linear`      | `ops`: список `{"op": "multiply"\|"divide"\|"add"\|"subtract", "value": число}` | Единицы измерения: десятые доли градуса → градусы. Обратный пересчёт строится сам                                 |
+| `passthrough` | —                                                                               | Значение совпадает, нужно только привести тип или проверить `validate`                                            |
 
 `range` и `linear` требуют числового `value_type`. Для `integer` результат округляется половиной вверх, а границы диапазонов в `tag_ranges` — внутрь (`"0-49.8"` → `"0-49"`). Числа, сохранённые строкой (`"22"`), принимаются как числа; в `enum` типы сравниваются строго (`"1"` ≠ `1`, но `1.0` = `1`).
 
@@ -82,21 +82,26 @@ flowchart LR
     {
       "id": "fan_speed",
       "tag_type": "FCUSPEED",
-      "external": {"value_type": "integer"},
-      "transform": {"type": "enum", "map": [
-        {"grms": "Low", "external": 1},
-        {"grms": "Medium", "external": 2},
-        {"grms": "High", "external": 3}
-      ]}
+      "external": { "value_type": "integer" },
+      "transform": {
+        "type": "enum",
+        "map": [
+          { "grms": "Low", "external": 1 },
+          { "grms": "Medium", "external": 2 },
+          { "grms": "High", "external": 3 }
+        ]
+      }
     },
     {
       "id": "dimmer",
       "tag_type": "Light Dimmer",
-      "external": {"value_type": "integer"},
-      "transform": {"type": "range",
-        "grms": {"min": 0, "max": 255},
-        "external": {"min": 0, "max": 100, "step": 10}},
-      "validate": {"min": 0, "max": 100},
+      "external": { "value_type": "integer" },
+      "transform": {
+        "type": "range",
+        "grms": { "min": 0, "max": 255 },
+        "external": { "min": 0, "max": 100, "step": 10 }
+      },
+      "validate": { "min": 0, "max": 100 },
       "on_invalid": "clamp"
     }
   ]
@@ -107,18 +112,18 @@ flowchart LR
 
 Все эндпоинты лежат под `/api/v1/services/`, требуют JWT (`Authorization: Bearer …`) и работают только с данными отеля пользователя. Чужой объект отвечает 404. В Swagger они в разделах **Services, Mapping Profiles** и **Services, Mapping Overrides**.
 
-| Метод и путь | Что делает | Право |
-| --- | --- | --- |
-| `GET mapping-profiles/` | Список профилей с правилами | `view_mappingprofile` |
-| `POST mapping-profiles/` | Создать профиль с правилами | `add_mappingprofile` |
-| `GET mapping-profiles/<id>/` | Один профиль | `view_mappingprofile` |
-| `PUT mapping-profiles/<id>/` | Заменить профиль и **все** его правила | `change_mappingprofile` |
-| `DELETE mapping-profiles/<id>/` | Удалить; у интеграций `mapping_profile` станет `null` | `delete_mappingprofile` |
-| `POST mapping-profiles/<id>/test/` | Прогнать одно правило на значении, не трогая теги | `view_mappingprofile` |
-| `GET mapping-overrides/` | Список переопределений | `view_mappingoverride` |
-| `POST mapping-overrides/` | Создать переопределение | `add_mappingoverride` |
-| `GET/PUT/DELETE mapping-overrides/<id>/` | Чтение, замена, удаление | `view/change/delete_mappingoverride` |
-| `PUT integration/<id>/` | Новое поле `mapping_profile` (id профиля или `null`) | `change_integration` |
+| Метод и путь                             | Что делает                                            | Право                                |
+| ---------------------------------------- | ----------------------------------------------------- | ------------------------------------ |
+| `GET mapping-profiles/`                  | Список профилей с правилами                           | `view_mappingprofile`                |
+| `POST mapping-profiles/`                 | Создать профиль с правилами                           | `add_mappingprofile`                 |
+| `GET mapping-profiles/<id>/`             | Один профиль                                          | `view_mappingprofile`                |
+| `PUT mapping-profiles/<id>/`             | Заменить профиль и **все** его правила                | `change_mappingprofile`              |
+| `DELETE mapping-profiles/<id>/`          | Удалить; у интеграций `mapping_profile` станет `null` | `delete_mappingprofile`              |
+| `POST mapping-profiles/<id>/test/`       | Прогнать одно правило на значении, не трогая теги     | `view_mappingprofile`                |
+| `GET mapping-overrides/`                 | Список переопределений                                | `view_mappingoverride`               |
+| `POST mapping-overrides/`                | Создать переопределение                               | `add_mappingoverride`                |
+| `GET/PUT/DELETE mapping-overrides/<id>/` | Чтение, замена, удаление                              | `view/change/delete_mappingoverride` |
+| `PUT integration/<id>/`                  | Новое поле `mapping_profile` (id профиля или `null`)  | `change_integration`                 |
 
 Права с префиксом `services.`; без них — 403. Админам отелей их выдаёт `./manage.py give_perms`.
 
@@ -143,7 +148,16 @@ flowchart LR
 Ошибки — стандартный 400 DRF. Ошибки одного правила приходят по его индексу в массиве:
 
 ```json
-{"rules": [{"non_field_errors": ["GRMS values ['Turbo'] are not ranges of tag type 'FCUSPEED'."]}, {}]}
+{
+  "rules": [
+    {
+      "non_field_errors": [
+        "GRMS values ['Turbo'] are not ranges of tag type 'FCUSPEED'."
+      ]
+    },
+    {}
+  ]
+}
 ```
 
 Ошибки профиля целиком — списком строк: `{"rules": ["Duplicate tag types: ['FCUSPEED']."]}`.
@@ -152,19 +166,19 @@ flowchart LR
 
 `POST mapping-profiles/<id>/test/` нужен для кнопки «Проверить» в редакторе. Он работает с сохранённым профилем, без учёта переопределений.
 
-| Поле тела | Значение |
-| --- | --- |
-| `rule` | `id` правила в профиле |
-| `direction` | `to_external` (значение GRMS → интегратору) или `to_grms` (от интегратора → GRMS) |
-| `input` | Любое JSON-значение |
+| Поле тела    | Значение                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------- |
+| `rule`       | `id` правила в профиле                                                                             |
+| `direction`  | `to_external` (значение GRMS → интегратору) или `to_grms` (от интегратора → GRMS)                  |
+| `input`      | Любое JSON-значение                                                                                |
 | `tag_ranges` | Необязательно. Для `to_external` тоже пересчитывается, для `to_grms` по нему проверяется результат |
 
-| Исход | Ответ |
-| --- | --- |
-| Успех | 200 `{"output": 2, "tag_ranges": [1, 2, 3]}` (`tag_ranges` только для `to_external`) |
-| `on_invalid: skip` сработал | 200 `{"output": null, "skipped": true}` |
-| Правило не перевело значение | 400 `{"detail": "No enum pair for the value.", "code": "unmapped"}` |
-| Нет такого правила | 400 `{"rule": ["No such rule in the profile."]}` |
+| Исход                        | Ответ                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| Успех                        | 200 `{"output": 2, "tag_ranges": [1, 2, 3]}` (`tag_ranges` только для `to_external`) |
+| `on_invalid: skip` сработал  | 200 `{"output": null, "skipped": true}`                                              |
+| Правило не перевело значение | 400 `{"detail": "No enum pair for the value.", "code": "unmapped"}`                  |
+| Нет такого правила           | 400 `{"rule": ["No such rule in the profile."]}`                                     |
 
 Коды `code`: `type` — неверный тип значения; `direction` — правило не работает в эту сторону; `unmapped` — нет пары в enum; `invalid` — не прошло `validate` или `tag_ranges` при `reject`.
 
@@ -175,7 +189,7 @@ flowchart LR
   "integration": "a1b2c3d4-…",
   "level": "device",
   "device": "47aef21b-…",
-  "rule_overrides": {"dimmer": {"on_invalid": "reject"}}
+  "rule_overrides": { "dimmer": { "on_invalid": "reject" } }
 }
 ```
 
@@ -197,21 +211,21 @@ flowchart LR
 
 Пример тега в `GET /api/v1/services/tags/<room_id>/` при правиле `fan_speed`:
 
-| Поле | Без профиля | С профилем |
-| --- | --- | --- |
-| `tag_type` | `"FCUSPEED"` | `"FCUSPEED"` |
-| `value` | `"Medium"` | `2` |
-| `tag_ranges` | `["Low", "Medium", "High"]` | `[1, 2, 3]` |
+| Поле         | Без профиля                 | С профилем   |
+| ------------ | --------------------------- | ------------ |
+| `tag_type`   | `"FCUSPEED"`                | `"FCUSPEED"` |
+| `value`      | `"Medium"`                  | `2`          |
+| `tag_ranges` | `["Low", "Medium", "High"]` | `[1, 2, 3]`  |
 
 `PUT /api/v1/services/tag/<id>/` с телом `{"value": 3}` отправит на устройство `"High"`. Возможные ответы:
 
-| Случай | Ответ |
-| --- | --- |
-| Устройство приняло | 200 `{"tag": {…}, "rpc": {…}}`, тег в формате Hoteza |
-| Устройство отказало или не ответило | 502, как раньше |
-| Значение не прошло правило | 400 `{"value": ["…"], "code": "type" \| "direction" \| "unmapped" \| "invalid"}`, RPC не отправляется |
-| Правило с `on_invalid: skip` | 200 `{"tag": {…}, "rpc": null, "skipped": true}`, тег не изменён |
-| Правило с `on_invalid: clamp` | Значение подтягивается к допустимому и записывается |
+| Случай                              | Ответ                                                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Устройство приняло                  | 200 `{"tag": {…}, "rpc": {…}}`, тег в формате Hoteza                                                  |
+| Устройство отказало или не ответило | 502, как раньше                                                                                       |
+| Значение не прошло правило          | 400 `{"value": ["…"], "code": "type" \| "direction" \| "unmapped" \| "invalid"}`, RPC не отправляется |
+| Правило с `on_invalid: skip`        | 200 `{"tag": {…}, "rpc": null, "skipped": true}`, тег не изменён                                      |
+| Правило с `on_invalid: clamp`       | Значение подтягивается к допустимому и записывается                                                   |
 
 Hoteza должна отличать пропущенную запись по флагу `skipped`: код ответа тот же, 200. Значение тега, которое нельзя перевести при чтении, приходит как `null`.
 

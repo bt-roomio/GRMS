@@ -62,7 +62,7 @@ class RolesListView(APIView):
         if Role.objects.filter(tenant_id=tenant_id, name=request.data.get("name")).exists():
             raise ValidationError({"non_field_errors": "The fields name, tenant must make a unique set."})
 
-        serializer = RoleSerializer(data=request.data, context={"is_superuser": is_superuser})
+        serializer = RoleSerializer(data=request.data, context={"is_superuser": is_superuser, "tenant_id": tenant_id})
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=tenant_id)
         return Response(serializer.data, 201)
