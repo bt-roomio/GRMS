@@ -80,20 +80,18 @@ class TagDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         mapper = TagMapper(request.integration)
 
+        is_attribute = isinstance(tag, AttributeKv)
+        key = tag.attribute_key if is_attribute else tag.key.key
+
         # The integrator sends values in its own form; write the GRMS value.
-        fields = tag_type_fields(tag)
+        tag_ranges = tag_type_fields(tag)["tag_ranges"]
         try:
-            value = mapper.value_to_grms(
-                serializer.validated_data["value"], fields["tag_type"], fields["tag_ranges"], device_target(tag.entity)
-            )
+            value = mapper.value_to_grms(serializer.validated_data["value"], key, tag_ranges, device_target(tag.entity))
         except MappingError as exc:
             return Response({"value": [str(exc)], "code": exc.code}, status=400)
         if value is SKIP:
             # The rule drops invalid values: nothing is sent to the device.
             return Response({"tag": tag_with_type(tag, mapper), "rpc": None, "skipped": True})
-
-        is_attribute = isinstance(tag, AttributeKv)
-        key = tag.attribute_key if is_attribute else tag.key.key
 
         mapping = find_compatible_field({key: value})
         if key not in mapping:

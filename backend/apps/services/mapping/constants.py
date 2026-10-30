@@ -23,6 +23,7 @@ class OnInvalid(models.TextChoices):
     REJECT = "reject", "Reject"
     SKIP = "skip", "Skip"
     CLAMP = "clamp", "Clamp"
+    CONST = "const", "Const"
 
 
 class TransformType(models.TextChoices):
@@ -41,5 +42,3 @@ class LinearOp(models.TextChoices):
 
 NUMERIC_VALUE_TYPES = (ValueType.INTEGER, ValueType.NUMBER)
 NUMERIC_TRANSFORMS = (TransformType.RANGE, TransformType.LINEAR)
-# Fields a level override may not replace: they identify the rule.
-RULE_IDENTITY_FIELDS = ("id", "tag_type")

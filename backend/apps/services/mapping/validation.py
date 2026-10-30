@@ -1,7 +1,7 @@
 """
 Structural checks of a mapping rule, run before it is saved. They guarantee the engine never
 meets a malformed rule: ``min < max``, ``step > 0``, no division by zero, an enum that converts
-back and forth unambiguously. Checks against the tenant's tag types live with the models.
+back and forth unambiguously.
 """
 
 from services.mapping.constants import (
@@ -104,40 +104,13 @@ def _transform_errors(transform, value_type: str, direction: str) -> list[str]:
     return []
 
 
-def _validate_errors(limits, value_type: str) -> list[str]:
-    if limits is None:
-        return []
-    if not isinstance(limits, dict):
-        return ["validate must be an object."]
-    errors = []
-    if any(key in limits for key in ("min", "max", "step")):
-        if value_type not in NUMERIC_VALUE_TYPES:
-            errors.append("validate.min/max/step need a numeric value_type.")
-        else:
-            low, high, step = limits.get("min"), limits.get("max"), limits.get("step")
-            if any(bound is not None and not is_number(bound) for bound in (low, high)):
-                errors.append("validate.min and validate.max must be numbers.")
-            elif low is not None and high is not None and low >= high:
-                errors.append("validate.min must be less than validate.max.")
-            if step is not None and (not is_number(step) or step <= 0):
-                errors.append("validate.step must be a positive number.")
-    if "allowed" in limits:
-        allowed = limits["allowed"]
-        if not isinstance(allowed, list) or not allowed:
-            errors.append("validate.allowed must be a non-empty list.")
-        elif wrong := [item for item in allowed if not matches_value_type(item, value_type)]:
-            errors.append(f"validate.allowed values {wrong} are not {value_type}.")
-    return errors
-
-
 def rule_errors(rule) -> list[str]:
     """Every problem of a rule; an empty list means the engine can run it."""
     if not isinstance(rule, dict):
         return ["A rule must be an object."]
     errors = []
-    for field in ("id", "tag_type"):
-        if not isinstance(rule.get(field), str) or not rule[field].strip():
-            errors.append(f"{field} must be a non-empty string.")
+    if not isinstance(rule.get("tag_name"), str) or not rule["tag_name"].strip():
+        errors.append("tag_name must be a non-empty string.")
     external = rule.get("external")
     value_type = external.get("value_type") if isinstance(external, dict) else None
     if value_type not in ValueType.values:
@@ -152,6 +125,9 @@ def rule_errors(rule) -> list[str]:
         return errors
     if on_invalid == OnInvalid.CLAMP and value_type not in NUMERIC_VALUE_TYPES:
         errors.append("on_invalid clamp needs a numeric value_type.")
+    if on_invalid == OnInvalid.CONST and rule.get("on_invalid_value") is None:
+        errors.append("on_invalid const needs on_invalid_value.")
+    elif on_invalid != OnInvalid.CONST and rule.get("on_invalid_value") is not None:
+        errors.append("on_invalid_value is used only with on_invalid const.")
     errors += _transform_errors(rule.get("transform"), value_type, direction)
-    errors += _validate_errors(rule.get("validate"), value_type)
     return errors

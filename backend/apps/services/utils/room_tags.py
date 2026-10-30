@@ -53,7 +53,7 @@ def _with_tag_types(rows, tags, lookup, mapper, room):
     convert the tag to the integrator's form."""
     for row, tag in zip(rows, tags, strict=True):
         tag.update(_tag_type_fields(lookup(row)))
-        mapper.tag_to_external(tag, Target(row["entity_id"], room.id, room.type_id))
+        mapper.tag_to_external(tag, Target(row["entity_id"], room.type_id))
     return tags
 
 

@@ -1,7 +1,7 @@
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from services.models import Integration, MappingOverride, MappingProfile, TagType, TagTypeGroup
+from services.models import Integration, MappingProfile
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"  # admin@gmail.com's tenant
 OTHER_TENANT_ID = "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
@@ -11,8 +11,7 @@ ROOM_ID = "df77f910-2dcd-45cf-b6be-054c744561a7"
 DEVICE_ID = "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
 
 FAN_SPEED = {
-    "id": "fan_speed",
-    "tag_type": "FCUSPEED",
+    "tag_name": "fanSpeed",
     "external": {"value_type": "integer"},
     "transform": {
         "type": "enum",
@@ -20,8 +19,7 @@ FAN_SPEED = {
     },
 }
 DIMMER = {
-    "id": "dimmer",
-    "tag_type": "Light Dimmer",
+    "tag_name": "dimmer",
     "external": {"value_type": "integer"},
     "transform": {"type": "range", "grms": {"min": 0, "max": 100}, "external": {"min": 0, "max": 100, "step": 10}},
     "on_invalid": "clamp",
@@ -32,16 +30,15 @@ def enum_transform(*pairs):
     return {"type": "enum", "map": [{"grms": grms, "external": external} for grms, external in pairs]}
 
 
-def profile_body(*rules, code="hoteza", integrator="hoteza"):
-    return {"code": code, "name": "Hoteza", "integrator": integrator, "rules": list(rules or (FAN_SPEED, DIMMER))}
+def profile_body(*rules, name="Hoteza", integrator="hoteza", **scope):
+    """A profile body; ``scope`` adds scope, room_type or device."""
+    rules = list(rules or (FAN_SPEED, DIMMER))
+    return {"name": name, "integrator": integrator, "rules": rules, **scope}
 
 
-def tag_type(name, ranges, tenant_id=TENANT_ID):
-    group, _ = TagTypeGroup.objects.get_or_create(name="Hoteza", tenant_id=tenant_id)
-    instance = TagType.objects.create(name=name, group=group, tenant_id=tenant_id)
-    for value in ranges:
-        instance.tag_ranges.create(range_value=value)
-    return instance
+def fan_speed_with_medium(external):
+    """FAN_SPEED with "Medium" sent as ``external``."""
+    return {**FAN_SPEED, "transform": enum_transform(("Low", 1), ("Medium", external), ("High", 3))}
 
 
 class MappingTestCase(BaseTestCase):
@@ -61,8 +58,6 @@ class MappingTestCase(BaseTestCase):
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
-        self.fan_speed = tag_type("FCUSPEED", ["Low", "Medium", "High"])
-        self.dimmer = tag_type("Light Dimmer", ["0-100"])
 
     def create_profile(self, body=None):
         response = self.post(reverse("services:mapping-profile-list"), body or profile_body(), format="json")
@@ -76,27 +71,15 @@ class MappingTestCase(BaseTestCase):
 class MappingProfileAPITest(MappingTestCase):
     def test_create_and_list(self):
         profile = self.create_profile()
-        rules = {rule["id"]: rule for rule in profile["rules"]}
-        self.assertEqual(set(rules), {"fan_speed", "dimmer"})
-        self.assertEqual(rules["fan_speed"]["tag_type"], "FCUSPEED")
-        self.assertEqual(rules["fan_speed"]["direction"], "both")
-        self.assertEqual(rules["fan_speed"]["on_invalid"], "reject")
-        self.assertIsNone(rules["fan_speed"]["validate"])
+        rules = {rule["tag_name"]: rule for rule in profile["rules"]}
+        self.assertEqual(set(rules), {"fanSpeed", "dimmer"})
+        self.assertEqual(rules["fanSpeed"]["direction"], "both")
+        self.assertEqual(rules["fanSpeed"]["on_invalid"], "reject")
+        self.assertNotIn("id", rules["fanSpeed"])
 
         response = self.get(reverse("services:mapping-profile-list"))
         assert response.data is not None
-        self.assertEqual([row["code"] for row in response.data["results"]], ["hoteza"])
-
-    def test_rule_must_fit_its_tag_type(self):
-        turbo = {**FAN_SPEED, "transform": {"type": "enum", "map": [{"grms": "Turbo", "external": 4}]}}
-        response = self.post(reverse("services:mapping-profile-list"), profile_body(turbo), format="json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Turbo", str(response.data))
-
-        wide = {**DIMMER, "transform": {**DIMMER["transform"], "grms": {"min": 0, "max": 255}}}
-        response = self.post(reverse("services:mapping-profile-list"), profile_body(wide), format="json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("0-255", str(response.data))
+        self.assertEqual([row["name"] for row in response.data["results"]], ["Hoteza"])
 
     def test_rule_structure_is_validated(self):
         broken = {**DIMMER, "transform": {**DIMMER["transform"], "external": {"min": 0, "max": 100, "step": 0}}}
@@ -104,33 +87,45 @@ class MappingProfileAPITest(MappingTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("step", str(response.data))
 
-    def test_tag_type_of_another_tenant(self):
-        tag_type("Foreign", [True, False], tenant_id=OTHER_TENANT_ID)
-        foreign = {**FAN_SPEED, "tag_type": "Foreign"}
-        response = self.post(reverse("services:mapping-profile-list"), profile_body(foreign), format="json")
-        self.assertEqual(response.status_code, 400)
-
-    def test_one_rule_per_tag_type_and_id(self):
-        twin = {**FAN_SPEED, "id": "fan_speed_2"}
+    def test_one_rule_per_tag_name(self):
+        twin = {**FAN_SPEED, "direction": "to_external"}
         response = self.post(reverse("services:mapping-profile-list"), profile_body(FAN_SPEED, twin), format="json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Duplicate tag types", str(response.data))
+        self.assertIn("Duplicate tag names", str(response.data))
 
-    def test_code_is_unique_per_tenant(self):
+    def test_tags_of_one_kind_get_their_own_rules(self):
+        # Two dimmers of one device with different GRMS scales: one rule per tag name.
+        dimmer_255 = {
+            **DIMMER,
+            "tag_name": "dimmer_2",
+            "transform": {**DIMMER["transform"], "grms": {"min": 0, "max": 255}},
+        }
+        profile = self.create_profile(profile_body(DIMMER, dimmer_255))
+        rules = {rule["tag_name"]: rule["transform"]["grms"] for rule in profile["rules"]}
+        self.assertEqual(rules, {"dimmer": {"min": 0, "max": 100}, "dimmer_2": {"min": 0, "max": 255}})
+
+    def test_tag_name_is_required(self):
+        response = self.post(
+            reverse("services:mapping-profile-list"), profile_body({**FAN_SPEED, "tag_name": ""}), format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("tag_name", str(response.data))
+
+    def test_name_is_unique_per_tenant(self):
         self.create_profile()
         response = self.post(reverse("services:mapping-profile-list"), profile_body(), format="json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("code", response.data)
+        self.assertIn("name", response.data)
 
     def test_update_replaces_rules(self):
         profile = self.create_profile()
         url = reverse("services:mapping-profile-detail", args=[profile["id"]])
         response = self.put(url, profile_body(DIMMER), format="json")
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual([rule["id"] for rule in response.data["rules"]], ["dimmer"])
+        self.assertEqual([rule["tag_name"] for rule in response.data["rules"]], ["dimmer"])
 
     def test_profile_of_another_tenant_is_hidden(self):
-        profile = MappingProfile.objects.create(code="x", name="x", integrator_id="Test", tenant_id=OTHER_TENANT_ID)
+        profile = MappingProfile.objects.create(name="x", integrator_id="Test", tenant_id=OTHER_TENANT_ID)
         response = self.get(reverse("services:mapping-profile-detail", args=[profile.pk]))
         self.assertEqual(response.status_code, 404)
 
@@ -141,74 +136,92 @@ class MappingProfileAPITest(MappingTestCase):
         self.assertEqual(response.status_code, 204)
         self.assertIsNone(Integration.objects.get(pk=HOTEZA_INTEGRATION_ID).mapping_profile_id)
 
-    def test_tag_type_used_by_a_rule_cannot_be_deleted(self):
+
+class ProfileAutoAttachTest(MappingTestCase):
+    """A new tenant profile is attached to the integration of its integrator when that has none."""
+
+    def integration_profile_id(self):
+        profile_id = Integration.objects.get(pk=HOTEZA_INTEGRATION_ID).mapping_profile_id
+        return str(profile_id) if profile_id else None
+
+    def test_first_profile_is_attached(self):
+        profile = self.create_profile()
+        self.assertEqual(self.integration_profile_id(), profile["id"])
+        self.assertEqual([str(pk) for pk in profile["integrations"]], [HOTEZA_INTEGRATION_ID])
+
+    def test_attached_profile_is_not_replaced(self):
+        first = self.create_profile()
+        second = self.create_profile(profile_body(name="Hoteza v2"))
+        self.assertEqual(self.integration_profile_id(), first["id"])
+        self.assertEqual(second["integrations"], [])
+
+    def test_scoped_profile_is_not_attached(self):
+        self.create_profile(profile_body(name="room-101", scope="device", device=DEVICE_ID))
+        self.assertIsNone(self.integration_profile_id())
+
+    def test_profile_of_another_integrator_is_not_attached(self):
+        self.create_profile(profile_body(name="test", integrator="Test"))
+        self.assertIsNone(self.integration_profile_id())
+
+    def test_inactive_integration_is_not_attached(self):
+        Integration.objects.filter(pk=HOTEZA_INTEGRATION_ID).update(is_active=False)
         self.create_profile()
-        response = self.delete(reverse("services:tag-type-detail", args=[self.fan_speed.pk]))
-        self.assertEqual(response.status_code, 409)
+        self.assertIsNone(self.integration_profile_id())
 
-    def test_rule_for_shared_tag_type(self):
-        tag_type("SharedFan", ["Low", "High"], tenant_id=None)
-        shared = {**FAN_SPEED, "tag_type": "SharedFan", "transform": enum_transform(("Low", 1), ("High", 3))}
-        profile = self.create_profile(profile_body(shared))
-        self.assertEqual(profile["rules"][0]["tag_type"], "SharedFan")
 
-    def test_own_tag_type_wins_over_shared_one(self):
-        # The shared FCUSPEED has no "Low": the rule passes only against the tenant's own type.
-        tag_type("FCUSPEED", ["Off"], tenant_id=None)
-        self.create_profile(profile_body(FAN_SPEED))
+class ScopedMappingProfileAPITest(MappingTestCase):
+    def post_profile(self, body):
+        return self.post(reverse("services:mapping-profile-list"), body, format="json")
 
-    def update_tag_type(self, ranges):
-        body = {"name": "FCUSPEED", "group": str(self.fan_speed.group_id), "tag_ranges": ranges}
-        return self.put(reverse("services:tag-type-detail", args=[self.fan_speed.pk]), body, format="json")
+    def test_create_room_type_and_device_profiles(self):
+        room_type = self.create_profile(
+            profile_body(FAN_SPEED, name="suite", scope="room_type", room_type=ROOM_TYPE_ID)
+        )
+        self.assertEqual(
+            (room_type["scope"], str(room_type["room_type"]), room_type["device"]), ("room_type", ROOM_TYPE_ID, None)
+        )
+        device = self.create_profile(profile_body(DIMMER, name="room-101", scope="device", device=DEVICE_ID))
+        self.assertEqual(str(device["device"]), DEVICE_ID)
 
-    def test_tag_type_ranges_must_keep_fitting_rules(self):
-        self.create_profile()
-        response = self.update_tag_type(["Medium", "High"])
+        response = self.get(reverse("services:mapping-profile-list"), {"scope": "device"})
+        assert response.data is not None
+        self.assertEqual([row["name"] for row in response.data["results"]], ["room-101"])
+
+    def test_target_must_match_scope(self):
+        cases = (
+            ({"scope": "room_type"}, "room_type"),
+            ({"scope": "device", "room_type": ROOM_TYPE_ID, "device": DEVICE_ID}, "room_type"),
+            ({"scope": "tenant", "device": DEVICE_ID}, "device"),
+        )
+        for scope, field in cases:
+            with self.subTest(scope=scope):
+                response = self.post_profile(profile_body(name="x", **scope))
+                self.assertEqual(response.status_code, 400)
+                self.assertIn(field, response.data)
+
+    def test_one_profile_per_target_and_integrator(self):
+        body = profile_body(name="room-101", scope="device", device=DEVICE_ID)
+        self.create_profile(body)
+        response = self.post_profile({**body, "name": "room-101-bis"})
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Low", str(response.data))
-        response = self.update_tag_type(["Low", "Medium", "High", "Turbo"])
+        self.assertIn("device", response.data)
+        # Another integrator has its own profiles for the same device.
+        self.create_profile({**body, "name": "test-101", "integrator": "Test"})
+
+    def test_attached_profile_stays_tenant(self):
+        profile = self.create_profile()
+        self.attach_profile(profile["id"])
+        url = reverse("services:mapping-profile-detail", args=[profile["id"]])
+        response = self.put(url, profile_body(scope="device", device=DEVICE_ID), format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("scope", response.data)
+
+    def test_put_keeps_scope_when_left_out(self):
+        profile = self.create_profile(profile_body(name="room-101", scope="device", device=DEVICE_ID))
+        url = reverse("services:mapping-profile-detail", args=[profile["id"]])
+        response = self.put(url, profile_body(DIMMER, name="room-101"), format="json")
         self.assertEqual(response.status_code, 200, response.data)
-
-    def test_tag_type_ranges_must_keep_fitting_overrides(self):
-        self.attach_profile(self.create_profile()["id"])
-        MappingOverride.objects.create(
-            integration_id=HOTEZA_INTEGRATION_ID,
-            level=MappingOverride.Level.TENANT,
-            rule_overrides={"fan_speed": {"transform": enum_transform(("Low", 1), ("High", 3))}},
-        )
-        response = self.update_tag_type(["Medium", "High"])
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("Override", str(response.data))
-
-
-class MappingProfileTestEndpointTest(MappingTestCase):
-    def setUp(self):
-        super().setUp()
-        self.url = reverse("services:mapping-profile-test", args=[self.create_profile()["id"]])
-
-    def run_rule(self, **body):
-        return self.post(self.url, body, format="json")
-
-    def test_to_external(self):
-        response = self.run_rule(
-            rule="fan_speed", direction="to_external", input="Medium", tag_ranges=["Low", "Medium", "High"]
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {"output": 2, "tag_ranges": [1, 2, 3]})
-
-    def test_to_grms(self):
-        response = self.run_rule(rule="dimmer", direction="to_grms", input="55", tag_ranges=["0-100"])
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, {"output": 60})
-
-    def test_unconvertible_value(self):
-        response = self.run_rule(rule="fan_speed", direction="to_grms", input=4)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data["code"], "unmapped")
-
-    def test_unknown_rule(self):
-        response = self.run_rule(rule="nope", direction="to_grms", input=1)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual((response.data["scope"], str(response.data["device"])), ("device", DEVICE_ID))
 
 
 class IntegrationMappingProfileTest(MappingTestCase):
@@ -227,7 +240,13 @@ class IntegrationMappingProfileTest(MappingTestCase):
         self.assertIsNone(response.data["mapping_profile"])
 
     def test_profile_of_another_integrator(self):
-        profile = self.create_profile(profile_body(code="test", integrator="Test"))
+        profile = self.create_profile(profile_body(name="test", integrator="Test"))
+        response = self.put_integration(profile["id"])
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("mapping_profile", response.data)
+
+    def test_scoped_profile_cannot_be_attached(self):
+        profile = self.create_profile(profile_body(name="room-101", scope="device", device=DEVICE_ID))
         response = self.put_integration(profile["id"])
         self.assertEqual(response.status_code, 400)
         self.assertIn("mapping_profile", response.data)
@@ -238,79 +257,3 @@ class IntegrationMappingProfileTest(MappingTestCase):
         response = self.put(reverse("services:integration-detail", args=[HOTEZA_INTEGRATION_ID]), body, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("mapping_profile", response.data)
-
-
-class MappingOverrideAPITest(MappingTestCase):
-    def setUp(self):
-        super().setUp()
-        self.profile = self.create_profile()
-        self.attach_profile(self.profile["id"])
-
-    def create_override(self, **body):
-        body = {"integration": HOTEZA_INTEGRATION_ID, "level": "tenant", "rule_overrides": {}, **body}
-        return self.post(reverse("services:mapping-override-list"), body, format="json")
-
-    def test_levels(self):
-        reject = {"dimmer": {"on_invalid": "reject"}}
-        for level, target in (("tenant", {}), ("room_type", {"room_type": ROOM_TYPE_ID}), ("room", {"room": ROOM_ID})):
-            with self.subTest(level=level):
-                response = self.create_override(level=level, rule_overrides=reject, **target)
-                self.assertEqual(response.status_code, 201, response.data)
-        response = self.create_override(level="device", device=DEVICE_ID, rule_overrides=reject)
-        self.assertEqual(response.status_code, 201, response.data)
-
-        response = self.get(reverse("services:mapping-override-list"), {"level": "device"})
-        assert response.data is not None
-        self.assertEqual([str(row["device"]) for row in response.data["results"]], [DEVICE_ID])
-
-    def test_target_must_match_level(self):
-        response = self.create_override(level="room")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("room", response.data)
-
-        response = self.create_override(level="tenant", room=ROOM_ID)
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("room", response.data)
-
-    def test_one_override_per_target(self):
-        self.assertEqual(self.create_override().status_code, 201)
-        self.assertEqual(self.create_override().status_code, 400)
-
-    def test_rule_overrides_are_validated(self):
-        response = self.create_override(rule_overrides={"nope": {"on_invalid": "reject"}})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("not in the integration", str(response.data))
-
-        response = self.create_override(rule_overrides={"dimmer": {"tag_type": "FCUSPEED"}})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("cannot change", str(response.data))
-
-        # The merged rule is checked like a profile rule: a 0-255 GRMS range does not fit "0-100".
-        wide = {"transform": {**DIMMER["transform"], "grms": {"min": 0, "max": 255}}}
-        response = self.create_override(rule_overrides={"dimmer": wide})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("0-255", str(response.data))
-
-    def test_integration_without_profile(self):
-        self.attach_profile(None)
-        response = self.create_override()
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("integration", response.data)
-
-    def test_profile_update_keeps_overrides_valid(self):
-        self.assertEqual(self.create_override(rule_overrides={"dimmer": {"on_invalid": "reject"}}).status_code, 201)
-        url = reverse("services:mapping-profile-detail", args=[self.profile["id"]])
-        response = self.put(url, profile_body(FAN_SPEED), format="json")  # drops the dimmer rule
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("dimmer", str(response.data))
-
-    def test_update_and_delete(self):
-        override = self.create_override().data
-        url = reverse("services:mapping-override-detail", args=[override["id"]])
-        body = {"integration": HOTEZA_INTEGRATION_ID, "level": "tenant", "rule_overrides": {"dimmer": {}}}
-        response = self.put(url, body, format="json")
-        self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.data["rule_overrides"], {"dimmer": {}})
-
-        self.assertEqual(self.delete(url).status_code, 204)
-        self.assertFalse(MappingOverride.objects.exists())

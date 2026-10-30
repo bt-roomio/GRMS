@@ -4,14 +4,17 @@ from django.urls import reverse
 
 from main.models import Device, Room
 from services.consumers.tags import RoomTagsConsumer, TagDetailConsumer
-from services.models import Integration, Integrator, MappingOverride
+from services.models import Integration, Integrator, MappingRule
 from services.tests.test_mapping_api import (
     DEVICE_ID,
+    DIMMER,
     HOTEZA_INTEGRATION_ID,
     ROOM_ID,
     ROOM_TYPE_ID,
     TENANT_ID,
     MappingTestCase,
+    fan_speed_with_medium,
+    profile_body,
 )
 from shuttle.models import AttributeKv
 
@@ -31,8 +34,8 @@ def tag_type_entry(tag_name, tag_type, tag_ranges):
 
 
 class TagMappingTestCase(MappingTestCase):
-    """Tags of the fixture device in room 101: ``fanSpeed`` (FCUSPEED, enum 1..3) and ``dimmer``
-    (Light Dimmer, 0..100 in steps of 10), read through the Hoteza integration's tokens."""
+    """Tags of the fixture device in room 101: ``fanSpeed`` (enum 1..3) and ``dimmer`` (0..100 in
+    steps of 10), read through the Hoteza integration's tokens. Rules match tags by ``tag_name``."""
 
     def setUp(self):
         super().setUp()
@@ -60,10 +63,12 @@ class TagMappingTestCase(MappingTestCase):
             entity_id=DEVICE_ID, entity_type="DEVICE", attribute_type=scope, attribute_key=key, **value
         )
 
-    def override(self, level, rule_overrides, **target):
-        return MappingOverride.objects.create(
-            integration_id=HOTEZA_INTEGRATION_ID, level=level, rule_overrides=rule_overrides, **target
-        )
+    def scoped_profile(self, name, *rules, **scope):
+        # Created with the JWT client: the tag requests use the integration's tokens.
+        self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
+        profile = self.create_profile(profile_body(*rules, name=name, **scope))
+        self.client.credentials(HTTP_CLIENTTOKEN=CLIENT_TOKEN, HTTP_ACCESSTOKEN=ACCESS_TOKEN)
+        return profile
 
     def room_tags(self):
         response = self.get(reverse("services:tags-by-room-list", args=[ROOM_ID]))
@@ -100,39 +105,79 @@ class TagReadMappingTest(TagMappingTestCase):
         self.assertEqual(tags["fanSpeed"]["tag_ranges"], ["Low", "Medium", "High"])
 
     def test_tag_without_rule_stays(self):
+        self.attribute("mode", str_v="Medium")
+        self.assertEqual(self.room_tags()["mode"]["value"], "Medium")
+
+    def test_rule_does_not_need_tag_types_entry(self):
+        AttributeKv.objects.filter(attribute_key="TAG_TYPES").update(json_v=[])
+        tag = self.room_tags()["fanSpeed"]
+        self.assertEqual(tag["value"], 2)
+        self.assertIsNone(tag["tag_type"])
+        self.assertIsNone(tag["tag_ranges"])
+
+    def test_tags_of_one_type_on_one_device_convert_apart(self):
+        dimmer_2 = self.attribute("dimmer_2", long_v=128)
         AttributeKv.objects.filter(attribute_key="TAG_TYPES").update(
-            json_v=[tag_type_entry("fanSpeed", "Other", ["Low", "Medium", "High"])]
+            json_v=[
+                tag_type_entry("dimmer", "Light Dimmer", ["0-100"]),
+                tag_type_entry("dimmer_2", "Light Dimmer", ["0-255"]),
+            ]
         )
-        self.assertEqual(self.room_tags()["fanSpeed"]["value"], "Medium")
+        MappingRule.objects.create(
+            profile_id=self.profile["id"],
+            tag_name="dimmer_2",
+            external=DIMMER["external"],
+            transform={**DIMMER["transform"], "grms": {"min": 0, "max": 255}},
+        )
+        tags = self.room_tags()
+        self.assertEqual(tags["dimmer"]["value"], 50)
+        self.assertEqual(tags["dimmer_2"]["value"], 50)
+        self.assertEqual(self.tag(dimmer_2)["value"], 50)
 
     def test_unmapped_stored_value_goes_out_as_null(self):
         AttributeKv.objects.filter(pk=self.fan.pk).update(str_v="Turbo")
         self.assertIsNone(self.room_tags()["fanSpeed"]["value"])
 
-    def test_most_specific_override_wins(self):
-        def medium_as(external):
-            pairs = [{"grms": "Low", "external": 1}, {"grms": "Medium", "external": external}]
-            return {"fan_speed": {"transform": {"type": "enum", "map": pairs}}}
 
-        self.override(MappingOverride.Level.TENANT, medium_as(10))
-        self.assertEqual(self.room_tags()["fanSpeed"]["value"], 10)
-        self.override(MappingOverride.Level.ROOM_TYPE, medium_as(20), room_type_id=ROOM_TYPE_ID)
+class ScopedProfileMappingTest(TagMappingTestCase):
+    """A tag takes its rule from the device profile, then the room type profile, then the
+    integration's profile."""
+
+    def test_most_specific_profile_wins(self):
+        self.assertEqual(self.room_tags()["fanSpeed"]["value"], 2)
+        self.scoped_profile("suite", fan_speed_with_medium(20), scope="room_type", room_type=ROOM_TYPE_ID)
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 20)
-        self.override(MappingOverride.Level.ROOM, medium_as(30), room_id=ROOM_ID)
-        self.assertEqual(self.room_tags()["fanSpeed"]["value"], 30)
-        self.override(MappingOverride.Level.DEVICE, medium_as(40), device_id=DEVICE_ID)
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 40)
         self.assertEqual(self.tag(self.fan)["value"], 40)
 
-    def test_overrides_of_other_targets_do_not_apply(self):
+    def test_tag_without_rule_in_scoped_profile_falls_back(self):
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        tags = self.room_tags()
+        self.assertEqual(tags["fanSpeed"]["value"], 40)
+        self.assertEqual(tags["dimmer"]["value"], 50)  # from the integration's profile
+
+    def test_profiles_of_other_targets_do_not_apply(self):
         other_device = Device.objects.exclude(pk=DEVICE_ID).filter(tenant_id=TENANT_ID).first()
         assert other_device is not None
-        self.override(
-            MappingOverride.Level.DEVICE,
-            {"fan_speed": {"transform": {"type": "enum", "map": [{"grms": "Medium", "external": 99}]}}},
-            device_id=other_device.pk,
-        )
+        self.scoped_profile("other", fan_speed_with_medium(99), scope="device", device=other_device.pk)
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 2)
+
+    def test_profiles_of_another_integrator_do_not_apply(self):
+        self.scoped_profile("test-101", fan_speed_with_medium(99), integrator="Test", scope="device", device=DEVICE_ID)
+        self.assertEqual(self.room_tags()["fanSpeed"]["value"], 2)
+
+    def test_scoped_profiles_need_the_integration_profile(self):
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        Integration.objects.filter(pk=HOTEZA_INTEGRATION_ID).update(mapping_profile=None)
+        self.assertEqual(self.room_tags()["fanSpeed"]["value"], "Medium")
+
+    @patch("services.views.tags.prepare_mqtt_request", return_value=RPC_OK)
+    def test_write_uses_scoped_rule(self, rpc):
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        response = self.put_tag(self.fan, 40)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(rpc.call_args.args[2], {"fanSpeed": "Medium"})
 
 
 @patch("services.views.tags.prepare_mqtt_request", return_value=RPC_OK)
@@ -168,7 +213,7 @@ class TagWriteMappingTest(TagMappingTestCase):
         self.assertEqual(rpc.call_args.args[2], {"dimmer": 100})
 
     def test_skip_leaves_tag_unchanged(self, rpc):
-        self.override(MappingOverride.Level.DEVICE, {"dimmer": {"on_invalid": "skip"}}, device_id=DEVICE_ID)
+        MappingRule.objects.filter(profile_id=self.profile["id"], tag_name="dimmer").update(on_invalid="skip")
         response = self.put_tag(self.dimmer, 150)
         self.assertEqual(response.status_code, 200, response.data)
         self.assertTrue(response.data["skipped"])
@@ -176,6 +221,14 @@ class TagWriteMappingTest(TagMappingTestCase):
         rpc.assert_not_called()
         self.dimmer.refresh_from_db()
         self.assertEqual(self.dimmer.long_v, 47)
+
+    def test_const_writes_its_value(self, rpc):
+        MappingRule.objects.filter(profile_id=self.profile["id"], tag_name="fanSpeed").update(
+            on_invalid="const", on_invalid_value="Low"
+        )
+        response = self.put_tag(self.fan, 9)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(rpc.call_args.args[2], {"fanSpeed": "Low"})
 
     def test_without_profile_value_written_as_is(self, rpc):
         Integration.objects.filter(pk=HOTEZA_INTEGRATION_ID).update(mapping_profile=None)

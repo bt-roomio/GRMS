@@ -3,7 +3,6 @@ from django.test import SimpleTestCase
 from services.mapping.engine import (
     SKIP,
     MappingError,
-    apply_overrides,
     ranges_to_external,
     to_external,
     to_grms,
@@ -11,7 +10,7 @@ from services.mapping.engine import (
 
 
 def rule(transform, value_type="integer", **fields):
-    return {"id": "rule", "tag_type": "Type", "external": {"value_type": value_type}, "transform": transform, **fields}
+    return {"tag_name": "tag", "external": {"value_type": value_type}, "transform": transform, **fields}
 
 
 def enum(*pairs):
@@ -141,24 +140,39 @@ class PassthroughTest(SimpleTestCase):
         self.assertEqual(to_external(rule({"type": "passthrough"}, value_type="string"), "Eco"), "Eco")
 
 
-class ValidateTest(SimpleTestCase):
-    def test_bounds_and_step(self):
-        setpoint = {**SETPOINT, "on_invalid": "reject", "validate": {"min": 16, "max": 32, "step": 0.5}}
-        self.assertEqual(to_grms(setpoint, 21.5), 21.5)
-        with self.assertRaises(MappingError):
-            to_grms(setpoint, 21.3)
-        with self.assertRaises(MappingError):
-            to_grms(setpoint, 33)
+class RangeBoundsTest(SimpleTestCase):
+    """A range rule keeps incoming values within its external bounds, as on_invalid says."""
 
-    def test_clamp_snaps_to_step(self):
-        setpoint = {**SETPOINT, "validate": {"min": 16, "max": 32, "step": 0.5}}
-        self.assertEqual(to_grms(setpoint, 21.3), 21.5)
-        self.assertEqual(to_grms(setpoint, 40), 32)
+    def test_reject(self):
+        with self.assertRaises(MappingError):
+            to_grms({**DIMMER, "on_invalid": "reject"}, 150)
 
-    def test_allowed(self):
-        scene = rule(enum((True, 1)), validate={"allowed": [1]}, on_invalid="skip")
-        self.assertIs(to_grms(scene, 1), True)
-        self.assertIs(to_grms(scene, 0), SKIP)
+    def test_skip(self):
+        self.assertIs(to_grms({**DIMMER, "on_invalid": "skip"}, 150), SKIP)
+
+    def test_clamp(self):
+        self.assertEqual(to_grms(DIMMER, 150), 100)
+
+    def test_const(self):
+        dimmer = {**DIMMER, "on_invalid": "const", "on_invalid_value": 0}
+        self.assertEqual(to_grms(dimmer, 150), 0)
+        self.assertEqual(to_grms(dimmer, 50), 50)  # a valid value is converted as usual
+
+
+class ConstTest(SimpleTestCase):
+    def test_unmapped_enum_value(self):
+        fan_speed = {**FAN_SPEED, "on_invalid": "const", "on_invalid_value": "Low"}
+        self.assertEqual(to_grms(fan_speed, 9), "Low")
+
+    def test_value_outside_tag_ranges(self):
+        setpoint = {**SETPOINT, "on_invalid": "const", "on_invalid_value": 22}
+        self.assertEqual(to_grms(setpoint, 40, ["16-30"]), 22)
+
+    def test_wrong_type_is_still_rejected(self):
+        fan_speed = {**FAN_SPEED, "on_invalid": "const", "on_invalid_value": "Low"}
+        with self.assertRaises(MappingError) as write:
+            to_grms(fan_speed, "fast")
+        self.assertEqual(write.exception.code, "type")
 
 
 class DirectionTest(SimpleTestCase):
@@ -212,17 +226,6 @@ class RangesToExternalTest(SimpleTestCase):
 
     def test_none(self):
         self.assertIsNone(ranges_to_external(FAN_SPEED, None))
-
-
-class OverridesTest(SimpleTestCase):
-    def test_most_specific_level_wins(self):
-        tenant = {"on_invalid": "reject"}
-        device = {"transform": DIMMER_255["transform"], "id": "other", "tag_type": "Other"}
-        merged = apply_overrides(DIMMER, [tenant, None, device])
-        self.assertEqual(merged["on_invalid"], "reject")
-        self.assertEqual(merged["transform"], DIMMER_255["transform"])
-        self.assertEqual((merged["id"], merged["tag_type"]), ("rule", "Type"))  # identity is kept
-        self.assertEqual(DIMMER["on_invalid"], "clamp")  # the profile rule is not mutated
 
 
 class RoundTripTest(SimpleTestCase):

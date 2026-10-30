@@ -4,7 +4,7 @@ from services.mapping.validation import rule_errors
 
 
 def rule(transform, value_type="integer", **fields):
-    return {"id": "rule", "tag_type": "Type", "external": {"value_type": value_type}, "transform": transform, **fields}
+    return {"tag_name": "tag", "external": {"value_type": value_type}, "transform": transform, **fields}
 
 
 def enum(*pairs):
@@ -29,11 +29,9 @@ class RuleErrorsTest(SimpleTestCase):
         )
         self.assert_valid(rule({"type": "linear", "ops": [{"op": "divide", "value": 10}]}, value_type="number"))
         self.assert_valid(rule({"type": "passthrough"}, value_type="string"))
-        self.assert_valid(rule({"type": "passthrough"}, validate={"min": 16, "max": 32, "step": 0.5}))
 
     def test_identity_and_vocabulary(self):
-        self.assert_invalid({**rule({"type": "passthrough"}), "id": ""}, "id must be")
-        self.assert_invalid({**rule({"type": "passthrough"}), "tag_type": None}, "tag_type must be")
+        self.assert_invalid({**rule({"type": "passthrough"}), "tag_name": None}, "tag_name must be")
         self.assert_invalid(rule({"type": "passthrough"}, value_type="float"), "value_type")
         self.assert_invalid(rule({"type": "passthrough"}, direction="sideways"), "direction")
         self.assert_invalid(rule({"type": "passthrough"}, on_invalid="ignore"), "on_invalid")
@@ -72,10 +70,8 @@ class RuleErrorsTest(SimpleTestCase):
     def test_clamp_needs_numbers(self):
         self.assert_invalid(rule(enum(("on", "1")), value_type="string", on_invalid="clamp"), "clamp")
 
-    def test_validate_block(self):
+    def test_const_needs_its_value(self):
         passthrough = {"type": "passthrough"}
-        self.assert_invalid(rule(passthrough, validate={"min": 30, "max": 16}), "validate.min must be less")
-        self.assert_invalid(rule(passthrough, validate={"step": -1}), "validate.step")
-        self.assert_invalid(rule(passthrough, value_type="string", validate={"min": 1}), "numeric value_type")
-        self.assert_invalid(rule(passthrough, validate={"allowed": ["1"]}), "are not integer")
-        self.assert_invalid(rule(passthrough, validate={"allowed": []}), "non-empty list")
+        self.assert_valid(rule(passthrough, on_invalid="const", on_invalid_value=0))
+        self.assert_invalid(rule(passthrough, on_invalid="const"), "needs on_invalid_value")
+        self.assert_invalid(rule(passthrough, on_invalid_value=0), "only with on_invalid const")

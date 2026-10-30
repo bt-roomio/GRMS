@@ -46,7 +46,7 @@ _room_tag_object_schema = openapi.Schema(
 )
 
 _MAPPING_DESCRIPTION = (
-    " When the integration has a mapping profile, value and tag_ranges of a tag whose tag_type has a rule "
+    " When the integration has a mapping profile, value and tag_ranges of a tag whose tag_name has a rule "
     "are in the integrator's form (a stored value the rule cannot convert is null)."
 )
 
