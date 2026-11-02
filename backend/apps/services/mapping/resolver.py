@@ -55,7 +55,14 @@ class TagMapper:
         rules = MappingRule.objects.filter(Q(profile_id=profile_id) | scoped).select_related("profile")
         for rule in rules:
             profile = rule.profile
-            self.rules[(profile.scope, profile.room_type_id or profile.device_id)][rule.tag_name] = rule.as_rule()
+            by_name = self.rules[(profile.scope, profile.room_type_id or profile.device_id)]
+            as_rule = rule.as_rule()
+            for tag_name in rule.tag_names:
+                if tag_name in by_name:  # the serializer forbids it; rows written past it may still have it
+                    logger.warning(
+                        "Mapping profile %s has several rules for tag %r: the last one applies.", profile.pk, tag_name
+                    )
+                by_name[tag_name] = as_rule
 
     def rule(self, tag_name, target: Target) -> dict | None:
         """The rule of the tag name from the most specific profile that has one; ``None`` when
@@ -82,7 +89,7 @@ class TagMapper:
             tag["value"] = to_external(rule, tag.get("value"))
         except MappingError as exc:
             logger.warning(
-                "Tag %s (%s): value %r not mapped: %s", tag.get("id"), rule["tag_name"], tag.get("value"), exc
+                "Tag %s (%s): value %r not mapped: %s", tag.get("id"), tag.get("tag_name"), tag.get("value"), exc
             )
             tag["value"] = None
         if tag.get("tag_ranges") is not None:
@@ -94,4 +101,4 @@ class TagMapper:
         rule = self.rule(tag_name, target)
         if rule is None:
             return value
-        return to_grms(rule, value, tag_ranges)
+        return to_grms(rule, value, tag_ranges, tag_name)

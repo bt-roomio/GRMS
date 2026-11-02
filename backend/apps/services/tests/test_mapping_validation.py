@@ -4,7 +4,7 @@ from services.mapping.validation import rule_errors
 
 
 def rule(transform, value_type="integer", **fields):
-    return {"tag_name": "tag", "external": {"value_type": value_type}, "transform": transform, **fields}
+    return {"tag_names": ["tag"], "external": {"value_type": value_type}, "transform": transform, **fields}
 
 
 def enum(*pairs):
@@ -31,7 +31,11 @@ class RuleErrorsTest(SimpleTestCase):
         self.assert_valid(rule({"type": "passthrough"}, value_type="string"))
 
     def test_identity_and_vocabulary(self):
-        self.assert_invalid({**rule({"type": "passthrough"}), "tag_name": None}, "tag_name must be")
+        self.assert_invalid({**rule({"type": "passthrough"}), "tag_names": None}, "tag_names must be")
+        self.assert_invalid({**rule({"type": "passthrough"}), "tag_names": []}, "tag_names must be")
+        self.assert_invalid({**rule({"type": "passthrough"}), "tag_names": ["a", " "]}, "non-empty strings")
+        self.assert_invalid({**rule({"type": "passthrough"}), "tag_names": ["a", "a"]}, "repeats")
+        self.assert_invalid({**rule({"type": "passthrough"}), "tag_names": ["a" * 256]}, "at most 255")
         self.assert_invalid(rule({"type": "passthrough"}, value_type="float"), "value_type")
         self.assert_invalid(rule({"type": "passthrough"}, direction="sideways"), "direction")
         self.assert_invalid(rule({"type": "passthrough"}, on_invalid="ignore"), "on_invalid")

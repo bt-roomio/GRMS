@@ -7,6 +7,7 @@ back and forth unambiguously.
 from services.mapping.constants import (
     NUMERIC_TRANSFORMS,
     NUMERIC_VALUE_TYPES,
+    TAG_NAME_MAX_LENGTH,
     Direction,
     LinearOp,
     OnInvalid,
@@ -109,8 +110,15 @@ def rule_errors(rule) -> list[str]:
     if not isinstance(rule, dict):
         return ["A rule must be an object."]
     errors = []
-    if not isinstance(rule.get("tag_name"), str) or not rule["tag_name"].strip():
-        errors.append("tag_name must be a non-empty string.")
+    tag_names = rule.get("tag_names")
+    if not isinstance(tag_names, list) or not tag_names:
+        errors.append("tag_names must be a non-empty list.")
+    elif not all(isinstance(name, str) and name.strip() for name in tag_names):
+        errors.append("tag_names must hold non-empty strings.")
+    elif any(len(name) > TAG_NAME_MAX_LENGTH for name in tag_names):
+        errors.append(f"tag_names must be at most {TAG_NAME_MAX_LENGTH} characters long.")
+    elif duplicates := _duplicates(tag_names):
+        errors.append(f"tag_names repeats {duplicates}.")
     external = rule.get("external")
     value_type = external.get("value_type") if isinstance(external, dict) else None
     if value_type not in ValueType.values:

@@ -1,9 +1,10 @@
 """
 Value Mapping Engine: converts a tag value between its GRMS form and an integrator's form.
 
-A rule is a plain dict (one per tag name in an integrator profile, see ``validate_rule``)::
+A rule is a plain dict (for one or more tag names in an integrator profile, see
+``services.mapping.validation.rule_errors``)::
 
-    {"tag_name": "fan_speed", "external": {"value_type": "integer"},
+    {"tag_names": ["fan_speed"], "external": {"value_type": "integer"},
      "direction": "both", "on_invalid": "reject",
      "transform": {"type": "enum", "map": [{"grms": "Low", "external": 1}, ...]}}
 
@@ -224,13 +225,13 @@ def _check_grms(value, tag_ranges, on_invalid: str):
     return normalize_number(min(candidates, key=lambda candidate: abs(candidate - value)))
 
 
-def to_grms(rule: dict, value, tag_ranges=None):
+def to_grms(rule: dict, value, tag_ranges=None, tag_name=None):
     """Integrator value -> GRMS value to write. ``tag_ranges`` (the tag's ranges from its device's
-    ``TAG_TYPES``) is checked when given. Returns ``SKIP`` for an invalid value under
+    ``TAG_TYPES``) is checked when given; ``tag_name`` names the written tag in errors. Returns ``SKIP`` for an invalid value under
     ``on_invalid: skip`` and the rule's ``on_invalid_value`` under ``on_invalid: const``; raises
     ``MappingError`` otherwise."""
     if not applies(rule, Direction.TO_GRMS):
-        raise MappingError(f"The rule of {rule.get('tag_name')!r} does not accept writes.", "direction")
+        raise MappingError(f"The rule of {tag_name or rule.get('tag_names')!r} does not accept writes.", "direction")
     transform, value_type = rule["transform"], rule["external"]["value_type"]
     on_invalid = rule.get("on_invalid", OnInvalid.REJECT)
     value = coerce(value, value_type)

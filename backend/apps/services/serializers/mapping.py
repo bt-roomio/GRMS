@@ -1,21 +1,25 @@
+from collections import Counter
 from dataclasses import dataclass
 
 from rest_framework import serializers
 
 from core.serializers.pagination import PaginationParams, PaginationSerializer
 from main.models import Device, RoomType
+from services.mapping.constants import TAG_NAME_MAX_LENGTH
 from services.mapping.validation import rule_errors
 from services.models import Integration, Integrator, MappingProfile, MappingRule
 
 
 class MappingRuleSerializer(serializers.ModelSerializer):
-    """A rule in its profile JSON form: ``tag_name`` is the attribute or telemetry key of the tags
-    it converts, ``on_invalid_value`` the GRMS value written instead of an invalid one under
+    """A rule in its profile JSON form: ``tag_names`` are the attribute or telemetry keys of the
+    tags it converts, ``on_invalid_value`` the GRMS value written instead of an invalid one under
     ``on_invalid: const``."""
+
+    tag_names = serializers.ListField(child=serializers.CharField(max_length=TAG_NAME_MAX_LENGTH), allow_empty=False)
 
     class Meta:
         model = MappingRule
-        fields = ("tag_name", "external", "direction", "transform", "on_invalid", "on_invalid_value")
+        fields = ("tag_names", "external", "direction", "transform", "on_invalid", "on_invalid_value")
 
     def validate(self, attrs):
         rule = MappingRule(**attrs).as_rule()  # unsaved: model defaults fill direction and on_invalid
@@ -77,8 +81,9 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
         return value
 
     def validate_rules(self, rules):
-        names = [rule["tag_name"] for rule in rules]
-        if duplicates := sorted({name for name in names if names.count(name) > 1}):
+        # A tag takes its rule by name, so a name belongs to one rule of the profile.
+        counts = Counter(name for rule in rules for name in rule["tag_names"])
+        if duplicates := sorted(name for name, count in counts.items() if count > 1):
             raise serializers.ValidationError([f"Duplicate tag names: {duplicates}."])
         return rules
 

@@ -13,7 +13,8 @@ _bad_request_response = openapi.Response(description="Invalid request body.")
 _profile_not_found_response = openapi.Response(description="Mapping profile not found or belongs to another tenant.")
 
 _RULES_DESCRIPTION = (
-    "One rule per tag name: `tag_name` is the attribute or telemetry key of the tags it converts, "
+    "A rule converts the tags named in `tag_names` (attribute or telemetry keys); a tag name belongs to one "
+    "rule of the profile. "
     "`external.value_type` is integer, number, string or boolean, `transform.type` is enum, range, linear "
     "or passthrough, `on_invalid` is reject, skip, clamp or const (writes `on_invalid_value` instead). Rules "
     "replace all rules of the profile. `scope` is tenant (default), room_type or device: a room_type or device "

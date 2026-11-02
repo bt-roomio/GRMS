@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 
 from main.models import Device, Room
@@ -125,7 +126,7 @@ class TagReadMappingTest(TagMappingTestCase):
         )
         MappingRule.objects.create(
             profile_id=self.profile["id"],
-            tag_name="dimmer_2",
+            tag_names=["dimmer_2"],
             external=DIMMER["external"],
             transform={**DIMMER["transform"], "grms": {"min": 0, "max": 255}},
         )
@@ -133,6 +134,28 @@ class TagReadMappingTest(TagMappingTestCase):
         self.assertEqual(tags["dimmer"]["value"], 50)
         self.assertEqual(tags["dimmer_2"]["value"], 50)
         self.assertEqual(self.tag(dimmer_2)["value"], 50)
+
+    def test_one_rule_converts_several_tags(self):
+        self.attribute("dimmer_2", long_v=63)
+        MappingRule.objects.filter(profile_id=self.profile["id"], tag_names=["dimmer"]).update(
+            tag_names=["dimmer", "dimmer_2"]
+        )
+        tags = self.room_tags()
+        self.assertEqual(tags["dimmer"]["value"], 50)
+        self.assertEqual(tags["dimmer_2"]["value"], 60)
+
+    def test_tag_in_two_rules_is_logged(self):
+        # Rows written past the serializer: the resolver warns instead of failing.
+        MappingRule.objects.filter(profile_id=self.profile["id"], tag_names=["fanSpeed"]).update(
+            tag_names=["fanSpeed", "dimmer"]
+        )
+        with self.assertLogs("services.mapping.resolver", "WARNING") as logs:
+            self.room_tags()
+        self.assertIn("several rules for tag 'dimmer'", logs.output[0])
+
+    def test_rule_without_tag_names_is_refused_by_the_database(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            MappingRule.objects.filter(profile_id=self.profile["id"]).update(tag_names=[])
 
     def test_unmapped_stored_value_goes_out_as_null(self):
         AttributeKv.objects.filter(pk=self.fan.pk).update(str_v="Turbo")
@@ -213,7 +236,7 @@ class TagWriteMappingTest(TagMappingTestCase):
         self.assertEqual(rpc.call_args.args[2], {"dimmer": 100})
 
     def test_skip_leaves_tag_unchanged(self, rpc):
-        MappingRule.objects.filter(profile_id=self.profile["id"], tag_name="dimmer").update(on_invalid="skip")
+        MappingRule.objects.filter(profile_id=self.profile["id"], tag_names=["dimmer"]).update(on_invalid="skip")
         response = self.put_tag(self.dimmer, 150)
         self.assertEqual(response.status_code, 200, response.data)
         self.assertTrue(response.data["skipped"])
@@ -223,7 +246,7 @@ class TagWriteMappingTest(TagMappingTestCase):
         self.assertEqual(self.dimmer.long_v, 47)
 
     def test_const_writes_its_value(self, rpc):
-        MappingRule.objects.filter(profile_id=self.profile["id"], tag_name="fanSpeed").update(
+        MappingRule.objects.filter(profile_id=self.profile["id"], tag_names=["fanSpeed"]).update(
             on_invalid="const", on_invalid_value="Low"
         )
         response = self.put_tag(self.fan, 9)

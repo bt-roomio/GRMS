@@ -5,6 +5,9 @@ Vocabulary of a value mapping rule. A rule converts a tag value between its GRMS
 
 from django.db import models
 
+# The longest attribute or telemetry key a rule may name, as the rule's tag_names column holds.
+TAG_NAME_MAX_LENGTH = 255
+
 
 class Direction(models.TextChoices):
     BOTH = "both", "Both"

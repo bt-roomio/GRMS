@@ -11,7 +11,7 @@ ROOM_ID = "df77f910-2dcd-45cf-b6be-054c744561a7"
 DEVICE_ID = "47aef21b-6cc9-4ec5-8573-1a6f491940c0"
 
 FAN_SPEED = {
-    "tag_name": "fanSpeed",
+    "tag_names": ["fanSpeed"],
     "external": {"value_type": "integer"},
     "transform": {
         "type": "enum",
@@ -19,7 +19,7 @@ FAN_SPEED = {
     },
 }
 DIMMER = {
-    "tag_name": "dimmer",
+    "tag_names": ["dimmer"],
     "external": {"value_type": "integer"},
     "transform": {"type": "range", "grms": {"min": 0, "max": 100}, "external": {"min": 0, "max": 100, "step": 10}},
     "on_invalid": "clamp",
@@ -71,7 +71,7 @@ class MappingTestCase(BaseTestCase):
 class MappingProfileAPITest(MappingTestCase):
     def test_create_and_list(self):
         profile = self.create_profile()
-        rules = {rule["tag_name"]: rule for rule in profile["rules"]}
+        rules = {rule["tag_names"][0]: rule for rule in profile["rules"]}
         self.assertEqual(set(rules), {"fanSpeed", "dimmer"})
         self.assertEqual(rules["fanSpeed"]["direction"], "both")
         self.assertEqual(rules["fanSpeed"]["on_invalid"], "reject")
@@ -97,19 +97,33 @@ class MappingProfileAPITest(MappingTestCase):
         # Two dimmers of one device with different GRMS scales: one rule per tag name.
         dimmer_255 = {
             **DIMMER,
-            "tag_name": "dimmer_2",
+            "tag_names": ["dimmer_2"],
             "transform": {**DIMMER["transform"], "grms": {"min": 0, "max": 255}},
         }
         profile = self.create_profile(profile_body(DIMMER, dimmer_255))
-        rules = {rule["tag_name"]: rule["transform"]["grms"] for rule in profile["rules"]}
+        rules = {rule["tag_names"][0]: rule["transform"]["grms"] for rule in profile["rules"]}
         self.assertEqual(rules, {"dimmer": {"min": 0, "max": 100}, "dimmer_2": {"min": 0, "max": 255}})
 
-    def test_tag_name_is_required(self):
-        response = self.post(
-            reverse("services:mapping-profile-list"), profile_body({**FAN_SPEED, "tag_name": ""}), format="json"
-        )
+    def test_one_rule_for_several_tags(self):
+        dimmers = {**DIMMER, "tag_names": ["dimmer", "dimmer_2"]}
+        profile = self.create_profile(profile_body(FAN_SPEED, dimmers))
+        self.assertEqual([rule["tag_names"] for rule in profile["rules"]], [["dimmer", "dimmer_2"], ["fanSpeed"]])
+
+    def test_tag_name_in_two_rules_rejected(self):
+        dimmers = {**DIMMER, "tag_names": ["dimmer", "fanSpeed"]}
+        response = self.post(reverse("services:mapping-profile-list"), profile_body(FAN_SPEED, dimmers), format="json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("tag_name", str(response.data))
+        self.assertIn("Duplicate tag names: ['fanSpeed']", str(response.data))
+
+    def test_tag_names_are_required(self):
+        for tag_names in ([], [""], None):
+            response = self.post(
+                reverse("services:mapping-profile-list"),
+                profile_body({**FAN_SPEED, "tag_names": tag_names}),
+                format="json",
+            )
+            self.assertEqual(response.status_code, 400, tag_names)
+            self.assertIn("tag_names", str(response.data))
 
     def test_name_is_unique_per_tenant(self):
         self.create_profile()
@@ -122,7 +136,7 @@ class MappingProfileAPITest(MappingTestCase):
         url = reverse("services:mapping-profile-detail", args=[profile["id"]])
         response = self.put(url, profile_body(DIMMER), format="json")
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual([rule["tag_name"] for rule in response.data["rules"]], ["dimmer"])
+        self.assertEqual([rule["tag_names"] for rule in response.data["rules"]], [["dimmer"]])
 
     def test_profile_of_another_tenant_is_hidden(self):
         profile = MappingProfile.objects.create(name="x", integrator_id="Test", tenant_id=OTHER_TENANT_ID)
