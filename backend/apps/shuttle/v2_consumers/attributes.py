@@ -1,4 +1,5 @@
 from asgiref.sync import sync_to_async
+from djangochannelsrestframework.decorators import action
 from djangochannelsrestframework.mixins import ListModelMixin
 
 from shuttle.models import AttributeKv
@@ -11,10 +12,15 @@ from shuttle.v2_consumers.generics.subscribe import SubscribeMixin
 class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMixin, ListSubscribeMixin):
     queryset = AttributeKv.objects.all()
     serializer_class = AttributeSerializer
-    group_name = "attribute_kv_updates"
+
+    @property
+    def group_name(self):
+        # The tenant's group, not a global one: otherwise every attribute change of any
+        # hotel was delivered to every subscriber of the stream.
+        return f"attribute_kv_updates_{self.tenant_id}"
 
     def get_queryset(self, **kwargs):
-        query = super().get_queryset(**kwargs)
+        query = super().get_queryset(**kwargs).filter(entity__tenant_id=self.tenant_id)
         params = AttributeFilterParams.check(data=kwargs.get("query_params", {}))
         query = query.get_attributes(  # pyright: ignore
             device=params.get("device"),
@@ -23,6 +29,16 @@ class AttributeConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer, SubscribeMi
         )
         query = self.pagination(query, params.get("page", 1), params.get("size", 25))
         return query
+
+    @action()
+    async def subscribe(self, request_id, action, query_params):
+        await self.check_device_access(query_params.get("device"))
+        await super().subscribe(request_id=request_id, action=action, query_params=query_params)
+
+    @action()
+    async def list_subscribe(self, request_id, action, query_params, **kwargs):
+        await self.check_device_access(query_params.get("device"))
+        await super().list_subscribe(request_id=request_id, action=action, query_params=query_params, **kwargs)
 
     async def get_latest_activity(self, message):
         updates = message.get("updates", []) or []

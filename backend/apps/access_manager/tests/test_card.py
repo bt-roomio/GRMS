@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from access_manager.models import Card, StaffCard
 from core.tests.base import BaseTestCase
+from users.models import User
 
 
 class CardTest(BaseTestCase):
@@ -126,7 +127,8 @@ class CardTest(BaseTestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data["message"], "Card deletion started.")
-        mock_unplug.delay.assert_called_once_with(card_id)
+        karina_id = str(User.objects.get(email="karina@gmail.com").id)
+        mock_unplug.delay.assert_called_once_with(card_id, karina_id)
 
     @patch("access_manager.tasks.unplug_card.disconnect_guests")
     @patch("access_manager.tasks.unplug_card.disconnect_staff")
@@ -174,6 +176,21 @@ class CardTest(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["message"], "Card is deactivated !")
+        self.assertEqual(mock_send_rpc.call_args.kwargs["source"], "roomio")
+        karina_id = str(User.objects.get(email="karina@gmail.com").id)
+        self.assertEqual(mock_send_rpc.call_args.kwargs["user"], karina_id)
+
+    @patch("access_manager.serializers.card.send_rpc_request")
+    def test_disconnect_serializer_works_without_user_context(self, mock_send_rpc):
+        from access_manager.serializers.card import DisconnectCardSerializer
+
+        mock_send_rpc.return_value = {"success": True}
+        serializer = DisconnectCardSerializer(data={"card_id": "f3db0b26-5537-3d9e-a44b-0411ff10dcb5"})
+        serializer.is_valid(raise_exception=True)
+
+        self.assertTrue(serializer.save()["success"])
+        self.assertIsNone(mock_send_rpc.call_args.kwargs["user"])
+        self.assertEqual(mock_send_rpc.call_args.kwargs["source"], "roomio")
 
     def test_disconnect_card_not_found(self):
         url = reverse("access_manager:disconnect-card")

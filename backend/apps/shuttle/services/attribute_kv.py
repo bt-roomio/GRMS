@@ -12,7 +12,7 @@ async def _send_groups(channel_layer, groups_payloads: list[tuple[str, dict]]):
 
 def publish_updates_attribute_batch(updates_by_device: dict[str, list[dict]]):
     """
-    Отправляем пачками: для каждого device_id шлём в каждую группу только изменившиеся данные.
+    Sent in batches: for each device_id, only changed data is sent to each group.
     updates_by_device: { device_id: [ {entity, key, ts, bool_v...}, ... ] }
     """
     channel_layer = get_channel_layer()
@@ -28,7 +28,6 @@ def publish_updates_attribute_batch(updates_by_device: dict[str, list[dict]]):
         payload = {"type": "get_latest_activity", "updates": changed_messages}
         groups_payloads.extend(
             [
-                ("attribute_kv_updates", payload),
                 (f"attribute_kv_updates_{tenant_id}", payload),
                 (f"emergency_status_{tenant_id}", {"type": "get_latest_activity", "updates": changed_messages}),
             ]

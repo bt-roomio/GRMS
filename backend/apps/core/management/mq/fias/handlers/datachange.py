@@ -3,7 +3,8 @@ import logging
 from django.db import transaction
 
 from core.management.mq.fias.exceptions import LookupFailure
-from core.management.mq.fias.utils.guests import resolve_guests_for_datachange, resolve_room
+from core.management.mq.fias.handlers.checkinout import handle_checkin_checkout
+from core.management.mq.fias.utils.guests import find_room, resolve_guests_for_datachange, resolve_room
 from core.management.mq.fias.utils.payloads import build_guest_move_payload
 from core.utils.date import datetime_to_unix
 from services.management.commands.pms_handler import handle_guest_move
@@ -17,6 +18,8 @@ def handle_datachange(data, device):
     `oldRoomName` carries the room being left and identifies the guests unambiguously;
     when it is absent (a plain data update) they are looked up by reservation number.
     A reservation can hold several guests (`shareFlag`), so all of them are moved.
+    When only one of the two rooms exists in GRMS the move becomes a checkout (target
+    unknown) or a checkin (origin unknown) instead of a lookup failure.
     """
     tenant_id = str(device.get("tenant_id"))
     room_name = data.get("roomName")
@@ -25,6 +28,9 @@ def handle_datachange(data, device):
 
     if not room_name:
         raise LookupFailure("Missing required field: roomName")
+
+    if _fall_back_to_checkin_checkout(data, device, tenant_id, room_name, old_room_name):
+        return
 
     new_room = resolve_room(tenant_id, room_name)
     guests = resolve_guests_for_datachange(tenant_id, reservation_number, old_room_name, room_name)
@@ -64,6 +70,42 @@ def handle_datachange(data, device):
             if "title" in payload:
                 guest.title = payload["title"]
             handle_guest_move(guest, payload)
+
+
+def _fall_back_to_checkin_checkout(data, device, tenant_id, room_name, old_room_name):
+    """Turn a move with one side unknown to GRMS into a checkout or a checkin.
+
+    A move out to a room GRMS does not manage means the guest leaves our rooms, so they
+    are checked out of `oldRoomName`; a move in from an unmanaged room means they arrive,
+    so they are checked in to `roomName`. Returns True when the message was handled so.
+    """
+    if not old_room_name or old_room_name == room_name:
+        return False
+
+    new_room = find_room(tenant_id, room_name)
+    old_room = find_room(tenant_id, old_room_name)
+
+    if new_room is None and old_room is not None:
+        logger.info(
+            "datachange reservation=%s: room %s not found, checking out of %s",
+            data.get("reservationNumber"),
+            room_name,
+            old_room_name,
+        )
+        handle_checkin_checkout("checkout", {**data, "roomName": old_room_name}, device)
+        return True
+
+    if new_room is not None and old_room is None:
+        logger.info(
+            "datachange reservation=%s: room %s not found, checking in to %s",
+            data.get("reservationNumber"),
+            old_room_name,
+            room_name,
+        )
+        handle_checkin_checkout("checkin", data, device)
+        return True
+
+    return False
 
 
 def _update_guest_in_place(guest, payload):

@@ -24,6 +24,7 @@ include(
     "components/monitoring.py",
     "components/integrations.py",
     "components/fleet.py",
+    "components/alarms.py",
     "components/brute_force_protection.py",
     "components/nodered.py",
     "components/logging.py",

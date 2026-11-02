@@ -51,6 +51,7 @@ def get_device_cards(device_id: UUID, cards: List = (), connect: bool = True) ->
             | Q(guest__guestpublicspace__public_space__device_public_spaces__device=device)
             | Q(guest__room__type__room_type_public_spaces__public_space__device_public_spaces__device=device),
             is_active=True,
+            card__is_pwd=False,
             card__tenant_id=tenant_id,
             guest__tenant_id=tenant_id,
         )

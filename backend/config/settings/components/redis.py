@@ -1,7 +1,9 @@
 import os
 from typing import Any
 
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+from config.settings.components.base import TESTING
+
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 
 
@@ -52,3 +54,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+WS_SYNC_THREADS = int(os.getenv("WS_SYNC_THREADS", "8"))
+WS_DB_CONN_MAX_AGE = 0 if TESTING else int(os.getenv("WS_DB_CONN_MAX_AGE", "300"))

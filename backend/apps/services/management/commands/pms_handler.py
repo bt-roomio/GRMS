@@ -311,7 +311,7 @@ def handle_checkin(validated_data):
         new_room.save(update_fields=["state"])
 
         if old_guest_context is not None:
-            move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
+            move_guest_cards(guest, old_guest_context, get_guest_access_context(guest), source=Guest.SOURCE.MEWS)
 
         if old_room:
             logger.info(
@@ -341,7 +341,7 @@ def handle_checkout(validated_data):
         )
         publish_guest_changes(guest)
         guest.room.save(update_fields=["state"])
-        revoke_guest_cards(guest, old_guest_context)
+        revoke_guest_cards(guest, old_guest_context, source=Guest.SOURCE.MEWS)
     except Guest.DoesNotExist:
         logger.warning("⚠ No active guests found with pms_id: %s", validated_data.get("pms_id"))
     return {"success": True}
@@ -419,7 +419,7 @@ def handle_guest_move(guest: Guest, data: dict):
 
         # old_room_id lets subscribers of the room being left refresh too
         publish_guest_changes(guest, old_room_id=old_room.id if old_room else None)
-        move_guest_cards(guest, old_guest_context, get_guest_access_context(guest))
+        move_guest_cards(guest, old_guest_context, get_guest_access_context(guest), source=Guest.SOURCE.MEWS)
     except Exception:
         logger.exception("✗ Failed to move guest")
         raise

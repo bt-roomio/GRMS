@@ -55,8 +55,9 @@ class UserListView(APIView):
 class UserDetailView(APIView):
     @swagger_auto_schema(tags=["Users, User"], responses=UserDetailSwagger)
     def get(self, request, pk):
-        queryset = User.objects.prefetch_related(
-            Prefetch("roles", queryset=Role.objects.order_by("name")),
+        queryset = User.objects.select_related("tenant").prefetch_related(
+            "dashboards",
+            Prefetch("roles", queryset=Role.objects.prefetch_related("dashboards").order_by("name")),
             Prefetch("roles__permissions", queryset=Permission.objects.order_by("-id")),
         )
         instance = get_object_or_404(reachable_users(request, queryset), id=pk, is_active=True)

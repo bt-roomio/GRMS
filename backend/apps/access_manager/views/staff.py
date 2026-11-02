@@ -4,7 +4,7 @@ from rest_framework.views import APIView, Response
 from access_manager.models import Staff
 from access_manager.serializers.staff import StaffFilterParams, StaffSerializer
 from access_manager.swagger.staff import staff_swagger
-from access_manager.tasks.send_rpc import send_rpc_request
+from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from core.utils.pagination import pagination
 from core.utils.perform_request import with_tenant
 from core.utils.permission import check_perms
@@ -68,7 +68,7 @@ class StaffDetailView(APIView):
 
         results = []
         for device in devices:
-            result = send_rpc_request(str(device.id), cards, False, staff_id=str(pk), user=user)
+            result = dispatch_card_rpc(str(device.id), cards, False, staff_id=str(pk), user=user)
             results.append(result)
 
         instance.is_active = False

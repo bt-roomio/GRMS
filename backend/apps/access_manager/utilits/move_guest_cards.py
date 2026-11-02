@@ -9,7 +9,9 @@ from main.utils.access_context import get_guest_access_context
 logger = logging.getLogger(__name__)
 
 
-def revoke_guest_cards(guests: Union[Guest, Iterable[Guest]], context: Optional[dict] = None) -> None:
+def revoke_guest_cards(
+    guests: Union[Guest, Iterable[Guest]], context: Optional[dict] = None, source=None, user=None
+) -> None:
     """Deactivate each guest's active cards on every device they currently access.
 
     Pass `context` (a `get_guest_access_context()` result) when the caller already
@@ -18,10 +20,12 @@ def revoke_guest_cards(guests: Union[Guest, Iterable[Guest]], context: Optional[
     """
     if context is None:
         context = get_guest_access_context(guests)
-    move_guest_cards(guests, context, {"devices": []})
+    move_guest_cards(guests, context, {"devices": []}, source=source, user=user)
 
 
-def move_guest_cards(guests: Union[Guest, Iterable[Guest]], old_context: dict, new_context: dict) -> None:
+def move_guest_cards(
+    guests: Union[Guest, Iterable[Guest]], old_context: dict, new_context: dict, source=None, user=None
+) -> None:
     """Re-dispatch each guest's active cards when their accessible devices change.
 
     Deactivates cards on devices the guests no longer have access to and activates
@@ -30,7 +34,8 @@ def move_guest_cards(guests: Union[Guest, Iterable[Guest]], old_context: dict, n
     `old_context` and `new_context` must be produced by
     `get_guest_access_context()` for the same `guests`,
     captured before and after the change (e.g. a room move). Only the "devices"
-    key is read from each context.
+    key is read from each context. `source` (Guest.SOURCE) and `user` are recorded
+    on the guest cards the removals deactivate and the assignments activate.
     """
     if isinstance(guests, Guest):
         guests = [guests]
@@ -55,6 +60,10 @@ def move_guest_cards(guests: Union[Guest, Iterable[Guest]], old_context: dict, n
         for card in cards:
             is_pwd = bool(card.is_pwd)
             for device_id in remove_ids:
-                send_rpc_request.delay(device_id, [card.number], 0, guest_id=guest_id, is_pwd=is_pwd)
+                send_rpc_request.delay(
+                    device_id, [card.number], 0, user=user, guest_id=guest_id, is_pwd=is_pwd, source=source
+                )
             for device_id in assign_ids:
-                send_rpc_request.delay(device_id, [card.number], 1, guest_id=guest_id, is_pwd=is_pwd)
+                send_rpc_request.delay(
+                    device_id, [card.number], 1, user=user, guest_id=guest_id, is_pwd=is_pwd, source=source
+                )

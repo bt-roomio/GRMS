@@ -5,6 +5,8 @@ from rest_framework import serializers
 
 from core.utils.brute_force import get_lock_status, locked_emails, normalize_email
 from core.utils.serializers import ValidatorSerializer
+from main.models import Dashboard
+from main.serializers.dashboard import SimpleDashboardSerializer
 from users.models import Role, User
 from users.serializers.role import RoleSimpleSerializer
 
@@ -40,6 +42,7 @@ class UserListSerializer(serializers.ListSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=True)
+    dashboards = serializers.PrimaryKeyRelatedField(many=True, queryset=Dashboard.objects.all(), required=False)
     additional_info = serializers.JSONField(required=False, help_text="{excluded_fields: ['phone', 'email']}")
 
     def to_representation(self, instance):
@@ -48,6 +51,7 @@ class UserSerializer(serializers.ModelSerializer):
         # A chain admin administers hotels without living in one, so `tenant` may be null.
         data["tenant_name"] = instance.tenant.title if instance.tenant_id else None
         data["tenant_has_access_ai"] = instance.tenant.has_access_ai if instance.tenant_id else False
+        data["dashboards"] = SimpleDashboardSerializer(instance.dashboards.all(), many=True).data
         locked = self.context.get("locked_emails")
         if locked is None:
             data["is_blocked"] = get_lock_status(instance.email)["is_locked"]
@@ -101,6 +105,23 @@ class UserSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate_dashboards(self, value):
+        """Dashboards must belong to the target user's hotel, whoever calls the serializer."""
+        if not value:
+            return value
+
+        request = self.context.get("request")
+        target_tenant_id = self.instance.tenant_id if self.instance else self.context.get("tenant_id")
+        if target_tenant_id is None and request is not None:
+            target_tenant_id = request.user.tenant_id
+        # A chain admin lives in no hotel, and `my_dashboards` only shows dashboards of the user's own one.
+        if target_tenant_id is None:
+            raise serializers.ValidationError("A user without a tenant cannot hold dashboards.")
+        outsiders = [d.title for d in value if str(d.tenant_id) != str(target_tenant_id)]
+        if outsiders:
+            raise serializers.ValidationError(f"Dashboard out of scope: {', '.join(outsiders)}.")
+        return value
+
     def validate_email(self, value):
         normalized_email = value.lower()
 
@@ -116,8 +137,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         roles_data = validated_data.pop("roles") if "roles" in validated_data else []
+        dashboards_data = validated_data.pop("dashboards", [])
         user = User.objects.create(**validated_data)
         user.roles.set(roles_data)
+        user.dashboards.set(dashboards_data)
         return user
 
     class Meta:
@@ -134,6 +157,7 @@ class UserSerializer(serializers.ModelSerializer):
             "tenant",
             "tenant_group",
             "roles",
+            "dashboards",
             "is_active",
         )
         extra_kwargs: ClassVar[dict[str, dict[str, bool]]] = {"is_superuser": {"read_only": True}}
@@ -147,6 +171,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         # A chain admin administers hotels without living in one, so `tenant` may be null.
         data["tenant_name"] = instance.tenant.title if instance.tenant_id else None
         data["tenant_has_access_ai"] = instance.tenant.has_access_ai if instance.tenant_id else False
+        data["dashboards"] = SimpleDashboardSerializer(instance.dashboards.all(), many=True).data
         data["is_blocked"] = get_lock_status(instance.email)["is_locked"]
         return data
 
@@ -164,6 +189,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "tenant",
             "tenant_group",
             "roles",
+            "dashboards",
             "is_active",
         )
         extra_kwargs: ClassVar[dict[str, dict[str, bool]]] = {

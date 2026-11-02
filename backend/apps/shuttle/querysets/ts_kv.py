@@ -237,9 +237,7 @@ class TsKvQuerySet(BaseQuerySet):
                     .order_by("-key", "-interval_time")
                 )
                 if agg_function is not None:
-                    query = query.annotate(
-                        aggreagted_field=Round(agg_function(F("avail_field")), precision=2)
-                    )  # ty: ignore
+                    query = query.annotate(aggreagted_field=Round(agg_function(F("avail_field")), precision=2))  # ty: ignore
                     query = query.annotate(ts=F("interval_time"), value=F("aggreagted_field")).values("ts", "value")
                 else:
                     query = query.annotate(ts=F("interval_time"), value=F("avail_field")).values("ts", "value")

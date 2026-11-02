@@ -203,15 +203,23 @@ class StaffCard(BaseModel):
         ]
 
 
-class GuestCard(BaseModel):
+def guest_sources():
+    from main.models import Guest  # main.models imports this module
+
+    return Guest.SOURCE.choices
+
+
+class GuestCard(BaseModel, UpdateByModel):
     guest = models.ForeignKey("main.Guest", models.CASCADE)
     card = models.ForeignKey("access_manager.Card", models.CASCADE)
     is_active = models.BooleanField(default=True)
     is_blocked = models.BooleanField(default=False)
+    # Channel of the last change (Guest.SOURCE); the acting user, if any, is in updated_by.
+    updated_source = models.CharField(choices=guest_sources, max_length=50, null=True, blank=True)
 
     objects = GuestCardQuerySet.as_manager()
 
-    class Meta(BaseModel.Meta):
+    class Meta(BaseModel.Meta, UpdateByModel.Meta):
         db_table = "access_manager_guest_cards"
         constraints = [
             UniqueConstraint(fields=["card"], condition=Q(is_active=True), name="unique_card_active"),

@@ -1,3 +1,5 @@
+import os
+
 from config.settings.components import env_list
 
 from core.utils.ip import trusted_ip_headers_from_env
@@ -22,3 +24,8 @@ SESSION_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Fernet key for third-party secrets stored in JSON settings (a hotel's
+# WhatsApp token, see core.utils.secrets). Empty: derived from SECRET_KEY.
+# Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+SECRETS_ENCRYPTION_KEY = os.getenv("SECRETS_ENCRYPTION_KEY", "")

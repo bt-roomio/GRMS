@@ -22,11 +22,12 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
         query = super().get_queryset(**kwargs)
         params = TsKvHistoryFilterParams.check(data=kwargs.get("query_params", {}))
         params["device"] = (
-            Device.objects.filter(room__id=params.get("room"), is_active=True).first()
+            Device.objects.filter(room__id=params.get("room"), is_active=True, tenant_id=self.tenant_id).first()
             if params.get("room")
             else params.get("device")
         )
-        query = query.by_device(entity=params.get("device")).get_history_v2(  # ty: ignore
+        query = query.by_device(entity=params.get("device")).filter(entity__tenant_id=self.tenant_id)
+        query = query.get_history_v2(  # ty: ignore
             keys=params.get("keys"),
             start_ts=convert_datetime(params.get("start_ts")) if params.get("start_ts") else None,
             interval=params.get("interval"),
@@ -57,6 +58,7 @@ class TsKvHistoryConsumer(BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_subscribe(self, request_id, query_params, action):
+        await self.check_device_access(query_params.get("device"))
         res = await self.send_list_paginated(action, query_params, request_id)
         await self.add_group(f"tskv_updates_{query_params.get('device')}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}

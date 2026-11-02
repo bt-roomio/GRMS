@@ -35,33 +35,33 @@ class InactiveDeviceAttributeConsumer(BaseGenericAsyncAPIConsumer):
         return self.pagination(query, page, size)
 
     async def get_latest_activity(self, message):
-        updates = message.get("updates", []) or []
-        if updates:
-            for u in updates:
-                await self._maybe_push(u)
-        else:
-            await self._maybe_push(message.get("update"))
-
-    async def _maybe_push(self, payload):
-        if not payload or payload.get("scope") != "SERVER_SCOPE" or payload.get("key_name") != "active":
+        if not self.subscribers:
             return
-
-        device_id = payload.get("entity")
-        if not device_id:
+        updates = message.get("updates") or ([message["update"]] if message.get("update") else [])
+        device_ids = {
+            u.get("entity")
+            for u in updates
+            if u and u.get("entity") and u.get("scope") == "SERVER_SCOPE" and u.get("key_name") == "active"
+        }
+        if not device_ids:
             return
 
         from main.models import Device
 
+        # One query for the whole batch instead of exists() per update.
         tenant_id = self.tenant_id
         device_connected = await sync_to_async(
-            lambda: Device.objects.filter(id=device_id, tenant_id=tenant_id)
-            .filter(Q(room__isnull=False) | Q(device_public_spaces__isnull=False))
-            .exists()
+            lambda: (
+                Device.objects.filter(id__in=device_ids, tenant_id=tenant_id)
+                .filter(Q(room__isnull=False) | Q(device_public_spaces__isnull=False))
+                .exists()
+            )
         )()
-        if not device_connected:
-            return
+        if device_connected:
+            self.request_refresh(self.refresh_lists)
 
-        for request_id, params in self.subscribers.items():
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
             if params.get("action") == "list_subscribe":
                 data = await sync_to_async(self.get_data)(query_params=params.get("query_params"))
                 await self.reply(data=data, action="list_subscribe", request_id=request_id)

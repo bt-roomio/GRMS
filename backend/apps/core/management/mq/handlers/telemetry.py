@@ -170,9 +170,9 @@ def _collect_value_keys(payload, keys: set):
         entries = [e["values"] for e in payload if isinstance(e, dict) and "ts" in e and "values" in e]
     for values in entries:
         if isinstance(values, dict):
-            # Только ключи, которые реально запишутся: _process_telemetry_entries тоже
-            # фильтрует через find_compatible_field, поэтому не прогреваем/не создаём
-            # TsKvDictionary для нехранимых значений (например None).
+            # Only keys that will actually be written: _process_telemetry_entries also
+            # filters through find_compatible_field, so we don't warm up/create
+            # TsKvDictionary entries for non-storable values (e.g. None).
             keys.update(find_compatible_field(values).keys())
 
 
@@ -194,7 +194,7 @@ def _warm_tskv_dict_cache(batch):
         get_tskv_dicts_batch(keys)
 
 
-executor = ThreadPoolExecutor(max_workers=4)  # для handle_fias
+executor = ThreadPoolExecutor(max_workers=4)  # for handle_fias
 
 
 def _log_fias_result(future):

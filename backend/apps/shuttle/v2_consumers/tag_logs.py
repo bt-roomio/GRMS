@@ -53,6 +53,7 @@ class TagLogsConsumer(BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_subscribe(self, request_id, query_params, action):
+        await self.check_device_access(query_params.get("device"))
         res = await self.send_list_paginated(action, query_params, request_id)
         await self.add_group(f"tskv_updates_{query_params.get('device')}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action, "response": res}

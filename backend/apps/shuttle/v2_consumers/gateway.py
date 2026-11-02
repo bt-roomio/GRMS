@@ -35,16 +35,13 @@ class GatewayConsumer(BaseGenericAsyncAPIConsumer):
         relevant_keys = {"active", "active_connectors", "inactive_connectors"}
         if not any(u.get("key_name") in relevant_keys for u in updates):
             return
-
-        for request_id, params in self.subscribers.items():
-            await self.send_list_paginated(
-                action=params.get("action"),
-                query_params=params.get("query_params", {}),
-                request_id=request_id,
-            )
+        self.request_refresh(self.refresh_lists)
 
     async def device_latest_activity(self, _):
-        for request_id, params in self.subscribers.items():
+        self.request_refresh(self.refresh_lists)
+
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
             await self.send_list_paginated(
                 action=params.get("action"),
                 query_params=params.get("query_params", {}),

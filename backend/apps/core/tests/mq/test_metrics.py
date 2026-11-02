@@ -4,11 +4,11 @@ from core.management.mq.mq_metrics import mq_keys_processed_total, mq_messages_p
 
 
 def test_keys_metric_has_no_labels():
-    # Метка gateway_id убрана (взрыв кардинальности); счётчик агрегируется по батчу.
+    # The gateway_id label was removed (cardinality blow-up); the counter is aggregated per batch.
     assert mq_keys_processed_total._labelnames == ()
 
 
 def test_messages_metric_labels():
-    # Осталась только topic (ограниченный набор); gateway_id убран во избежание
-    # серии на каждое устройство.
+    # Only topic remains (a bounded set); gateway_id was removed to avoid
+    # a series per device.
     assert mq_messages_processed_total._labelnames == ("topic",)

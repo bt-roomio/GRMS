@@ -30,6 +30,8 @@ def provision_tenant(*, title, email, password, group=None):
     user.roles.add(role)
 
     for name in DEFAULT_DEVICE_PROFILES:
+        # Profiles start without alarm rules: each tenant writes the ones it
+        # wants through the device-profile API (see docs/alarms.md).
         DeviceProfile.objects.get_or_create(name=name, tenant=tenant, type="DEFAULT")
 
     schedule_nodered_provisioning(tenant)

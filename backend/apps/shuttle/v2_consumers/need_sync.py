@@ -17,19 +17,21 @@ class NeedSyncConsumer(BaseGenericAsyncAPIConsumer):
     def get_queryset(self, **kwargs):
         query = super().get_queryset(**kwargs)
         params = NeedSyncDeviceFilterParams.check(data=kwargs.get("query_params", {}))
-        query = query.list(sort_by=params.get("sort_by"))
+        query = query.filter(device__tenant_id=self.tenant_id).list(sort_by=params.get("sort_by"))
         return query
 
     async def get_list_activity(self, message, **kwargs):
-        for request_id, params in self.subscribers.items():
-            query_params = params.get("query_params")
-            data = await sync_to_async(self.get_data_paginated)(query_params=query_params, **kwargs)
+        self.request_refresh(self.refresh_lists)
+
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
+            data = await sync_to_async(self.get_data_paginated)(query_params=params.get("query_params"))
             await self.reply(data=data, action="list_subscribe", request_id=request_id)
 
     @action()
     async def list_subscribe(self, **kwargs):
         await self.send_list_paginated(**kwargs)
-        await self.add_group("need_sync")
+        await self.add_group(f"need_sync_{self.tenant_id}")
         self.subscribers[kwargs.get("request_id")] = kwargs
 
     @action()

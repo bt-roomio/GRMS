@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "admin_panel",
     "hoteza",
     "fleet",
+    "alarms",
 ]
 
 MIDDLEWARE = [

@@ -46,7 +46,7 @@ class TsKvLatestQuerySet(BaseQuerySet):
     def get_ts_kv_latest_by_room(self, room, tenant, sort_by=()):
         return (
             self.filter(entity__room=room, entity__tenant=tenant)
-            .values("ts", "id", "key__key", *self.VALUE_FIELDS)
+            .values("ts", "id", "entity_id", "key__key", *self.VALUE_FIELDS)
             .order_by(*sort_by)
         )
 

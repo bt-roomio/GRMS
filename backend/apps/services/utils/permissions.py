@@ -26,4 +26,5 @@ class DoorLockPermission(permissions.BasePermission):
             return False
 
         request.tenant = integration.tenant
+        request.integration = integration  # its mapping profile converts tag values
         return True

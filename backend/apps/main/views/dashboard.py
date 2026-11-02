@@ -12,19 +12,33 @@ from main.serializers.dashboard import DashboardFilterParams, DashboardSerialize
 from main.swagger.dashboard import DashboardDetailSwagger, DashboardSwagger
 
 
+def ensure_not_linked_to_room_types(instance):
+    """Room types reference dashboards with CASCADE, so deleting a linked one would take them along."""
+    linked_room_types = RoomType.objects.filter(Q(dashboard=instance) | Q(engineering_dashboard=instance)).values_list(
+        "title", flat=True
+    )
+    if linked_room_types:
+        raise ValidationError(
+            {
+                "detail": "Dashboard is linked to room type(s) and cannot be deleted: "
+                f"{', '.join(linked_room_types)}. Unassign it from these room types first."
+            }
+        )
+
+
 class DashboardListView(APIView):
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardSwagger, query_serializer=DashboardFilterParams())
     @check_perms(["main.view_dashboard"])
     def get(self, request):
         params = DashboardFilterParams.check(request.GET)
-        queryset = Dashboard.objects.list(  # pyright: ignore
+        queryset = Dashboard.objects.list(  # ty: ignore
             tenant_id=request.user.tenant_id,
-            search_field=params.get("search_field"),  # pyright: ignore
-            search_value=params.get("search_value"),  # pyright: ignore
-            sort_by=params.get("sort_by", []),  # pyright: ignore
+            search_field=params.get("search_field"),
+            search_value=params.get("search_value"),
+            sort_by=params.get("sort_by", []),
         )
         serializer = DashboardSerializer(queryset, many=True)
-        data = pagination(queryset, serializer, params.get("page"), params.get("size"))  # pyright: ignore
+        data = pagination(queryset, serializer, params.get("page"), params.get("size"))
         return Response(data)
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardSwagger, request_body=DashboardSerializer)
@@ -57,16 +71,7 @@ class DashboardDetailView(APIView):
     @check_perms(["main.delete_dashboard"])
     def delete(self, request, pk):
         instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
-        linked_room_types = RoomType.objects.filter(
-            Q(dashboard=instance) | Q(engineering_dashboard=instance)
-        ).values_list("title", flat=True)
-        if linked_room_types:
-            raise ValidationError(
-                {
-                    "detail": "Dashboard is linked to room type(s) and cannot be deleted: "
-                    f"{', '.join(linked_room_types)}. Unassign it from these room types first."
-                }
-            )
+        ensure_not_linked_to_room_types(instance)
         instance.delete()
         return Response({}, 204)
 

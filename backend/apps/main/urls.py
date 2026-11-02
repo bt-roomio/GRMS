@@ -13,6 +13,7 @@ from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.integration_settings import IntegrationSettingsDetailView
 from main.views.knx_from_conf import KnxDeviceFromConfListView
+from main.views.notification_settings import NotificationSettingsDetailView
 from main.views.public_space import PublicSpaceDetailView, PublicSpaceListView
 from main.views.room import RoomDetailView, RoomListView
 from main.views.room_from_conf import RoomFromConfListView
@@ -27,6 +28,7 @@ urlpatterns = [
     path("general-settings/", GeneralSettingsDetailView.as_view(), name="general-settings-detail"),
     path("integration-settings/", IntegrationSettingsDetailView.as_view(), name="integration-settings-detail"),
     path("alarm-settings/", AlarmSettingsDetailView.as_view(), name="alarm-settings"),
+    path("notification-settings/", NotificationSettingsDetailView.as_view(), name="notification-settings"),
     path("admin-settings/<str:key>/", AdminSettingsView.as_view(), name="admin-settings"),
     path("room/", RoomListView.as_view(), name="room-list"),
     path("room/<uuid:pk>/", RoomDetailView.as_view(), name="room-detail"),

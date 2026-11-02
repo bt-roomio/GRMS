@@ -1,13 +1,13 @@
 # =============================================================================
-# docker-compose.prod.yml — продакшн-специфика
+# docker-compose.prod.yml: production specifics
 # =============================================================================
-# Использование:
+# Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Или через Makefile: make up ENV=prod
+# Or via the Makefile: make up ENV=prod
 #
-# Что добавляет этот файл:
-#   - Resource limits (CPU, memory) для всех сервисов
+# What this file adds:
+#   - Resource limits (CPU, memory) for all services
 # =============================================================================
 
 services:

@@ -68,6 +68,7 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
         device_id = query_params.get("device")
         if not device_id:
             raise ValidationError("device is required in query_params!")
+        await self.check_device_access(device_id)
 
         await self.add_group(f"tskv_latest_updates_{device_id}")
         self.subscribers[request_id] = {"query_params": query_params, "action": action}
@@ -78,6 +79,7 @@ class TsKvLatestConsumer(ListModelMixin, BaseGenericAsyncAPIConsumer):
 
     @action()
     async def list_subscribe(self, request_id, action, query_params, **kwargs):
+        await self.check_device_access(query_params.get("device"))
         with_pagination = self.send_list_paginated if query_params.get("with_pagination") else self.send_list
         data = await with_pagination(action, query_params, request_id, **kwargs)
         device_id = query_params.get("device")

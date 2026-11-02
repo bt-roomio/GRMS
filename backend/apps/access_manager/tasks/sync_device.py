@@ -6,28 +6,32 @@ from django.db.models import Exists, OuterRef
 
 from access_manager.models import NeedSyncDevice
 from access_manager.tasks.send_rpc import send_rpc_request
-from main.models import DevicePublicSpaces, Room
+from main.models import Device, DevicePublicSpaces, Guest, Room
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def sync_device_card_group(device_id, cards, access, is_pwd=False):
-    if is_pwd:
-        for card_number in cards:
-            result = send_rpc_request(device_id, [card_number], access, sync=True, is_pwd=True)
-            if result.get("success", False):
-                NeedSyncDevice.objects.filter(device_id=device_id, card__number=card_number, need_sync=True).update(
-                    need_sync=False
-                )
-    else:
-        result = send_rpc_request(device_id, cards, access, sync=True)
+def sync_device_card_group(device_id, cards, access, is_pwd=False, source=None, user_id=None):
+    # `source`/`user_id` are recorded on the guest cards; requests queued before the source was stored count as AUTO.
+    source = source or Guest.SOURCE.AUTO
+    # Default-profile devices take the full card list in one writeRFID; everything else
+    # (PINs and non-default devices) is synced one card per request.
+    is_default = Device.objects.filter(id=device_id, device_profile__name__iexact="default").exists()
+    batches = [cards] if is_default and not is_pwd else [[card] for card in cards]
+
+    for batch in batches:
+        result = send_rpc_request(device_id, batch, access, user=user_id, sync=True, is_pwd=is_pwd, source=source)
         if result.get("success", False):
-            NeedSyncDevice.objects.filter(device_id=device_id, need_sync=True).update(need_sync=False)
+            NeedSyncDevice.objects.filter(
+                device_id=device_id,
+                card__number__in=batch,
+                need_sync=True,
+            ).update(need_sync=False)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
-def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
+def sync_devices_task(tenant_id=None, ids=None, device_ids=None, user_id=None):
     try:
         queryset = (
             NeedSyncDevice.objects.select_related("device", "card")
@@ -70,12 +74,17 @@ def sync_devices_task(tenant_id=None, ids=None, device_ids=None):
         grouped = defaultdict(list)
         for obj in connected_objects:
             device_id = obj.device_id
-            access = (obj.additional_info or {}).get("message_params", {}).get("access", "UNKNOWN")
+            message_params = (obj.additional_info or {}).get("message_params", {})
+            access = message_params.get("access", "UNKNOWN")
+            if user_id:
+                source, actor_id = Guest.SOURCE.ROOMIO, user_id
+            else:
+                source, actor_id = message_params.get("source"), obj.updated_by_id and str(obj.updated_by_id)
             is_pwd = bool(obj.card.is_pwd)
-            grouped[(device_id, access, is_pwd)].append(obj.card.number)
+            grouped[(device_id, access, is_pwd, source, actor_id)].append(obj.card.number)
 
-        for (device_id, access, is_pwd), cards in grouped.items():
-            sync_device_card_group.delay(str(device_id), cards, access, is_pwd)
+        for (device_id, access, is_pwd, source, actor_id), cards in grouped.items():
+            sync_device_card_group.delay(str(device_id), cards, access, is_pwd, source=source, user_id=actor_id)
 
         return {"success": True, "dispatched": len(grouped)}
 

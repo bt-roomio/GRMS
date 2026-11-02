@@ -17,7 +17,6 @@ dependencies = [
   "cffi==1.16.0",
   "channels==4.3.1",
   "channels-redis==4.3.0",
-  "channelsmultiplexer==0.0.3",
   "charset-normalizer==3.4.1",
   "click==8.1.7",
   "click-didyoumean==0.3.1",
@@ -120,6 +119,7 @@ dev = [
   "pytest-asyncio==1.1.0",
   "pytest-django==4.11.1",
   "pre-commit>=4.6.0",
+  "ruff==0.17.0",
 ]
 
 [tool.uv]
@@ -128,6 +128,13 @@ package = false
 [tool.ty.environment]
 root = ["apps", "."]
 
+# Django idioms ty reads as incompatible overrides: `class Meta(Parent.Meta)` and `objects` managers.
+[[tool.ty.overrides]]
+include = ["apps/**/models.py", "apps/**/models.pyi", "apps/**/serializers/**"]
+
+[tool.ty.overrides.rules]
+invalid-attribute-override = "ignore"
+
 [tool.ruff]
 line-length = 120
 extend-exclude = ["migrations"]
@@ -135,7 +142,7 @@ extend-exclude = ["migrations"]
 [tool.ruff.lint]
 # G: lazy %-style logging args (no f-strings), logger.exception over exc_info=True.
 # LOG: logging API misuse (root logger calls, getLogger misuse, …).
-extend-select = ["I", "F401", "F841", "G", "LOG"]
+select = ["E4", "E7", "E9", "F", "I", "G", "LOG"]
 
 [tool.ruff.lint.isort]
 known-first-party = [
@@ -146,6 +153,7 @@ known-first-party = [
   "services",
   "access_manager",
   "fleet",
+  "alarms",
 ]
 section-order = [
   "future",

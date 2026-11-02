@@ -65,9 +65,9 @@ async def test_a_substituted_host_key_is_refused(sshd, client_key):
     assert await has_audit(node, FleetAuditLog.ACTION.HOST_KEY_MISMATCH)
 
     await sync_to_async(node.refresh_from_db)()
-    assert (
-        node.ssh_host_key == impostor.export_public_key("openssh").decode().strip()
-    ), "a mismatch must never silently re-pin"
+    assert node.ssh_host_key == impostor.export_public_key("openssh").decode().strip(), (
+        "a mismatch must never silently re-pin"
+    )
 
 
 async def test_non_zero_exit_is_reported_not_raised(sshd, client_key):

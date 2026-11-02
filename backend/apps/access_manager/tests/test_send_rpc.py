@@ -257,6 +257,66 @@ class SendRPCRequestTest(TestCase):
         ).first()
         self.assertIsNone(guest_card)
 
+    @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
+    @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
+    def test_deactivation_records_user_and_source_on_guest_card(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        mock_connect_rabbitmq.return_value = Mock()
+        guest_card = GuestCard.objects.get(card__number=self.guest_card_number, is_active=True)
+
+        with patch("access_manager.tasks.send_rpc.RPCMessage") as mock_rpc_message:
+            mock_rpc_message.objects.filter.return_value.first.return_value = Mock(additional_info='{"success": true}')
+            send_rpc_request(
+                device_id=self.device_id,
+                cards=[self.guest_card_number],
+                access=0,
+                user=self.karina_id,
+                source=Guest.SOURCE.FIAS,
+            )
+
+        guest_card.refresh_from_db()
+        self.assertFalse(guest_card.is_active)
+        self.assertEqual(str(guest_card.updated_by_id), self.karina_id)
+        self.assertEqual(guest_card.updated_source, Guest.SOURCE.FIAS)
+
+    @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
+    @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
+    def test_activation_records_user_and_source_on_guest_card(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        mock_connect_rabbitmq.return_value = Mock()
+        new_card_number = "AA BB CC DD"
+
+        with patch("access_manager.tasks.send_rpc.RPCMessage") as mock_rpc_message:
+            mock_rpc_message.objects.filter.return_value.first.return_value = Mock(additional_info='{"success": true}')
+            result = send_rpc_request(
+                device_id=self.device_id,
+                cards=[new_card_number],
+                access=1,
+                user=self.karina_id,
+                guest_id=self.guest_id,
+                source=Guest.SOURCE.ROOMIO,
+            )
+
+        self.assertTrue(result["success"])
+        guest_card = GuestCard.objects.get(guest=self.guest, card__number=new_card_number, is_active=True)
+        self.assertEqual(str(guest_card.created_by_id), self.karina_id)
+        self.assertEqual(str(guest_card.updated_by_id), self.karina_id)
+        self.assertEqual(guest_card.updated_source, Guest.SOURCE.ROOMIO)
+
+    @patch("access_manager.tasks.send_rpc.connect_to_rabbitmq")
+    @patch("access_manager.tasks.send_rpc.send_to_rabbitmq")
+    def test_rejected_deactivation_leaves_guest_card_untouched(self, mock_send_rabbitmq, mock_connect_rabbitmq):
+        mock_connect_rabbitmq.return_value = Mock()
+        guest_card = GuestCard.objects.get(card__number=self.guest_card_number, is_active=True)
+
+        with patch("access_manager.tasks.send_rpc.RPCMessage") as mock_rpc_message:
+            mock_rpc_message.objects.filter.return_value.first.return_value = Mock(additional_info='{"success": false}')
+            send_rpc_request(
+                device_id=self.device_id, cards=[self.guest_card_number], access=0, source=Guest.SOURCE.FIAS
+            )
+
+        guest_card.refresh_from_db()
+        self.assertTrue(guest_card.is_active)
+        self.assertIsNone(guest_card.updated_source)
+
     def test_device_offline_creates_need_sync(self):
         """Test that offline device creates NeedSyncDevice record"""
         # Make device offline
@@ -266,7 +326,11 @@ class SendRPCRequestTest(TestCase):
         initial_sync_count = NeedSyncDevice.objects.count()
 
         result = send_rpc_request(
-            device_id=self.device_id, cards=[self.guest_card_number], access=0, user=self.karina_id
+            device_id=self.device_id,
+            cards=[self.guest_card_number],
+            access=0,
+            user=self.karina_id,
+            source=Guest.SOURCE.FIAS,
         )
 
         self.assertFalse(result["success"])
@@ -279,6 +343,8 @@ class SendRPCRequestTest(TestCase):
         need_sync = NeedSyncDevice.objects.filter(device=self.device, need_sync=True).last()
         self.assertIsNotNone(need_sync)
         self.assertEqual(need_sync.additional_info["message_params"]["access"], 0)
+        self.assertEqual(need_sync.additional_info["message_params"]["source"], Guest.SOURCE.FIAS)
+        self.assertEqual(str(need_sync.updated_by_id), self.karina_id)
 
     def test_empty_cards_handling(self):
         """Test handling of empty cards list"""

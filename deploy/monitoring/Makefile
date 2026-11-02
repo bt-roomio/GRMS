@@ -1,13 +1,13 @@
 # =============================================================================
 # roomio GRMS — monitoring/Makefile
 # =============================================================================
-# Использование:
-#   make up                    # dev (override применяется автоматически)
-#   make up ENV=prod           # prod (resource limits, без лишних портов)
-#   make down                  # остановить
-#   make logs s=grafana        # логи конкретного сервиса
-#   make shell s=prometheus    # exec sh в контейнер
-#   make reload                # перечитать конфиг Prometheus без рестарта
+# Usage:
+#   make up                    # dev (override is applied automatically)
+#   make up ENV=prod           # prod (resource limits, no extra ports)
+#   make down                  # stop
+#   make logs s=grafana        # logs of a specific service
+#   make shell s=prometheus    # exec sh into the container
+#   make reload                # reload the Prometheus config without a restart
 #   make deploy                # git pull + docker pull + restart
 # =============================================================================
 
@@ -57,7 +57,7 @@ help:
 	@echo "    make init                  Создать .env из env.example"
 	@echo ""
 
-# --- Запуск / остановка ---
+# --- Start / stop ---
 
 up:
 	$(COMPOSE) up -d
@@ -65,10 +65,10 @@ up:
 down:
 	$(COMPOSE) down
 
-down-v:  ## Остановить и удалить volumes (ОСТОРОЖНО: удалит данные!)
+down-v:  ## Stop and remove volumes (CAUTION: deletes data!)
 	$(COMPOSE) down -v
 
-# --- Управление сервисами ---
+# --- Service management ---
 
 restart:
 ifndef s
@@ -100,7 +100,7 @@ pull:
 reload:
 	curl -s -X POST http://localhost:9090/-/reload && echo "Prometheus config reloaded"
 
-# --- Деплой ---
+# --- Deploy ---
 
 deploy:
 	git pull
@@ -108,7 +108,7 @@ deploy:
 	$(COMPOSE) up -d --remove-orphans
 	@echo "Деплой завершён: $$(git log -1 --oneline)"
 
-# --- Первый запуск ---
+# --- First run ---
 
 init:
 	@if [ -f .env ]; then \

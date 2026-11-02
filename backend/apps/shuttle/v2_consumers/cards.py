@@ -33,17 +33,22 @@ class CardConsumer(ListModelMixin, ObserverModelInstanceMixin, BaseGenericAsyncA
         )
         return query
 
-    async def get_list_activity(self, action, **kwargs):
-        for request_id, params in self.subscribers.items():
-            data = await sync_to_async(self.get_data_paginated)(query_params=params, **kwargs)
-            await self.reply(data=data, action=action, request_id=request_id)
+    async def get_list_activity(self, message, **kwargs):
+        self.request_refresh(self.refresh_lists)
+
+    async def refresh_lists(self):
+        for request_id, params in list(self.subscribers.items()):
+            data = await sync_to_async(self.get_data_paginated)(query_params=params)
+            await self.reply(data=data, action="list_subscribe", request_id=request_id)
 
     @action()
     async def list_subscribe(self, **kwargs):
         await self.send_list_paginated(**kwargs)
-        await self.add_group("cards")
+        await self.add_group(f"cards_{self.tenant_id}")
         self.subscribers[kwargs.get("request_id")] = kwargs.get("query_params")
 
     @action()
     async def list_unsubscribe(self, request_id, **kwargs):
-        await self.remove_group("cards")
+        self.subscribers.pop(request_id, None)
+        if not self.subscribers:
+            await self.remove_group(f"cards_{self.tenant_id}")

@@ -1,8 +1,8 @@
 from django.db import connection
 from prometheus_client import Gauge
 
-# Важно для gunicorn/uvicorn с несколькими воркерами:
-# суммирует значения из разных процессов
+# Important for gunicorn/uvicorn with multiple workers:
+# sums values across processes
 DB_CONN_GAUGE = Gauge(
     "django_db_connections",
     "PostgreSQL connections by state for current_database()",
@@ -22,7 +22,7 @@ DB_MAX_CONN = Gauge(
     multiprocess_mode="max",
 )
 
-# Опционально: соединения по пользователям (красиво для фильтров в Grafana)
+# Optional: connections per user (handy for Grafana filters)
 DB_CONN_BY_USER = Gauge(
     "django_db_connections_by_user",
     "PostgreSQL connections by user for current_database()",
@@ -33,8 +33,8 @@ DB_CONN_BY_USER = Gauge(
 
 def refresh_db_connection_metrics() -> None:
     """
-    Читает pg_stat_activity и pg_settings и выставляет метрики.
-    Вызывать безопасно из Celery-beat/cron или фонового треда.
+    Reads pg_stat_activity and pg_settings and sets the metrics.
+    Safe to call from Celery beat/cron or a background thread.
     """
     # 1) max_connections
     with connection.cursor() as cur:
@@ -42,7 +42,7 @@ def refresh_db_connection_metrics() -> None:
         (max_conn,) = cur.fetchone()
         DB_MAX_CONN.set(max_conn)
 
-    # 2) по состояниям
+    # 2) by state
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -54,8 +54,8 @@ def refresh_db_connection_metrics() -> None:
         )
         rows = cur.fetchall()
 
-    # Сначала обнулим известные labels,
-    # чтобы при исчезновении какого-то состояния метрика не "зависала".
+    # First zero out the known labels,
+    # so the metric doesn't "stick" when some state disappears.
     for st in ("active", "idle", "idle in transaction", "unknown"):
         DB_CONN_GAUGE.labels(state=st).set(0)
 
@@ -66,7 +66,7 @@ def refresh_db_connection_metrics() -> None:
 
     DB_CONN_TOTAL.set(total)
 
-    # 3) по пользователям
+    # 3) by user
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -78,7 +78,7 @@ def refresh_db_connection_metrics() -> None:
         )
         user_rows = cur.fetchall()
 
-    # Сбросить существующие значения нельзя без хранения списка лейблов,
-    # поэтому просто выставляем актуальные; "старые" пропадут при рестарте воркера.
+    # Existing values can't be reset without storing the list of labels,
+    # so we just set the current ones; "old" ones disappear when the worker restarts.
     for usename, cnt in user_rows:
         DB_CONN_BY_USER.labels(usename=usename or "<none>").set(cnt)

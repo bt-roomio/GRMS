@@ -59,4 +59,16 @@ CELERY_BEAT_SCHEDULE = {
         "task": "fleet.tasks.poll_fleet_peers",
         "schedule": 60.0,
     },
+    "evaluate-alarm-rules": {
+        "task": "alarms.tasks.evaluate_alarm_rules",
+        "schedule": float(os.getenv("ALARMS_EVAL_INTERVAL_SEC", "30")),
+    },
+    "dispatch-alarm-notifications": {
+        "task": "alarms.tasks.dispatch_notifications",
+        "schedule": 60.0,
+    },
+    "purge-alarms": {
+        "task": "alarms.tasks.purge_alarms",
+        "schedule": crontab(hour=4, minute=30),
+    },
 }

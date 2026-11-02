@@ -1,5 +1,8 @@
 import logging
+from functools import partial
 from typing import List
+
+from django.db import transaction
 
 from shuttle.services.publish_updates import publish_updates
 
@@ -17,5 +20,6 @@ def not_need_sync(cards: List[str], devices):
     ).update(need_sync=False)
 
     if updated_count > 0:
-        publish_updates("need_sync", "get_list_activity", {})
+        for tenant_id in {device.tenant_id for device in devices}:
+            transaction.on_commit(partial(publish_updates, f"need_sync_{tenant_id}", "get_list_activity", {}))
         logger.info("Updated %d NeedSyncDevice objects to need_sync=False", updated_count)

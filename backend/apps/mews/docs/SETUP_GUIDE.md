@@ -145,7 +145,7 @@ backend/apps/mews/
 
 ## Dependencies
 
-All required packages are already in `requirements.txt`:
+All required packages are already declared in `backend/pyproject.toml` (locked in `uv.lock`):
 - `websockets==12.0` - WebSocket client
 - `requests` - HTTP client for REST API
 

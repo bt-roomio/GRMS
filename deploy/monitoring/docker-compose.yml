@@ -1,10 +1,10 @@
 # =============================================================================
 # roomio GRMS — monitoring/docker-compose.yml
 # =============================================================================
-# Profiles: нет — все сервисы поднимаются вместе
+# Profiles: none, all services come up together
 #
-# Запуск:
-#   make up              # dev (override применяется автоматически)
+# Start:
+#   make up              # dev (override is applied automatically)
 #   make up ENV=prod     # prod (+ docker-compose.prod.yml)
 # =============================================================================
 

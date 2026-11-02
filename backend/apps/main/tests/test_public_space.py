@@ -1,6 +1,9 @@
+from unittest.mock import patch
+
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
+from users.models import User
 
 
 class PublicSpaceTest(BaseTestCase):
@@ -200,3 +203,22 @@ class PublicSpaceTest(BaseTestCase):
     def test_list_with_excessive_page_size(self):
         response = self.client.get(self.list_url, {"size": 500})
         self.assertEqual(response.status_code, 200)
+
+
+class PublicSpaceDeviceRemovalActorTest(BaseTestCase):
+    fixtures = (*PublicSpaceTest.fixtures, "public_space_device.yaml")
+
+    def setUp(self):
+        self.client.credentials(HTTP_AUTHORIZATION=self.karina_token)
+
+    @patch("main.serializers.public_space.register_cards_for_public_space")
+    def test_removing_devices_records_acting_user(self, mock_register):
+        url = reverse("main:public-space-detail", kwargs={"pk": "ad09aa20-77b8-457a-bfc4-5dee69790243"})
+        data = {"name": "Lobby", "floor": "1st", "block": "A", "accessible_for_guest": True, "device_ids": []}
+
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_register.assert_called_once()
+        karina_id = str(User.objects.get(email="karina@gmail.com").id)
+        self.assertEqual(mock_register.call_args.kwargs, {"source": "roomio", "user": karina_id})

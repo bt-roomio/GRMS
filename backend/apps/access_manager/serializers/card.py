@@ -7,6 +7,7 @@ from access_manager.tasks.send_rpc import send_rpc_request
 from core.utils.serializers import ValidatorSerializer
 from main.models import Guest
 from main.utils.access_context import get_guest_access_context
+from main.utils.actor import actor_from_context, actor_id
 
 
 class CardSerializer(serializers.ModelSerializer):
@@ -76,8 +77,11 @@ class DisconnectCardSerializer(serializers.Serializer):
             devices = access_context.get("devices", [])
             card_number = [card.card.number]
             is_pwd = bool(card.card.is_pwd)
+            source, user = actor_from_context(self.context)
             for device in devices:
-                deactivate_result = send_rpc_request(str(device.id), card_number, 0, is_pwd=is_pwd)
+                deactivate_result = send_rpc_request(
+                    str(device.id), card_number, 0, user=actor_id(user), is_pwd=is_pwd, source=source
+                )
                 deactivate_results.append(deactivate_result)
             if any(not r.get("success", False) for r in deactivate_results):
                 return {
