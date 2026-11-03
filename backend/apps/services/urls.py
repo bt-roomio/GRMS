@@ -7,6 +7,7 @@ from services.views.mapping import (
     MappingProfileDetailView,
     MappingProfileListView,
 )
+from services.views.mapping_test import MappingTestView
 from services.views.messengers import MessengersView
 from services.views.mews_integration import MewsIntegrationView
 from services.views.room import RoomListView
@@ -37,6 +38,7 @@ urlpatterns = [
     path("device/<uuid:device_id>/tag-types/", DeviceTagTypesView.as_view(), name="device-tag-types"),
     path("mapping-profiles/", MappingProfileListView.as_view(), name="mapping-profile-list"),
     path("mapping-profiles/<uuid:pk>/", MappingProfileDetailView.as_view(), name="mapping-profile-detail"),
+    path("mapping-test/", MappingTestView.as_view(), name="mapping-test"),
     # Messengers
     path("messengers/", MessengersView.as_view(), name="messengers"),
 ]

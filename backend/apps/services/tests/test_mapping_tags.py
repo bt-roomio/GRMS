@@ -195,7 +195,7 @@ class ScopedProfileMappingTest(TagMappingTestCase):
         Integration.objects.filter(pk=HOTEZA_INTEGRATION_ID).update(mapping_profile=None)
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], "Medium")
 
-    @patch("services.views.tags.prepare_mqtt_request", return_value=RPC_OK)
+    @patch("services.utils.tag_write.prepare_mqtt_request", return_value=RPC_OK)
     def test_write_uses_scoped_rule(self, rpc):
         self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
         response = self.put_tag(self.fan, 40)
@@ -203,7 +203,7 @@ class ScopedProfileMappingTest(TagMappingTestCase):
         self.assertEqual(rpc.call_args.args[2], {"fanSpeed": "Medium"})
 
 
-@patch("services.views.tags.prepare_mqtt_request", return_value=RPC_OK)
+@patch("services.utils.tag_write.prepare_mqtt_request", return_value=RPC_OK)
 class TagWriteMappingTest(TagMappingTestCase):
     def test_value_written_in_grms_form(self, rpc):
         response = self.put_tag(self.fan, 3)
@@ -283,6 +283,6 @@ class ConsumerMappingTest(TagMappingTestCase):
         self.assertEqual(tags["fanSpeed"]["value"], "Medium")
 
     def test_tag_payload(self):
-        payload, _, _ = self.consumer(TagDetailConsumer).build_payload(self.fan.pk)
+        payload, _ = self.consumer(TagDetailConsumer).build_payload(self.fan.pk)
         self.assertEqual(payload["value"], 2)
         self.assertEqual(payload["tag_ranges"], [1, 2, 3])

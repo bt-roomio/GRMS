@@ -45,3 +45,30 @@ class LinearOp(models.TextChoices):
 
 NUMERIC_VALUE_TYPES = (ValueType.INTEGER, ValueType.NUMBER)
 NUMERIC_TRANSFORMS = (TransformType.RANGE, TransformType.LINEAR)
+
+
+class Source(models.TextChoices):
+    """Where a composite input reads its tag: a CLIENT_SCOPE attribute or the latest telemetry."""
+
+    ATTRIBUTE = "attribute", "Attribute"
+    TELEMETRY = "telemetry", "Telemetry"
+
+
+class OnNoMatch(models.TextChoices):
+    """What a composite rule does with a value no condition (read) or action (write) matches."""
+
+    REJECT = "reject", "Reject"
+    SKIP = "skip", "Skip"
+    CONST = "const", "Const"  # reads only: the rule's default_value goes out
+
+
+class OnMissing(models.TextChoices):
+    """What a composite read does when the result depends on an input with no fresh value."""
+
+    REJECT = "reject", "Reject"
+    SKIP = "skip", "Skip"
+
+
+# A composite rule id and an input alias: short identifiers, an alias usable as a variable name.
+COMPOSITE_ID_PATTERN = r"^[A-Za-z0-9_.-]{1,64}$"
+ALIAS_PATTERN = r"^[A-Za-z_][A-Za-z0-9_]{0,63}$"

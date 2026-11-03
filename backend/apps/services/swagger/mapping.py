@@ -19,7 +19,10 @@ _RULES_DESCRIPTION = (
     "or passthrough, `on_invalid` is reject, skip, clamp or const (writes `on_invalid_value` instead). Rules "
     "replace all rules of the profile. `scope` is tenant (default), room_type or device: a room_type or device "
     "profile names its `room_type` or `device` and applies to the integration of its integrator; a tag takes "
-    "its rule from the device profile, then the room type profile, then the integration's profile."
+    "its rule from the device profile, then the room type profile, then the integration's profile. "
+    "`composite_rules` make one integrator value (`output`) of several tags (`inputs` by alias): reads match "
+    "`conditions`, writes run the ordered `set` of the matching `actions`; they follow the same scopes by `id`. "
+    "Left out of a PUT, the saved composite rules stay. Composite errors come per rule index and field path."
 )
 
 

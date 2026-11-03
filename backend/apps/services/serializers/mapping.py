@@ -5,8 +5,9 @@ from rest_framework import serializers
 
 from core.serializers.pagination import PaginationParams, PaginationSerializer
 from main.models import Device, RoomType
+from services.mapping.composite import composite_rules_issues
 from services.mapping.constants import TAG_NAME_MAX_LENGTH
-from services.mapping.validation import rule_errors
+from services.mapping.validation import Issue, rule_errors
 from services.models import Integration, Integrator, MappingProfile, MappingRule
 
 
@@ -28,6 +29,15 @@ class MappingRuleSerializer(serializers.ModelSerializer):
         return attrs
 
 
+def issues_by_field(issues: list[Issue]) -> dict[str, list[str]]:
+    """Issues as a DRF error dict: the field path (``conditions[1].when.mode``) -> its messages;
+    issues of the whole rule go under ``non_field_errors``."""
+    errors: dict[str, list[str]] = {}
+    for issue in issues:
+        errors.setdefault(issue.field or "non_field_errors", []).append(issue.message)
+    return errors
+
+
 class MappingProfileSerializer(serializers.ModelSerializer):
     integrator = serializers.SlugRelatedField(slug_field="name", read_only=True)
     rules = MappingRuleSerializer(many=True, read_only=True)
@@ -46,6 +56,7 @@ class MappingProfileSerializer(serializers.ModelSerializer):
             "device",
             "integrations",
             "rules",
+            "composite_rules",
             "created_at",
             "updated_at",
         )
@@ -58,10 +69,14 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
 
     integrator = serializers.SlugRelatedField(slug_field="name", queryset=Integrator.objects.all())
     rules = MappingRuleSerializer(many=True)
+    composite_rules = serializers.JSONField(
+        required=False,
+        help_text="Composite rules (see services.mapping.composite); left out of a PUT, the saved ones stay.",
+    )
 
     class Meta:
         model = MappingProfile
-        fields = ("name", "integrator", "scope", "room_type", "device", "rules")
+        fields = ("name", "integrator", "scope", "room_type", "device", "rules", "composite_rules")
 
     def get_fields(self):
         fields = super().get_fields()
@@ -87,7 +102,17 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError([f"Duplicate tag names: {duplicates}."])
         return rules
 
+    def _validate_composite_rules(self, attrs):
+        composite_rules = attrs.get("composite_rules", getattr(self.instance, "composite_rules", []))
+        plain_tag_names = {name for rule in attrs["rules"] for name in rule["tag_names"]}
+        per_rule, general = composite_rules_issues(composite_rules, plain_tag_names)
+        if general:
+            raise serializers.ValidationError({"composite_rules": [issue.message for issue in general]})
+        if any(per_rule):
+            raise serializers.ValidationError({"composite_rules": [issues_by_field(issues) for issues in per_rule]})
+
     def validate(self, attrs):
+        self._validate_composite_rules(attrs)
         # A field left out of the body keeps the saved value (none for a new profile).
         scope = attrs.get("scope", getattr(self.instance, "scope", MappingProfile.Scope.TENANT))
         target_field = MappingProfile.TARGET_FIELDS[scope]

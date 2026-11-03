@@ -44,11 +44,17 @@ LINEAR_INVERSE = {
 class MappingError(ValueError):
     """A value the rule cannot convert. ``code`` is ``type`` (wrong JSON type), ``direction``
     (the rule does not convert this way), ``unmapped`` (no enum pair) or ``invalid`` (failed
-    validation under ``on_invalid: reject``)."""
+    validation under ``on_invalid: reject``); a composite rule adds ``missing_input`` and
+    ``ambiguous_source``. ``field`` names what the error is about
+    (``value``, ``inputs.power``), for a form to show it there."""
 
-    def __init__(self, message: str, code: str = "invalid"):
+    def __init__(self, message: str, code: str = "invalid", field: str = "value"):
         super().__init__(message)
         self.code = code
+        self.field = field
+
+    def as_dict(self) -> dict:
+        return {"field": self.field, "code": self.code, "message": str(self)}
 
 
 class _Skip:

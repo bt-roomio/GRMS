@@ -129,7 +129,8 @@ class TagRange(BaseModel):
 
 
 class MappingProfile(BaseModel):
-    """An integrator's value format: ``MappingRule`` objects, each for one or more tag names.
+    """An integrator's value format: ``MappingRule`` objects, each for one or more tag names, and
+    ``composite_rules``, each making one integrator value of several tags.
 
     An integration uses a ``tenant`` profile through ``Integration.mapping_profile``. The
     ``room_type`` and ``device`` profiles of the same integrator in the tenant hold the rules that
@@ -156,6 +157,11 @@ class MappingProfile(BaseModel):
     scope = models.CharField(max_length=20, choices=Scope.choices, default=Scope.TENANT)
     room_type = models.ForeignKey("main.RoomType", models.CASCADE, "mapping_profiles", null=True, blank=True)
     device = models.ForeignKey("main.Device", models.CASCADE, "mapping_profiles", null=True, blank=True)
+    composite_rules = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Rules making one integrator value of several tags, see services.mapping.composite.",
+    )
 
     objects: ClassVar[MappingProfileQuerySet] = cast(MappingProfileQuerySet, MappingProfileQuerySet.as_manager())
 
