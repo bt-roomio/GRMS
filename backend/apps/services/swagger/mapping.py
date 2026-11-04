@@ -13,12 +13,16 @@ _bad_request_response = openapi.Response(description="Invalid request body.")
 _profile_not_found_response = openapi.Response(description="Mapping profile not found or belongs to another tenant.")
 
 _RULES_DESCRIPTION = (
-    "One rule per tag name: `tag_name` is the attribute or telemetry key of the tags it converts, "
+    "A rule converts the tags named in `tag_names` (attribute or telemetry keys); a tag name belongs to one "
+    "rule of the profile. "
     "`external.value_type` is integer, number, string or boolean, `transform.type` is enum, range, linear "
     "or passthrough, `on_invalid` is reject, skip, clamp or const (writes `on_invalid_value` instead). Rules "
     "replace all rules of the profile. `scope` is tenant (default), room_type or device: a room_type or device "
     "profile names its `room_type` or `device` and applies to the integration of its integrator; a tag takes "
-    "its rule from the device profile, then the room type profile, then the integration's profile."
+    "its rule from the device profile, then the room type profile, then the integration's profile. "
+    "`composite_rules` make one integrator value (`output`) of several tags (`inputs` by alias): reads match "
+    "`conditions`, writes run the ordered `set` of the matching `actions`; they follow the same scopes by `id`. "
+    "Left out of a PUT, the saved composite rules stay. Composite errors come per rule index and field path."
 )
 
 

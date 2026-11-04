@@ -1,27 +1,41 @@
+from collections import Counter
 from dataclasses import dataclass
 
 from rest_framework import serializers
 
 from core.serializers.pagination import PaginationParams, PaginationSerializer
 from main.models import Device, RoomType
-from services.mapping.validation import rule_errors
+from services.mapping.composite import composite_rules_issues
+from services.mapping.constants import TAG_NAME_MAX_LENGTH
+from services.mapping.validation import Issue, rule_errors
 from services.models import Integration, Integrator, MappingProfile, MappingRule
 
 
 class MappingRuleSerializer(serializers.ModelSerializer):
-    """A rule in its profile JSON form: ``tag_name`` is the attribute or telemetry key of the tags
-    it converts, ``on_invalid_value`` the GRMS value written instead of an invalid one under
+    """A rule in its profile JSON form: ``tag_names`` are the attribute or telemetry keys of the
+    tags it converts, ``on_invalid_value`` the GRMS value written instead of an invalid one under
     ``on_invalid: const``."""
+
+    tag_names = serializers.ListField(child=serializers.CharField(max_length=TAG_NAME_MAX_LENGTH), allow_empty=False)
 
     class Meta:
         model = MappingRule
-        fields = ("tag_name", "external", "direction", "transform", "on_invalid", "on_invalid_value")
+        fields = ("tag_names", "external", "direction", "transform", "on_invalid", "on_invalid_value")
 
     def validate(self, attrs):
         rule = MappingRule(**attrs).as_rule()  # unsaved: model defaults fill direction and on_invalid
         if errors := rule_errors(rule):
             raise serializers.ValidationError(errors)
         return attrs
+
+
+def issues_by_field(issues: list[Issue]) -> dict[str, list[str]]:
+    """Issues as a DRF error dict: the field path (``conditions[1].when.mode``) -> its messages;
+    issues of the whole rule go under ``non_field_errors``."""
+    errors: dict[str, list[str]] = {}
+    for issue in issues:
+        errors.setdefault(issue.field or "non_field_errors", []).append(issue.message)
+    return errors
 
 
 class MappingProfileSerializer(serializers.ModelSerializer):
@@ -42,6 +56,7 @@ class MappingProfileSerializer(serializers.ModelSerializer):
             "device",
             "integrations",
             "rules",
+            "composite_rules",
             "created_at",
             "updated_at",
         )
@@ -54,10 +69,14 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
 
     integrator = serializers.SlugRelatedField(slug_field="name", queryset=Integrator.objects.all())
     rules = MappingRuleSerializer(many=True)
+    composite_rules = serializers.JSONField(
+        required=False,
+        help_text="Composite rules (see services.mapping.composite); left out of a PUT, the saved ones stay.",
+    )
 
     class Meta:
         model = MappingProfile
-        fields = ("name", "integrator", "scope", "room_type", "device", "rules")
+        fields = ("name", "integrator", "scope", "room_type", "device", "rules", "composite_rules")
 
     def get_fields(self):
         fields = super().get_fields()
@@ -77,12 +96,23 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
         return value
 
     def validate_rules(self, rules):
-        names = [rule["tag_name"] for rule in rules]
-        if duplicates := sorted({name for name in names if names.count(name) > 1}):
+        # A tag takes its rule by name, so a name belongs to one rule of the profile.
+        counts = Counter(name for rule in rules for name in rule["tag_names"])
+        if duplicates := sorted(name for name, count in counts.items() if count > 1):
             raise serializers.ValidationError([f"Duplicate tag names: {duplicates}."])
         return rules
 
+    def _validate_composite_rules(self, attrs):
+        composite_rules = attrs.get("composite_rules", getattr(self.instance, "composite_rules", []))
+        plain_tag_names = {name for rule in attrs["rules"] for name in rule["tag_names"]}
+        per_rule, general = composite_rules_issues(composite_rules, plain_tag_names)
+        if general:
+            raise serializers.ValidationError({"composite_rules": [issue.message for issue in general]})
+        if any(per_rule):
+            raise serializers.ValidationError({"composite_rules": [issues_by_field(issues) for issues in per_rule]})
+
     def validate(self, attrs):
+        self._validate_composite_rules(attrs)
         # A field left out of the body keeps the saved value (none for a new profile).
         scope = attrs.get("scope", getattr(self.instance, "scope", MappingProfile.Scope.TENANT))
         target_field = MappingProfile.TARGET_FIELDS[scope]

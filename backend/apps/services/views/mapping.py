@@ -59,12 +59,13 @@ class MappingProfileDetailView(APIView):
     @mapping_profile_swagger_update()
     @check_perms(["services.change_mappingprofile"])
     def put(self, request, pk):
-        instance = self.get_own_object(request, pk)
-        serializer = MappingProfileWriteSerializer(
-            instance, request.data, context={"tenant_id": request.user.tenant_id}
-        )
-        serializer.is_valid(raise_exception=True)
+        tenant_id = request.user.tenant_id
         with transaction.atomic():
+            # Saves of one profile run one after another: two at once would each keep their rules.
+            profiles = MappingProfile.objects.by_tenant(tenant_id).select_for_update()
+            instance = get_object_or_404(profiles, pk=pk)
+            serializer = MappingProfileWriteSerializer(instance, request.data, context={"tenant_id": tenant_id})
+            serializer.is_valid(raise_exception=True)
             instance = serializer.save(updated_by=request.user)
         return Response(MappingProfileSerializer(self.get_own_object(request, instance.pk)).data)
 

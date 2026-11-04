@@ -10,7 +10,7 @@ from services.mapping.engine import (
 
 
 def rule(transform, value_type="integer", **fields):
-    return {"tag_name": "tag", "external": {"value_type": value_type}, "transform": transform, **fields}
+    return {"tag_names": ["tag"], "external": {"value_type": value_type}, "transform": transform, **fields}
 
 
 def enum(*pairs):
@@ -183,8 +183,9 @@ class DirectionTest(SimpleTestCase):
 
     def test_read_only_rule_refuses_writes(self):
         with self.assertRaises(MappingError) as write:
-            to_grms({**ON_OFF, "direction": "to_external"}, 1)
+            to_grms({**ON_OFF, "direction": "to_external"}, 1, tag_name="power")
         self.assertEqual(write.exception.code, "direction")
+        self.assertIn("'power'", str(write.exception))
 
     def test_number_stored_as_string_is_read(self):
         # A device may report a numeric value as a string (str_v).

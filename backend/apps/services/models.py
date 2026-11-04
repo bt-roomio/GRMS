@@ -1,10 +1,11 @@
 import uuid
 from typing import ClassVar, cast
 
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 
-from services.mapping.constants import Direction, OnInvalid
+from services.mapping.constants import TAG_NAME_MAX_LENGTH, Direction, OnInvalid
 from services.querysets.integration import IntegrationQuerySet
 from services.querysets.mapping import MappingProfileQuerySet
 from services.querysets.tag import TagTypeGroupQuerySet, TagTypeQuerySet
@@ -128,7 +129,8 @@ class TagRange(BaseModel):
 
 
 class MappingProfile(BaseModel):
-    """An integrator's value format: one ``MappingRule`` per tag name.
+    """An integrator's value format: ``MappingRule`` objects, each for one or more tag names, and
+    ``composite_rules``, each making one integrator value of several tags.
 
     An integration uses a ``tenant`` profile through ``Integration.mapping_profile``. The
     ``room_type`` and ``device`` profiles of the same integrator in the tenant hold the rules that
@@ -155,6 +157,11 @@ class MappingProfile(BaseModel):
     scope = models.CharField(max_length=20, choices=Scope.choices, default=Scope.TENANT)
     room_type = models.ForeignKey("main.RoomType", models.CASCADE, "mapping_profiles", null=True, blank=True)
     device = models.ForeignKey("main.Device", models.CASCADE, "mapping_profiles", null=True, blank=True)
+    composite_rules = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Rules making one integrator value of several tags, see services.mapping.composite.",
+    )
 
     objects: ClassVar[MappingProfileQuerySet] = cast(MappingProfileQuerySet, MappingProfileQuerySet.as_manager())
 
@@ -188,11 +195,12 @@ class MappingProfile(BaseModel):
 
 
 class MappingRule(BaseModel):
-    """One rule of a profile, see ``services.mapping.engine``. The rule converts every tag named
-    ``tag_name`` (an attribute key or a telemetry key) its profile applies to."""
+    """One rule of a profile, see ``services.mapping.engine``. The rule converts every tag whose
+    name (an attribute key or a telemetry key) is in ``tag_names``, wherever its profile applies.
+    A tag name belongs to one rule of a profile: the serializer checks it, the database cannot."""
 
     profile = models.ForeignKey("services.MappingProfile", models.CASCADE, "rules")
-    tag_name = models.CharField(max_length=255)
+    tag_names = ArrayField(models.CharField(max_length=TAG_NAME_MAX_LENGTH), default=list)
     external = models.JSONField(help_text='The integrator side, e.g. {"value_type": "integer"}.')
     direction = models.CharField(max_length=20, choices=Direction.choices, default=Direction.BOTH)
     transform = models.JSONField()
@@ -202,12 +210,12 @@ class MappingRule(BaseModel):
     )
 
     def __str__(self):
-        return str(self.tag_name)
+        return ", ".join(self.tag_names)
 
     def as_rule(self) -> dict:
         """The rule as the engine takes it."""
         return {
-            "tag_name": self.tag_name,
+            "tag_names": list(self.tag_names),
             "external": self.external,
             "direction": self.direction,
             "transform": self.transform,
@@ -217,7 +225,8 @@ class MappingRule(BaseModel):
 
     class Meta(BaseModel.Meta):
         db_table = "services_mapping_rule"
-        ordering = ("tag_name",)
+        ordering = ("tag_names",)
         constraints: ClassVar[list] = [
-            UniqueConstraint(fields=("profile", "tag_name"), name="unique_mapping_rule_profile_tag_name"),
+            # A rule without tag names would match no tag.
+            models.CheckConstraint(check=Q(tag_names__len__gt=0), name="mapping_rule_tag_names_not_empty"),
         ]
