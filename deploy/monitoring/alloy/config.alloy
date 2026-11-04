@@ -1,0 +1,64 @@
+// Ships the stdout/stderr of every container on this host to Loki.
+//
+// Labels are kept low-cardinality (container, service, project, level); ids such
+// as request_id/tenant_id stay in the line and are filtered at query time:
+//   {service="django"} |= "request_id=7a77..."                 (text formatters)
+//   {service="django"} | json | tenant_id="..."                (DJANGO_LOG_FORMATTER=json)
+//   {service="proxy"} | json | status >= 500                   (nginx access log)
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.level.receiver]
+}
+
+// level label for Django/Celery lines: text formatters start with the level
+// ("INFO ..." / "[INFO] ..."), the json formatter has a "level" key.
+loki.process "level" {
+  stage.regex {
+    expression = "^\\[?(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL)\\]? "
+  }
+
+  stage.regex {
+    expression = "\"level\":\"(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL)\""
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

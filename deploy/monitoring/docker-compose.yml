@@ -132,9 +132,49 @@ services:
     networks:
       - roomio_net
 
+  loki:
+    image: grafana/loki:3.7.9
+    container_name: loki
+    restart: always
+    logging: *default-logging
+    expose:
+      - "3100"
+    command:
+      - -config.file=/etc/loki/config.yml
+      - -config.expand-env=true
+    environment:
+      - LOKI_RETENTION_PERIOD=${LOKI_RETENTION_PERIOD:-336h}
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    networks:
+      - roomio_net
+
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: alloy
+    restart: always
+    logging: *default-logging
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # Read-only, used to discover containers and read their logs through the Docker API.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Read positions: a restart resumes where it stopped instead of re-sending logs.
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      - loki
+    networks:
+      - roomio_net
+
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
+  alloy_data:
 
 networks:
   roomio_net:

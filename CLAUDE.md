@@ -15,7 +15,7 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 - **Task Queue**: Celery on a dedicated `redis-broker` instance (separate from the `redis` cache/channel layer)
 - **Message Queue**: RabbitMQ for device communication, MQTT broker
 - **Auth**: JWT (djangorestframework-simplejwt), django-allauth (Google, Microsoft, Keycloak SSO)
-- **Monitoring**: Prometheus metrics (django-prometheus); stdout logging with request/task context (text or JSON, `core/log/`); standalone Prometheus + Grafana + Alertmanager stack under `deploy/monitoring/`
+- **Monitoring**: Prometheus metrics (django-prometheus); stdout logging with request/task context (text or JSON, `core/log/`); standalone Prometheus + Grafana + Alertmanager + Loki stack under `deploy/monitoring/`
 - **Process Management**: Each process runs as its own Docker Compose service (no supervisord); orchestrated via `deploy/Makefile`
 
 ## Development Commands
@@ -226,7 +226,7 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 - Custom metrics in `main/metrics.py`
 - Gateway monitoring via `DJANGO_IS_MONITORING_GATEWAYS` and `DJANGO_MONITOR_DISABLED_GATEWAYS`
 - Database metrics updated every 60s via Celery task
-- Standalone observability stack under `deploy/monitoring/` (Prometheus + Grafana + Alertmanager + node-exporter + blackbox), with Grafana dashboards and alert rules; alerts route to Telegram. Runs on the shared external `roomio_net` network.
+- Standalone observability stack under `deploy/monitoring/` (Prometheus + Grafana + Alertmanager + node-exporter + blackbox, plus Loki + Alloy collecting every container's stdout), with Grafana dashboards and alert rules; alerts route to Telegram. Runs on the shared external `roomio_net` network.
 - Celery workers/queues can be inspected via Flower (`celery-flower` service, port 5555)
 
 ### Logging
@@ -236,6 +236,7 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 - `%s`-style args, never f-strings (ruff `G`/`LOG` enforce this). Unexpected errors (`except Exception`): `logger.exception(...)` without the exception in the message. Expected ones (timeouts, `DoesNotExist`, bad payloads, retry loops): `logger.error`/`warning` with the error text, no traceback
 - Knobs: `DJANGO_LOG_LEVEL`, `DJANGO_LOG_FORMATTER` (`simple`/`verbose`/`verbose_with_location`/`json`), `DJANGO_LOG_SQL`. Celery workers/beat use the same config (`core/log/celery.py`), their `-l` flag has no effect. Chatty third-party libs and per-task Celery lines are capped at WARNING (`_QUIET_LOGGERS`); `hoteza` is capped at WARNING because it logs webhook payloads with guest PII at INFO
 - Log context (`core/log/`): every record carries `request_id` (HTTP: `RequestContextMiddleware`, echoed in the `X-Request-ID` header; passed to Celery tasks via task headers), `user_id`/`tenant_id` (once DRF has authenticated), `task_id`/`task` in Celery; in mq-async a fresh `request_id` + `queue` per batch (inherited by the Celery tasks it dispatches) and `device_id`/`topic` in per-message handlers. Add your own with `with log_context(key=value):` from `core.log.context`
+- nginx-proxy generates/forwards the request id (`deploy/nginx/proxy.conf`, which replaces nginx-proxy's default proxy headers; never put `proxy_set_header` in `vhost.d/*`, it drops all of them for that host) and writes a JSON access log with it (`LOG_FORMAT` on the `proxy` service), so one id links the nginx line with the backend/Celery lines. Search all of them in Grafana → Explore → Loki (`deploy/monitoring/README.md`)
 
 ## Configuration
 
