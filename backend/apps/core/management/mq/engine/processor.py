@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 import aio_pika
 import orjson
 
-from core.log.context import bind
+from core.log.context import log_context
 from core.management.mq.config import (
     TOPIC_ATTRIBUTES,
     TOPIC_DEVICES_ATTRIBUTES_REQUEST,
@@ -157,15 +157,16 @@ class BatchProcessor:
     async def _handle_other(self, entry: RoutedMessage, message_status: dict):
         """Dispatch a single non-batched message (attribute request / RPC)."""
         device, topic, data, message = entry
-        # gather() runs each call in its own task, so this context stays per message.
-        bind(tenant_id=device["tenant_id"], device_id=device["id"], topic=topic)
         try:
-            if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(TOPIC_DEVICES_ATTRIBUTES_REQUEST):
-                await handle_attribute_request_async(topic, device, data, self.publisher)  # ty: ignore
-            elif topic == TOPIC_GATEWAY_RPC:
-                await handle_rpc_async(data)
-            else:
-                logger.warning("[%s] Unhandled topic: %s", self.queue_name, topic)
+            with log_context(tenant_id=device.get("tenant_id"), device_id=device.get("id"), topic=topic):
+                if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(
+                    TOPIC_DEVICES_ATTRIBUTES_REQUEST
+                ):
+                    await handle_attribute_request_async(topic, device, data, self.publisher)  # ty: ignore
+                elif topic == TOPIC_GATEWAY_RPC:
+                    await handle_rpc_async(data)
+                else:
+                    logger.warning("[%s] Unhandled topic: %s", self.queue_name, topic)
             message_status[message.delivery_tag] = STATUS_SUCCESS
         except Exception:
             logger.exception("[%s] Individual message processing failed", self.queue_name)

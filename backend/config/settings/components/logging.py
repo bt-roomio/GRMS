@@ -13,7 +13,11 @@ _QUIET_LOGGERS = (
     "aiormq",
     "amqp",
     "asyncssh",
-    "celery",
+    # Per-task "received"/"succeeded" lines; failures are logged at ERROR anyway.
+    # The rest of the celery tree (beat "Sending due task", worker "ready") follows
+    # DJANGO_LOG_LEVEL.
+    "celery.app.trace",
+    "celery.worker.strategy",
     "engineio",
     "kombu",
     "pika",
@@ -94,6 +98,11 @@ LOGGING = {
         # login events are always needed, regardless of overall log verbosity.
         "security": {
             "level": "INFO",
+        },
+        # Hoteza views/serializers log whole webhook payloads (guest PII) at INFO;
+        # kept at WARNING so they stay out of production logs.
+        "hoteza": {
+            "level": "WARNING",
         },
         **{name: {"level": "WARNING"} for name in _QUIET_LOGGERS},
     },

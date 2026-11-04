@@ -233,8 +233,8 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 
 - Config: `config/settings/components/logging.py`. One `console` handler on the root logger (stdout; Docker rotates it); loggers below it only set levels, so never give a logger its own handler (duplicate lines)
 - Always `logger = logging.getLogger(__name__)`; the only named channel is `security` (auth/lockout events, always INFO). Don't use `get_task_logger` or `getLogger("django"/"main"/...)`
-- `%s`-style args, never f-strings; in `except` blocks use `logger.exception(...)` without the exception in the message (ruff `G`/`LOG` rules enforce this)
-- Knobs: `DJANGO_LOG_LEVEL`, `DJANGO_LOG_FORMATTER` (`simple`/`verbose`/`verbose_with_location`/`json`), `DJANGO_LOG_SQL`. Celery workers/beat use the same config (`core/log/celery.py`), their `-l` flag has no effect. Chatty third-party libs are capped at WARNING (`_QUIET_LOGGERS`)
+- `%s`-style args, never f-strings (ruff `G`/`LOG` enforce this). Unexpected errors (`except Exception`): `logger.exception(...)` without the exception in the message. Expected ones (timeouts, `DoesNotExist`, bad payloads, retry loops): `logger.error`/`warning` with the error text, no traceback
+- Knobs: `DJANGO_LOG_LEVEL`, `DJANGO_LOG_FORMATTER` (`simple`/`verbose`/`verbose_with_location`/`json`), `DJANGO_LOG_SQL`. Celery workers/beat use the same config (`core/log/celery.py`), their `-l` flag has no effect. Chatty third-party libs and per-task Celery lines are capped at WARNING (`_QUIET_LOGGERS`); `hoteza` is capped at WARNING because it logs webhook payloads with guest PII at INFO
 - Log context (`core/log/`): every record carries `request_id` (HTTP: `RequestContextMiddleware`, echoed in the `X-Request-ID` header; passed to Celery tasks via task headers), `user_id`/`tenant_id` (once DRF has authenticated), `task_id`/`task` in Celery, `device_id`/`topic` in mq-async per-message handlers. Add your own with `with log_context(key=value):` from `core.log.context`
 
 ## Configuration

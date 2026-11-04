@@ -11,13 +11,9 @@ class UUIDSafeJSONSerializer(BaseMessageSerializer):
     """
 
     def as_bytes(self, message):
-        def default(o):
-            # uuid.UUID and anything else json can't encode -> str
-            return str(o)
-
         text = json.dumps(
             message,
-            default=default,
+            default=str,  # uuid.UUID and anything else json can't encode
             ensure_ascii=False,
             separators=(",", ":"),
         )

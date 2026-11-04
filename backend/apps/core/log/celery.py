@@ -1,5 +1,6 @@
 """
-Celery side of the logging setup, connected from ``config/celery.py``:
+Celery side of the logging setup, connected from ``CoreConfig.ready()``
+(core/apps.py; config/celery.py is imported before apps/ is on sys.path):
 
 - workers and beat keep Django's LOGGING instead of Celery's own root-logger
   setup, so every process shares one format and DJANGO_LOG_LEVEL;
