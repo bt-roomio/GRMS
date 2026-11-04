@@ -36,7 +36,28 @@ test:
     - uv sync --frozen
     - uv run python manage.py migrate
   script:
+    - uv run python manage.py makemigrations --check --dry-run
     - uv run python manage.py test
+
+# Runs every hook on the whole tree, so a commit made with --no-verify or
+# without `pre-commit install` is still checked.
+pre-commit:
+  stage: test
+  image: ghcr.io/astral-sh/uv:python3.12-bookworm
+  interruptible: true
+  variables:
+    PRE_COMMIT_HOME: .pre-commit-cache
+    # makemigrations-check needs the backend venv (covered by the test job);
+    # no-commit-to-branch is local-only.
+    SKIP: makemigrations-check,no-commit-to-branch
+  cache:
+    key:
+      files:
+        - .pre-commit-config.yaml
+    paths:
+      - .pre-commit-cache
+  script:
+    - uvx pre-commit run --all-files --show-diff-on-failure
 
 backend:
   stage: build
