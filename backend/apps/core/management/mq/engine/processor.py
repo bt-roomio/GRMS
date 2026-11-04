@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 import aio_pika
 import orjson
 
-from core.log.context import log_context
+from core.log.context import log_context, new_request_id
 from core.management.mq.config import (
     TOPIC_ATTRIBUTES,
     TOPIC_DEVICES_ATTRIBUTES_REQUEST,
@@ -67,6 +67,13 @@ class BatchProcessor:
 
     async def process(self, batch: list[aio_pika.IncomingMessage]) -> dict:
         """Process a batch and return ``{delivery_tag: status}`` for every message."""
+        # One id per batch: every log line of the batch carries it, and Celery tasks
+        # dispatched from the handlers inherit it through the task headers
+        # (core.log.celery), the same way HTTP requests pass theirs.
+        with log_context(request_id=new_request_id(), queue=self.queue_name):
+            return await self._process(batch)
+
+    async def _process(self, batch: list[aio_pika.IncomingMessage]) -> dict:
         message_status: dict = {}
 
         parsed, source_ids = self._parse(batch, message_status)

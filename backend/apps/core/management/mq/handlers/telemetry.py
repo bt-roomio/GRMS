@@ -257,12 +257,13 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     # Batch publish WebSocket updates
     if updates_by_device:
-        logger.info("Dispatching publish_updates_batch_task: devices=%s", len(updates_by_device.keys()))
+        logger.debug("Dispatching publish_updates_batch_task: devices=%d", len(updates_by_device))
         publish_updates_batch_task.delay(updates_by_device)
 
     logger.info(
-        "Batch telemetry processed: %d messages, %d historical, %d latest",
+        "Batch telemetry processed: %d messages, %d devices, %d historical, %d latest",
         len(batch),
+        len(device_ids),
         len(historical_objs),
         len(latest_objs),
     )

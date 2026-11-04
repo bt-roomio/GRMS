@@ -91,3 +91,26 @@ async def test_run_group_noop_on_empty():
     await p._run_group("Telemetry", [], handler, status)
     handler.assert_not_awaited()
     assert status == {}
+
+
+async def test_process_binds_batch_context_for_thread_handlers():
+    from asgiref.sync import sync_to_async
+
+    from core.log.context import get_context
+
+    p = BatchProcessor("q")
+    seen = []
+
+    async def fake_process(batch):
+        # Handlers run in the thread pool via sync_to_async; the context must follow.
+        seen.append(await sync_to_async(get_context, thread_sensitive=False)())
+        return {}
+
+    p._process = fake_process
+    await p.process([])
+    await p.process([])
+
+    assert [ctx["queue"] for ctx in seen] == ["q", "q"]
+    assert len(seen[0]["request_id"]) == 32
+    assert seen[0]["request_id"] != seen[1]["request_id"]  # fresh id per batch
+    assert get_context() == {}
