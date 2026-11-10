@@ -1,15 +1,15 @@
-import html
 import smtplib
+from dataclasses import asdict
 from typing import Any, ClassVar
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
+from django.template.loader import render_to_string
 
 from alarms.channels.base import ChannelNotConfigured, DeliveryError
 from alarms.notifications.message import (
     CLEARED_TITLE,
     RAISED_TITLE,
-    AlarmLine,
     alarm_lines,
     overflow,
     tenant_title,
@@ -19,7 +19,7 @@ from alarms.notifications.message import (
 SEVERITY_COLORS = {
     "CRITICAL": "#d32f2f",
     "MAJOR": "#f57c00",
-    "MINOR": "#fbc02d",
+    "MINOR": "#e6a700",
     "WARNING": "#1976d2",
     "INDETERMINATE": "#9e9e9e",
 }
@@ -47,14 +47,15 @@ class EmailChannel:
         if not settings.EMAIL_HOST or not sender:
             raise ChannelNotConfigured("EMAIL_HOST and DEFAULT_FROM_EMAIL must be set to send alarm notifications")
 
+        subject = build_subject(tenant, raised, cleared)
         message = EmailMultiAlternatives(
-            subject=build_subject(tenant, raised, cleared),
+            subject=subject,
             body=build_text(tenant, raised, cleared),
             from_email=sender,
             to=list(config["recipients"]),
             connection=get_connection(fail_silently=False),
         )
-        message.attach_alternative(build_html(tenant, raised, cleared), "text/html")
+        message.attach_alternative(build_html(tenant, subject, raised, cleared), "text/html")
 
         try:
             message.send()
@@ -73,10 +74,10 @@ class EmailChannel:
 def build_subject(tenant, raised: list, cleared: list) -> str:
     counts = []
     if raised:
-        counts.append(f"новых {len(raised)}")
+        counts.append(f"{len(raised)} new")
     if cleared:
-        counts.append(f"снятых {len(cleared)}")
-    return f"{tenant_title(tenant)}: аварии — {', '.join(counts)}"
+        counts.append(f"{len(cleared)} cleared")
+    return f"{tenant_title(tenant)}: alarms — {', '.join(counts)}"
 
 
 def sections(tenant, raised: list, cleared: list):
@@ -101,27 +102,18 @@ def build_text(tenant, raised: list, cleared: list) -> str:
     return "\n".join(parts)
 
 
-def build_html(tenant, raised: list, cleared: list) -> str:
-    parts = [f"<h2 style='margin:0 0 12px'>{html.escape(tenant_title(tenant))}</h2>"]
-
-    for title, lines, more in sections(tenant, raised, cleared):
-        parts.append(f"<h3 style='margin:16px 0 8px'>{html.escape(title)}</h3>")
-        parts.append("<table cellpadding='4' cellspacing='0' style='border-collapse:collapse'>")
-        parts.extend(html_row(line) for line in lines)
-        parts.append("</table>")
-        if more:
-            parts.append(f"<p style='color:#757575'>{html.escape(more)}</p>")
-
-    return "<div style='font-family:Arial,sans-serif;font-size:14px'>" + "".join(parts) + "</div>"
-
-
-def html_row(line: AlarmLine) -> str:
-    color = SEVERITY_COLORS.get(line.severity, "#9e9e9e")
-    return (
-        "<tr>"
-        f"<td style='color:{color};font-weight:bold;white-space:nowrap'>{html.escape(line.severity)}</td>"
-        f"<td style='white-space:nowrap'>{html.escape(line.time)}</td>"
-        f"<td style='white-space:nowrap'>{html.escape(line.room or '')}</td>"
-        f"<td>{html.escape(line.text)}</td>"
-        "</tr>"
+def build_html(tenant, subject: str, raised: list, cleared: list) -> str:
+    """Same layout as the password reset email (``core/templates/base_email.html``)."""
+    sections_data = [
+        {
+            "title": title,
+            "rows": [{**asdict(line), "color": SEVERITY_COLORS.get(line.severity, "#9e9e9e")} for line in lines],
+            "more": more,
+        }
+        for title, lines, more in sections(tenant, raised, cleared)
+    ]
+    panel_url = (settings.FRONTEND_DOMAIN or "").rstrip("/")
+    return render_to_string(
+        "alarm_email.html",
+        {"subject": subject, "title": tenant_title(tenant), "sections": sections_data, "panel_url": panel_url},
     )

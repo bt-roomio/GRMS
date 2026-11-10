@@ -57,7 +57,7 @@ class MessengersWebhookTest(SimpleTestCase):
         self.assertEqual(self.verify(**{"hub.verify_token": "nope"}).status_code, 403)
 
     def test_handshake_survives_non_ascii_token(self):
-        self.assertEqual(self.verify(**{"hub.verify_token": "токен"}).status_code, 403)
+        self.assertEqual(self.verify(**{"hub.verify_token": "tökén-✓"}).status_code, 403)
 
     def test_handshake_refused_when_token_not_configured(self):
         with override_settings(WA_VERIFY_TOKEN=""):

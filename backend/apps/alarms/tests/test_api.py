@@ -178,11 +178,11 @@ class AlarmActionTest(AlarmAPITestCase):
     def test_comments(self):
         response = self.post(
             reverse("alarms:alarm-comments", args=[self.alarm.id]),
-            data={"text": "Выехал техник"},
+            data={"text": "Technician dispatched"},
             format="json",
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data["comment"]["text"], "Выехал техник")
+        self.assertEqual(response.data["comment"]["text"], "Technician dispatched")
 
         listing = self.get(reverse("alarms:alarm-comments", args=[self.alarm.id]))
         self.assertEqual(len(listing.data), 1)
@@ -207,7 +207,7 @@ class AlarmActionTest(AlarmAPITestCase):
     def test_delete_removes_the_alarm_and_its_comments(self):
         self.post(
             reverse("alarms:alarm-comments", args=[self.alarm.id]),
-            data={"text": "Ложное срабатывание"},
+            data={"text": "False alarm"},
             format="json",
         )
 
@@ -220,15 +220,15 @@ class AlarmActionTest(AlarmAPITestCase):
     def test_own_comment_can_be_edited_and_deleted(self):
         created = self.post(
             reverse("alarms:alarm-comments", args=[self.alarm.id]),
-            data={"text": "Выехал техник"},
+            data={"text": "Technician dispatched"},
             format="json",
         )
         comment_id = created.data["id"]
         url = reverse("alarms:alarm-comment-detail", args=[self.alarm.id, comment_id])
 
-        edited = self.put(url, data={"text": "Техник на месте"}, format="json")
+        edited = self.put(url, data={"text": "Technician on site"}, format="json")
         self.assertEqual(edited.status_code, 200)
-        self.assertEqual(edited.data["comment"]["text"], "Техник на месте")
+        self.assertEqual(edited.data["comment"]["text"], "Technician on site")
         self.assertTrue(edited.data["comment"]["edited"])
 
         self.assertEqual(self.delete(url).status_code, 204)
@@ -239,7 +239,7 @@ class AlarmActionTest(AlarmAPITestCase):
         system = AlarmComment.objects.get(alarm=self.alarm, comment__subtype="ACKNOWLEDGED")
         url = reverse("alarms:alarm-comment-detail", args=[self.alarm.id, system.id])
 
-        self.assertEqual(self.put(url, data={"text": "переписал"}, format="json").status_code, 403)
+        self.assertEqual(self.put(url, data={"text": "rewritten"}, format="json").status_code, 403)
         self.assertEqual(self.delete(url).status_code, 403)
         self.assertTrue(AlarmComment.objects.filter(pk=system.id).exists())
 

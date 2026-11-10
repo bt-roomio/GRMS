@@ -21,8 +21,8 @@ SEVERITY_ICONS = {
     AlarmSeverity.INDETERMINATE: "⚪",
 }
 
-RAISED_TITLE = "Новые аварии"
-CLEARED_TITLE = "Снятые аварии"
+RAISED_TITLE = "New alarms"
+CLEARED_TITLE = "Cleared alarms"
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ def alarm_lines(alarms: list[Alarm], offset: int, raised: bool) -> list[AlarmLin
 
 def overflow(alarms: list[Alarm]) -> str | None:
     if len(alarms) > MAX_LINES:
-        return f"… и ещё {len(alarms) - MAX_LINES}"
+        return f"… and {len(alarms) - MAX_LINES} more"
     return None
 
 

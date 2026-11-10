@@ -29,7 +29,7 @@ class EmailChannelTest(AlarmTestCase):
             severity="CRITICAL",
             start_ts=start,
             end_ts=start,
-            details={"message": "Устройство <DHT11> не на связи"},
+            details={"message": "Device <DHT11> is offline"},
         )
 
     def test_is_configured_needs_the_switch_and_a_recipient(self):
@@ -46,9 +46,9 @@ class EmailChannelTest(AlarmTestCase):
         assert isinstance(message, EmailMultiAlternatives)
         self.assertEqual(message.to, ["ops@hotel.uz", "eng@hotel.uz"])
         self.assertEqual(message.from_email, "grms@example.com")
-        self.assertIn("новых 1", message.subject)
-        self.assertIn("Новые аварии (1)", message.body)
-        self.assertIn("Устройство <DHT11> не на связи", message.body)
+        self.assertIn("1 new", message.subject)
+        self.assertIn("New alarms (1)", message.body)
+        self.assertIn("Device <DHT11> is offline", message.body)
 
         content, mimetype = message.alternatives[0]
         html = str(content)
@@ -56,14 +56,17 @@ class EmailChannelTest(AlarmTestCase):
         # Device names come from the field; they must not inject markup.
         self.assertIn("&lt;DHT11&gt;", html)
         self.assertIn("CRITICAL", html)
+        # The shared Room.io layout, as in the password reset email.
+        self.assertIn('alt="Room.io Logo"', html)
+        self.assertIn("New alarms (1)", html)
 
     def test_cleared_alarms_get_their_own_section(self):
         EmailChannel().send(self.tenant, SETTINGS, [], [self.alarm])
 
         message = mail.outbox[0]
-        self.assertIn("снятых 1", message.subject)
-        self.assertIn("Снятые аварии (1)", message.body)
-        self.assertNotIn("Новые аварии", message.body)
+        self.assertIn("1 cleared", message.subject)
+        self.assertIn("Cleared alarms (1)", message.body)
+        self.assertNotIn("New alarms", message.body)
 
     @override_settings(DEFAULT_FROM_EMAIL="", EMAIL_HOST_USER="")
     def test_no_sender_means_the_installation_is_not_configured(self):

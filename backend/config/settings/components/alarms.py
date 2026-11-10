@@ -32,4 +32,4 @@ WA_GRAPH_VERSION = os.getenv("WA_GRAPH_VERSION", "v21.0")
 WA_TIMEOUT = float(os.getenv("WA_TIMEOUT", "10"))
 # The approved Utility template alarms go out with (see alarms.channels.whatsapp).
 WA_ALARM_TEMPLATE = os.getenv("WA_ALARM_TEMPLATE", "alarm_summary")
-WA_TEMPLATE_LANGUAGE = os.getenv("WA_TEMPLATE_LANGUAGE", "ru")
+WA_TEMPLATE_LANGUAGE = os.getenv("WA_TEMPLATE_LANGUAGE", "en")

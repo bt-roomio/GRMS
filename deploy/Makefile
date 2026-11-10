@@ -59,50 +59,50 @@ PS_FORMAT = table {{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}
 
 help:
 	@echo ""
-	@echo "  roomio GRMS — управление сервисами"
+	@echo "  roomio GRMS — service management"
 	@echo ""
-	@echo "  Запуск:"
-	@echo "    make up-infra              Инфраструктура (postgres, redis, rabbitmq)"
-	@echo "    make up-app                Инфра + Django + Celery"
-	@echo "    make up-iot                Добавить MQTT"
-	@echo "    make up-front              Добавить Frontend"
-	@echo "    make up-proxy              Добавить Proxy + SSL"
-	@echo "    make up-all                Всё вместе (без Node-RED)"
-	@echo "    make up-all ENV=prod       Всё в продакшн-режиме (лимиты ресурсов)"
+	@echo "  Start:"
+	@echo "    make up-infra              Infrastructure (postgres, redis, rabbitmq)"
+	@echo "    make up-app                Infra + Django + Celery"
+	@echo "    make up-iot                Add MQTT"
+	@echo "    make up-front              Add Frontend"
+	@echo "    make up-proxy              Add Proxy + SSL"
+	@echo "    make up-all                Everything (without Node-RED)"
+	@echo "    make up-all ENV=prod       Everything in production mode (resource limits)"
 	@echo ""
-	@echo "  Деплой:"
+	@echo "  Deploy:"
 	@echo "    make deploy                git pull + docker pull + restart app"
-	@echo "    make deploy-backend        Обновить только backend + celery"
-	@echo "    make deploy-frontend       Обновить только frontend"
+	@echo "    make deploy-backend        Update backend + celery only"
+	@echo "    make deploy-frontend       Update frontend only"
 	@echo ""
-	@echo "  Управление:"
-	@echo "    make down                  Остановить все сервисы"
-	@echo "    make down-infra            Остановить инфраструктуру"
-	@echo "    make down-app              Остановить backend + celery"
-	@echo "    make down-iot              Остановить MQTT"
-	@echo "    make down-front            Остановить Frontend"
-	@echo "    make down-proxy            Остановить Proxy + SSL"
-	@echo "    make down-nodered          Остановить Node-RED"
-	@echo "    make restart s=backend     Перезапустить сервис"
-	@echo "    make logs s=backend        Логи сервиса (Ctrl+C для выхода)"
-	@echo "    make shell s=backend       Bash в контейнер"
-	@echo "    make ps                    Статус всех контейнеров"
+	@echo "  Manage:"
+	@echo "    make down                  Stop all services"
+	@echo "    make down-infra            Stop infrastructure"
+	@echo "    make down-app              Stop backend + celery"
+	@echo "    make down-iot              Stop MQTT"
+	@echo "    make down-front            Stop Frontend"
+	@echo "    make down-proxy            Stop Proxy + SSL"
+	@echo "    make down-nodered          Stop Node-RED"
+	@echo "    make restart s=backend     Restart a service"
+	@echo "    make logs s=backend        Service logs (Ctrl+C to exit)"
+	@echo "    make shell s=backend       Bash into the container"
+	@echo "    make ps                    Status of all containers"
 	@echo ""
 	@echo "  Django:"
-	@echo "    make migrate               Запустить миграции"
-	@echo "    make collectstatic         Собрать статику"
+	@echo "    make migrate               Run migrations"
+	@echo "    make collectstatic         Collect static files"
 	@echo ""
 	@echo "  Node-RED (multi-tenant):"
-	@echo "    make nodered-up-<name>     Поднять тенанта  (требует .env.nodered.<name>)"
-	@echo "    make nodered-down-<name>   Остановить тенанта"
-	@echo "    make nodered-restart-<name>  Перезапустить тенанта"
-	@echo "    make nodered-logs-<name>   Логи тенанта"
-	@echo "    make nodered-pull-<name>   Обновить образ тенанта"
-	@echo "    make nodered-up-all        Поднять всех  (NODERED_TENANTS=$(NODERED_TENANTS))"
-	@echo "    make nodered-down-all      Остановить всех"
-	@echo "    make nodered-pull-all      Обновить образы всех"
-	@echo "    make nodered-ps-<name>     Статус тенанта"
-	@echo "    make nodered-ps-all        Статус всех тенантов"
+	@echo "    make nodered-up-<name>     Start a tenant  (needs .env.nodered.<name>)"
+	@echo "    make nodered-down-<name>   Stop a tenant"
+	@echo "    make nodered-restart-<name>  Restart a tenant"
+	@echo "    make nodered-logs-<name>   Tenant logs"
+	@echo "    make nodered-pull-<name>   Update a tenant's image"
+	@echo "    make nodered-up-all        Start all  (NODERED_TENANTS=$(NODERED_TENANTS))"
+	@echo "    make nodered-down-all      Stop all"
+	@echo "    make nodered-pull-all      Update all images"
+	@echo "    make nodered-ps-<name>     Tenant status"
+	@echo "    make nodered-ps-all        Status of all tenants"
 	@echo ""
 
 # --- Start by level ---
@@ -127,7 +127,7 @@ up-all:
 
 up:
 ifndef s
-	$(error Укажи сервис: make restart s=backend)
+	$(error Specify a service: make restart s=backend)
 endif
 	$(COMPOSE) up -d --no-deps $(s)
 
@@ -162,7 +162,7 @@ down-nodered:
 
 restart:
 ifndef s
-	$(error Укажи сервис: make restart s=backend)
+	$(error Specify a service: make restart s=backend)
 endif
 	$(COMPOSE) restart $(s)
 
@@ -175,7 +175,7 @@ endif
 
 shell:
 ifndef s
-	$(error Укажи сервис: make shell s=backend)
+	$(error Specify a service: make shell s=backend)
 endif
 	$(COMPOSE) exec $(s) bash
 

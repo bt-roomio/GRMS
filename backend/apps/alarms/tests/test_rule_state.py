@@ -21,7 +21,7 @@ class AlarmLifecycleTest(AlarmTestCase):
         self.assertEqual(alarm.severity, "MAJOR")
         self.assertFalse(alarm.cleared)
         self.assertEqual(alarm.status, "ACTIVE_UNACK")
-        self.assertEqual(alarm.details["message"], "Устройство DHT11 Demo Device не на связи")
+        self.assertEqual(alarm.details["message"], "Device DHT11 Demo Device is offline")
         self.assertEqual(alarm.details["values"], {"active": False})
         self.assertEqual(str(alarm.room_id), ROOM_ID)
 
@@ -147,7 +147,7 @@ class DynamicThresholdTest(AlarmTestCase):
 
         alarm = Alarm.objects.get(originator_id=DEVICE_ID)
         self.assertEqual(alarm.alarm_type, "High Temperature")
-        self.assertEqual(alarm.details["message"], "Температура 25.0° в номере 101")
+        self.assertEqual(alarm.details["message"], "Temperature 25.0° in room 101")
 
 
 class ScheduleTest(AlarmTestCase):

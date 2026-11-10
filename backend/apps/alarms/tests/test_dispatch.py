@@ -162,7 +162,7 @@ class DispatchTest(DispatcherTestCase):
 
         channel, stats = self.run_dispatch()
         self.assertEqual(stats["cleared"], 1)
-        self.assertIn("Снятые аварии", channel.sent[0][1])
+        self.assertIn("Cleared alarms", channel.sent[0][1])
         self.assertIsNotNone(self.mark(alarm).cleared_at)
 
         # And only once.
@@ -185,7 +185,7 @@ class DispatchTest(DispatcherTestCase):
 
         self.assertEqual(stats["raised"], 2)
         self.assertEqual(len(channel.sent), 1)
-        self.assertIn("Новые аварии (2)", channel.sent[0][1])
+        self.assertIn("New alarms (2)", channel.sent[0][1])
 
     def test_a_tenant_without_telegram_is_skipped(self):
         self.configure(telegram={"enabled": False})

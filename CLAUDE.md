@@ -294,6 +294,10 @@ Branches:
 - `stable` - Production branch, builds `latest` tag
 - `main` - Main integration branch
 
+## Language
+
+All texts in the code are in English: anything a user sees (API and validation messages, emails, Telegram/WhatsApp notifications, alarm rule templates and their `alarmDetails`), log messages, comments, docstrings and test data. Project docs under `backend/docs/` are written in Russian, but any product text they quote must match the code verbatim.
+
 ## Common Patterns
 
 ### Adding a New Model

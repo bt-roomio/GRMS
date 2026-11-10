@@ -165,9 +165,7 @@ class Room(BaseModel, UpdateByModel):
     def clean(self):
         super().clean()
         if self.state is not None and self.Available in self.state and self.CheckedIn in self.state:
-            raise ValidationError(
-                {"state": "Поле state не может содержать одновременно состояния Available и CheckedIn."}
-            )
+            raise ValidationError({"state": "The state field cannot contain both Available and CheckedIn."})
 
     def save(self, *args, **kwargs):
         self.full_clean()

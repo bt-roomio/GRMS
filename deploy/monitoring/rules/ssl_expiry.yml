@@ -7,15 +7,15 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "TLS скоро истечёт ({{ $labels.instance }})"
+          summary: "TLS certificate expires soon ({{ $labels.instance }})"
           description: >-
-            Сертификат истекает
+            The certificate expires
             {{- $ts := query (printf "probe_ssl_earliest_cert_expiry{instance=%q}" $labels.instance) -}}
             {{- with $s := first $ts -}}
               {{ humanizeTimestamp (value $s) }}
             {{- end -}}
-            (осталось ~
+            (~
             {{- $dl := query (printf "(probe_ssl_earliest_cert_expiry{instance=%q} - time())/86400" $labels.instance) -}}
             {{- with $d := first $dl -}}
               {{ printf "%.1f" (value $d) }}
-            {{- end -}} дн.).
+            {{- end -}} days left).

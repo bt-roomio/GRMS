@@ -610,8 +610,8 @@ TB не выражается — нужны два разных правила.
   профиля: вычислитель не загружает ключи, на которые никто не ссылается.
 - Пустой или отсутствующий шаблон даёт `"<alarmType> — <имя устройства>"`.
 
-Пример: `"Температура ${Room Temperature}° в номере ${room}, этаж ${room.floor} (${alarmSeverity})"`
-→ `"Температура 31.5° в номере 305, этаж 3 (MAJOR)"`.
+Пример: `"Temperature ${Room Temperature}° in room ${room}, floor ${room.floor} (${alarmSeverity})"`
+→ `"Temperature 31.5° in room 305, floor 3 (MAJOR)"`.
 
 `details["values"]` — снимок значений ключей из фильтров сработавшего правила (кроме
 `CONSTANT`), например `{"Room Temperature": 31.5}`.
@@ -824,7 +824,7 @@ Alarm evaluation: 1480 devices × 12 rules → 2 created, 0 escalated, 1 cleared
           "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 10}}
         },
         "schedule": {"type": "ANY_TIME"},
-        "alarmDetails": "Устройство ${originatorName} не на связи"
+        "alarmDetails": "Device ${originatorName} is offline"
       }
     },
     "clearRule": {
@@ -852,7 +852,7 @@ Alarm evaluation: 1480 devices × 12 rules → 2 created, 0 escalated, 1 cleared
           "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
         },
         "schedule": {"type": "ANY_TIME"},
-        "alarmDetails": "Шлюз ${originatorName} не на связи"
+        "alarmDetails": "Gateway ${originatorName} is offline"
       }
     },
     "clearRule": {
@@ -1587,7 +1587,7 @@ Swagger: теги `Alarms` и `Alarm Rules`.
   "results": [
     {
       "id": "high-temperature",
-      "name": "Высокая температура",
+      "name": "High temperature",
       "description": "Температура выше 30° дольше 5 минут. Порог можно переопределить на номере атрибутом «temperatureMax».",
       "requires": {"attributes": [], "timeseries": ["Room Temperature"]},
       "rule": {"alarmType": "High Temperature", "createRules": {"MINOR": {}}, "clearRule": {}}
@@ -1685,7 +1685,7 @@ GET /api/v1/alarms/?search_value=305
       "clear_ts": "2026-09-14T10:42:00.305117Z",
       "duration_ms": 1439892,
       "details": {
-        "message": "Шлюз GW-3 не на связи",
+        "message": "Gateway GW-3 is offline",
         "values": {"active": false, "is_gateway": true}
       },
       "tenant": "28c81921-f78e-4864-87d2-cec674f19d1c",
@@ -1919,7 +1919,7 @@ GET /api/v1/alarms/?search_value=305
           "ack_ts": null,
           "clear_ts": null,
           "duration_ms": 0,
-          "details": {"message": "Шлюз GW-3 не на связи", "values": {"active": false, "is_gateway": true}},
+          "details": {"message": "Gateway GW-3 is offline", "values": {"active": false, "is_gateway": true}},
           "tenant": "28c81921f78e486487d2cec674f19d1c",
           "originator": "5e6f7a8b9c0d4e1fa2b3c4d5e6f7a8b9",
           "originator_name": "GW-3",
@@ -2039,7 +2039,7 @@ GET /api/v1/alarms/?search_value=305
 2. **Снятые** — аварии, у которых `cleared = true`, а строка канала есть и её `cleared_at IS NULL`. Уведомление о снятии уходит только для аварий, о которых
    сообщали.
 3. Нет ни тех, ни других — тенант пропускается.
-4. Одно сообщение на цель за тик: обе секции, до 20 строк в каждой, плюс «… и ещё N».
+4. Одно сообщение на цель за тик: обе секции, до 20 строк в каждой, плюс «… and N more».
 5. Сразу после успешной отправки цели создаются её строки (новые) или проставляется
    `cleared_at` (снятые). При ошибке ничего не пишется, и цель повторяется на следующем тике
    **одна** — получатели, которым уже дошло, повторно сообщение не получат.
@@ -2058,12 +2058,12 @@ GET /api/v1/alarms/?search_value=305
 ```text
 Grand Hotel Tashkent
 
-Новые аварии (2)
-🔴 14.09 15:18 — Шлюз GW-3 не на связи
-🟡 14.09 15:21 · 305 — Температура 31.5° в номере 305
+New alarms (2)
+🔴 14.09 15:18 — Gateway GW-3 is offline
+🟡 14.09 15:21 · 305 — Temperature 31.5° in room 305
 
-Снятые аварии (1)
-🟠 14.09 15:40 · 412 — Устройство Thermostat 412 не на связи
+Cleared alarms (1)
+🟠 14.09 15:40 · 412 — Device Thermostat 412 is offline
 ```
 
 - Заголовки жирные (`parse_mode=HTML`), название и тексты экранируются.
@@ -2081,8 +2081,8 @@ Grand Hotel Tashkent
 | T | `active` устройства стал `false` |
 | T + до 30 с | Первый проход видит условие, начинается отсчёт `DURATION` |
 | ≈ T + 10–10,5 мин | Авария создана (`start_ts`) — видна в журнале и WS |
-| ≈ `start_ts` + 5–6 мин | Сообщение «Новые аварии» (`notify_delay_sec = 300`, тик диспетчера 60 с) |
-| `active` стал `true` | До 30 с — авария снята; ещё до 60 с — «Снятые аварии» |
+| ≈ `start_ts` + 5–6 мин | Сообщение «New alarms» (`notify_delay_sec = 300`, тик диспетчера 60 с) |
+| `active` стал `true` | До 30 с — авария снята; ещё до 60 с — «Cleared alarms» |
 
 Отсюда:
 
@@ -2098,7 +2098,7 @@ Grand Hotel Tashkent
   эскалации до `CRITICAL` нового сообщения не даст. Но если `min_severity = MAJOR`, а авария
   создалась как `MINOR`, она уйдёт в момент эскалации до `MAJOR`: фильтр смотрит на текущую
   severity.
-- **Ручное закрытие** даёт «Снятые аварии», если о срабатывании сообщали.
+- **Ручное закрытие** даёт «Cleared alarms», если о срабатывании сообщали.
 - **Удалённая авария** не даёт ничего.
 - **Аварии, снятые, пока Telegram был недоступен**, в чат не попадут: к отправке берутся только
   незакрытые.
@@ -2131,9 +2131,11 @@ Content-Type: application/json
 
 Письмо — одно на тенант за тик, всем получателям в `To`:
 
-- тема: `<название тенанта>: аварии — новых 2, снятых 1`;
-- тело — `text/plain` с теми же строками, что в Telegram, и `text/html`-версия таблицей
-  (severity цветом, время, номер, текст).
+- тема: `<название тенанта>: alarms — 2 new, 1 cleared`;
+- тело — `text/plain` с теми же строками, что в Telegram, и `text/html`-версия в оформлении
+  письма сброса пароля: шаблон `core/templates/alarm_email.html` (общий логотип —
+  `email_logo.html`, тот же футер), секции таблицами — severity цветной плашкой, время, номер,
+  текст — и кнопка «Open Room.io» на `FRONTEND_DOMAIN`.
 
 | Ситуация | Реакция |
 |---|---|
@@ -2198,17 +2200,17 @@ Content-Type: application/json
   самая серьёзная из новых, а если новых нет, первая из снятых (с ✅).
 - **Сообщение на каждого получателя.** Broadcast в Cloud API нет, каждое сообщение платное.
 
-Текст шаблона для модерации (имя `alarm_summary`, категория Utility, язык `ru`):
+Текст шаблона для модерации (имя `alarm_summary`, категория Utility, язык `en`):
 
 ```
-Объект «{{1}}»: обновление по авариям.
-Новых: {{2}}. Снятых: {{3}}.
-Главное: {{4}}
-Подробности в панели roomio.
+{{1}}: alarm update.
+New: {{2}}. Cleared: {{3}}.
+Top: {{4}}
+See the roomio panel for details.
 ```
 
 Примеры для модерации: `{{1}}` = `Grand Hotel`, `{{2}}` = `2`, `{{3}}` = `1`,
-`{{4}}` = `🔴 14.10 09:12 · 512 — Шлюз GW-3 не на связи`. Если число или порядок переменных
+`{{4}}` = `🔴 14.10 09:12 · 512 — Gateway GW-3 is offline`. Если число или порядок переменных
 в одобренном шаблоне другие, Meta отвергнет каждую отправку (ошибка `132000`).
 
 #### Ошибки
@@ -2251,7 +2253,7 @@ Content-Type: application/json
 | `TELEGRAM_TIMEOUT` | `10` | Таймаут HTTP-запроса к Telegram, секунды | `celery-low` |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | см. `env.example` | SMTP проекта, через него уходят и письма об авариях | `celery-low`, `backend` |
 | `EMAIL_TIMEOUT` | `30` | Таймаут SMTP-соединения, секунды | `celery-low`, `backend` |
-| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `ru` | Имя и язык шаблона для аварий; такой шаблон должен быть одобрен в аккаунте каждого отеля. Номер и токен отправителя — не здесь, а в настройках тенанта | `celery-low` |
+| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `en` | Имя и язык шаблона для аварий; такой шаблон должен быть одобрен в аккаунте каждого отеля. Номер и токен отправителя — не здесь, а в настройках тенанта | `celery-low` |
 | `WA_GRAPH_VERSION`, `WA_TIMEOUT` | `v21.0`, `10` | Версия Graph API и таймаут запроса, секунды | `celery-low` |
 | `SECRETS_ENCRYPTION_KEY` | `""` (выводится из `DJANGO_SECRET_KEY`) | Ключ Fernet для секретов, которые тенанты вводят в панели (токен WhatsApp отеля). Сменили — токены вводятся заново | `celery-low`, `backend` |
 | `WA_VERIFY_TOKEN`, `WA_APP_SECRET` | `""` | Webhook `/api/v1/services/messengers/`: строка подтверждения и секрет подписи. Пустые значения означают, что webhook отвечает `403` | `backend` |

@@ -97,7 +97,7 @@ def device_offline_rule(minutes: int = DEVICE_OFFLINE_MINUTES, severity: str = A
                     "spec": duration(minutes),
                 },
                 "schedule": {"type": "ANY_TIME"},
-                "alarmDetails": "Устройство ${originatorName} не на связи",
+                "alarmDetails": "Device ${originatorName} is offline",
             }
         },
         "clearRule": simple_clear_rule([boolean_filter(ATTR_ACTIVE, True)]),
@@ -118,7 +118,7 @@ def gateway_offline_rule(minutes: int = GATEWAY_OFFLINE_MINUTES, severity: str =
                     "spec": duration(minutes),
                 },
                 "schedule": {"type": "ANY_TIME"},
-                "alarmDetails": "Шлюз ${originatorName} не на связи",
+                "alarmDetails": "Gateway ${originatorName} is offline",
             }
         },
         "clearRule": simple_clear_rule([boolean_filter(ATTR_ACTIVE, True)]),
@@ -137,7 +137,7 @@ def high_temperature_rule(severity: str = AlarmSeverity.MINOR) -> dict:
                     "spec": duration(TEMPERATURE_MINUTES),
                 },
                 "schedule": {"type": "ANY_TIME"},
-                "alarmDetails": "Температура ${Room Temperature}° в номере ${room}",
+                "alarmDetails": "Temperature ${Room Temperature}° in room ${room}",
             }
         },
         "clearRule": simple_clear_rule([numeric_filter(Room_Temperature, "LESS", HIGH_TEMPERATURE_OFF)]),
@@ -154,7 +154,7 @@ def low_temperature_rule(severity: str = AlarmSeverity.MINOR) -> dict:
                     "spec": duration(TEMPERATURE_MINUTES),
                 },
                 "schedule": {"type": "ANY_TIME"},
-                "alarmDetails": "Температура ${Room Temperature}° в номере ${room}",
+                "alarmDetails": "Temperature ${Room Temperature}° in room ${room}",
             }
         },
         "clearRule": simple_clear_rule([numeric_filter(Room_Temperature, "GREATER", LOW_TEMPERATURE_OFF)]),
@@ -165,11 +165,11 @@ def low_temperature_rule(severity: str = AlarmSeverity.MINOR) -> dict:
 TEMPLATES: tuple[dict, ...] = (
     {
         "id": "device-offline",
-        "name": "Устройство не на связи",
+        "name": "Device offline",
         "description": (
-            f"Устройство молчит {DEVICE_OFFLINE_MINUTES} минут. Учитывает тумблер уведомлений "
-            f"устройства и состояние его шлюза, поэтому падение шлюза не поднимает аварию на каждом "
-            f"устройстве за ним."
+            f"The device has been silent for {DEVICE_OFFLINE_MINUTES} minutes. Respects the device's "
+            f"notification toggle and the state of its gateway, so a gateway outage does not raise an "
+            f"alarm on every device behind it."
         ),
         "requires": {
             "attributes": [ATTR_ACTIVE, ATTR_NOTIFY_ON_OFFLINE, ATTR_GATEWAY_ACTIVE],
@@ -179,29 +179,30 @@ TEMPLATES: tuple[dict, ...] = (
     },
     {
         "id": "gateway-offline",
-        "name": "Шлюз не на связи",
+        "name": "Gateway offline",
         "description": (
-            f"Шлюз молчит {GATEWAY_OFFLINE_MINUTES} минут. Авария видна в карточке каждого устройства за этим шлюзом."
+            f"The gateway has been silent for {GATEWAY_OFFLINE_MINUTES} minutes. The alarm shows up on every "
+            f"device behind this gateway."
         ),
         "requires": {"attributes": [ATTR_ACTIVE], "timeseries": []},
         "rule": gateway_offline_rule,
     },
     {
         "id": "high-temperature",
-        "name": "Высокая температура",
+        "name": "High temperature",
         "description": (
-            f"Температура выше {HIGH_TEMPERATURE_ON}° дольше {TEMPERATURE_MINUTES} минут. "
-            f"Порог можно переопределить на номере атрибутом «{ROOM_MAX_ATTRIBUTE}»."
+            f"Temperature above {HIGH_TEMPERATURE_ON}° for more than {TEMPERATURE_MINUTES} minutes. "
+            f'The threshold can be overridden per room with the "{ROOM_MAX_ATTRIBUTE}" attribute.'
         ),
         "requires": {"attributes": [], "timeseries": [Room_Temperature]},
         "rule": high_temperature_rule,
     },
     {
         "id": "low-temperature",
-        "name": "Низкая температура",
+        "name": "Low temperature",
         "description": (
-            f"Температура ниже {LOW_TEMPERATURE_ON}° дольше {TEMPERATURE_MINUTES} минут. "
-            f"Порог можно переопределить на номере атрибутом «{ROOM_MIN_ATTRIBUTE}»."
+            f"Temperature below {LOW_TEMPERATURE_ON}° for more than {TEMPERATURE_MINUTES} minutes. "
+            f'The threshold can be overridden per room with the "{ROOM_MIN_ATTRIBUTE}" attribute.'
         ),
         "requires": {"attributes": [], "timeseries": [Room_Temperature]},
         "rule": low_temperature_rule,
