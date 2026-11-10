@@ -35,7 +35,7 @@ endif
 
 # Service groups
 INFRA_SVCS   = postgres pgbouncer redis redis-broker rabbitmq
-APP_SVCS     = backend celery-critical celery-default celery-realtime celery-low celery-beat celery-flower mq-async mews-websocket pms-handler
+APP_SVCS     = backend celery-critical celery-default celery-realtime celery-low celery-beat celery-flower mq-async mews-websocket pms-handler autoheal
 IOT_SVCS     = mqtt
 FRONT_SVCS   = frontend
 PROXY_SVCS   = proxy letsencrypt
