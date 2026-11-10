@@ -334,7 +334,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-flower
-    command: celery -A config flower --port=5555 --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
+    command: celery -A config flower --port=5555 --max_tasks=2000 --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
     ports:
       - "127.0.0.1:5555:5555"
     tmpfs:
@@ -403,24 +403,19 @@ services:
   # ---------------------------------------------------------------------------
 
   mqtt:
-    image: registry.gitlab.com/grms1/mqtt-broker
+    image: registry.gitlab.com/grms1/mqtt-broker:test
     container_name: mqtt-broker
     hostname: mqtt-broker
     restart: unless-stopped
     ports:
       - "${MQTT_EXTERNAL_PORT:-9000}:9999"
-    command: python MqttTransportHandler.py
     volumes:
-      - mqtt_logs:/mqtt/logs
+      - mqtt_app_logs:/app/logs
     logging: *default-logging
     environment:
       GRMS_PROTOCOL: http
       GRMS_HOST: django
       GRMS_PORT: "8000"
-      GRMS_PROTOCOL1: https
-      GRMS_HOST1: ${API_VIRTUAL_HOST}
-      GRMS_PORT1: "443"
-      QUEUE_TYPE: rabbitMQ
       QUEUE_HOST: rabbitmq
       QUEUE_PORT: "5672"
       QUEUE_LOGIN: ${RABBITMQ_DEFAULT_USER}
@@ -532,7 +527,7 @@ volumes:
   rabbitmq_data:
   static_volume:
   media_volume:
-  mqtt_logs:
+  mqtt_app_logs:
   backend_venv:
   # nginx-proxy volumes
   acme_sh_data:

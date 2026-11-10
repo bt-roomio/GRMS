@@ -58,7 +58,7 @@ services:
       - roomio_net
 
   grafana:
-    image: grafana/grafana:11.1.0
+    image: grafana/grafana:12.4.14
     container_name: grafana
     restart: always
     logging: *default-logging
