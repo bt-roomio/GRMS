@@ -444,10 +444,6 @@ CELERY_BEAT_SCHEDULE = {
         "task": "access_manager.tasks.sync_device.sync_devices_task",
         "schedule": 300.0,
     },
-    "clean_logs": {
-        "task": "shuttle.tasks.delete_old_logs",
-        "schedule": crontab(hour="0", minute="0"),
-    },
     "update_db_metrics": {
         "task": "core.tasks.update_db_metrics",
         "schedule": 60.0,
@@ -463,10 +459,6 @@ CELERY_BEAT_SCHEDULE = {
     "active-attribute-server-scope": {
         "task": "core.tasks.active_attribute_server_scope_task",
         "schedule": 10.0,  # Every 10 seconds
-    },
-    "aggregate-ts-kv": {
-        "task": "shuttle.tasks.aggregate_table_ts_kv",
-        "schedule": crontab(hour=3, minute=0),  # Every day at 03:00
     },
     "flush-expired-tokens": {
         "task": "users.tasks.flush_expired_tokens",

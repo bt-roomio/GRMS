@@ -63,8 +63,6 @@ app.conf.task_routes = {
     "shuttle.tasks.publish_updates_batch_task": {"queue": "realtime"},
     "shuttle.tasks.publish_updates_attribute_batch_task": {"queue": "realtime"},
     "shuttle.tasks.update_activity_devices_batch_task": {"queue": "realtime"},
-    "shuttle.tasks.aggregate_table_ts_kv": {"queue": "low"},
-    "shuttle.tasks.delete_old_logs": {"queue": "low"},
     "users.tasks.flush_expired_tokens": {"queue": "low"},
     "admin_panel.tasks.send_activation_email": {"queue": "low"},
     "mews.tasks.sync_access_tokens": {"queue": "low"},
