@@ -28,7 +28,7 @@ END $$;
 ADD_COMPRESSION_POLICY = """
 SELECT add_compression_policy(
     'shuttle_ts_kv',
-    compress_after => INTERVAL '14 days',
+    compress_after => INTERVAL '30 days',
     schedule_interval => INTERVAL '1 day',
     initial_start => date_trunc('day', now()) + INTERVAL '1 day 3 hours',
     if_not_exists => true
