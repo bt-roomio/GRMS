@@ -51,7 +51,22 @@ class NoNewSocialSignupAdapter(DefaultSocialAccountAdapter):
 
         sociallogin.connect(request, user)
 
-    def authentication_error(self, request, provider, error=None, exception=None, **kwargs):
+    def on_authentication_error(self, request, provider, error=None, exception=None, extra_context=None):
+        extra_context = extra_context or {}
+        logger.warning(
+            "Social auth error: provider=%s error=%s exception=%r state_found=%s state_id=%s "
+            "session_key=%s user=%s provider_error=%s provider_error_description=%s",
+            getattr(provider, "id", provider),
+            error,
+            exception,
+            extra_context.get("state") is not None,
+            extra_context.get("state_id"),
+            bool(request.session.session_key),
+            getattr(request, "user", None),
+            request.GET.get("error"),
+            request.GET.get("error_description"),
+            exc_info=exception if isinstance(exception, BaseException) else None,
+        )
         raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=authentication_error"))
 
     def pre_social_token(self, request, socialtoken):
