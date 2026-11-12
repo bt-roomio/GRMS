@@ -21,25 +21,25 @@ export DOCKER_DEFAULT_PLATFORM = $(PLATFORM)
 
 help:
 	@echo ""
-	@echo "  roomio GRMS — сборка Docker-образа"
+	@echo "  roomio GRMS — Docker image build"
 	@echo ""
-	@echo "  Подготовка:"
-	@echo "    make login                 Войти в GitLab Container Registry"
-	@echo "    make buildx-setup          Создать buildx-builder (один раз)"
+	@echo "  Setup:"
+	@echo "    make login                 Log in to GitLab Container Registry"
+	@echo "    make buildx-setup          Create the buildx builder (once)"
 	@echo ""
-	@echo "  Сборка:"
-	@echo "    make build                 Локальная сборка (текущая платформа, без push)"
-	@echo "    make build TAG=my-feature  Сборка с кастомным тегом"
+	@echo "  Build:"
+	@echo "    make build                 Local build (current platform, no push)"
+	@echo "    make build TAG=my-feature  Build with a custom tag"
 	@echo ""
-	@echo "  Push в registry:"
+	@echo "  Push to registry:"
 	@echo "    make push                          Push (TAG=dev, PLATFORM=linux/amd64)"
-	@echo "    make push PLATFORM=linux/amd64     Push под amd64"
-	@echo "    make push-dev                      Push с тегом dev"
-	@echo "    make push-prod                     Push с тегом latest"
+	@echo "    make push PLATFORM=linux/amd64     Push for amd64"
+	@echo "    make push-dev                      Push with the dev tag"
+	@echo "    make push-prod                     Push with the latest tag"
 	@echo ""
-	@echo "  Переменные:"
-	@echo "    TAG       Тег образа  (default: dev)"
-	@echo "    PLATFORM  Платформа   (default: linux/amd64)"
+	@echo "  Variables:"
+	@echo "    TAG       Image tag  (default: dev)"
+	@echo "    PLATFORM  Platform    (default: linux/amd64)"
 	@echo ""
 
 # --- Auth ---
@@ -53,7 +53,7 @@ buildx-setup:
 	docker buildx inspect $(BUILDER) > /dev/null 2>&1 || \
 	  docker buildx create --name $(BUILDER) --driver docker-container --bootstrap
 	docker buildx use $(BUILDER)
-	@echo "Builder '$(BUILDER)' готов"
+	@echo "Builder '$(BUILDER)' is ready"
 
 # --- Build ---
 

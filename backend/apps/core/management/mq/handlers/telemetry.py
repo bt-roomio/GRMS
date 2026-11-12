@@ -241,15 +241,15 @@ def sync_telemetry_batch(batch: list[tuple]):
         try:
             unique = {(obj.entity_id, obj.key_id): obj for obj in latest_objs}
             _upsert_latest(list(unique.values()))
-        except Exception as e:
-            logger.exception("Failed to upsert TsKvLatest in batch: %s", e)
+        except Exception:
+            logger.exception("Failed to upsert TsKvLatest in batch")
 
     if card_logs:
         try:
             _upsert_card_logs(card_logs)
             publish_card_log_updates_batch(card_logs)
-        except Exception as e:
-            logger.exception("Failed to create CardLog entries in batch: %s", e)
+        except Exception:
+            logger.exception("Failed to create CardLog entries in batch")
 
     # One Celery task for all devices instead of N separate dispatches
     if device_ids:
@@ -257,12 +257,13 @@ def sync_telemetry_batch(batch: list[tuple]):
 
     # Batch publish WebSocket updates
     if updates_by_device:
-        logger.info("Dispatching publish_updates_batch_task: devices=%s", len(updates_by_device.keys()))
+        logger.debug("Dispatching publish_updates_batch_task: devices=%d", len(updates_by_device))
         publish_updates_batch_task.delay(updates_by_device)
 
     logger.info(
-        "Batch telemetry processed: %d messages, %d historical, %d latest",
+        "Batch telemetry processed: %d messages, %d devices, %d historical, %d latest",
         len(batch),
+        len(device_ids),
         len(historical_objs),
         len(latest_objs),
     )

@@ -320,7 +320,7 @@ async def validate_body(body: bytes):
   - backend/apps/core/management/mq/telemetry.py
   - backend/apps/core/management/mq/attributes.py
   - backend/apps/core/management/mq/state_device_batch_async.py
-4. Конфигурация: backend/config/settings.py (LOGGING)
+4. Конфигурация: backend/config/settings/components/logging.py (LOGGING)
 5. Симуляция: backend/apps/core/management/commands/sim_message.py
 
 Порядок выполнения

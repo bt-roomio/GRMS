@@ -44,7 +44,7 @@ class ReservationEventHandler:
             event: Event dictionary from WebSocket
         """
         try:
-            logger.info(f"Received event: {event}")
+            logger.info("Received event: %s", event)
             reservation_id = event.get("Id")
             state = event.get("State", "Unknown")
 
@@ -54,13 +54,13 @@ class ReservationEventHandler:
 
             event_type = self.EVENT_TYPE_MAPPING.get(state)
             if not event_type:
-                logger.info(f"Ignoring reservation {reservation_id} with unhandled state: {state}")
+                logger.info("Ignoring reservation %s with unhandled state: %s", reservation_id, state)
                 return
 
             self._process_reservation({"event_type": event_type, **event})
 
-        except Exception as e:
-            logger.error(f"Error handling event: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error handling event")
 
     def _process_reservation(self, event: dict[str, Any]) -> None:
         """
@@ -75,7 +75,7 @@ class ReservationEventHandler:
             try:
                 self._validate_required_fields(event, required_fields)
             except ValueError as e:
-                logger.warning(f"Validation failed: {e}")
+                logger.warning("Validation failed: %s", e)
                 return
 
             reservation_id = event["Id"]
@@ -85,7 +85,7 @@ class ReservationEventHandler:
             if not reservation:
                 return
 
-            logger.info(f"Processing {event.get('event_type')} for reservation {reservation_id}")
+            logger.info("Processing %s for reservation %s", event.get("event_type"), reservation_id)
             room_number = ""
             if resource_id:
                 resource = self._fetch_resource(resource_id)
@@ -99,16 +99,16 @@ class ReservationEventHandler:
             if not companion_ids:
                 account_id = reservation.get("AccountId") or reservation.get("CustomerId")
                 if not account_id:
-                    logger.error(f"No CompanionIds or AccountId found in reservation {reservation_id}")
+                    logger.error("No CompanionIds or AccountId found in reservation %s", reservation_id)
                     return
                 companion_ids = [account_id]
 
-            logger.info(f"Found {len(companion_ids)} companion(s) for reservation {reservation_id}")
+            logger.info("Found %s companion(s) for reservation %s", len(companion_ids), reservation_id)
 
             # Fetch all customers at once
             customers = self._fetch_customers(companion_ids)
             if not customers:
-                logger.error(f"No customers found for reservation {reservation_id}")
+                logger.error("No customers found for reservation %s", reservation_id)
                 return
 
             # Process each customer (companion)
@@ -124,14 +124,15 @@ class ReservationEventHandler:
 
                     self._publish_to_rabbitmq(standardized_data)
 
-                except Exception as e:
-                    logger.error(
-                        f"Error processing customer {customer.get('Id')} for reservation {reservation_id}: {e}",
-                        exc_info=True,
+                except Exception:
+                    logger.exception(
+                        "Error processing customer %s for reservation %s",
+                        customer.get("Id"),
+                        reservation_id,
                     )
 
-        except Exception as e:
-            logger.error(f"Error processing reservation: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error processing reservation")
 
     def _validate_required_fields(self, event: dict[str, Any], required_fields: list[str]) -> None:
         """
@@ -153,7 +154,7 @@ class ReservationEventHandler:
 
         if missing_fields:
             error_msg = f"Missing or empty required field(s): {', '.join(missing_fields)}"
-            logger.warning(f"{error_msg} in event: {event.get('Id', 'unknown')}")
+            logger.warning("%s in event: %s", error_msg, event.get("Id", "unknown"))
             raise ValueError(error_msg)
 
     def _fetch_reservation(self, reservation_id: str) -> dict[str, Any] | None:
@@ -174,7 +175,7 @@ class ReservationEventHandler:
         reservations = response.get("Reservations", [])
 
         if not reservations:
-            logger.error(f"No reservation found for ID: {reservation_id}")
+            logger.error("No reservation found for ID: %s", reservation_id)
             return None
 
         return reservations[0]
@@ -193,7 +194,7 @@ class ReservationEventHandler:
         resources = response.get("Resources", [])
 
         if not resources:
-            logger.error(f"No resource found for ID: {resource_id}")
+            logger.error("No resource found for ID: %s", resource_id)
             return None
 
         return resources[0]
@@ -212,10 +213,10 @@ class ReservationEventHandler:
         customers = response.get("Customers", [])
 
         if not customers:
-            logger.error(f"No customer found for ID: {customer_id}")
+            logger.error("No customer found for ID: %s", customer_id)
             return None
 
-        logger.info(f"Found customer: {customers[0].get('Id')}")
+        logger.info("Found customer: %s", customers[0].get("Id"))
         return customers[0]
 
     def _fetch_customers(self, customer_ids: list[str]) -> list[dict[str, Any]]:
@@ -234,7 +235,7 @@ class ReservationEventHandler:
         response = self.api_client.get_customer_by_ids(customer_ids)
         customers = response.get("Customers", [])
 
-        logger.info(f"Found {len(customers)} customers out of {len(customer_ids)} requested")
+        logger.info("Found %s customers out of %s requested", len(customers), len(customer_ids))
         return customers
 
     def _fetch_customers_by_resource(self, resource_id: str) -> list[dict[str, Any]]:
@@ -254,7 +255,7 @@ class ReservationEventHandler:
         search_results = response.get("Customers", [])
         customers = [result.get("Customer") for result in search_results if result.get("Customer")]
 
-        logger.info(f"Found {len(customers)} customers for resource {resource_id}")
+        logger.info("Found %s customers for resource %s", len(customers), resource_id)
         return customers
 
     def _build_standardized_data(
@@ -333,12 +334,15 @@ class ReservationEventHandler:
             channel.connection.close()
 
             logger.info(
-                f"Published PMS message to RabbitMQ: {data.get('event_type')} for "
-                f"guest {data.get('first_name')} {data.get('last_name')} in room {data.get('room_number')}"
+                "Published PMS message to RabbitMQ: %s for guest %s %s in room %s",
+                data.get("event_type"),
+                data.get("first_name"),
+                data.get("last_name"),
+                data.get("room_number"),
             )
 
-        except Exception as e:
-            logger.error(f"Error publishing to RabbitMQ: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error publishing to RabbitMQ")
             # Don't raise - we don't want to fail check-in/check-out if RabbitMQ fails
 
     def sync_reservations(self, start_utc: str, end_utc: str) -> dict[str, Any]:
@@ -369,7 +373,7 @@ class ReservationEventHandler:
         }
 
         try:
-            logger.info(f"Starting reservation sync for period {start_utc} to {end_utc}")
+            logger.info("Starting reservation sync for period %s to %s", start_utc, end_utc)
 
             # Fetch all reservations for the time period
             # Use old API to get CompanionIds field
@@ -386,27 +390,28 @@ class ReservationEventHandler:
             reservations = response.get("Reservations", [])
 
             stats["total"] = len(reservations)
-            logger.info(f"Found {stats['total']} reservations to process")
+            logger.info("Found %s reservations to process", stats["total"])
 
             # Process each reservation
             for reservation in reservations:
                 try:
                     self._process_reservation_sync(reservation, stats)
-                except Exception as e:
-                    logger.error(f"Error processing reservation {reservation.get('Id')}: {e}", exc_info=True)
+                except Exception:
+                    logger.exception("Error processing reservation %s", reservation.get("Id"))
                     stats["errors"] += 1
 
             logger.info(
-                f"Sync completed: {stats['checked_in']} checked in, "
-                f"{stats['checked_out']} checked out, "
-                f"{stats['skipped']} skipped, "
-                f"{stats['errors']} errors"
+                "Sync completed: %s checked in, %s checked out, %s skipped, %s errors",
+                stats["checked_in"],
+                stats["checked_out"],
+                stats["skipped"],
+                stats["errors"],
             )
 
             return stats
 
         except Exception as e:
-            logger.error(f"Sync failed: {e}", exc_info=True)
+            logger.exception("Sync failed")
             return {"error": str(e), **stats}
 
     def _check_for_guest_move(
@@ -433,13 +438,16 @@ class ReservationEventHandler:
             # Guest exists - check if room is different
             if guest.room and guest.room.number != room_number:
                 logger.info(
-                    f"→ Detected guest move: {guest.name} {guest.lastname} "
-                    f"from room {guest.room.number} to {room_number}"
+                    "→ Detected guest move: %s %s from room %s to %s",
+                    guest.name,
+                    guest.lastname,
+                    guest.room.number,
+                    room_number,
                 )
                 return guest
 
             # Guest exists in same room - skip
-            logger.info(f"Guest {guest.name} {guest.lastname} already in room {room_number}")
+            logger.info("Guest %s %s already in room %s", guest.name, guest.lastname, room_number)
             return None
 
         except Guest.DoesNotExist:
@@ -469,15 +477,18 @@ class ReservationEventHandler:
 
             if guest:
                 logger.info(
-                    f"Guest {guest.name} {guest.lastname} (pms_id={customer_id}) "
-                    f"was checked out from ROOMIO - skipping check-in for reservation {reservation_id}"
+                    "Guest %s %s (pms_id=%s) was checked out from ROOMIO - skipping check-in for reservation %s",
+                    guest.name,
+                    guest.lastname,
+                    customer_id,
+                    reservation_id,
                 )
                 return True
 
             return False
 
-        except Exception as e:
-            logger.error(f"Error checking checkout source for customer {customer_id}: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error checking checkout source for customer %s", customer_id)
             return False
 
     def _process_reservation_sync(self, reservation: dict[str, Any], stats: dict[str, Any]) -> None:
@@ -496,15 +507,17 @@ class ReservationEventHandler:
 
         if not all([reservation_id, state, resource_id]):
             logger.info(
-                f"Skipping reservation {reservation_id}: missing required fields "
-                f"(state={state}, resource={resource_id})"
+                "Skipping reservation %s: missing required fields (state=%s, resource=%s)",
+                reservation_id,
+                state,
+                resource_id,
             )
             stats["skipped"] += 1
             return
 
         event_type = self.EVENT_TYPE_MAPPING.get(state)
         if not event_type:
-            logger.info(f"Ignoring reservation {reservation_id} with unhandled state: {state}")
+            logger.info("Ignoring reservation %s with unhandled state: %s", reservation_id, state)
             return
 
         # Get all companion IDs from the reservation
@@ -514,24 +527,24 @@ class ReservationEventHandler:
         if not companion_ids:
             customer_id = reservation.get("AccountId") or reservation.get("CustomerId")
             if not customer_id:
-                logger.warning(f"No CompanionIds or AccountId found for reservation {reservation_id}")
+                logger.warning("No CompanionIds or AccountId found for reservation %s", reservation_id)
                 stats["errors"] += 1
                 return
             companion_ids = [customer_id]
 
-        logger.info(f"Found {len(companion_ids)} companion(s) for reservation {reservation_id}")
+        logger.info("Found %s companion(s) for reservation %s", len(companion_ids), reservation_id)
 
         # Fetch all customers at once
         customers = self._fetch_customers(companion_ids)
         if not customers:
-            logger.warning(f"No customers found for reservation {reservation_id}")
+            logger.warning("No customers found for reservation %s", reservation_id)
             stats["errors"] += 1
             return
 
         # Fetch resource (room) details
         resource = self._fetch_resource(resource_id)  # ty: ignore
         if not resource:
-            logger.warning(f"Resource {resource_id} not found for reservation {reservation_id}")
+            logger.warning("Resource %s not found for reservation %s", resource_id, reservation_id)
             stats["errors"] += 1
             return
 
@@ -559,8 +572,9 @@ class ReservationEventHandler:
                     # Skip check-in if guest was checked out from ROOMIO
                     if self._checked_out_from_roomio(customer_id, reservation_id):  # ty: ignore
                         logger.info(
-                            f"Skipping check-in for {customer.get('FirstName')} {customer.get('LastName')} - "
-                            f"guest was checked out from ROOMIO"
+                            "Skipping check-in for %s %s - guest was checked out from ROOMIO",
+                            customer.get("FirstName"),
+                            customer.get("LastName"),
                         )
                         stats["skipped"] += 1
                         continue
@@ -570,8 +584,11 @@ class ReservationEventHandler:
                         # This is a guest move, not a new check-in
                         # The pms_handler will handle the move when it receives the message
                         logger.info(
-                            f"Detected guest move for {customer.get('FirstName')} {customer.get('LastName')}: "
-                            f"room {existing_guest.room.number if existing_guest.room else 'N/A'} → {room_number}"
+                            "Detected guest move for %s %s: room %s → %s",
+                            customer.get("FirstName"),
+                            customer.get("LastName"),
+                            existing_guest.room.number if existing_guest.room else "N/A",
+                            room_number,
                         )
                         # Still publish as check-in - pms_handler will detect it's a move
 
@@ -584,21 +601,26 @@ class ReservationEventHandler:
                     resource_id=resource_id,  # ty: ignore
                 )
 
-                logger.info(f"Standardized data for customer {customer_id}: {standardized_data}")
+                logger.info("Standardized data for customer %s: %s", customer_id, standardized_data)
 
                 # Publish to RabbitMQ
                 self._publish_to_rabbitmq(standardized_data)
                 processed_count += 1
 
                 logger.info(
-                    f"Processed {event_type} for reservation {reservation_id}: "
-                    f"{customer.get('FirstName')} {customer.get('LastName')} in room {room_number}"
+                    "Processed %s for reservation %s: %s %s in room %s",
+                    event_type,
+                    reservation_id,
+                    customer.get("FirstName"),
+                    customer.get("LastName"),
+                    room_number,
                 )
 
-            except Exception as e:
-                logger.error(
-                    f"Error processing customer {customer.get('Id')} for reservation {reservation_id}: {e}",
-                    exc_info=True,
+            except Exception:
+                logger.exception(
+                    "Error processing customer %s for reservation %s",
+                    customer.get("Id"),
+                    reservation_id,
                 )
                 stats["errors"] += 1
 

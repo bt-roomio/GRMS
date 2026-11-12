@@ -3,7 +3,7 @@ from typing import List
 
 from access_manager.models import ALL_DAYS, WEEK_DAYS, CardDeviceSlot, Group, GuestCard, StaffCard
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 
 
 def find_or_assign_slot(card_number: str, device, connect) -> int:
@@ -12,7 +12,7 @@ def find_or_assign_slot(card_number: str, device, connect) -> int:
             slot = CardDeviceSlot.objects.get(card_number=card_number, device=device).slot
             return slot
         except CardDeviceSlot.DoesNotExist:
-            logger.warning(f"Card {card_number} not found in device {device.id}")
+            logger.warning("Card %s not found in device %s", card_number, device.id)
             raise
     else:
 

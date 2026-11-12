@@ -11,6 +11,6 @@ def flush_expired_tokens():
     """ """
     try:
         call_command("flushexpiredtokens")
-    except Exception as e:
-        logger.error(f"flush expired tokens task failed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("flush expired tokens task failed")
         raise

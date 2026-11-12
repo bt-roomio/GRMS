@@ -46,8 +46,10 @@ _room_tag_object_schema = openapi.Schema(
 )
 
 _MAPPING_DESCRIPTION = (
-    " When the integration has a mapping profile, value and tag_ranges of a tag whose tag_type has a rule "
-    "are in the integrator's form (a stored value the rule cannot convert is null)."
+    " When the integration has a mapping profile, value and tag_ranges of a tag whose tag_name has a rule "
+    "are in the integrator's form (a stored value the rule cannot convert is null). A composite rule computes "
+    "the value of the room's tag named as its output, or adds a virtual tag (virtual: true, a stable id per "
+    "room and rule) after the others."
 )
 
 _tags_list_response = openapi.Response(
@@ -126,7 +128,13 @@ def tag_detail_put_swagger(**kwargs):
             "the type-compatible column; otherwise the stored value is left unchanged and 502 is returned. "
             "When the integration has a mapping profile, value is in the integrator's form and is converted to the "
             "GRMS value before the RPC; a value the rule rejects returns 400 with a code (type, direction, unmapped, "
-            "invalid), one it skips returns 200 with skipped: true and no RPC."
+            "invalid), one it skips returns 200 with skipped: true and no RPC. "
+            "A composite tag (virtual or computed) takes the integrator's value and runs the writes of its action "
+            "in order, each RPC waiting for the device; every write is checked first (400 with code and field: "
+            "unmapped, type, invalid, missing_input, ambiguous_source). The answer lists each write with its "
+            "status (ok, failed, not_run) and rpc: 200 when every required write succeeded, else 502 with "
+            "success: false, partial: true if some writes went through. A failed required write stops the rest. "
+            "One write chain of a composite tag runs at a time: another PUT meanwhile answers 409 with code busy."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,

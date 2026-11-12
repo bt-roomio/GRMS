@@ -16,7 +16,6 @@ dependencies = [
   "certifi==2025.1.31",
   "cffi==1.16.0",
   "channels==4.3.1",
-  "channels-demultiplexer==2.2.0",
   "channels-redis==4.3.0",
   "charset-normalizer==3.4.1",
   "click==8.1.7",
@@ -29,12 +28,9 @@ dependencies = [
   "daphne==4.1.2",
   "Django==5.0.4",
   "django-appconf==1.1.0",
-  "django-celery-beat==2.6.0",
-  "django-celery-results==2.5.1",
   "django-compat==1.0.15",
   "django-cors-headers==4.3.1",
   "django-crontab==0.7.1",
-  "django-filter==25.1",
   "django-group-model==1.0.1",
   "django-redis==5.4.0",
   "django-timezone-field==7.0",
@@ -107,6 +103,7 @@ dependencies = [
   "orjson>=3.11.9",
   "asyncssh==2.23.1",
   "orjson>=3.11.9",
+  "django-split-settings==1.3.2",
 ]
 
 [dependency-groups]
@@ -129,7 +126,7 @@ dev = [
 package = false
 
 [tool.ty.environment]
-root = ["apps"]
+root = ["apps", "."]
 
 # Django idioms ty reads as incompatible overrides: `class Meta(Parent.Meta)` and `objects` managers.
 [[tool.ty.overrides]]
@@ -143,10 +140,9 @@ line-length = 120
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
-
-[tool.ruff.lint.per-file-ignores]
-"config/settings.py" = ["E402"]
+# G: lazy %-style logging args (no f-strings), logger.exception over exc_info=True.
+# LOG: logging API misuse (root logger calls, getLogger misuse, …).
+select = ["E4", "E7", "E9", "F", "I", "G", "LOG"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

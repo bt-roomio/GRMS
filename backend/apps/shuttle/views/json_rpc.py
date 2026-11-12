@@ -17,7 +17,7 @@ from shuttle.swagger.rpc import json_rpc_swagger
 from shuttle.utils.parse_json import parse_json
 from shuttle.utils.permissions import WhiteListOrIsAuthenticated
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 
 
 class JsonRPCView(APIView):

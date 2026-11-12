@@ -48,7 +48,7 @@ class TestRoomDetailLive:
         try:
             data = await self._subscribe(comm, test_room, "live1")
             devices = data.get("devices") or []
-            assert len(devices) > device_index, "недостаточно устройств у комнаты для теста"
+            assert len(devices) > device_index, "the room has too few devices for this test"
             device_id = devices[device_index]["id"]
 
             key = STATIC_KEYS[3]  # Room Temperature
@@ -60,6 +60,6 @@ class TestRoomDetailLive:
 
             live = await comm.receive_json_from(timeout=5)
             telemetry = ((live.get("payload") or {}).get("data") or {}).get("telemetry") or {}
-            assert telemetry.get(key) == 25.5, f"telemetry не обновилась: {telemetry}"
+            assert telemetry.get(key) == 25.5, f"telemetry was not updated: {telemetry}"
         finally:
             await comm.disconnect()

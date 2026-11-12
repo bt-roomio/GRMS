@@ -1,13 +1,13 @@
+import logging
 from functools import partial
 from typing import List
 
-from celery.utils.log import get_task_logger
 from django.db import transaction
 
 from access_manager.utilits.check_card_assignment import get_card_assignments
 from shuttle.services.publish_updates import publish_updates
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def need_sync(cards: List[str], device, access, user=None, reason="", source=None):
@@ -53,8 +53,8 @@ def need_sync(cards: List[str], device, access, user=None, reason="", source=Non
 
         except Card.DoesNotExist:
             logger.error("Card '%s' not found, skipping sync", card_num)
-        except Exception as e:
-            logger.error("Failed to update NeedSyncDevice for card '%s': '%s'", card_num, str(e))
+        except Exception:
+            logger.exception("Failed to update NeedSyncDevice for card '%s'", card_num)
 
     # One notification per call rather than per card: the subscriber re-reads the
     # whole list on every message. Sent after commit, otherwise it would re-read

@@ -77,7 +77,7 @@ def offline_rule(minutes=10, severity="MAJOR", alarm_type="Device Offline", clea
                     else {"type": "SIMPLE"},
                 },
                 "schedule": {"type": "ANY_TIME"},
-                "alarmDetails": "Устройство ${originatorName} не на связи",
+                "alarmDetails": "Device ${originatorName} is offline",
             }
         },
         **extra,
@@ -114,7 +114,7 @@ def temperature_rule(threshold=30, severity="MINOR", attribute="temperatureMax")
                     "spec": {"type": "SIMPLE"},
                 },
                 "schedule": {"type": "ANY_TIME"},
-                "alarmDetails": "Температура ${Room Temperature}° в номере ${room}",
+                "alarmDetails": "Temperature ${Room Temperature}° in room ${room}",
             }
         },
     }

@@ -47,7 +47,7 @@ class TsKvTenantHistoryConsumer(BaseGenericAsyncAPIConsumer):
                     await self.reply(data=fresh, action=action, request_id=request_id)
 
             except Exception as exc:
-                logger.warning(f"ts_kv_activity error for {request_id}: {exc}")
+                logger.warning("ts_kv_activity error for %s: %s", request_id, exc)
                 continue
 
     @action()

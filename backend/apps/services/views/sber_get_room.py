@@ -33,7 +33,7 @@ class SberGetRoomDetailView(APIView):
         if not room:
             body["messageName"] = "ANSWER_TO_USER"
             body["payload"] = {
-                "pronounceText": "Сбер девайс не найдено",
+                "pronounceText": "Sber device not found",
                 "auto_listening": False,
                 "finished": True,
             }
@@ -42,13 +42,13 @@ class SberGetRoomDetailView(APIView):
         if not guest:
             body["messageName"] = "ANSWER_TO_USER"
             body["payload"] = {
-                "pronounceText": "Гостя не найдено",
+                "pronounceText": "Guest not found",
                 "auto_listening": False,
                 "finished": True,
             }
             return Response(body)
 
-        text = f"Добро пожаловать, {guest.lastname} {guest.name} в номер {room.number}!"
+        text = f"Welcome, {guest.lastname} {guest.name}, to room {room.number}!"
         if guest.nationality and guest.nationality not in self.rus_list:
             from deep_translator import GoogleTranslator
 

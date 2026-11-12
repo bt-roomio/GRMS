@@ -2,8 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from core.utils.serializers import ValidatorSerializer
-from services.models import Integration, Integrator, MappingOverride, MappingProfile
-from services.serializers.mapping import override_errors
+from services.models import Integration, Integrator, MappingProfile
 
 
 class IntegrationSerializer(serializers.ModelSerializer):
@@ -56,18 +55,9 @@ class IntegrationSerializer(serializers.ModelSerializer):
         integrator = attrs.get("integrator", getattr(self.instance, "integrator", None))
         if integrator is not None and profile.integrator_id != integrator.name:
             raise serializers.ValidationError({"mapping_profile": ["The profile belongs to another integrator."]})
-        if self.instance:
-            # The integration's overrides must fit the rules of the new profile.
-            rules = profile.rules.select_related("tag_type").prefetch_related("tag_type__tag_ranges")
-            rules_by_code = {rule.code: rule for rule in rules}
-            errors = []
-            for override in MappingOverride.objects.filter(integration=self.instance):
-                errors += [
-                    f"Override {override.pk}: {error}"
-                    for error in override_errors(rules_by_code, override.rule_overrides)
-                ]
-            if errors:
-                raise serializers.ValidationError({"mapping_profile": errors})
+        if profile.scope != MappingProfile.Scope.TENANT:
+            # A room type or device profile applies through its parent.
+            raise serializers.ValidationError({"mapping_profile": ["Only a tenant profile can be attached."]})
         return attrs
 
 

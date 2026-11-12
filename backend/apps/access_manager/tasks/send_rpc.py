@@ -59,7 +59,7 @@ def send_rpc_request(
         return fail_response
 
     channel = connect_to_rabbitmq()
-    logger.info(f"Message: {message}")
+    logger.info("Message: %s", message)
     send_to_rabbitmq(channel, message)
 
     start_time = time.time()

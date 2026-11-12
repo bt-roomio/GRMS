@@ -54,16 +54,6 @@ class TagTypeWriteSerializer(TenantUniqueNameSerializer):
             fields["group"].queryset = TagTypeGroup.objects.by_tenant(self.context["tenant_id"])
         return fields
 
-    def validate_tag_ranges(self, tag_ranges):
-        if self.instance is not None:
-            # Imported here: services.serializers.mapping depends on this module.
-            from services.serializers.mapping import tag_type_ranges_errors
-
-            # The type's mapping rules (and their overrides) must still fit the new ranges.
-            if errors := tag_type_ranges_errors(self.instance, tag_ranges):
-                raise serializers.ValidationError(errors)
-        return tag_ranges
-
     def create(self, validated_data):
         tag_ranges = validated_data.pop("tag_ranges")
         instance = super().create(validated_data)

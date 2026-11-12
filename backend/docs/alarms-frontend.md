@@ -247,7 +247,7 @@ GET /api/v1/alarms/?status=ACTIVE&severity=CRITICAL&severity=MAJOR&page=1&size=2
       "clear_ts": null,
       "duration_ms": 1409695,
       "details": {
-        "message": "Шлюз GW-3 не на связи",
+        "message": "Gateway GW-3 is offline",
         "values": { "active": false, "is_gateway": true }
       },
       "tenant": "28c81921-f78e-4864-87d2-cec674f19d1c",
@@ -1128,8 +1128,8 @@ GET /api/v1/alarms/rule-templates/
   "results": [
     {
       "id": "high-temperature",
-      "name": "Высокая температура",
-      "description": "Температура выше 30° дольше 5 минут. Порог можно переопределить на номере атрибутом «temperatureMax».",
+      "name": "High temperature",
+      "description": "Temperature above 30° for more than 5 minutes. The threshold can be overridden per room with the \"temperatureMax\" attribute.",
       "requires": {"attributes": [], "timeseries": ["Room Temperature"]},
       "rule": {"alarmType": "High Temperature", "createRules": {"MINOR": {}}, "clearRule": {}}
     }

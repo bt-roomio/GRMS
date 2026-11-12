@@ -63,29 +63,33 @@ services:
       retries: 3
       start_period: 20s
 
-  # --- Celery: verbose logs in dev ---
+  # --- Celery: live code mount, fewer workers in dev ---
   celery-critical:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q critical -n critical@%h -c 1
 
   celery-default:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q default -n default@%h -c 2
 
   celery-realtime:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q realtime -n realtime@%h -c 2
 
   celery-low:
     volumes:
       - ../backend:/app
       - /app/.venv
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
     command: celery -A config worker -Q low -n low@%h -c 1
 
   celery-beat:

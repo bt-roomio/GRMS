@@ -1,7 +1,9 @@
 import os
 from typing import Any
 
-TURNSTILE_ENABLED = os.getenv("TURNSTILE_ENABLED", "False").lower() in ("true", "1", "yes")
+from config.settings.components import env_bool
+
+TURNSTILE_ENABLED = env_bool("TURNSTILE_ENABLED", "False")
 TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "")
 TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"

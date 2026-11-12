@@ -1,12 +1,13 @@
+import logging
+
 from celery import shared_task
-from celery.utils.log import get_task_logger
 
 from access_manager.models import Group
 from access_manager.utilits.need_sync import need_sync
 from access_manager.utilits.process_multi_devices_rpc import process_devices_parallel
 from main.models import Device
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
@@ -22,7 +23,7 @@ def manage_cards_for_public_space_task(group_id: str, public_space_id: str, acti
         active_devices, inactive_devices = Device.objects.active_inactive(public_space_id, group.tenant)
 
         for device in inactive_devices:
-            logger.info(f"Adding device {device.name} (ID: {device.id}) to sync queue - inactive or status false")
+            logger.info("Adding device %s (ID: %s) to sync queue - inactive or status false", device.name, device.id)
             need_sync(cards, device, access, reason=f"Device {device.name} is inactive or offline")
 
         if not active_devices.exists():
@@ -54,5 +55,5 @@ def manage_cards_for_public_space_task(group_id: str, public_space_id: str, acti
         logger.debug("Group '%s' not found or not active", group_id)
         return {"success": False, "message": f"Group {group_id} not found or not active"}
     except Exception as e:
-        logger.error("Error in manage_cards_for_public_space_task: '%s'", str(e))
+        logger.exception("Error in manage_cards_for_public_space_task")
         raise e

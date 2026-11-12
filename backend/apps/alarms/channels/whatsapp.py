@@ -24,10 +24,10 @@ class WhatsAppChannel:
     API has no broadcast. The template is a summary rather than the full list
     Telegram and email get, because a parameter cannot span lines::
 
-        Объект «{{1}}»: обновление по авариям.
-        Новых: {{2}}. Снятых: {{3}}.
-        Главное: {{4}}
-        Подробности в панели roomio.
+        {{1}}: alarm update.
+        New: {{2}}. Cleared: {{3}}.
+        Top: {{4}}
+        See the roomio panel for details.
 
     Its name and language are installation settings (``WA_ALARM_TEMPLATE``,
     ``WA_TEMPLATE_LANGUAGE``); each hotel gets a template of that name approved

@@ -54,13 +54,13 @@ def verify_turnstile_token(token: str, remote_ip: str | None = None) -> bool:
 
         if not success:
             error_codes = result.get("error-codes", [])
-            logger.warning(f"Turnstile verification failed: {error_codes} (IP: {remote_ip})")
+            logger.warning("Turnstile verification failed: %s (IP: %s)", error_codes, remote_ip)
 
         return success
 
     except requests.exceptions.Timeout:
-        logger.error(f"Turnstile verification timed out (IP: {remote_ip})")
+        logger.error("Turnstile verification timed out (IP: %s)", remote_ip)
         raise TurnstileVerificationError("Turnstile verification timed out")
     except requests.exceptions.RequestException as e:
-        logger.error(f"Turnstile verification request failed: {e} (IP: {remote_ip})")
+        logger.error("Turnstile verification request failed: %s (IP: %s)", e, remote_ip)
         raise TurnstileVerificationError(f"Turnstile verification failed: {e}")

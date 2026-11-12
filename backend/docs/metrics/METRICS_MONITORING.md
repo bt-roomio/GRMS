@@ -247,7 +247,7 @@ grep "multiprocess_mode" apps/main/metrics.py
 
 - `apps/main/metrics.py` - Основная логика метрик
 - `apps/main/middlewares/device.py` - Middleware для обновления метрик
-- `config/settings.py` - Конфигурация (строки 109-113)
+- `config/settings/components/monitoring.py` - Конфигурация
 
 ### Алгоритм работы
 

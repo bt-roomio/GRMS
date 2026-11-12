@@ -1,16 +1,18 @@
 # Стек мониторинга GRMS
 
-Observability-стек на базе Prometheus + Grafana с алертами в Telegram.
+Observability-стек на базе Prometheus + Grafana с алертами в Telegram и сбором логов всех контейнеров в Loki.
 
 ## Сервисы
 
-| Сервис            | Образ                            | Порт | Описание                                   |
-| ----------------- | -------------------------------- | ---- | ------------------------------------------ |
-| **prometheus**    | `prom/prometheus:v2.53.0`        | 9090 | Сбор и хранение метрик (retention 30 дней) |
-| **grafana**       | `grafana/grafana:11.1.0`         | 3000 | Дашборды и визуализация                    |
-| **alertmanager**  | `prom/alertmanager:v0.27.0`      | 9093 | Маршрутизация алертов → Telegram           |
-| **node-exporter** | `prom/node-exporter:v1.8.2`      | 9100 | Системные метрики хоста                    |
-| **blackbox**      | `prom/blackbox-exporter:v0.25.0` | 9115 | HTTP/HTTPS проверки доступности            |
+| Сервис            | Образ                            | Порт | Описание                                       |
+| ----------------- | -------------------------------- | ---- | ---------------------------------------------- |
+| **prometheus**    | `prom/prometheus:v2.53.0`        | 9090 | Сбор и хранение метрик (retention 30 дней)     |
+| **grafana**       | `grafana/grafana:12.4.14`        | 3000 | Дашборды и визуализация                        |
+| **alertmanager**  | `prom/alertmanager:v0.27.0`      | 9093 | Маршрутизация алертов → Telegram               |
+| **node-exporter** | `prom/node-exporter:v1.8.2`      | 9100 | Системные метрики хоста                        |
+| **blackbox**      | `prom/blackbox-exporter:v0.25.0` | 9115 | HTTP/HTTPS проверки доступности                |
+| **loki**          | `grafana/loki:3.7.9`             | 3100 | Хранение логов контейнеров (retention 14 дней) |
+| **alloy**         | `grafana/alloy:v1.21.3`          | —    | Читает логи всех контейнеров хоста → Loki      |
 
 Все сервисы работают в общей сети `roomio_net` (внешняя, создаётся основным `docker-compose.yml`).
 
@@ -30,13 +32,14 @@ make up
 
 ## Переменные окружения (`.env`)
 
-| Переменная               | Описание                                  |
-| ------------------------ | ----------------------------------------- |
-| `GRAFANA_VIRTUAL_HOST`   | Домен Grafana (`grafana.domain.com`)      |
-| `GRAFANA_ADMIN_PASSWORD` | Пароль администратора Grafana             |
-| `TELEGRAM_BOT_TOKEN`     | Токен Telegram-бота для алертов           |
-| `TELEGRAM_CHAT_ID`       | ID чата/канала для получения алертов      |
-| `LETSENCRYPT_EMAIL`      | Email для Let's Encrypt (SSL-сертификаты) |
+| Переменная               | Описание                                             |
+| ------------------------ | ---------------------------------------------------- |
+| `GRAFANA_VIRTUAL_HOST`   | Домен Grafana (`grafana.domain.com`)                 |
+| `GRAFANA_ADMIN_PASSWORD` | Пароль администратора Grafana                        |
+| `TELEGRAM_BOT_TOKEN`     | Токен Telegram-бота для алертов                      |
+| `TELEGRAM_CHAT_ID`       | ID чата/канала для получения алертов                 |
+| `LETSENCRYPT_EMAIL`      | Email для Let's Encrypt (SSL-сертификаты)            |
+| `LOKI_RETENTION_PERIOD`  | Сколько хранить логи (по умолчанию `336h` = 14 дней) |
 
 > `.env` **не коммитить** в git.
 
@@ -96,6 +99,12 @@ monitoring/
 ├── blackbox/
 │   └── blackbox.yml            # Модули проверок (https_2xx, https_relaxed, login_post)
 │
+├── loki/
+│   └── config.yml              # Хранилище логов (filesystem, retention)
+│
+├── alloy/
+│   └── config.alloy            # Сбор логов контейнеров через Docker API → Loki
+│
 └── grafana/
     ├── dashboards/             # JSON-дашборды (django, node_exporter, rabbitmq)
     └── provisioning/           # Автоматическая провизия datasources и дашбордов
@@ -125,3 +134,41 @@ make reload
 Grafana доступна по адресу `https://$GRAFANA_VIRTUAL_HOST`. Дашборды и datasource провизируются автоматически из `grafana/provisioning/` при старте.
 
 Встроенные дашборды: **Django**, **Node Exporter**, **RabbitMQ**.
+
+## Логи (Loki)
+
+Alloy читает stdout/stderr **всех** контейнеров хоста (через `docker.sock`, read-only) и отправляет их в Loki. Смотреть — Grafana → **Explore** → datasource **Loki**.
+
+Метки (labels): `service` (имя сервиса compose: `django`, `celery-default`, `mq-async`, `proxy`, …), `container`, `project`, `level` (для строк Django/Celery). Всё остальное (`request_id`, `tenant_id`, `user_id`, `task`, `device_id`) — внутри строки, фильтруется в запросе.
+
+```logql
+# Всё по одному запросу: nginx, django, celery, mq-async
+{project=~".+"} |= "7a7741bf4f7848e48250149c7ca63048"
+
+# Ошибки бэкенда за период
+{service="django", level="ERROR"}
+
+# С DJANGO_LOG_FORMATTER=json — фильтр по полям
+{service=~"django|celery-.*"} | json | tenant_id="..." | level="WARNING"
+
+# nginx: 5xx и медленные запросы (access-лог в JSON, см. ниже)
+{service="proxy"} | json | status >= 500
+{service="proxy"} | json | request_time > 1
+```
+
+**Связка nginx ↔ backend.** nginx-proxy пишет access-лог в JSON с полем `request_id` и передаёт тот же id бэкенду в заголовке `X-Request-ID` (`deploy/nginx/proxy.conf`, `LOG_FORMAT` сервиса `proxy`). Строка в `proxy` и строки в `django`/`celery-*` одного запроса находятся по одному id.
+
+Текстовые форматы Django ищутся через `|=`; для фильтров по полям (`| json | tenant_id=...`) поставь `DJANGO_LOG_FORMATTER=json` в `deploy/.env`.
+
+### Logs Drilldown
+
+В Grafana 12 встроено приложение **Drilldown → Logs**: список сервисов с графиками объёма и ошибок, фильтры по `level` и полям кликами, вкладка **Patterns** (похожие строки сгруппированы в шаблоны — видно, кто больше всех пишет в лог). Запросы писать не нужно. Сервисы берутся из метки `service` (Loki сам переносит её в `service_name`), для этого в `loki/config.yml` включены `volume_enabled` и `pattern_ingester`. Поля JSON-логов (`tenant_id`, `task`, `request_id`) появляются как фильтры при `DJANGO_LOG_FORMATTER=json`.
+
+### Обновление Grafana
+
+Миграция базы Grafana при смене мажорной версии необратима — перед обновлением сделай бэкап volume:
+
+```bash
+docker run --rm -v monitoring_grafana_data:/data -v "$PWD":/backup alpine \
+  tar czf /backup/grafana_data-$(date +%F).tgz -C /data .
+```

@@ -22,4 +22,4 @@ def publish_device(instance: Device):
             "update": SimpleDeviceSerializer(instance).data,
         },
     )
-    logger.debug(f"✓ Published device changes {instance.name}")
+    logger.debug("✓ Published device changes %s", instance.name)

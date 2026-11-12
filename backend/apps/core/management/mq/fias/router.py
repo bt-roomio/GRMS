@@ -39,9 +39,8 @@ def _dispatch_key_command(command, data, device):
         KEY_COMMAND_HANDLERS[command](data, device)
     except Exception as exc:
         logger.exception(
-            "Error handling FIAS key command=%s operationId=%s: %s",
+            "Error handling FIAS key command=%s operationId=%s",
             command,
             operation_id,
-            exc,
         )
         send_card_operation_confirmation(device, operation_id, status="UR", text=str(exc))

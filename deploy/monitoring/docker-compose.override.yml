@@ -28,6 +28,11 @@ services:
     ports:
       - "127.0.0.1:9115:9115"
 
+  # --- Loki: direct access for diagnostics (logcli, /ready) ---
+  loki:
+    ports:
+      - "127.0.0.1:3100:3100"
+
   # --- Node exporter: direct access for diagnostics ---
   node-exporter:
     ports:

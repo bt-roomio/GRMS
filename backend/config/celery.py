@@ -1,7 +1,6 @@
 import os
 
 from celery import Celery
-from celery import signals as celery_signals
 from kombu import Queue
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -13,21 +12,8 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 
-@celery_signals.setup_logging.connect
-def configure_celery_logging(**kwargs):
-    """Hand Celery the Django logging config instead of its built-in one.
-
-    Without a receiver for this signal Celery considers logging its own: with
-    worker_hijack_root_logger (on by default) it clears the handlers of the
-    ``celery`` logger and attaches a handler only to root. But settings.LOGGING
-    sets ``propagate: False`` for ``celery``, so after such "configuration"
-    beat and worker records go nowhere, and the log looks empty.
-    """
-    from logging.config import dictConfig
-
-    from django.conf import settings
-
-    dictConfig(settings.LOGGING)
+# Logging setup for workers/beat (setup_logging receiver) lives in
+# core.log.celery, connected from CoreConfig.ready().
 
 
 @app.task(bind=True)

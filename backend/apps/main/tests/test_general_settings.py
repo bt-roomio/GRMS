@@ -54,6 +54,7 @@ class GeneralSettingsTest(BaseTestCase):
             "auto_checkout",
             "auto_checkout_time",
             "aggregate_db",
+            "work_offline",
             "main_dashboard",
             "room_fields",
         ]
@@ -65,6 +66,22 @@ class GeneralSettingsTest(BaseTestCase):
         response = self.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["door_lock"], {"ving_card": False, "kaba": False})
+
+    def test_get_work_offline_default(self):
+        """GET returns work_offline=False when it was never set."""
+        response = self.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.data["work_offline"], False)
+
+    def test_put_work_offline_persists(self):
+        """PUT stores work_offline and GET returns it."""
+        response = self.put(self.url, data={"work_offline": True}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.data["work_offline"], True)
+
+        tenant = Tenant.objects.get(id=self.tenant_id)
+        self.assertIs(tenant.additional_info["general_settings"]["work_offline"], True)
+        self.assertIs(self.get(self.url).data["work_offline"], True)
 
     def test_get_room_fields_defaults(self):
         """GET returns room_fields as empty list by default."""

@@ -15,7 +15,7 @@ GRMS (Guest Room Management System) is a Django-based IoT/smart hotel management
 - **Task Queue**: Celery on a dedicated `redis-broker` instance (separate from the `redis` cache/channel layer)
 - **Message Queue**: RabbitMQ for device communication, MQTT broker
 - **Auth**: JWT (djangorestframework-simplejwt), django-allauth (Google, Microsoft, Keycloak SSO)
-- **Monitoring**: Prometheus metrics (django-prometheus); standalone Prometheus + Grafana + Alertmanager stack under `deploy/monitoring/`
+- **Monitoring**: Prometheus metrics (django-prometheus); stdout logging with request/task context (text or JSON, `core/log/`); standalone Prometheus + Grafana + Alertmanager + Loki stack under `deploy/monitoring/`
 - **Process Management**: Each process runs as its own Docker Compose service (no supervisord); orchestrated via `deploy/Makefile`
 
 ## Development Commands
@@ -126,7 +126,7 @@ The Django project is organized into specialized apps under `backend/apps/`:
   - Demultiplexer for routing WebSocket messages
 - **access_manager**: Physical access control integration, device synchronization
 - **services**: External service integrations (PMS systems)
-- **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, not in INSTALLED_APPS, routes at root level)
+- **hoteza**: Hoteza PMS integration (webhook endpoints for check-in/check-out/DND/guest events, no models, routes at root level)
 - **admin_panel**: Multi-tenant admin operations (tenant management, user management, user impersonation), routes under `/api/v1/admin/`
 - **alarms**: ThingsBoard-style alarm rules — rules live in `DeviceProfile.profile_data["alarms"]` (no table of their own), a periodic Celery evaluator walks `TsKvLatest`/`AttributeKv`, and one `Alarm` row per incident doubles as the journal. Also holds the notification dispatcher (Telegram + email channels). Routes under `/api/v1/alarms/`
 - **mews**: Mews PMS integration
@@ -194,7 +194,7 @@ Key model patterns defined in `backend/apps/core/models.py`:
 
 Queues are defined in `config/celery.py`: `critical`, `default` (default queue), `low`. Task-to-queue routing lives in `app.conf.task_routes` (e.g. `sync_devices_task`, `auto_check_out`, `auto_block` → `critical`; `aggregate_table_ts_kv`, `delete_old_logs`, `flush_expired_tokens` → `low`). Global settings: `task_soft_time_limit=300`, `task_time_limit=360`, `task_acks_late=True`, `worker_prefetch_multiplier=1`.
 
-Scheduled tasks in `config/settings.py` (`CELERY_BEAT_SCHEDULE`):
+Scheduled tasks in `config/settings/components/celery.py` (`CELERY_BEAT_SCHEDULE`):
 - `auto-checkout` - every 5 minutes (main.tasks.auto_check_out)
 - `auto-block-guest` - 1800s interval (main.tasks.auto_block)
 - `sync_device` - 300s interval (access_manager.tasks.sync_device.sync_devices_task)
@@ -216,7 +216,7 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 
 - Custom user model: `users.User` (email-based, no username field)
 - Multiple auth backends: JWT, Django ModelBackend, django-allauth
-- Social auth: Google OAuth, Microsoft, Keycloak (OpenID Connect)
+- Social auth: Google OAuth, Microsoft (allauth); Keycloak via custom views in `users/views/keycloak.py`
 - Custom adapters prevent public signup: `NoSignupAccountAdapter`, `NoNewSocialSignupAdapter`
 - Frontend redirects configured via `FRONTEND_DOMAIN` env var
 
@@ -226,10 +226,23 @@ Custom tasks can be added to app-specific `tasks.py` files using `@shared_task` 
 - Custom metrics in `main/metrics.py`
 - Gateway monitoring via `DJANGO_IS_MONITORING_GATEWAYS` and `DJANGO_MONITOR_DISABLED_GATEWAYS`
 - Database metrics updated every 60s via Celery task
-- Standalone observability stack under `deploy/monitoring/` (Prometheus + Grafana + Alertmanager + node-exporter + blackbox), with Grafana dashboards and alert rules; alerts route to Telegram. Runs on the shared external `roomio_net` network.
+- Standalone observability stack under `deploy/monitoring/` (Prometheus + Grafana + Alertmanager + node-exporter + blackbox, plus Loki + Alloy collecting every container's stdout), with Grafana dashboards and alert rules; alerts route to Telegram. Runs on the shared external `roomio_net` network.
 - Celery workers/queues can be inspected via Flower (`celery-flower` service, port 5555)
 
+### Logging
+
+- Config: `config/settings/components/logging.py`. One `console` handler on the root logger (stdout; Docker rotates it); loggers below it only set levels, so never give a logger its own handler (duplicate lines)
+- Always `logger = logging.getLogger(__name__)`; the only named channel is `security` (auth/lockout events, always INFO). Don't use `get_task_logger` or `getLogger("django"/"main"/...)`
+- `%s`-style args, never f-strings (ruff `G`/`LOG` enforce this). Unexpected errors (`except Exception`): `logger.exception(...)` without the exception in the message. Expected ones (timeouts, `DoesNotExist`, bad payloads, retry loops): `logger.error`/`warning` with the error text, no traceback
+- Knobs: `DJANGO_LOG_LEVEL`, `DJANGO_LOG_FORMATTER` (`simple`/`verbose`/`verbose_with_location`/`json`), `DJANGO_LOG_SQL`. Celery workers/beat use the same config (`core/log/celery.py`), their `-l` flag has no effect. Chatty third-party libs and per-task Celery lines are capped at WARNING (`_QUIET_LOGGERS`); `hoteza` is capped at WARNING because it logs webhook payloads with guest PII at INFO
+- Log context (`core/log/`): every record carries `request_id` (HTTP: `RequestContextMiddleware`, echoed in the `X-Request-ID` header; passed to Celery tasks via task headers), `user_id`/`tenant_id` (once DRF has authenticated), `task_id`/`task` in Celery; in mq-async a fresh `request_id` + `queue` per batch (inherited by the Celery tasks it dispatches) and `device_id`/`topic` in per-message handlers. Add your own with `with log_context(key=value):` from `core.log.context`
+- nginx-proxy generates/forwards the request id (`deploy/nginx/proxy.conf`, which replaces nginx-proxy's default proxy headers; never put `proxy_set_header` in `vhost.d/*`, it drops all of them for that host) and writes a JSON access log with it (`LOG_FORMAT` on the `proxy` service), so one id links the nginx line with the backend/Celery lines. Search all of them in Grafana → Explore → Loki (`deploy/monitoring/README.md`)
+
 ## Configuration
+
+### Settings Layout
+
+`config/settings/` is a package assembled by django-split-settings (`DJANGO_SETTINGS_MODULE` stays `config.settings`). `__init__.py` lists the components in load order; each file in `components/` covers one topic (`base`, `security`, `auth`, `database`, `redis`, `drf`, `celery`, `mail`, `monitoring`, `integrations`, `fleet`, `alarms`, `brute_force_protection`, `nodered`, `logging`). `components/__init__.py` loads `.env`, puts `apps/` on `sys.path` and provides `env_bool()` / `env_list()`. A component that needs a value from another one imports it explicitly (`from config.settings.components.base import TIME_ZONE`) rather than relying on the shared namespace, so ruff/ty can resolve it. New settings go into the matching component (or a new component added to `include(...)`).
 
 ### Environment Variables
 
@@ -281,6 +294,10 @@ Branches:
 - `stable` - Production branch, builds `latest` tag
 - `main` - Main integration branch
 
+## Language
+
+All texts in the code are in English: anything a user sees (API and validation messages, emails, Telegram/WhatsApp notifications, alarm rule templates and their `alarmDetails`), log messages, comments, docstrings and test data. Project docs under `backend/docs/` are written in Russian, but any product text they quote must match the code verbatim.
+
 ## Common Patterns
 
 ### Adding a New Model
@@ -305,7 +322,7 @@ Note: Django will automatically generate migrations. Never write migrations manu
 ### Adding a Celery Task
 
 1. Create task in app's `tasks.py` with `@shared_task` decorator
-2. For periodic tasks, add to `CELERY_BEAT_SCHEDULE` in `config/settings.py`
+2. For periodic tasks, add to `CELERY_BEAT_SCHEDULE` in `config/settings/components/celery.py`
 3. To run it off the `default` queue, add a route in `app.conf.task_routes` (`config/celery.py`) targeting `critical` or `low`
 4. Tasks run in the matching Celery worker service (`celery-critical` / `celery-default` / `celery-low`)
 

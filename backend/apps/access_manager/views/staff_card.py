@@ -10,7 +10,7 @@ from access_manager.utilits.check_card_assignment import get_card_assignments
 from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from main.utils.access_context import get_staff_access_context
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 
 
 class StaffCardView(APIView):

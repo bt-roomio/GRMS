@@ -52,7 +52,7 @@ async def ws_connect(asgi_app):
     async def _connect(token: str) -> WebsocketCommunicator:
         comm = WebsocketCommunicator(asgi_app, f"/api/ws/v2/?token={token}")
         connected, _ = await comm.connect()
-        assert connected, "WebSocket должен подключаться"
+        assert connected, "WebSocket must connect"
         opened.append(comm)
         return comm
 

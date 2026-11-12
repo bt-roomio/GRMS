@@ -12,7 +12,7 @@ import signal
 from core.management.mq.engine.consumer import AsyncMQConsumer
 from core.utils.redis_pool import async_redis as redis_client
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 
 async def main():
@@ -31,8 +31,5 @@ async def main():
 
 
 def run():
-    """Configure noisy third-party loggers and run the consumer event loop."""
-    logging.getLogger("aiormq").setLevel(logging.WARNING)
-    logging.getLogger("aio_pika").setLevel(logging.WARNING)
-
+    """Run the consumer event loop (aiormq/aio_pika log levels are set in LOGGING)."""
     asyncio.run(main())

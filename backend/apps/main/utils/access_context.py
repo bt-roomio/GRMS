@@ -86,5 +86,5 @@ def get_staff_access_context(staff: Staff) -> dict:
             is_active=True,
         ).distinct()
         devices = (room_devices | public_space_devices).distinct()
-    _logger.info(f"Devices for staff {staff.id}: {[device.id for device in devices]}")
+    _logger.info("Devices for staff %s: %s", staff.id, [device.id for device in devices])
     return {"staff": staff, "devices": devices, "staff_cards": staff_cards, "cards": cards}

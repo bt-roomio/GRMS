@@ -85,7 +85,7 @@ class GuestSerializer(serializers.ModelSerializer):
             raise
 
     def update(self, instance: Guest, validated_data):
-        logger.info(f"Updating Guest {instance.id} with data: {validated_data}")
+        logger.info("Updating Guest %s with data: %s", instance.id, validated_data)
         deactivate_result = {"success": True}
 
         access_context = get_guest_access_context(instance)
@@ -116,7 +116,7 @@ class GuestSerializer(serializers.ModelSerializer):
                 instance.mark_checked_in(*self._actor())
 
         if isinstance(validated_data.get("is_active"), bool) and not validated_data.get("is_active"):
-            logger.info(f"Deactivating Guest {instance.id}")
+            logger.info("Deactivating Guest %s", instance.id)
             room = instance.room
             devices = access_context.get("devices", [])
             cards = access_context.get("cards")
@@ -136,7 +136,7 @@ class GuestSerializer(serializers.ModelSerializer):
         updated = super().update(instance, validated_data)
 
         if room_to_update:
-            logger.info(f"Updating Room {room_to_update.id} state to Available")
+            logger.info("Updating Room %s state to Available", room_to_update.id)
             room_to_update.save(update_fields=["state"])
             self.context["deactivate_results"] = deactivate_result
 

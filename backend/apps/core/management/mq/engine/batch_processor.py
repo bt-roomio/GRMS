@@ -22,7 +22,7 @@ from core.management.mq.engine.processor import (
     BatchProcessor,
 )
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 
 class BatchAccumulator:

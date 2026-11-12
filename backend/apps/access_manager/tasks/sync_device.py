@@ -8,7 +8,7 @@ from access_manager.models import NeedSyncDevice
 from access_manager.tasks.send_rpc import send_rpc_request
 from main.models import Device, DevicePublicSpaces, Guest, Room
 
-logger = logging.getLogger("main")
+logger = logging.getLogger(__name__)
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 60})
@@ -89,5 +89,5 @@ def sync_devices_task(tenant_id=None, ids=None, device_ids=None, user_id=None):
         return {"success": True, "dispatched": len(grouped)}
 
     except Exception as e:
-        logger.error("sync_devices_task error: %s", str(e))
+        logger.exception("sync_devices_task error")
         raise e

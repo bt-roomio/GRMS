@@ -235,6 +235,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-critical
+    volumes: *celery-volumes
     command: celery -A config worker -Q critical -n critical@%h -c 2 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
@@ -254,6 +255,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-default
+    volumes: *celery-volumes
     command: celery -A config worker -Q default -n default@%h -c 8 --max-tasks-per-child=100
     tmpfs:
       - /prom_mp
@@ -273,6 +275,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-realtime
+    volumes: *celery-volumes
     command: celery -A config worker -Q realtime -n realtime@%h -c 8 --prefetch-multiplier=4 --max-tasks-per-child=200
     tmpfs:
       - /prom_mp
@@ -292,6 +295,15 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-low
+    # On top of *celery-volumes: provisioning/deprovisioning Node-RED tenants (main.services.nodered)
+    # writes .env.nodered.<slug> into deploy/ and runs docker compose on the host.
+    # WARNING: access to docker.sock is equivalent to root on the host — mount it only here.
+    volumes:
+      - ${FLEET_SSH_KEY_PATH:-/etc/roomio/fleet_key}:/etc/roomio/fleet_key:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/deploy
+      # docker login to registry.gitlab.com to pull the node-red-nodes image (of whoever runs make)
+      - ${DOCKER_CONFIG_DIR:-${HOME}/.docker}:/root/.docker:ro
     command: celery -A config worker -Q low -n low@%h -c 1 --max-tasks-per-child=50
     tmpfs:
       - /prom_mp
@@ -322,7 +334,7 @@ services:
     environment:
       <<: *celery-env
       PGAPPNAME: grms-celery-flower
-    command: celery -A config flower --port=5555 --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
+    command: celery -A config flower --port=5555 --max_tasks=2000 --basic_auth=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set (user:password)}
     ports:
       - "127.0.0.1:5555:5555"
     tmpfs:
@@ -391,24 +403,19 @@ services:
   # ---------------------------------------------------------------------------
 
   mqtt:
-    image: registry.gitlab.com/grms1/mqtt-broker
+    image: registry.gitlab.com/grms1/mqtt-broker:test
     container_name: mqtt-broker
     hostname: mqtt-broker
     restart: unless-stopped
     ports:
       - "${MQTT_EXTERNAL_PORT:-9000}:9999"
-    command: python MqttTransportHandler.py
     volumes:
-      - mqtt_logs:/mqtt/logs
+      - mqtt_app_logs:/app/logs
     logging: *default-logging
     environment:
       GRMS_PROTOCOL: http
       GRMS_HOST: django
       GRMS_PORT: "8000"
-      GRMS_PROTOCOL1: https
-      GRMS_HOST1: ${API_VIRTUAL_HOST}
-      GRMS_PORT1: "443"
-      QUEUE_TYPE: rabbitMQ
       QUEUE_HOST: rabbitmq
       QUEUE_PORT: "5672"
       QUEUE_LOGIN: ${RABBITMQ_DEFAULT_USER}
@@ -460,10 +467,19 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      LOG_FORMAT_ESCAPE: json
+      LOG_FORMAT: >-
+        {"time":"$$time_iso8601","host":"$$host","remote_addr":"$$remote_addr",
+        "x_forwarded_for":"$$http_x_forwarded_for","method":"$$request_method","uri":"$$uri",
+        "status":$$status,"bytes":$$body_bytes_sent,"request_time":$$request_time,
+        "upstream_time":"$$upstream_response_time","upstream":"$$upstream_addr",
+        "referer":"$$http_referer","user_agent":"$$http_user_agent","request_id":"$$grms_request_id"}
     volumes:
+      # Proxy headers incl. X-Request-ID (replaces nginx-proxy's defaults, see the file).
+      - ./nginx/proxy.conf:/etc/nginx/proxy.conf:ro
       - html:/usr/share/nginx/html
       - dhparam:/etc/nginx/dhparam
-      - vhost:/etc/nginx/vhost.d
       - certs:/etc/nginx/certs
       - /run/docker.sock:/tmp/docker.sock:ro
       - static_volume:/app/static/
@@ -490,7 +506,6 @@ services:
     volumes:
       - html:/usr/share/nginx/html
       - dhparam:/etc/nginx/dhparam
-      - vhost:/etc/nginx/vhost.d
       - certs:/etc/nginx/certs
       - /run/docker.sock:/var/run/docker.sock:ro
       - acme_sh_data:/etc/acme.sh
@@ -512,13 +527,12 @@ volumes:
   rabbitmq_data:
   static_volume:
   media_volume:
-  mqtt_logs:
+  mqtt_app_logs:
   backend_venv:
   # nginx-proxy volumes
   acme_sh_data:
   certs:
   dhparam:
-  vhost:
   html:
 
 # =============================================================================

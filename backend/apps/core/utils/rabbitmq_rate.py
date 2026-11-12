@@ -16,18 +16,18 @@ def get_delivery_rate():
         rate = data.get("message_stats", {}).get("deliver_get_details", {}).get("rate", 0.0)
         return rate
     except requests.RequestException as e:
-        print(f"❌ Ошибка при запросе: {e}")
+        print(f"❌ Request failed: {e}")
         return None
 
 
 def monitor():
-    print("📡 Мониторинг скорости обработки сообщений (deliver_get_details.rate):\n")
+    print("📡 Monitoring the message processing rate (deliver_get_details.rate):\n")
     while True:
         rate = get_delivery_rate()
         if rate is not None:
-            print(f"⚙️  Текущая скорость: {rate:.2f} msg/sec")
+            print(f"⚙️  Current rate: {rate:.2f} msg/sec")
         else:
-            print("🚫 Не удалось получить данные.")
+            print("🚫 Could not fetch the data.")
         time.sleep(INTERVAL)
 
 

@@ -32,7 +32,7 @@ class SberWindowView(APIView):
         if not room:
             body["messageName"] = "ANSWER_TO_USER"
             body["payload"] = {
-                "pronounceText": "Сбер девайс не найдено",
+                "pronounceText": "Sber device not found",
                 "auto_listening": False,
                 "finished": True,
             }
@@ -41,13 +41,13 @@ class SberWindowView(APIView):
         if not guest:
             body["messageName"] = "ANSWER_TO_USER"
             body["payload"] = {
-                "pronounceText": "Гостя не найдено",
+                "pronounceText": "Guest not found",
                 "auto_listening": False,
                 "finished": True,
             }
             return Response(body)
 
-        text = "Кондиционер не может быть включен, окно открыто"
+        text = "The air conditioner cannot be turned on, the window is open"
         if guest.nationality and guest.nationality not in self.rus_list:
             from deep_translator import GoogleTranslator
 

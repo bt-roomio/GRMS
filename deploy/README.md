@@ -14,8 +14,9 @@ deploy/
 ├── env.example                 # Шаблон переменных окружения
 ├── .env.nodered.example        # Шаблон для Node-RED тенанта
 ├── nginx/
-│   └── vhost.d/                # Конфиги nginx-proxy (per-vhost)
-└── monitoring/                 # Prometheus + Grafana + Alertmanager
+│   ├── proxy.conf              # Заголовки к бэкенду для всех хостов (+ X-Request-ID)
+│   └── vhost.d/                # Конфиги nginx-proxy (per-vhost), без proxy_set_header
+└── monitoring/                 # Prometheus + Grafana + Alertmanager + Loki
 ```
 
 ## Профили

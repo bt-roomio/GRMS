@@ -9,8 +9,8 @@ class DetailsTemplateTest(SimpleTestCase):
         self.snapshot = snapshot(ts={"Room Temperature": 31.5}, attrs={"active": False})
 
     def test_placeholders_with_spaces_in_the_key(self):
-        text = render("Температура ${Room Temperature}° в номере ${room}", self.snapshot, "High Temperature", "MINOR")
-        self.assertEqual(text, "Температура 31.5° в номере 101")
+        text = render("Temperature ${Room Temperature}° in room ${room}", self.snapshot, "High Temperature", "MINOR")
+        self.assertEqual(text, "Temperature 31.5° in room 101")
 
     def test_service_placeholders(self):
         text = render("${alarmType}/${alarmSeverity}: ${originatorName}", self.snapshot, "High Temperature", "MINOR")

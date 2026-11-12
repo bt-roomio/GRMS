@@ -13,7 +13,7 @@ def register_cards_for_public_space(public_space_id, devices, connect, source=No
             try:
                 cards_of_device = get_device_cards(device, [], connect)
                 send_rpc_request(str(device), cards_of_device, connect, user=user, sync=True, source=source)
-            except Exception as e:
-                logger.error("Error registering cards for device %s : %s", device.id, str(e))
-    except Exception as e:
-        logger.error("Error in cards_for_public_space for public space %s: %s", public_space_id, str(e))
+            except Exception:
+                logger.exception("Error registering cards for device %s", device.id)
+    except Exception:
+        logger.exception("Error in cards_for_public_space for public space %s", public_space_id)

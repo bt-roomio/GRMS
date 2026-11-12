@@ -82,7 +82,6 @@ def tag_type_swagger_delete(**kwargs):
         responses={
             204: openapi.Response(description="Deleted."),
             404: _not_found_response,
-            409: openapi.Response(description="The tag type is used by mapping rules."),
         },
         tags=_TAGS,
     )

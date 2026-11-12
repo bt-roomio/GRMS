@@ -72,14 +72,14 @@ class Command(BaseCommand):
             logger.warning("No active Mews configurations found")
             return
 
-        logger.info(f"Processing {len(active_integrations)} tenant(s)")
+        logger.info("Processing %s tenant(s)", len(active_integrations))
 
         total_published = 0
         for integration in active_integrations:
             tenant = integration.tenant
-            logger.info(f"\n{'=' * 60}")
-            logger.info(f"Tenant: {tenant.title}")
-            logger.info(f"{'=' * 60}")
+            logger.info("\n%s", "=" * 60)
+            logger.info("Tenant: %s", tenant.title)
+            logger.info("%s", "=" * 60)
 
             try:
                 # Step 1: Find active guests with Mews reservation IDs
@@ -93,7 +93,7 @@ class Command(BaseCommand):
                 )
 
                 if not reservation_ids:
-                    logger.warning(f"No active guests with Mews reservations for tenant {tenant}")
+                    logger.warning("No active guests with Mews reservations for tenant %s", tenant)
                     continue
 
                 # Step 2: Setup API client
@@ -120,7 +120,7 @@ class Command(BaseCommand):
                 start_utc = last_fetch.strftime("%Y-%m-%dT%H:%M:%SZ")
                 end_utc = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-                logger.info(f"Fetching tokens updated from {start_utc} to {end_utc}")
+                logger.info("Fetching tokens updated from %s to %s", start_utc, end_utc)
 
                 response = api_client.get_resource_access_tokens(
                     service_order_ids=reservation_ids,
@@ -148,7 +148,7 @@ class Command(BaseCommand):
                 # Step 5: Filter by Type='RfidTag'
                 rfid_tokens = [token for token in all_tokens if token.get("Type") == "RfidTag"]
 
-                logger.info(f"  Found {len(all_tokens)} total token(s), {len(rfid_tokens)} RFID tag(s)")
+                logger.info("  Found %s total token(s), %s RFID tag(s)", len(all_tokens), len(rfid_tokens))
 
                 if not rfid_tokens:
                     logger.info("No RFID tags to publish")
@@ -167,20 +167,20 @@ class Command(BaseCommand):
                 if rfid_tokens:
                     logger.info("\n  Sample key card data:")
                     for idx, token in enumerate(rfid_tokens[:3], 1):
-                        logger.info(f"    {idx}. ID: {token.get('Id', 'N/A')[:20]}...")
-                        logger.info(f"       Value: {token.get('Value', 'N/A')}")
+                        logger.info("    %s. ID: %s...", idx, token.get("Id", "N/A")[:20])
+                        logger.info("       Value: %s", token.get("Value", "N/A"))
                         logger.info(
-                            f"Valid: {token.get('ValidityStartUtc', 'N/A')} → {token.get('ValidityEndUtc', 'N/A')}"
+                            "Valid: %s → %s", token.get("ValidityStartUtc", "N/A"), token.get("ValidityEndUtc", "N/A")
                         )
-                        logger.info(f"       Reservation: {token.get('ServiceOrderId', 'N/A')[:20]}...")
+                        logger.info("       Reservation: %s...", token.get("ServiceOrderId", "N/A")[:20])
 
             except Exception as e:
-                logger.exception(f"Error processing tenant {tenant.title}")
+                logger.exception("Error processing tenant %s", tenant.title)
                 logger.warning(self.style.ERROR(f"  ✗ Failed: {str(e)}"))
                 continue
 
-        logger.info(f"\n{'=' * 60}")
-        logger.info(f"Completed. Total key cards assigned: {total_published}")
+        logger.info("\n%s", "=" * 60)
+        logger.info("Completed. Total key cards assigned: %s", total_published)
 
     def _assign_keycards(self, tenant: Tenant, rfid_tokens: list, active_guests) -> int:
         """
@@ -221,7 +221,7 @@ class Command(BaseCommand):
 
                 for guest in guests_for_reservation:
                     if not guest.room:
-                        logger.warning(f"Guest {guest.id} has no room assigned")
+                        logger.warning("Guest %s has no room assigned", guest.id)
                         continue
 
                     room = guest.room
@@ -243,14 +243,14 @@ class Command(BaseCommand):
                     access_cards_via_card_numbers(guests, room, cards, access=1)
                     assigned_count += len(cards)
 
-                    logger.info(f"Assigned {len(cards)} card(s) for {len(guests)} guest(s) in room {room.number}")
+                    logger.info("Assigned %s card(s) for %s guest(s) in room %s", len(cards), len(guests), room.number)
 
-                except Exception as e:
-                    logger.exception(f"Failed to assign cards for room {room.number}: {e}")
+                except Exception:
+                    logger.exception("Failed to assign cards for room %s", room.number)
                     continue
 
         except Exception as _:
-            logger.exception(f"Failed to assign keycards for tenant {tenant.title}")
+            logger.exception("Failed to assign keycards for tenant %s", tenant.title)
             raise
 
         return assigned_count
@@ -261,6 +261,6 @@ class Command(BaseCommand):
             additional_info["last_keycard_fetch"] = fetch_time.strftime("%Y-%m-%dT%H:%M:%SZ")
             integration.additional_info = additional_info
             integration.save(update_fields=["additional_info"])
-            logger.info(f"Updated last_keycard_fetch for tenant {integration.tenant.title}")
+            logger.info("Updated last_keycard_fetch for tenant %s", integration.tenant.title)
         except Exception as _:
-            logger.exception(f"Failed to update last_keycard_fetch for tenant {integration.tenant.title}")
+            logger.exception("Failed to update last_keycard_fetch for tenant %s", integration.tenant.title)

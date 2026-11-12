@@ -22,4 +22,4 @@ def publish_room_detail_changes(instance: Room):
             "update": RoomDetailWsSerializer(instance).data,
         },
     )
-    logger.debug(f"✓ Published room detail changes for room {instance.number}")
+    logger.debug("✓ Published room detail changes for room %s", instance.number)

@@ -41,7 +41,7 @@ class WhatsAppChannelTest(AlarmTestCase):
         self.config = block()
 
     def make_alarm(
-        self, severity="MAJOR", message="Устройство DHT11 не на связи", minutes_ago=10, alarm_type="Device Offline"
+        self, severity="MAJOR", message="Device DHT11 is offline", minutes_ago=10, alarm_type="Device Offline"
     ):
         # One active alarm per (originator, type) is a DB constraint: a second
         # one needs another type.
@@ -85,7 +85,7 @@ class WhatsAppChannelTest(AlarmTestCase):
         title, raised, cleared, headline = call.args[3]
         self.assertEqual(title, self.tenant.title or "GRMS")
         self.assertEqual((raised, cleared), ("1", "0"))
-        self.assertIn("Устройство DHT11 не на связи", headline)
+        self.assertIn("Device DHT11 is offline", headline)
 
     def test_the_hotels_credentials_are_decrypted_and_the_session_closed(self):
         self.send()

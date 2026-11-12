@@ -107,8 +107,8 @@ class Command(BaseCommand):
             for client in clients:
                 try:
                     client.disconnect()
-                except Exception as e:
-                    logger.error(f"Error disconnecting client: {e}")
+                except Exception:
+                    logger.exception("Error disconnecting client")
             self.stdout.write(self.style.SUCCESS("Shutdown complete"))
             sys.exit(0)
 
@@ -172,8 +172,8 @@ class Command(BaseCommand):
 
     def _on_connected(self, tenant_name: str):
         self.stdout.write(self.style.SUCCESS(f"✓ Connected to Mews for tenant: {tenant_name}"))
-        logger.info(f"Connected to Mews for tenant: {tenant_name}")
+        logger.info("Connected to Mews for tenant: %s", tenant_name)
 
     def _on_disconnected(self, reason: str, tenant_name: str):
         self.stdout.write(self.style.WARNING(f"✗ Disconnected from Mews for tenant {tenant_name}: {reason}"))
-        logger.warning(f"Disconnected from Mews for tenant {tenant_name}: {reason}")
+        logger.warning("Disconnected from Mews for tenant %s: %s", tenant_name, reason)

@@ -1,8 +1,7 @@
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
-
-from celery.utils.log import get_task_logger
 
 from access_manager.models import Group
 from access_manager.utilits.merge_rpc_results import merge_rpc_results
@@ -15,7 +14,7 @@ from core.utils.str_to_dict import str_to_dict
 from main.models import Device
 from shuttle.models import RPCMessage
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def process_devices_parallel(devices, cards: List[str], group: Group, action: str) -> List[Dict[str, Any]]:

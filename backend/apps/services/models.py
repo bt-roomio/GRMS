@@ -1,12 +1,13 @@
 import uuid
 from typing import ClassVar, cast
 
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 
-from services.mapping.constants import Direction, OnInvalid
+from services.mapping.constants import TAG_NAME_MAX_LENGTH, Direction, OnInvalid
 from services.querysets.integration import IntegrationQuerySet
-from services.querysets.mapping import MappingOverrideQuerySet, MappingProfileQuerySet
+from services.querysets.mapping import MappingProfileQuerySet
 from services.querysets.tag import TagTypeGroupQuerySet, TagTypeQuerySet
 
 
@@ -128,115 +129,104 @@ class TagRange(BaseModel):
 
 
 class MappingProfile(BaseModel):
-    """An integrator's value format: one ``MappingRule`` per tag type. An integration uses it
-    through ``Integration.mapping_profile``."""
+    """An integrator's value format: ``MappingRule`` objects, each for one or more tag names, and
+    ``composite_rules``, each making one integrator value of several tags.
 
-    code = models.SlugField(max_length=100)
+    An integration uses a ``tenant`` profile through ``Integration.mapping_profile``. The
+    ``room_type`` and ``device`` profiles of the same integrator in the tenant hold the rules that
+    differ for their target; a tag takes its rule from the device profile, then the room type
+    profile, then the integration's profile."""
+
+    class Scope(models.TextChoices):
+        TENANT = "tenant", "Tenant"
+        ROOM_TYPE = "room_type", "Room type"
+        DEVICE = "device", "Device"
+
+    # The target field of each scope; None for the tenant scope.
+    TARGET_FIELDS: ClassVar[dict] = {
+        Scope.TENANT: None,
+        Scope.ROOM_TYPE: "room_type",
+        Scope.DEVICE: "device",
+    }
+
     name = models.CharField(max_length=255)
     integrator = models.ForeignKey(
         "services.Integrator", models.CASCADE, "mapping_profiles", to_field="name", db_column="integrator"
     )
-    schema_version = models.CharField(max_length=20, default="1.0")
     tenant = models.ForeignKey("main.Tenant", models.CASCADE, "mapping_profiles")
+    scope = models.CharField(max_length=20, choices=Scope.choices, default=Scope.TENANT)
+    room_type = models.ForeignKey("main.RoomType", models.CASCADE, "mapping_profiles", null=True, blank=True)
+    device = models.ForeignKey("main.Device", models.CASCADE, "mapping_profiles", null=True, blank=True)
+    composite_rules = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Rules making one integrator value of several tags, see services.mapping.composite.",
+    )
 
     objects: ClassVar[MappingProfileQuerySet] = cast(MappingProfileQuerySet, MappingProfileQuerySet.as_manager())
 
     def __str__(self):
-        return str(self.code)
+        return str(self.name)
 
     class Meta(BaseModel.Meta):
         db_table = "services_mapping_profile"
         constraints: ClassVar[list] = [
-            UniqueConstraint(fields=("code", "tenant"), name="unique_mapping_profile_code_tenant"),
+            UniqueConstraint(fields=("name", "tenant"), name="unique_mapping_profile_name_tenant"),
+            # Exactly the scope's own target is set; a tenant profile has none.
+            models.CheckConstraint(
+                check=(
+                    Q(scope="tenant", room_type__isnull=True, device__isnull=True)
+                    | Q(scope="room_type", room_type__isnull=False, device__isnull=True)
+                    | Q(scope="device", room_type__isnull=True, device__isnull=False)
+                ),
+                name="mapping_profile_target_matches_scope",
+            ),
+            UniqueConstraint(
+                fields=("tenant", "integrator", "room_type"),
+                condition=Q(scope="room_type"),
+                name="unique_mapping_profile_integrator_room_type",
+            ),
+            UniqueConstraint(
+                fields=("tenant", "integrator", "device"),
+                condition=Q(scope="device"),
+                name="unique_mapping_profile_integrator_device",
+            ),
         ]
 
 
 class MappingRule(BaseModel):
-    """One rule of a profile, see ``services.mapping.engine``. ``code`` is the rule ``id`` and
-    ``limits`` its ``validate`` block in the profile JSON."""
+    """One rule of a profile, see ``services.mapping.engine``. The rule converts every tag whose
+    name (an attribute key or a telemetry key) is in ``tag_names``, wherever its profile applies.
+    A tag name belongs to one rule of a profile: the serializer checks it, the database cannot."""
 
     profile = models.ForeignKey("services.MappingProfile", models.CASCADE, "rules")
-    code = models.CharField(max_length=100)
-    # RESTRICT, not PROTECT: deleting the tenant still cascades through its tag types and rules.
-    tag_type = models.ForeignKey("services.TagType", models.RESTRICT, "mapping_rules")
+    tag_names = ArrayField(models.CharField(max_length=TAG_NAME_MAX_LENGTH), default=list)
     external = models.JSONField(help_text='The integrator side, e.g. {"value_type": "integer"}.')
     direction = models.CharField(max_length=20, choices=Direction.choices, default=Direction.BOTH)
     transform = models.JSONField()
-    limits = models.JSONField(null=True, blank=True)
     on_invalid = models.CharField(max_length=20, choices=OnInvalid.choices, default=OnInvalid.REJECT)
+    on_invalid_value = models.JSONField(
+        null=True, blank=True, help_text="The GRMS value written instead of an invalid one under on_invalid const."
+    )
 
     def __str__(self):
-        return str(self.code)
+        return ", ".join(self.tag_names)
 
     def as_rule(self) -> dict:
         """The rule as the engine takes it."""
-        rule = {
-            "id": self.code,
-            "tag_type": self.tag_type.name,
+        return {
+            "tag_names": list(self.tag_names),
             "external": self.external,
             "direction": self.direction,
             "transform": self.transform,
             "on_invalid": self.on_invalid,
+            "on_invalid_value": self.on_invalid_value,
         }
-        if self.limits is not None:
-            rule["validate"] = self.limits
-        return rule
 
     class Meta(BaseModel.Meta):
         db_table = "services_mapping_rule"
-        ordering = ("code",)
+        ordering = ("tag_names",)
         constraints: ClassVar[list] = [
-            UniqueConstraint(fields=("profile", "code"), name="unique_mapping_rule_profile_code"),
-            UniqueConstraint(fields=("profile", "tag_type"), name="unique_mapping_rule_profile_tag_type"),
-        ]
-
-
-class MappingOverride(BaseModel):
-    """Changes rules of the integration's profile for part of the tags: every tag of the tenant,
-    a room type, a room or a device. ``rule_overrides`` maps a rule id to the fields it replaces."""
-
-    class Level(models.TextChoices):
-        TENANT = "tenant", "Tenant"
-        ROOM_TYPE = "room_type", "Room type"
-        ROOM = "room", "Room"
-        DEVICE = "device", "Device"
-
-    # The target field of each level; None for the tenant level.
-    TARGET_FIELDS: ClassVar[dict] = {
-        Level.TENANT: None,
-        Level.ROOM_TYPE: "room_type",
-        Level.ROOM: "room",
-        Level.DEVICE: "device",
-    }
-
-    integration = models.ForeignKey("services.Integration", models.CASCADE, "mapping_overrides")
-    level = models.CharField(max_length=20, choices=Level.choices)
-    room_type = models.ForeignKey("main.RoomType", models.CASCADE, "mapping_overrides", null=True, blank=True)
-    room = models.ForeignKey("main.Room", models.CASCADE, "mapping_overrides", null=True, blank=True)
-    device = models.ForeignKey("main.Device", models.CASCADE, "mapping_overrides", null=True, blank=True)
-    rule_overrides = models.JSONField(default=dict, blank=True)
-
-    objects: ClassVar[MappingOverrideQuerySet] = cast(MappingOverrideQuerySet, MappingOverrideQuerySet.as_manager())
-
-    def __str__(self):
-        return f"{self.integration} {self.level}"
-
-    class Meta(BaseModel.Meta):
-        db_table = "services_mapping_override"
-        constraints: ClassVar[list] = [
-            # Exactly the level's own target is set.
-            models.CheckConstraint(
-                check=(
-                    Q(level="tenant", room_type__isnull=True, room__isnull=True, device__isnull=True)
-                    | Q(level="room_type", room_type__isnull=False, room__isnull=True, device__isnull=True)
-                    | Q(level="room", room_type__isnull=True, room__isnull=False, device__isnull=True)
-                    | Q(level="device", room_type__isnull=True, room__isnull=True, device__isnull=False)
-                ),
-                name="mapping_override_target_matches_level",
-            ),
-            UniqueConstraint(
-                fields=("integration", "level", "room_type", "room", "device"),
-                nulls_distinct=False,
-                name="unique_mapping_override_target",
-            ),
+            # A rule without tag names would match no tag.
+            models.CheckConstraint(check=Q(tag_names__len__gt=0), name="mapping_rule_tag_names_not_empty"),
         ]

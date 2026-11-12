@@ -805,8 +805,6 @@ in [recipe 7.1](#71-temperature-threshold-per-room-and-tenant-online-devices-onl
 Both rules live on the same profile: the `is_gateway` filter splits them between devices, so
 a separate profile for gateways is not needed.
 
-The message texts below are quoted verbatim as the templates in `apps/alarms/templates.py` produce them.
-
 ```json
 [
   {
@@ -828,7 +826,7 @@ The message texts below are quoted verbatim as the templates in `apps/alarms/tem
           "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 10}}
         },
         "schedule": {"type": "ANY_TIME"},
-        "alarmDetails": "Устройство ${originatorName} не на связи"
+        "alarmDetails": "Device ${originatorName} is offline"
       }
     },
     "clearRule": {
@@ -856,7 +854,7 @@ The message texts below are quoted verbatim as the templates in `apps/alarms/tem
           "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
         },
         "schedule": {"type": "ANY_TIME"},
-        "alarmDetails": "Шлюз ${originatorName} не на связи"
+        "alarmDetails": "Gateway ${originatorName} is offline"
       }
     },
     "clearRule": {
@@ -1622,8 +1620,8 @@ rule" button. Permission — `alarms.view_alarmrule`.
   "results": [
     {
       "id": "high-temperature",
-      "name": "Высокая температура",
-      "description": "Температура выше 30° дольше 5 минут. Порог можно переопределить на номере атрибутом «temperatureMax».",
+      "name": "High temperature",
+      "description": "Temperature above 30° for more than 5 minutes. The threshold can be overridden per room with the \"temperatureMax\" attribute.",
       "requires": {"attributes": [], "timeseries": ["Room Temperature"]},
       "rule": {"alarmType": "High Temperature", "createRules": {"MINOR": {}}, "clearRule": {}}
     }
@@ -1639,7 +1637,6 @@ rule" button. Permission — `alarms.view_alarmrule`.
 - the catalog lives in `apps/alarms/templates.py`, and the tests use the same module, so a broken template
   never reaches the panel;
 - there are four of them now: two connectivity rules and two temperature rules;
-- `name` and `description` are returned as they are in the catalog (currently in Russian).
 
 Nothing is seeded automatically: a template reaches a tenant only when it is chosen.
 
@@ -1721,7 +1718,7 @@ Response:
       "clear_ts": "2026-09-14T10:42:00.305117Z",
       "duration_ms": 1439892,
       "details": {
-        "message": "Шлюз GW-3 не на связи",
+        "message": "Gateway GW-3 is offline",
         "values": {"active": false, "is_gateway": true}
       },
       "tenant": "28c81921-f78e-4864-87d2-cec674f19d1c",
@@ -1955,7 +1952,7 @@ the stream returns **only active** alarms (`ACTIVE`); to get the journal, pass `
           "ack_ts": null,
           "clear_ts": null,
           "duration_ms": 0,
-          "details": {"message": "Шлюз GW-3 не на связи", "values": {"active": false, "is_gateway": true}},
+          "details": {"message": "Gateway GW-3 is offline", "values": {"active": false, "is_gateway": true}},
           "tenant": "28c81921f78e486487d2cec674f19d1c",
           "originator": "5e6f7a8b9c0d4e1fa2b3c4d5e6f7a8b9",
           "originator_name": "GW-3",
@@ -2090,17 +2087,15 @@ The limit of 10 messages per minute is counted per target: for WhatsApp, per num
 
 ### 10.3. What a message looks like
 
-The message texts are quoted verbatim as the dispatcher produces them:
-
 ```text
 Grand Hotel Tashkent
 
-Новые аварии (2)
-🔴 14.09 15:18 — Шлюз GW-3 не на связи
-🟡 14.09 15:21 · 305 — Температура 31.5° в номере 305
+New alarms (2)
+🔴 14.09 15:18 — Gateway GW-3 is offline
+🟡 14.09 15:21 · 305 — Temperature 31.5° in room 305
 
-Снятые аварии (1)
-🟠 14.09 15:40 · 412 — Устройство Thermostat 412 не на связи
+Cleared alarms (1)
+🟠 14.09 15:40 · 412 — Device Thermostat 412 is offline
 ```
 
 - Headings are bold (`parse_mode=HTML`); the name and the texts are escaped.
@@ -2118,8 +2113,8 @@ Grand Hotel Tashkent
 | T | The device's `active` became `false` |
 | T + up to 30 s | The first pass sees the condition, the `DURATION` count starts |
 | ≈ T + 10–10.5 min | Alarm created (`start_ts`) — visible in the journal and WS |
-| ≈ `start_ts` + 5–6 min | The "new alarms" message (`notify_delay_sec = 300`, dispatcher tick 60 s) |
-| `active` became `true` | Up to 30 s — alarm cleared; up to 60 s more — the "cleared alarms" message |
+| ≈ `start_ts` + 5–6 min | The "New alarms" message (`notify_delay_sec = 300`, dispatcher tick 60 s) |
+| `active` became `true` | Up to 30 s — alarm cleared; up to 60 s more — the "Cleared alarms" message |
 
 Hence:
 
@@ -2135,7 +2130,7 @@ Hence:
   escalating to `CRITICAL`. But if `min_severity = MAJOR` and the alarm
   was created as `MINOR`, it is sent at the moment it escalates to `MAJOR`: the filter looks at the current
   severity.
-- **A manual clear** produces a "cleared alarms" entry if the raise was reported.
+- **A manual clear** produces a "Cleared alarms" entry if the raise was reported.
 - **A deleted alarm** produces nothing.
 - **Alarms cleared while Telegram was unavailable** do not reach the chat: only
   uncleared alarms are picked up for sending.
@@ -2168,9 +2163,11 @@ Content-Type: application/json
 
 One email per tenant per tick, all recipients in `To`:
 
-- subject (produced verbatim by the code): `<tenant name>: аварии — новых 2, снятых 1`;
-- body — `text/plain` with the same lines as in Telegram, plus a `text/html` version as a table
-  (severity by colour, time, room, text).
+- subject: `<tenant name>: alarms — 2 new, 1 cleared`;
+- body — `text/plain` with the same lines as in Telegram, plus a `text/html` version styled like the
+  password reset email: the `core/templates/alarm_email.html` template (the shared logo is
+  `email_logo.html`, the same footer), sections as tables — severity as a coloured badge, time, room,
+  text — and an "Open Room.io" button linking to `FRONTEND_DOMAIN`.
 
 | Situation | Reaction |
 |---|---|
@@ -2235,17 +2232,17 @@ Content-Type: application/json
   the most severe of the new ones, or, if there are no new ones, the first of the cleared ones (with ✅).
 - **A message per recipient.** The Cloud API has no broadcast, and every message is paid for.
 
-The template text for approval (name `alarm_summary`, category Utility, language `ru`), quoted verbatim:
+The template text for approval (name `alarm_summary`, category Utility, language `en`):
 
 ```
-Объект «{{1}}»: обновление по авариям.
-Новых: {{2}}. Снятых: {{3}}.
-Главное: {{4}}
-Подробности в панели roomio.
+{{1}}: alarm update.
+New: {{2}}. Cleared: {{3}}.
+Top: {{4}}
+See the roomio panel for details.
 ```
 
 Examples for approval: `{{1}}` = `Grand Hotel`, `{{2}}` = `2`, `{{3}}` = `1`,
-`{{4}}` = `🔴 14.10 09:12 · 512 — Шлюз GW-3 не на связи`. If the number or order of variables
+`{{4}}` = `🔴 14.10 09:12 · 512 — Gateway GW-3 is offline`. If the number or order of variables
 in the approved template differs, Meta rejects every send (error `132000`).
 
 #### Errors
@@ -2288,7 +2285,7 @@ Set in `deploy/.env` (template — `deploy/env.example`), read when a process st
 | `TELEGRAM_TIMEOUT` | `10` | HTTP request timeout to Telegram, seconds | `celery-low` |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | see `env.example` | The project's SMTP; alarm emails go out through it too | `celery-low`, `backend` |
 | `EMAIL_TIMEOUT` | `30` | SMTP connection timeout, seconds | `celery-low`, `backend` |
-| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `ru` | Name and language of the alarm template; such a template must be approved in every hotel's account. The sender's number and token are not here but in the tenant settings | `celery-low` |
+| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `en` | Name and language of the alarm template; such a template must be approved in every hotel's account. The sender's number and token are not here but in the tenant settings | `celery-low` |
 | `WA_GRAPH_VERSION`, `WA_TIMEOUT` | `v21.0`, `10` | Graph API version and request timeout, seconds | `celery-low` |
 | `SECRETS_ENCRYPTION_KEY` | `""` (derived from `DJANGO_SECRET_KEY`) | Fernet key for the secrets tenants enter in the panel (the hotel's WhatsApp token). If it changes, the tokens have to be entered again | `celery-low`, `backend` |
 | `WA_VERIFY_TOKEN`, `WA_APP_SECRET` | `""` | The `/api/v1/services/messengers/` webhook: verification string and signature secret. Empty values mean the webhook responds with `403` | `backend` |

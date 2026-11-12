@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 import aio_pika
 import orjson
 
+from core.log.context import log_context, new_request_id
 from core.management.mq.config import (
     TOPIC_ATTRIBUTES,
     TOPIC_DEVICES_ATTRIBUTES_REQUEST,
@@ -38,7 +39,7 @@ from core.management.mq.handlers.attribute_request import handle_attribute_reque
 from core.management.mq.handlers.state_device_batch_async import sync_state_device_batch_async
 from core.management.mq.mq_metrics import mq_keys_processed_total, mq_messages_processed_total
 
-logger = logging.getLogger("core")
+logger = logging.getLogger(__name__)
 
 # Per-message processing outcome, keyed by delivery_tag.
 STATUS_SUCCESS = "success"
@@ -66,6 +67,13 @@ class BatchProcessor:
 
     async def process(self, batch: list[aio_pika.IncomingMessage]) -> dict:
         """Process a batch and return ``{delivery_tag: status}`` for every message."""
+        # One id per batch: every log line of the batch carries it, and Celery tasks
+        # dispatched from the handlers inherit it through the task headers
+        # (core.log.celery), the same way HTTP requests pass theirs.
+        with log_context(request_id=new_request_id(), queue=self.queue_name):
+            return await self._process(batch)
+
+    async def _process(self, batch: list[aio_pika.IncomingMessage]) -> dict:
         message_status: dict = {}
 
         parsed, source_ids = self._parse(batch, message_status)
@@ -157,12 +165,15 @@ class BatchProcessor:
         """Dispatch a single non-batched message (attribute request / RPC)."""
         device, topic, data, message = entry
         try:
-            if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(TOPIC_DEVICES_ATTRIBUTES_REQUEST):
-                await handle_attribute_request_async(topic, device, data, self.publisher)  # ty: ignore
-            elif topic == TOPIC_GATEWAY_RPC:
-                await handle_rpc_async(data)
-            else:
-                logger.warning("[%s] Unhandled topic: %s", self.queue_name, topic)
+            with log_context(tenant_id=device.get("tenant_id"), device_id=device.get("id"), topic=topic):
+                if topic.startswith(TOPIC_GATEWAY_ATTRIBUTES_REQUEST) or topic.startswith(
+                    TOPIC_DEVICES_ATTRIBUTES_REQUEST
+                ):
+                    await handle_attribute_request_async(topic, device, data, self.publisher)  # ty: ignore
+                elif topic == TOPIC_GATEWAY_RPC:
+                    await handle_rpc_async(data)
+                else:
+                    logger.warning("[%s] Unhandled topic: %s", self.queue_name, topic)
             message_status[message.delivery_tag] = STATUS_SUCCESS
         except Exception:
             logger.exception("[%s] Individual message processing failed", self.queue_name)

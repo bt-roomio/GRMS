@@ -1,15 +1,16 @@
 """
 Value Mapping Engine: converts a tag value between its GRMS form and an integrator's form.
 
-A rule is a plain dict (one per ``TagType`` in an integrator profile, see ``validate_rule``)::
+A rule is a plain dict (for one or more tag names in an integrator profile, see
+``services.mapping.validation.rule_errors``)::
 
-    {"id": "fan_speed", "tag_type": "FCUSPEED", "external": {"value_type": "integer"},
+    {"tag_names": ["fan_speed"], "external": {"value_type": "integer"},
      "direction": "both", "on_invalid": "reject",
      "transform": {"type": "enum", "map": [{"grms": "Low", "external": 1}, ...]}}
 
 ``to_external`` runs on reads (tag list, tag detail), ``to_grms`` on writes (``PUT tag``),
 ``ranges_to_external`` turns the tag's ``tag_ranges`` into values the integrator may send.
-No database access: the caller passes the rule (after ``apply_overrides``) and the tag's ranges.
+No database access: the caller passes the rule and the tag's ranges.
 """
 
 import math
@@ -17,7 +18,6 @@ from typing import Any
 
 from services.mapping.constants import (
     NUMERIC_VALUE_TYPES,
-    RULE_IDENTITY_FIELDS,
     Direction,
     LinearOp,
     OnInvalid,
@@ -44,11 +44,17 @@ LINEAR_INVERSE = {
 class MappingError(ValueError):
     """A value the rule cannot convert. ``code`` is ``type`` (wrong JSON type), ``direction``
     (the rule does not convert this way), ``unmapped`` (no enum pair) or ``invalid`` (failed
-    validation under ``on_invalid: reject``)."""
+    validation under ``on_invalid: reject``); a composite rule adds ``missing_input`` and
+    ``ambiguous_source``. ``field`` names what the error is about
+    (``value``, ``inputs.power``), for a form to show it there."""
 
-    def __init__(self, message: str, code: str = "invalid"):
+    def __init__(self, message: str, code: str = "invalid", field: str = "value"):
         super().__init__(message)
         self.code = code
+        self.field = field
+
+    def as_dict(self) -> dict:
+        return {"field": self.field, "code": self.code, "message": str(self)}
 
 
 class _Skip:
@@ -124,15 +130,6 @@ def cast(value, value_type: str):
 
 def applies(rule: dict, direction: str) -> bool:
     return rule.get("direction", Direction.BOTH) in (Direction.BOTH, direction)
-
-
-def apply_overrides(rule: dict, overrides) -> dict:
-    """The rule with level overrides applied, from the least specific (tenant) to the most
-    specific (device). Each override replaces whole top-level fields, except ``id`` and ``tag_type``."""
-    merged = dict(rule)
-    for override in overrides:
-        merged.update({key: value for key, value in (override or {}).items() if key not in RULE_IDENTITY_FIELDS})
-    return merged
 
 
 def _lookup(pairs, source: str, target: str, value) -> tuple[bool, Any]:
@@ -211,29 +208,15 @@ def _resolve_number(value, low, high, on_invalid: str):
 
 
 def _check_external(rule: dict, value, on_invalid: str):
-    """Validate an incoming value against ``validate`` and, for ``range``, the external bounds.
-    A range value is always snapped to the external step: 55 with step 10 becomes 60."""
-    limits = rule.get("validate") or {}
-    if "allowed" in limits and value_key(value) not in {value_key(item) for item in limits["allowed"]}:
-        raise _Invalid(f"{value!r} is not one of {limits['allowed']}.")
-    if not is_number(value):
-        return value
-    low, high = limits.get("min"), limits.get("max")
+    """Keep an incoming ``range`` value within the external bounds. It is always snapped to the
+    external step: 55 with step 10 becomes 60."""
     transform = rule["transform"]
-    if transform["type"] == TransformType.RANGE:
-        external = transform["external"]
-        low = external["min"] if low is None else max(low, external["min"])
-        high = external["max"] if high is None else min(high, external["max"])
-        if external.get("step"):
-            value = snap(value, external["min"], external["step"])
-    if step := limits.get("step"):
-        origin = low if low is not None else 0
-        snapped = snap(value, origin, step)
-        if snapped != value:
-            if on_invalid != OnInvalid.CLAMP:
-                raise _Invalid(f"{value} is not a multiple of {step}.")
-            value = snapped
-    return _resolve_number(value, low, high, on_invalid)
+    if transform["type"] != TransformType.RANGE or not is_number(value):
+        return value
+    external = transform["external"]
+    if external.get("step"):
+        value = snap(value, external["min"], external["step"])
+    return _resolve_number(value, external["min"], external["max"], on_invalid)
 
 
 def _check_grms(value, tag_ranges, on_invalid: str):
@@ -248,12 +231,13 @@ def _check_grms(value, tag_ranges, on_invalid: str):
     return normalize_number(min(candidates, key=lambda candidate: abs(candidate - value)))
 
 
-def to_grms(rule: dict, value, tag_ranges=None):
+def to_grms(rule: dict, value, tag_ranges=None, tag_name=None):
     """Integrator value -> GRMS value to write. ``tag_ranges`` (the tag's ranges from its device's
-    ``TAG_TYPES``) is checked when given. Returns ``SKIP`` for an invalid value under
-    ``on_invalid: skip``; raises ``MappingError`` otherwise."""
+    ``TAG_TYPES``) is checked when given; ``tag_name`` names the written tag in errors. Returns ``SKIP`` for an invalid value under
+    ``on_invalid: skip`` and the rule's ``on_invalid_value`` under ``on_invalid: const``; raises
+    ``MappingError`` otherwise."""
     if not applies(rule, Direction.TO_GRMS):
-        raise MappingError(f"Rule {rule.get('id')!r} does not accept writes.", "direction")
+        raise MappingError(f"The rule of {tag_name or rule.get('tag_names')!r} does not accept writes.", "direction")
     transform, value_type = rule["transform"], rule["external"]["value_type"]
     on_invalid = rule.get("on_invalid", OnInvalid.REJECT)
     value = coerce(value, value_type)
@@ -272,6 +256,8 @@ def to_grms(rule: dict, value, tag_ranges=None):
     except _Invalid as exc:
         if on_invalid == OnInvalid.SKIP:
             return SKIP
+        if on_invalid == OnInvalid.CONST:
+            return rule["on_invalid_value"]
         raise MappingError(str(exc), "unmapped" if transform["type"] == TransformType.ENUM else "invalid") from None
 
 

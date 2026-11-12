@@ -82,7 +82,7 @@ class MewsWebSocketClient:
         """Handle incoming WebSocket messages"""
         try:
             data = json.loads(message)
-            logger.debug(f"Received message: {data}")
+            logger.debug("Received message: %s", data)
 
             # Process events
             events = data.get("Events", [])
@@ -91,22 +91,22 @@ class MewsWebSocketClient:
                     if self.on_event:
                         try:
                             self.on_event(event)
-                        except Exception as e:
-                            logger.error(f"Error in event handler: {e}", exc_info=True)
+                        except Exception:
+                            logger.exception("Error in event handler")
 
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse message: {e}")
-        except Exception as e:
-            logger.error(f"Error processing message: {e}", exc_info=True)
+            logger.error("Failed to parse message: %s", e)
+        except Exception:
+            logger.exception("Error processing message")
 
     def _on_error(self, ws, error):
         """Handle WebSocket errors"""
-        logger.error(f"WebSocket error: {error}")
+        logger.error("WebSocket error: %s", error)
 
     def _on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket connection close"""
         self.connected = False
-        logger.debug(f"WebSocket closed. Code: {close_status_code}, Message: {close_msg}")
+        logger.debug("WebSocket closed. Code: %s, Message: %s", close_status_code, close_msg)
 
         if close_status_code == 1008:
             logger.error("Unauthorized - check your Mews tokens")
@@ -122,8 +122,8 @@ class MewsWebSocketClient:
         if self.on_disconnected:
             try:
                 self.on_disconnected(close_msg or "Connection closed")
-            except Exception as e:
-                logger.error(f"Error in disconnected callback: {e}", exc_info=True)
+            except Exception:
+                logger.exception("Error in disconnected callback")
 
         # Auto-reconnect if enabled
         if self.auto_reconnect and self.running:
@@ -140,8 +140,8 @@ class MewsWebSocketClient:
         if self.on_connected:
             try:
                 self.on_connected()
-            except Exception as e:
-                logger.error(f"Error in connected callback: {e}", exc_info=True)
+            except Exception:
+                logger.exception("Error in connected callback")
 
         # Start ping thread
         self._start_ping_thread()
@@ -177,12 +177,12 @@ class MewsWebSocketClient:
                     if self.last_pong_time:
                         time_since_pong = time.time() - self.last_pong_time
                         if time_since_pong > 60:  # 60s timeout
-                            logger.warning(f"No pong for {time_since_pong:.1f}s. Reconnecting...")
+                            logger.warning("No pong for %.1fs. Reconnecting...", time_since_pong)
                             self.ws.close()
                             break
 
-                except Exception as e:
-                    logger.error(f"Error in ping thread: {e}", exc_info=True)
+                except Exception:
+                    logger.exception("Error in ping thread")
                     break
 
         self.ping_thread = threading.Thread(target=ping_worker, daemon=True)
@@ -191,7 +191,7 @@ class MewsWebSocketClient:
     def _schedule_reconnect(self):
         """Schedule reconnection with exponential backoff in a separate thread"""
         if self.max_reconnect_attempts is not None and self.reconnect_count >= self.max_reconnect_attempts:
-            logger.error(f"Max reconnect attempts ({self.max_reconnect_attempts}) reached. Giving up.")
+            logger.error("Max reconnect attempts (%s) reached. Giving up.", self.max_reconnect_attempts)
             self.running = False
             return
 
@@ -204,7 +204,7 @@ class MewsWebSocketClient:
             if self.max_reconnect_attempts is not None
             else str(self.reconnect_count)
         )
-        logger.info(f"Reconnecting in {delay}s (attempt {attempts_info})...")
+        logger.info("Reconnecting in %ss (attempt %s)...", delay, attempts_info)
 
         def _reconnect_worker():
             time.sleep(delay)
@@ -220,7 +220,7 @@ class MewsWebSocketClient:
             return
 
         try:
-            logger.debug(f"Connecting to {self.ws_url}...")
+            logger.debug("Connecting to %s...", self.ws_url)
 
             # Create WebSocket connection
             self.ws = WebSocketApp(
@@ -246,8 +246,8 @@ class MewsWebSocketClient:
             )
             self.connection_thread.start()
 
-        except Exception as e:
-            logger.error(f"Failed to connect: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Failed to connect")
             if self.auto_reconnect and self.running:
                 self._schedule_reconnect()
 

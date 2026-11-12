@@ -57,14 +57,16 @@ class Command(BaseCommand):
                 logger.debug("No active gateway devices found")
                 return
 
-            logger.debug(f"Found {len(gateway_active_attrs)} active gateway devices to check")
+            logger.debug("Found %s active gateway devices to check", len(gateway_active_attrs))
 
             # Process inactive devices
             deactivated, related_deactivated = self.check_activity_time(gateway_active_attrs)
 
             # Log summary
             if deactivated > 0:
-                logger.info(f"Deactivated {deactivated} gateway device(s) and {related_deactivated} related device(s)")
+                logger.info(
+                    "Deactivated %s gateway device(s) and %s related device(s)", deactivated, related_deactivated
+                )
             else:
                 logger.debug("No inactive gateway devices found")
 
@@ -123,7 +125,7 @@ class Command(BaseCommand):
             last_activity_attr = last_activity_attrs.get(attr_active.entity_id)
 
             if not last_activity_attr:
-                logger.warning(f"Missing lastActivityTime for gateway device: {attr_active.entity_id}")
+                logger.warning("Missing lastActivityTime for gateway device: %s", attr_active.entity_id)
                 continue
 
             # Check if device is inactive
@@ -131,8 +133,9 @@ class Command(BaseCommand):
                 live_gateway_ids.append(attr_active.entity_id)
             else:
                 logger.warning(
-                    f"Deactivated gateway device: {attr_active.entity_id} "
-                    f"(last activity: {(current_time - last_activity_attr.long_v) / 1000:.0f}s ago)"
+                    "Deactivated gateway device: %s (last activity: %.0fs ago)",
+                    attr_active.entity_id,
+                    (current_time - last_activity_attr.long_v) / 1000,
                 )
 
                 # Mark for deactivation
@@ -205,7 +208,7 @@ class Command(BaseCommand):
             tenant_id = attr.entity.tenant_id
             device_key = f"{attr.entity_id}_{tenant_id}"
 
-            logger.info(f"Current time: {current_time}")
+            logger.info("Current time: %s", current_time)
             # Add update message for this device
             updates_by_device[device_key].append(
                 {
@@ -220,7 +223,7 @@ class Command(BaseCommand):
         if updates_by_device:
             try:
                 publish_updates_attribute_batch(updates_by_device)
-                logger.debug(f"Published WebSocket updates for {len(updates_by_device)} deactivated gateway devices")
+                logger.debug("Published WebSocket updates for %s deactivated gateway devices", len(updates_by_device))
             except Exception:
                 logger.exception("Failed to publish WebSocket updates")
 
@@ -250,7 +253,7 @@ class Command(BaseCommand):
         entities_to_update = []
 
         for relation_attr in related_attrs:
-            logger.info(f"Deactivated related device: {relation_attr.entity_id}")
+            logger.info("Deactivated related device: %s", relation_attr.entity_id)
             relation_attr.bool_v = False
             attrs_to_update.append(relation_attr)
 

@@ -31,30 +31,30 @@ endif
 
 help:
 	@echo ""
-	@echo "  roomio GRMS — стек мониторинга"
+	@echo "  roomio GRMS — monitoring stack"
 	@echo ""
-	@echo "  Запуск:"
-	@echo "    make up                    Поднять все сервисы (dev)"
-	@echo "    make up ENV=prod           Поднять в продакшн-режиме (лимиты ресурсов)"
-	@echo "    make down                  Остановить все сервисы"
-	@echo "    make down-v                Остановить и удалить volumes (ОСТОРОЖНО!)"
+	@echo "  Start:"
+	@echo "    make up                    Start all services (dev)"
+	@echo "    make up ENV=prod           Start in production mode (resource limits)"
+	@echo "    make down                  Stop all services"
+	@echo "    make down-v                Stop and remove volumes (CAUTION!)"
 	@echo ""
-	@echo "  Деплой:"
+	@echo "  Deploy:"
 	@echo "    make deploy                git pull + docker pull + restart"
-	@echo "    make deploy ENV=prod       Деплой в продакшн-режиме"
+	@echo "    make deploy ENV=prod       Deploy in production mode"
 	@echo ""
-	@echo "  Управление:"
-	@echo "    make restart s=grafana     Перезапустить сервис"
-	@echo "    make logs s=prometheus     Логи сервиса (Ctrl+C для выхода)"
-	@echo "    make shell s=grafana       sh в контейнер"
-	@echo "    make ps                    Статус всех контейнеров"
-	@echo "    make pull                  Обновить все образы"
+	@echo "  Manage:"
+	@echo "    make restart s=grafana     Restart a service"
+	@echo "    make logs s=prometheus     Service logs (Ctrl+C to exit)"
+	@echo "    make shell s=grafana       sh into the container"
+	@echo "    make ps                    Status of all containers"
+	@echo "    make pull                  Update all images"
 	@echo ""
 	@echo "  Prometheus:"
-	@echo "    make reload                Перечитать конфиг без рестарта"
+	@echo "    make reload                Reload the config without a restart"
 	@echo ""
-	@echo "  Первый запуск:"
-	@echo "    make init                  Создать .env из env.example"
+	@echo "  First run:"
+	@echo "    make init                  Create .env from env.example"
 	@echo ""
 
 # --- Start / stop ---
@@ -72,7 +72,7 @@ down-v:  ## Stop and remove volumes (CAUTION: deletes data!)
 
 restart:
 ifndef s
-	$(error Укажи сервис: make restart s=grafana)
+	$(error Specify a service: make restart s=grafana)
 endif
 	$(COMPOSE) restart $(s)
 
@@ -85,7 +85,7 @@ endif
 
 shell:
 ifndef s
-	$(error Укажи сервис: make shell s=prometheus)
+	$(error Specify a service: make shell s=prometheus)
 endif
 	$(COMPOSE) exec $(s) sh
 
@@ -106,18 +106,18 @@ deploy:
 	git pull
 	$(COMPOSE) pull
 	$(COMPOSE) up -d --remove-orphans
-	@echo "Деплой завершён: $$(git log -1 --oneline)"
+	@echo "Deploy finished: $$(git log -1 --oneline)"
 
 # --- First run ---
 
 init:
 	@if [ -f .env ]; then \
-		echo ".env уже существует, пропускаем"; \
+		echo ".env already exists, skipping"; \
 	else \
 		cp env.example .env; \
-		echo "Создан .env из env.example — заполни переменные перед запуском"; \
+		echo "Created .env from env.example — fill in the variables before starting"; \
 	fi
 	@if [ ! -f targets/blackbox-https.yml ]; then \
 		cp targets/blackbox-https.example.yml targets/blackbox-https.yml; \
-		echo "Создан targets/blackbox-https.yml — добавь свои домены"; \
+		echo "Created targets/blackbox-https.yml — add your domains"; \
 	fi
