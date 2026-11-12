@@ -12,6 +12,7 @@ from alarms.tests.base import (
     TENANT_ID,
     AlarmTestCase,
     offline_rule,
+    temperature_rule,
 )
 from main.models import Device
 from shuttle.models import Relation
@@ -122,3 +123,79 @@ class GatewayCascadeTest(AlarmTestCase):
         self.run_until_fired()
 
         self.assertFalse(Alarm.objects.exists())
+
+
+class DeadGatewaySuppressionTest(AlarmTestCase):
+    """
+    Behind a dead gateway no rule raises an alarm, even one that does not
+    mention ``gatewayActive`` — the guard lives in the evaluator.
+    """
+
+    def setUp(self):
+        self.now = timezone.now()
+        Device.objects.filter(pk=OTHER_DEVICE_ID).update(additional_info={"gateway": True})
+
+    def test_a_rule_without_the_guard_is_suppressed(self):
+        self.set_rules(temperature_rule(threshold=30, attribute=None))
+        self.set_telemetry("Room Temperature", 35.0)
+        self.set_attribute("gatewayActive", False)
+
+        evaluate(now=self.now)
+
+        self.assertFalse(Alarm.objects.exists())
+
+    def test_a_live_gateway_lets_the_rule_fire(self):
+        self.set_rules(temperature_rule(threshold=30, attribute=None))
+        self.set_telemetry("Room Temperature", 35.0)
+        self.set_attribute("gatewayActive", True)
+
+        evaluate(now=self.now)
+
+        self.assertEqual(Alarm.objects.get().alarm_type, "High Temperature")
+
+    def test_a_device_without_the_attribute_is_not_suppressed(self):
+        self.set_rules(temperature_rule(threshold=30, attribute=None))
+        self.set_telemetry("Room Temperature", 35.0)
+
+        evaluate(now=self.now)
+
+        self.assertTrue(Alarm.objects.exists())
+
+    def test_the_gateway_itself_is_never_suppressed(self):
+        self.set_rules(offline_rule(minutes=0))
+        self.set_attribute("active", False, device_id=OTHER_DEVICE_ID)
+        self.set_attribute("gatewayActive", False, device_id=OTHER_DEVICE_ID)
+
+        evaluate(now=self.now)
+
+        self.assertEqual(str(Alarm.objects.get().originator_id), OTHER_DEVICE_ID)
+
+    def test_the_duration_restarts_after_the_gateway_recovers(self):
+        self.set_rules(offline_rule(minutes=10))
+        self.set_attribute("active", False)
+        self.set_attribute("gatewayActive", True)
+        evaluate(now=self.now)
+
+        self.set_attribute("gatewayActive", False)
+        evaluate(now=self.now + timedelta(minutes=3))
+
+        # Back after 6 minutes: without the reset the streak started at 0
+        # would be 11 minutes old here and fire on data frozen half that time.
+        self.set_attribute("gatewayActive", True)
+        evaluate(now=self.now + timedelta(minutes=6))
+        evaluate(now=self.now + timedelta(minutes=11))
+        self.assertFalse(Alarm.objects.exists())
+
+        evaluate(now=self.now + timedelta(minutes=16))
+        self.assertTrue(Alarm.objects.exists())
+
+    def test_the_clear_rule_still_runs(self):
+        self.set_rules(offline_rule(minutes=0))
+        self.set_attribute("active", False)
+        evaluate(now=self.now)
+
+        self.set_attribute("gatewayActive", False)
+        self.set_attribute("active", True)
+        evaluate(now=self.now + timedelta(minutes=1))
+
+        self.assertTrue(Alarm.objects.get().cleared)

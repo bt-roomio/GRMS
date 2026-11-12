@@ -7,12 +7,14 @@ raised and pushed to Telegram.
 """
 
 from alarms.constants import SEVERITY_ORDER
+from alarms.models import AlarmRuleState
 from alarms.services.details import render
 from alarms.services.engine import build_snapshots, collect_keys
 from alarms.services.predicates import eval_condition
 from main.models import Device
 
 SAMPLE_SIZE = 5
+CLEAR_KEY = AlarmRuleState.CLEAR_KEY
 
 
 def preview(profile_id, alarms: list[dict]) -> dict:
@@ -48,7 +50,7 @@ def preview_alarm(alarm: dict, devices, snapshots) -> dict:
     return {
         "alarmType": alarm.get("alarmType"),
         "create_rules": severities,
-        "clear_rule": matching(clear_rule, alarm, "CLEAR", devices, snapshots) if clear_rule else None,
+        "clear_rule": matching(clear_rule, alarm, CLEAR_KEY, devices, snapshots) if clear_rule else None,
     }
 
 
@@ -58,6 +60,10 @@ def matching(rule: dict, alarm: dict, severity: str, devices, snapshots) -> dict
 
     for device in devices:
         snapshot = snapshots[device.id]
+        # Same suppression as state.process: create rules never fire behind a
+        # dead gateway, the clear rule is evaluated as usual.
+        if severity != CLEAR_KEY and snapshot.behind_dead_gateway:
+            continue
         if eval_condition(filters, snapshot):
             matched.append(
                 {

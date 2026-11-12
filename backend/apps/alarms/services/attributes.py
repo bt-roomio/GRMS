@@ -46,10 +46,11 @@ def set_gateway_active(device_ids, value: bool) -> int:
     Mirror a gateway's state onto the devices behind it.
 
     This is the whole gateway-cascade answer. The watchdog already silences a
-    dead gateway's devices, and without this flag the plain offline rule would
-    raise one alarm per device — hundreds for a single physical incident. With
-    it the rule simply carries one more condition, and the evaluator stays free
-    of special cases.
+    dead gateway's devices, and without this flag every rule on them would
+    raise one alarm per device — hundreds for a single physical incident. The
+    evaluator reads it for every device (``DataSnapshot.behind_dead_gateway``)
+    and suppresses all create rules while it is false, so tenants need not
+    repeat the guard in each rule.
     """
     device_ids = list(device_ids)
     if not device_ids:

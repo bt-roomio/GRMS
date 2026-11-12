@@ -1,224 +1,224 @@
-# Alarms — аварии, правила аварий и уведомления
+# Alarms — alarms, alarm rules and notifications
 
-Справочник по приложению `backend/apps/alarms`: как устроены аварии, как писать правила, как
-работает вычислитель, API, WebSocket-стрим, Telegram-уведомления, эксплуатация и диагностика.
+Reference for the `backend/apps/alarms` app: how alarms work, how to write rules, how the
+evaluator works, the API, the WebSocket stream, Telegram notifications, operations and troubleshooting.
 
-Модель правил портирована из ThingsBoard, поэтому структуры и имена полей совпадают с его
-документацией; отличия собраны в [«Отличия от ThingsBoard»](#отличия-от-thingsboard).
+The rule model is ported from ThingsBoard, so the structures and field names match its
+documentation; the differences are collected in [Differences from ThingsBoard](#differences-from-thingsboard).
 
-> Ключи в рецептах, кроме `Room Temperature`, `active`, `notifyOnOffline` и `gatewayActive`, —
-> условные (`Humidity`, `Water Leak` и т. п.). Реальные имена ключей конкретного тенанта отдаёт
+> Keys in the recipes, except `Room Temperature`, `active`, `notifyOnOffline` and `gatewayActive`, are
+> placeholders (`Humidity`, `Water Leak`, etc.). The real key names of a given tenant are returned by
 > [`GET /api/v1/alarms/available-keys/`](#available-keys).
 
-## Содержание
+## Contents
 
-1. [Коротко](#1-коротко)
-2. [Карта кода](#2-карта-кода)
-3. [Модель данных](#3-модель-данных)
-4. [Формат правил](#4-формат-правил)
-5. [Как вычисляются правила](#5-как-вычисляются-правила)
-6. [Правила связи: устройства и шлюзы](#6-правила-связи-устройства-и-шлюзы)
-7. [Рецепты](#7-рецепты)
+1. [Overview](#1-overview)
+2. [Code map](#2-code-map)
+3. [Data model](#3-data-model)
+4. [Rule format](#4-rule-format)
+5. [How rules are evaluated](#5-how-rules-are-evaluated)
+6. [Connectivity rules: devices and gateways](#6-connectivity-rules-devices-and-gateways)
+7. [Recipes](#7-recipes)
 8. [REST API](#8-rest-api)
-9. [WebSocket: стрим `alarms`](#9-websocket-стрим-alarms)
-10. [Уведомления в Telegram](#10-уведомления-в-telegram) (там же email и WhatsApp)
-11. [Настройка и эксплуатация](#11-настройка-и-эксплуатация)
-12. [Диагностика](#12-диагностика)
-13. [Тесты](#13-тесты)
-14. [Расширение](#14-расширение)
+9. [WebSocket: the `alarms` stream](#9-websocket-the-alarms-stream)
+10. [Telegram notifications](#10-telegram-notifications) (email and WhatsApp are there too)
+11. [Configuration and operations](#11-configuration-and-operations)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Tests](#13-tests)
+14. [Extending](#14-extending)
 
 ---
 
-## 1. Коротко
+## 1. Overview
 
-**Авария (`Alarm`)** — один инцидент на одном устройстве: «шлюз GW-3 не на связи с 10:15 до 10:42»,
-«в номере 305 температура выше 30° с 14:00». Строка аварии **и есть журнал**: отдельной таблицы
-событий нет, длительность инцидента — `clear_ts - start_ts`.
+**An alarm (`Alarm`)** is one incident on one device: "gateway GW-3 offline from 10:15 to 10:42",
+"temperature in room 305 above 30° since 14:00". The alarm row **is the journal**: there is no separate
+events table, and the incident duration is `clear_ts - start_ts`.
 
-**Правило аварии** — строка в таблице `alarms_alarm_rule` с FK на профиль устройства: правило
-действует на все активные устройства этого профиля. Условия внутри правила остаются JSON в формате
-ThingsBoard (они рекурсивны и полиморфны), а у самого правила есть свой CRUD, выключатель
-`enabled` и аудит.
+**An alarm rule** is a row in the `alarms_alarm_rule` table with an FK to a device profile: the rule
+applies to all active devices of that profile. The conditions inside the rule stay JSON in the
+ThingsBoard format (they are recursive and polymorphic), while the rule itself has its own CRUD, an
+`enabled` switch and an audit trail.
 
-**Вычислитель** — Celery-задача, которая раз в `ALARMS_EVAL_INTERVAL_SEC` (30 с) читает последние
-значения телеметрии (`TsKvLatest`) и серверных атрибутов (`AttributeKv`), прогоняет правила и
-создаёт, обновляет или закрывает аварии.
+**The evaluator** is a Celery task that every `ALARMS_EVAL_INTERVAL_SEC` (30 s) reads the latest
+telemetry values (`TsKvLatest`) and server attributes (`AttributeKv`), runs the rules and
+creates, updates or clears alarms.
 
 ```mermaid
 flowchart LR
-    DEV[Устройства / шлюзы] -->|MQTT / RabbitMQ| MQ[mq-async]
+    DEV[Devices / gateways] -->|MQTT / RabbitMQ| MQ[mq-async]
     MQ --> LATEST[(TsKvLatest)]
     MQ --> ATTR[(AttributeKv<br/>SERVER_SCOPE)]
     WD[watchdog<br/>active_attribute_server_scope] --> ATTR
     RULES[(AlarmRule<br/>FK → DeviceProfile)] --> EVAL
-    LATEST --> EVAL[evaluate_alarm_rules<br/>каждые 30 с]
+    LATEST --> EVAL[evaluate_alarm_rules<br/>every 30 s]
     ATTR --> EVAL
     EVAL --> ALARM[(Alarm<br/>AlarmComment<br/>AlarmRuleState)]
     ALARM --> REST[REST /api/v1/alarms/]
-    ALARM --> WS[WS-стрим alarms]
-    ALARM --> DISP[dispatch_notifications<br/>каждые 60 с] --> TG[Telegram]
+    ALARM --> WS[WS stream alarms]
+    ALARM --> DISP[dispatch_notifications<br/>every 60 s] --> TG[Telegram]
     DISP --> WA[WhatsApp]
     DISP --> MAIL[Email]
 ```
 
-### Словарь
+### Glossary
 
-| Термин | Где в коде | Смысл |
+| Term | Where in the code | Meaning |
 |---|---|---|
-| Правило (`DeviceProfileAlarm` в TB) | `alarms.AlarmRule` | Один тип аварии на профиле: набор правил создания по severity и правило снятия |
-| `alarmType` | `Alarm.alarm_type` | Имя типа аварии: `Device Offline`, `High Temperature`. Уникально внутри профиля |
+| Rule (`DeviceProfileAlarm` in TB) | `alarms.AlarmRule` | One alarm type on a profile: a set of create rules by severity and a clear rule |
+| `alarmType` | `Alarm.alarm_type` | Alarm type name: `Device Offline`, `High Temperature`. Unique within a profile |
 | Severity | `AlarmSeverity` | `CRITICAL` > `MAJOR` > `MINOR` > `WARNING` > `INDETERMINATE` |
-| Originator | `Alarm.originator` | Устройство, на котором сработало правило |
-| Условие (`condition`) | `AlarmCondition` | Список фильтров, объединённых через AND |
-| Спецификация (`spec`) | `AlarmConditionSpec` | Сколько условие должно держаться: сразу, N времени или N проходов подряд |
-| Расписание (`schedule`) | `AlarmSchedule` | Когда правило вообще действует |
-| Распространение (`propagate`) | `Alarm.propagate_entity_ids` | На каких ещё сущностях видна авария |
-| Квитирование (ack) | `Alarm.acknowledged` | «Оператор видел». На жизненный цикл не влияет |
-| Снятие (clear) | `Alarm.cleared` | Инцидент закончился: автоматически по `clearRule` или вручную |
+| Originator | `Alarm.originator` | The device the rule fired on |
+| Condition (`condition`) | `AlarmCondition` | A list of filters combined with AND |
+| Spec (`spec`) | `AlarmConditionSpec` | How long the condition must hold: immediately, for N time, or for N passes in a row |
+| Schedule (`schedule`) | `AlarmSchedule` | When the rule is in effect at all |
+| Propagation (`propagate`) | `Alarm.propagate_entity_ids` | Which other entities the alarm is visible on |
+| Acknowledgement (ack) | `Alarm.acknowledged` | "An operator has seen it". Does not affect the lifecycle |
+| Clear | `Alarm.cleared` | The incident is over: automatically via `clearRule` or manually |
 
 ---
 
-## 2. Карта кода
+## 2. Code map
 
-| Путь | Что там |
+| Path | What is there |
 |---|---|
 | `apps/alarms/models.py` | `AlarmRule`, `Alarm`, `AlarmComment`, `AlarmRuleState` |
-| `apps/alarms/constants.py` | Словарь TB: severity, типы ключей, операции, спецификации, расписания, белый список `ENTITY_FIELD` |
-| `apps/alarms/serializers/rules/` | Валидация формата правил (зеркало классов TB) |
-| `apps/alarms/serializers/rule.py` | CRUD-контракт правила: конверт GRMS + объект TB |
-| `apps/alarms/querysets/rule.py` | Выборки правил: `active()`, `for_profiles()`, `list()` |
-| `apps/alarms/views/rule.py` | CRUD правил, `bulk`, `preview` |
-| `apps/alarms/serializers/alarm.py` | Сериализаторы аварий, комментариев, параметров фильтрации |
-| `apps/alarms/services/engine.py` | Проход вычислителя: профили → устройства → снимки → правила |
-| `apps/alarms/services/state.py` | Одно правило на одном устройстве: создать / обновить / эскалировать / снять; `ack`, `clear`, `assign` |
-| `apps/alarms/services/snapshot.py` | `DataSnapshot` — значения устройства на момент прохода, приведение типов |
-| `apps/alarms/services/predicates.py` | Вычисление предикатов и фильтров |
-| `apps/alarms/services/dynamic.py` | `defaultValue` / `dynamicValue` с `inherit` |
+| `apps/alarms/constants.py` | TB vocabulary: severities, key types, operations, specs, schedules, the `ENTITY_FIELD` whitelist |
+| `apps/alarms/serializers/rules/` | Rule format validation (mirrors the TB classes) |
+| `apps/alarms/serializers/rule.py` | Rule CRUD contract: GRMS envelope + TB object |
+| `apps/alarms/querysets/rule.py` | Rule queries: `active()`, `for_profiles()`, `list()` |
+| `apps/alarms/views/rule.py` | Rule CRUD, `bulk`, `preview` |
+| `apps/alarms/serializers/alarm.py` | Serializers for alarms, comments and filter parameters |
+| `apps/alarms/services/engine.py` | The evaluator pass: profiles → devices → snapshots → rules |
+| `apps/alarms/services/state.py` | One rule on one device: create / update / escalate / clear; `ack`, `clear`, `assign` |
+| `apps/alarms/services/snapshot.py` | `DataSnapshot` — the device's values at the time of the pass, type coercion |
+| `apps/alarms/services/predicates.py` | Predicate and filter evaluation |
+| `apps/alarms/services/dynamic.py` | `defaultValue` / `dynamicValue` with `inherit` |
 | `apps/alarms/services/spec.py` | `SIMPLE` / `DURATION` / `REPEATING` |
 | `apps/alarms/services/schedule.py` | `ANY_TIME` / `SPECIFIC_TIME` / `CUSTOM` |
-| `apps/alarms/services/details.py` | Шаблон `alarmDetails` |
-| `apps/alarms/services/propagate.py` | Цели распространения |
-| `apps/alarms/services/preview.py` | Сухой прогон правил профиля |
-| `apps/alarms/services/keys.py` | Каталог ключей для конструктора правил |
-| `apps/alarms/templates.py` | Каталог шаблонов правил: то, что конструктор предлагает кнопкой «добавить типовое» |
-| `apps/alarms/services/attributes.py` | Запись серверных атрибутов `notifyOnOffline`, `gatewayActive` |
-| `apps/alarms/notifications/` | Диспетчер уведомлений и настройки тенанта |
-| `apps/alarms/channels/`, `apps/alarms/telegram/`, `apps/alarms/whatsapp/` | Каналы доставки (Telegram, WhatsApp, email), HTTP-клиенты Bot API и WhatsApp Cloud API |
+| `apps/alarms/services/details.py` | The `alarmDetails` template |
+| `apps/alarms/services/propagate.py` | Propagation targets |
+| `apps/alarms/services/preview.py` | Dry run of a profile's rules |
+| `apps/alarms/services/keys.py` | Key catalog for the rule builder |
+| `apps/alarms/templates.py` | Rule template catalog: what the builder offers via the "add a typical rule" button |
+| `apps/alarms/services/attributes.py` | Writing the `notifyOnOffline` and `gatewayActive` server attributes |
+| `apps/alarms/notifications/` | Notification dispatcher and tenant settings |
+| `apps/alarms/channels/`, `apps/alarms/telegram/`, `apps/alarms/whatsapp/` | Delivery channels (Telegram, WhatsApp, email), HTTP clients for the Bot API and the WhatsApp Cloud API |
 | `apps/alarms/views/`, `urls.py`, `swagger/` | REST API |
-| `apps/alarms/v2_consumers/alarms.py` | WS-стрим `alarms` |
-| `apps/alarms/observables/alarm.py` | Пуш изменений в группу `alarms_<tenant_id>` |
+| `apps/alarms/v2_consumers/alarms.py` | The `alarms` WS stream |
+| `apps/alarms/observables/alarm.py` | Pushes changes to the `alarms_<tenant_id>` group |
 | `apps/alarms/tasks.py` | `evaluate_alarm_rules`, `dispatch_notifications`, `purge_alarms` |
-| `apps/main/serializers/notification_settings.py`, `views/notification_settings.py` | Настройки уведомлений тенанта |
-| `apps/main/serializers/device.py` | Поле `notify_on_offline` устройства |
-| `apps/core/management/commands/active_attribute_server_scope.py` | Watchdog: поддерживает `gatewayActive` |
+| `apps/main/serializers/notification_settings.py`, `views/notification_settings.py` | Tenant notification settings |
+| `apps/main/serializers/device.py` | The device's `notify_on_offline` field |
+| `apps/core/management/commands/active_attribute_server_scope.py` | Watchdog: maintains `gatewayActive` |
 
 ---
 
-## 3. Модель данных
+## 3. Data model
 
 ### 3.1. `AlarmRule` (`alarms_alarm_rule`)
 
-Правило аварии. Порт `DeviceProfileAlarm` из ThingsBoard, который держит правила внутри
-`DeviceProfile.profile_data["alarms"]`; здесь каждое правило — строка.
+An alarm rule. A port of ThingsBoard's `DeviceProfileAlarm`, which keeps rules inside
+`DeviceProfile.profile_data["alarms"]`; here every rule is a row.
 
-| Поле | Тип | Смысл |
+| Field | Type | Meaning |
 |---|---|---|
-| `id` | UUID | Он же идентификатор правила в API |
-| `tenant` | FK `main.Tenant` | Берётся из профиля, из тела запроса не читается |
-| `device_profile` | FK `main.DeviceProfile` | Правило действует на все активные устройства профиля |
-| `alarm_type` | str | Тип аварии. Уникален внутри профиля (ограничение БД) |
-| `enabled` | bool | Выключенное правило вычислитель не видит |
-| `create_rules` | JSON | `{"CRITICAL": {condition, schedule, alarmDetails}, …}` в формате TB (camelCase внутри) |
-| `clear_rule` | JSON, null | Правило снятия |
-| `propagate`, `propagate_relation_types`, `propagate_to_owner`, `propagate_to_tenant` | | Распространение, см. [4.10](#410-распространение) |
-| `created_at`, `created_by`, `updated_at`, `updated_by` | | Аудит из `BaseModel` / `UpdateByModel` |
+| `id` | UUID | Also the rule identifier in the API |
+| `tenant` | FK `main.Tenant` | Taken from the profile, not read from the request body |
+| `device_profile` | FK `main.DeviceProfile` | The rule applies to all active devices of the profile |
+| `alarm_type` | str | Alarm type. Unique within a profile (DB constraint) |
+| `enabled` | bool | The evaluator does not see a disabled rule |
+| `create_rules` | JSON | `{"CRITICAL": {condition, schedule, alarmDetails}, …}` in the TB format (camelCase inside) |
+| `clear_rule` | JSON, null | The clear rule |
+| `propagate`, `propagate_relation_types`, `propagate_to_owner`, `propagate_to_tenant` | | Propagation, see [4.10](#410-propagation) |
+| `created_at`, `created_by`, `updated_at`, `updated_by` | | Audit from `BaseModel` / `UpdateByModel` |
 
 ```python
 UniqueConstraint(fields=["device_profile", "alarm_type"], name="uniq_alarm_rule_profile_type")
 ```
 
-Два правила одного типа на одном профиле боролись бы за одну и ту же строку аварии, поэтому
-уникальность обеспечивает БД, а не валидатор. Индексы — `(tenant, enabled)` и
-`(device_profile, enabled)`: вычислитель выбирает правила ровно по ним.
+Two rules of the same type on one profile would fight over the same alarm row, so
+uniqueness is enforced by the DB, not by the validator. Indexes: `(tenant, enabled)` and
+`(device_profile, enabled)` — exactly what the evaluator selects rules by.
 
-**Почему условия остались JSON.** Дерево условий рекурсивно (`COMPLEX`) и полиморфно (`spec`,
-`schedule`), вычислитель читает его словарями, а хранение в формате TB позволяет вставлять
-правило, выгруженное из ThingsBoard, без переделки. Нормализовать это в таблицы — недели работы
-без выгоды.
+**Why the conditions stayed JSON.** The condition tree is recursive (`COMPLEX`) and polymorphic (`spec`,
+`schedule`), the evaluator reads it as dicts, and storing it in the TB format makes it possible to paste
+a rule exported from ThingsBoard without rework. Normalizing this into tables would be weeks of work
+for no gain.
 
-Метод `AlarmRule.as_rule()` превращает строку обратно в объект `DeviceProfileAlarm` — это
-единственное место конвертации, поэтому ни вычислитель, ни валидаторы не знают, что правила
-переехали в таблицу.
+The `AlarmRule.as_rule()` method turns a row back into a `DeviceProfileAlarm` object. This is
+the only conversion point, so neither the evaluator nor the validators know that the rules
+moved into a table.
 
 ### 3.2. `Alarm` (`alarms_alarm`)
 
-| Поле | Тип | Смысл |
+| Field | Type | Meaning |
 |---|---|---|
 | `id` | UUID | |
 | `tenant` | FK `main.Tenant` | |
-| `originator` | FK `main.Device` | Устройство, на котором сработало правило |
-| `room` | FK `main.Room`, null | Номер устройства **на момент создания**. Денормализован: журнал переживает переезд устройства |
-| `alarm_type` | str | `alarmType` правила |
-| `severity` | str | Текущая severity. Может только расти (эскалация), но не падать |
-| `acknowledged`, `ack_ts` | bool, datetime | Квитирование |
-| `cleared`, `clear_ts` | bool, datetime | Снятие |
-| `start_ts` | datetime | Когда авария создана (условие со спецификацией впервые выполнилось) |
-| `end_ts` | datetime | Последний проход, на котором правило создания ещё срабатывало |
-| `details` | JSON | `{"message": "…", "values": {…}}` — отрендеренный `alarmDetails` и значения ключей из условия |
-| `propagate`, `propagate_relation_types`, `propagate_to_owner`, `propagate_to_tenant` | | Копия настроек распространения из правила |
-| `propagate_entity_ids` | UUID[] (GIN) | Сущности, на которых авария тоже видна |
-| `assignee`, `assign_ts` | FK `users.User`, datetime | Назначенный исполнитель |
-| `created_at`, `created_by`, `updated_at`, `updated_by` | | Из `BaseModel` / `UpdateByModel` (`created_at` — Unix-мс) |
+| `originator` | FK `main.Device` | The device the rule fired on |
+| `room` | FK `main.Room`, null | The device's room **at creation time**. Denormalized: the journal survives the device being moved |
+| `alarm_type` | str | The rule's `alarmType` |
+| `severity` | str | Current severity. Can only go up (escalation), never down |
+| `acknowledged`, `ack_ts` | bool, datetime | Acknowledgement |
+| `cleared`, `clear_ts` | bool, datetime | Clear |
+| `start_ts` | datetime | When the alarm was created (the condition with its spec held for the first time) |
+| `end_ts` | datetime | The last pass on which the create rule still fired |
+| `details` | JSON | `{"message": "…", "values": {…}}` — the rendered `alarmDetails` and the values of the keys from the condition |
+| `propagate`, `propagate_relation_types`, `propagate_to_owner`, `propagate_to_tenant` | | A copy of the rule's propagation settings |
+| `propagate_entity_ids` | UUID[] (GIN) | Entities on which the alarm is also visible |
+| `assignee`, `assign_ts` | FK `users.User`, datetime | The assigned person |
+| `created_at`, `created_by`, `updated_at`, `updated_by` | | From `BaseModel` / `UpdateByModel` (`created_at` is Unix ms) |
 
-Вычисляемые свойства: `status` и `duration_ms` (`(clear_ts или end_ts) - start_ts`).
+Computed properties: `status` and `duration_ms` (`(clear_ts or end_ts) - start_ts`).
 
-Что о ней уже сообщили каналы уведомлений — не в самой аварии, а в `AlarmNotification`
-(`alarms_alarm_notification`): `alarm`, `channel`, `raised_at`, `cleared_at`, уникальность
-`(alarm, channel)`. В `channel` лежит ключ **цели** доставки: `telegram`, `email` или
-`whatsapp:<номер>` — у WhatsApp строка на каждого получателя. В API аварии это список
-`notifications`.
+What the notification channels have already reported about it is stored not in the alarm itself but in
+`AlarmNotification` (`alarms_alarm_notification`): `alarm`, `channel`, `raised_at`, `cleared_at`, unique on
+`(alarm, channel)`. `channel` holds the delivery **target** key: `telegram`, `email` or
+`whatsapp:<number>` — WhatsApp has a row per recipient. In the alarm API this is the
+`notifications` list.
 
-Индексы: `(tenant, cleared, -start_ts)`, `(originator, -start_ts)`, `(alarm_type, -start_ts)`,
-`(severity, -start_ts)`, GIN по `propagate_entity_ids`.
+Indexes: `(tenant, cleared, -start_ts)`, `(originator, -start_ts)`, `(alarm_type, -start_ts)`,
+`(severity, -start_ts)`, GIN on `propagate_entity_ids`.
 
-### 3.3. Статус
+### 3.3. Status
 
-Статус не хранится — это пара двух независимых флагов:
+The status is not stored — it is a pair of two independent flags:
 
 | | `acknowledged = false` | `acknowledged = true` |
 |---|---|---|
 | **`cleared = false`** | `ACTIVE_UNACK` | `ACTIVE_ACK` |
 | **`cleared = true`** | `CLEARED_UNACK` | `CLEARED_ACK` |
 
-Квитирование не закрывает аварию, закрытие не квитирует. Закрытую аварию можно квитировать.
+Acknowledging does not clear an alarm, and clearing does not acknowledge it. A cleared alarm can be acknowledged.
 
-### 3.4. Дедупликация
+### 3.4. Deduplication
 
-На одном устройстве может быть **не больше одной незакрытой аварии каждого типа** — это частичный
-уникальный индекс в БД:
+A device can have **at most one uncleared alarm of each type** — this is a partial
+unique index in the DB:
 
 ```python
 UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False),
                  name="uniq_active_alarm_per_originator_type")
 ```
 
-Следствия:
+Consequences:
 
-- повторные срабатывания правила не плодят строки, а сдвигают `end_ts` существующей;
-- после снятия следующий инцидент — это **новая** строка;
-- гонка двух процессов, вставляющих одну и ту же аварию, решается на уровне БД:
-  `get_or_create` вернёт уже существующую строку.
+- repeated firings of a rule do not create new rows, they move the `end_ts` of the existing one;
+- after a clear, the next incident is a **new** row;
+- a race between two processes inserting the same alarm is resolved at the DB level:
+  `get_or_create` returns the existing row.
 
 ### 3.5. `AlarmComment` (`alarms_alarm_comment`)
 
-| Поле | Смысл |
+| Field | Meaning |
 |---|---|
-| `alarm` | FK `Alarm`, каскадное удаление |
-| `user` | Автор (null для записей вычислителя) |
-| `alarm_comment_type` | `OTHER` — комментарий человека, `SYSTEM` — аудит жизненного цикла |
+| `alarm` | FK `Alarm`, cascade delete |
+| `user` | Author (null for evaluator entries) |
+| `alarm_comment_type` | `OTHER` — a human comment, `SYSTEM` — lifecycle audit |
 | `comment` | JSON |
 
-`SYSTEM`-комментарии пишутся автоматически и через API недоступны для правки. Их формы:
+`SYSTEM` comments are written automatically and cannot be edited through the API. Their shapes:
 
 ```json
 {"subtype": "SEVERITY_CHANGED", "from": "MINOR", "to": "MAJOR", "text": "Severity changed from MINOR to MAJOR"}
@@ -229,18 +229,18 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 {"subtype": "UNASSIGNED", "assignee": null, "text": "Unassigned"}
 ```
 
-`CLEARED` с текстом `Alarm cleared` оставляет вычислитель (сработал `clearRule`, `user = null`),
-`Cleared manually` — ручное закрытие через `POST …/clear/` (`user` — оператор). Массовое
-закрытие (`bulk/clear/`) пишет `Alarm cleared` с `user` оператора.
+`CLEARED` with the text `Alarm cleared` is left by the evaluator (the `clearRule` fired, `user = null`);
+`Cleared manually` is a manual clear via `POST …/clear/` (`user` is the operator). A bulk
+clear (`bulk/clear/`) writes `Alarm cleared` with the operator as `user`.
 
-Пользовательский комментарий: `{"text": "Выехал техник"}`, после правки —
+A user comment: `{"text": "Technician dispatched"}`; after an edit —
 `{"text": "…", "edited": true, "edited_at": "2026-09-14T10:31:02.114Z"}`.
 
 ### 3.6. `AlarmRuleState` (`alarms_rule_state`)
 
-Счётчики спецификаций `DURATION` / `REPEATING` между проходами вычислителя. Одна строка на пару
-(устройство, `alarmType`); создаётся при первом совпадении условия и удаляется, как только ни одно
-правило этого типа ничего не отсчитывает.
+Counters of the `DURATION` / `REPEATING` specs between evaluator passes. One row per pair
+(device, `alarmType`); created on the first condition match and deleted as soon as no
+rule of that type is counting anything.
 
 ```json
 {
@@ -250,33 +250,33 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 }
 ```
 
-Ключи — severity правил создания и `CLEAR` для правила снятия. Счётчики хранятся в БД, а не в
-памяти процесса, поэтому переживают деплой и перезапуск воркеров. Строку можно смело удалить:
-отсчёт просто начнётся заново.
+The keys are the severities of the create rules and `CLEAR` for the clear rule. The counters are stored in the DB,
+not in process memory, so they survive deploys and worker restarts. A row can safely be deleted:
+counting simply starts over.
 
 ---
 
-## 4. Формат правил
+## 4. Rule format
 
-Правило приезжает в API как объект `DeviceProfileAlarm` — camelCase, **как в ThingsBoard**:
-правило, экспортированное из профиля TB, вставляется без правок (с поправкой на
-[отличия GRMS](#отличия-от-thingsboard)). Поля верхнего уровня раскладываются по колонкам
-`alarms_alarm_rule`, условия и расписания сохраняются как JSON ровно в том виде, который вернул
-валидатор, — с дописанными значениями по умолчанию.
+A rule arrives in the API as a `DeviceProfileAlarm` object — camelCase, **as in ThingsBoard**:
+a rule exported from a TB profile can be pasted without changes (subject to the
+[GRMS differences](#differences-from-thingsboard)). The top-level fields are spread over the columns of
+`alarms_alarm_rule`; conditions and schedules are stored as JSON exactly as the validator returned
+them — with default values filled in.
 
-Скелет ниже — это тело одного правила в `POST /api/v1/alarms/rules/` и один элемент массива в
+The skeleton below is the body of one rule in `POST /api/v1/alarms/rules/` and one element of the array in
 `POST /api/v1/alarms/rules/bulk/`.
 
-### 4.1. Полный скелет
+### 4.1. Full skeleton
 
 ```jsonc
 {
-  "id": "myHighTemperature",            // необязательно; произвольная строка
-  "alarmType": "High Temperature",      // обязательно; уникально внутри профиля
-  "createRules": {                      // обязательно; ключи — severity
+  "id": "myHighTemperature",            // optional; any string
+  "alarmType": "High Temperature",      // required; unique within the profile
+  "createRules": {                      // required; keys are severities
     "MAJOR": {                          // AlarmRule
       "condition": {
-        "condition": [                  // фильтры, AND; минимум один
+        "condition": [                  // filters, AND; at least one
           {
             "key": {"type": "TIME_SERIES", "key": "Room Temperature"},
             "valueType": "NUMERIC",
@@ -293,11 +293,11 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
         "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
       },
       "schedule": {"type": "ANY_TIME"},
-      "alarmDetails": "Температура ${Room Temperature}° в номере ${room}",
+      "alarmDetails": "Temperature ${Room Temperature}° in room ${room}",
       "dashboardId": null
     }
   },
-  "clearRule": {                        // необязательно; без него авария закрывается только вручную
+  "clearRule": {                        // optional; without it the alarm can only be cleared manually
     "condition": {
       "condition": [
         {
@@ -316,38 +316,38 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 }
 ```
 
-(`jsonc` здесь только ради комментариев — в API отправляется обычный JSON.)
+(`jsonc` is used here only for the comments — the API receives plain JSON.)
 
-### 4.2. `DeviceProfileAlarm` — верхний уровень
+### 4.2. `DeviceProfileAlarm` — top level
 
-| Поле | Обяз. | По умолчанию | Смысл |
+| Field | Req. | Default | Meaning |
 |---|---|---|---|
-| `id` | — | — | Только в ответах: UUID строки правила. В теле запроса игнорируется |
-| `alarmType` | да | — | Тип аварии, до 255 символов |
-| `createRules` | да | — | Словарь `severity → AlarmRule`, непустой, ключи только из пяти severity |
-| `clearRule` | нет | — | `AlarmRule` снятия (`alarmDetails` в нём не используется) |
-| `propagate` | нет | `false` | Распространять на связанные устройства |
-| `propagateRelationTypes` | нет | `[]` | Типы связей `shuttle.Relation`; пусто — любые |
-| `propagateToOwner` | нет | `false` | Добавить id номера устройства в `propagate_entity_ids` |
-| `propagateToTenant` | нет | `false` | Добавить id тенанта в `propagate_entity_ids` |
+| `id` | — | — | Responses only: the UUID of the rule row. Ignored in the request body |
+| `alarmType` | yes | — | Alarm type, up to 255 characters |
+| `createRules` | yes | — | A `severity → AlarmRule` dict, non-empty, keys only from the five severities |
+| `clearRule` | no | — | The clear `AlarmRule` (`alarmDetails` is not used in it) |
+| `propagate` | no | `false` | Propagate to related devices |
+| `propagateRelationTypes` | no | `[]` | `shuttle.Relation` relation types; empty means any |
+| `propagateToOwner` | no | `false` | Add the id of the device's room to `propagate_entity_ids` |
+| `propagateToTenant` | no | `false` | Add the tenant id to `propagate_entity_ids` |
 
-Рядом с этими полями в теле запроса едет конверт GRMS — snake_case, как остальное API:
+Next to these fields, the request body carries the GRMS envelope — snake_case, like the rest of the API:
 
-| Поле | Обяз. | Смысл |
+| Field | Req. | Meaning |
 |---|---|---|
-| `device_profile` | да при создании | UUID профиля, к которому крепится правило |
-| `enabled` | нет, по умолчанию `true` | Выключатель правила |
+| `device_profile` | yes, on create | UUID of the profile the rule is attached to |
+| `enabled` | no, defaults to `true` | Rule switch |
 
 ### 4.3. `AlarmRule`
 
-| Поле | Обяз. | Смысл |
+| Field | Req. | Meaning |
 |---|---|---|
-| `condition` | да | `{"condition": [фильтры], "spec": {…}}`; `spec` по умолчанию `{"type": "SIMPLE"}` |
-| `schedule` | нет | Расписание; отсутствует или `null` — действует всегда |
-| `alarmDetails` | нет | Шаблон сообщения, см. [4.9](#49-alarmdetails--шаблон-сообщения) |
-| `dashboardId` | нет | Хранится ради совместимости с TB, не используется |
+| `condition` | yes | `{"condition": [filters], "spec": {…}}`; `spec` defaults to `{"type": "SIMPLE"}` |
+| `schedule` | no | Schedule; missing or `null` means always in effect |
+| `alarmDetails` | no | Message template, see [4.9](#49-alarmdetails--message-template) |
+| `dashboardId` | no | Stored for TB compatibility, not used |
 
-### 4.4. Фильтр условия
+### 4.4. Condition filter
 
 ```json
 {
@@ -358,57 +358,57 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 }
 ```
 
-**Типы ключа (`key.type`):**
+**Key types (`key.type`):**
 
-| Тип | Откуда берётся значение |
+| Type | Where the value comes from |
 |---|---|
-| `TIME_SERIES` | `TsKvLatest` устройства — последнее значение ключа телеметрии (имя из `TsKvDictionary`, с пробелами и регистром как есть) |
-| `ATTRIBUTE` | `AttributeKv` устройства со скоупом **`SERVER_SCOPE`** |
-| `ENTITY_FIELD` | Поле самого устройства или его номера, только из белого списка ниже |
-| `CONSTANT` | Литерал из поля `value` фильтра; `key.key` не нужен |
+| `TIME_SERIES` | The device's `TsKvLatest` — the latest value of a telemetry key (name from `TsKvDictionary`, spaces and case as is) |
+| `ATTRIBUTE` | The device's `AttributeKv` with the **`SERVER_SCOPE`** scope |
+| `ENTITY_FIELD` | A field of the device itself or of its room, only from the whitelist below |
+| `CONSTANT` | A literal from the filter's `value` field; `key.key` is not needed |
 
-**Белый список `ENTITY_FIELD`:**
+**The `ENTITY_FIELD` whitelist:**
 
-| Поле | Тип значения | Подходящий `valueType` |
+| Field | Value type | Suitable `valueType` |
 |---|---|---|
-| `name` | строка | `STRING` |
-| `type` | строка | `STRING` |
-| `label` | строка или null | `STRING` |
+| `name` | string | `STRING` |
+| `type` | string | `STRING` |
+| `label` | string or null | `STRING` |
 | `status` | bool (`Device.status`) | `BOOLEAN` |
-| `is_active` | bool | `BOOLEAN` — бесполезно: вычислитель берёт только активные устройства |
+| `is_active` | bool | `BOOLEAN` — useless: the evaluator only takes active devices |
 | `is_gateway` | bool, `Device.additional_info["gateway"]` | `BOOLEAN` |
-| `room.number` | строка | `STRING` |
-| `room.floor` | строка (!) | `STRING` — `"3"`, а не `3` |
-| `room.state` | список чисел | не рекомендуется: сравнивается строковое представление `"[1, 3]"` |
+| `room.number` | string | `STRING` |
+| `room.floor` | string (!) | `STRING` — `"3"`, not `3` |
+| `room.state` | list of numbers | not recommended: the string representation `"[1, 3]"` is compared |
 
-У устройства без номера полей `room.*` нет — любой предикат по ним ложен.
+A device without a room has no `room.*` fields — any predicate on them is false.
 
-**`valueType` и чтение значения:**
+**`valueType` and reading the value:**
 
-| `valueType` | Как читается значение из строки `TsKvLatest` / `AttributeKv` |
+| `valueType` | How the value is read from a `TsKvLatest` / `AttributeKv` row |
 |---|---|
-| `NUMERIC` | `dbl_v`, иначе `long_v`, иначе `str_v`, если строка парсится как число |
-| `BOOLEAN` | `bool_v`, иначе `str_v` из `true/1/yes/on` или `false/0/no/off` (без учёта регистра). **`long_v` не читается** |
-| `STRING` | `str_v`, иначе первое непустое значение, приведённое к строке |
-| `DATE_TIME` | как `NUMERIC` — Unix-время в миллисекундах |
+| `NUMERIC` | `dbl_v`, else `long_v`, else `str_v` if the string parses as a number |
+| `BOOLEAN` | `bool_v`, else `str_v` from `true/1/yes/on` or `false/0/no/off` (case-insensitive). **`long_v` is not read** |
+| `STRING` | `str_v`, else the first non-empty value converted to a string |
+| `DATE_TIME` | like `NUMERIC` — Unix time in milliseconds |
 
-> **Ловушка:** если контроллер шлёт булево значение числом `0`/`1` (оно ляжет в `long_v`),
-> `BOOLEAN`-фильтр его не увидит и никогда не совпадёт. Для таких ключей используйте
+> **Pitfall:** if a controller sends a boolean as the number `0`/`1` (it lands in `long_v`),
+> a `BOOLEAN` filter will not see it and will never match. For such keys use
 > `NUMERIC` + `EQUAL 1`.
 
-**Совместимость `valueType` и типа предиката** проверяется валидатором, в том числе для всех
-листьев `COMPLEX`:
+**Compatibility of `valueType` and the predicate type** is checked by the validator, including for all
+`COMPLEX` leaves:
 
-| `valueType` | Тип предиката |
+| `valueType` | Predicate type |
 |---|---|
 | `NUMERIC`, `DATE_TIME` | `NUMERIC` |
 | `BOOLEAN` | `BOOLEAN` |
 | `STRING` | `STRING` |
 
-### 4.5. Предикаты
+### 4.5. Predicates
 
 **`NUMERIC`** — `EQUAL`, `NOT_EQUAL`, `GREATER`, `LESS`, `GREATER_OR_EQUAL`, `LESS_OR_EQUAL`.
-Обе стороны приводятся к `float`.
+Both sides are converted to `float`.
 
 ```json
 {"type": "NUMERIC", "operation": "GREATER_OR_EQUAL", "value": {"defaultValue": 30}}
@@ -421,18 +421,18 @@ UniqueConstraint(fields=["originator", "alarm_type"], condition=Q(cleared=False)
 ```
 
 **`STRING`** — `EQUAL`, `NOT_EQUAL`, `STARTS_WITH`, `ENDS_WITH`, `CONTAINS`, `NOT_CONTAINS`,
-`IN`, `NOT_IN`; флаг `ignoreCase` (по умолчанию `false`). Для `IN`/`NOT_IN` значение — список
-или строка через запятую (пробелы вокруг элементов обрезаются):
+`IN`, `NOT_IN`; the `ignoreCase` flag (default `false`). For `IN`/`NOT_IN` the value is a list
+or a comma-separated string (spaces around elements are trimmed):
 
 ```json
 {"type": "STRING", "operation": "IN", "ignoreCase": true, "value": {"defaultValue": ["error", "fault"]}}
 {"type": "STRING", "operation": "NOT_IN", "value": {"defaultValue": "2.4.1, 2.4.2"}}
 ```
 
-**`COMPLEX`** — `AND` / `OR` над вложенными предикатами, рекурсивно, до 5 уровней. Все
-вложенные предикаты сравнивают **одно и то же** значение ключа фильтра. Условия на разные ключи
-пишутся отдельными фильтрами (они объединяются через AND); OR между разными ключами в формате
-TB не выражается — нужны два разных правила.
+**`COMPLEX`** — `AND` / `OR` over nested predicates, recursively, up to 5 levels. All
+nested predicates compare **the same** value of the filter's key. Conditions on different keys
+are written as separate filters (they are combined with AND); OR between different keys cannot be
+expressed in the TB format — it takes two separate rules.
 
 ```json
 {
@@ -445,12 +445,12 @@ TB не выражается — нужны два разных правила.
 }
 ```
 
-**Отсутствующее значение никогда не совпадает.** Если у устройства нет ключа (не прислало
-телеметрию, нет атрибута) или не удалось вычислить порог — предикат ложен, **включая
-`NOT_EQUAL` и `NOT_IN`**. Устройство, ни разу не приславшее `Room Temperature`, не может
-сработать ни по одному температурному правилу.
+**A missing value never matches.** If the device does not have the key (it sent no
+telemetry, there is no attribute) or the threshold could not be resolved, the predicate is false, **including
+`NOT_EQUAL` and `NOT_IN`**. A device that has never sent `Room Temperature` cannot
+fire any temperature rule.
 
-### 4.6. Значение предиката: `defaultValue` и `dynamicValue`
+### 4.6. Predicate value: `defaultValue` and `dynamicValue`
 
 ```json
 {
@@ -459,83 +459,83 @@ TB не выражается — нужны два разных правила.
 }
 ```
 
-Нужно хотя бы одно из двух. Порядок разрешения:
+At least one of the two is required. Resolution order:
 
-1. Если есть `dynamicValue` — ищется атрибут `sourceAttribute` в источнике `sourceType`.
-2. Не найден и `inherit: true` — поиск продолжается **вверх** по цепочке
-   `CURRENT_DEVICE → CURRENT_ROOM → CURRENT_TENANT`, начиная со следующего за источником уровня.
-3. Ничего не найдено — используется `defaultValue`.
-4. Нет и `defaultValue` — предикат ложен.
+1. If there is a `dynamicValue`, the `sourceAttribute` attribute is looked up in the `sourceType` source.
+2. Not found and `inherit: true` — the lookup continues **upwards** along the chain
+   `CURRENT_DEVICE → CURRENT_ROOM → CURRENT_TENANT`, starting at the level after the source.
+3. Nothing found — `defaultValue` is used.
+4. No `defaultValue` either — the predicate is false.
 
-**Где лежат атрибуты источников:**
+**Where the source attributes live:**
 
-| `sourceType` | Хранилище |
+| `sourceType` | Storage |
 |---|---|
-| `CURRENT_DEVICE` | `AttributeKv` устройства, `SERVER_SCOPE` |
+| `CURRENT_DEVICE` | The device's `AttributeKv`, `SERVER_SCOPE` |
 | `CURRENT_ROOM` | `Room.additional_info["attributes"]` |
 | `CURRENT_TENANT` | `Tenant.additional_info["attributes"]` |
 
-`CURRENT_USER` и `CURRENT_CUSTOMER` из TB не поддерживаются — валидатор их отклонит.
+TB's `CURRENT_USER` and `CURRENT_CUSTOMER` are not supported — the validator rejects them.
 
-**Пример разрешения** для `{"defaultValue": 30, "dynamicValue": {"sourceType": "CURRENT_ROOM", "sourceAttribute": "temperatureMax", "inherit": …}}`:
+**Resolution example** for `{"defaultValue": 30, "dynamicValue": {"sourceType": "CURRENT_ROOM", "sourceAttribute": "temperatureMax", "inherit": …}}`:
 
-| Номер | Тенант | `inherit: false` | `inherit: true` |
+| Room | Tenant | `inherit: false` | `inherit: true` |
 |---|---|---|---|
 | `26` | `28` | 26 | 26 |
 | — | `28` | 30 | 28 |
 | — | — | 30 | 30 |
 
-Атрибут устройства в этой цепочке не участвует никогда: поиск идёт только вверх от источника.
-Чтобы устройство могло переопределить порог номера, источником должен быть `CURRENT_DEVICE`
-с `inherit: true`.
+The device attribute never takes part in this chain: the lookup only goes up from the source.
+For a device to be able to override the room threshold, the source must be `CURRENT_DEVICE`
+with `inherit: true`.
 
-Значения атрибутов номера и тенанта — обычный JSON; строка `"26"` тоже будет приведена к числу.
+Room and tenant attribute values are plain JSON; the string `"26"` is converted to a number as well.
 
-### 4.7. Спецификация условия
+### 4.7. Condition spec
 
-| Тип | Срабатывает | Поля |
+| Type | Fires | Fields |
 |---|---|---|
-| `SIMPLE` | на первом проходе, где условие выполнено | — |
-| `DURATION` | когда условие выполняется непрерывно не меньше заданного времени | `unit`: `SECONDS` / `MINUTES` / `HOURS` / `DAYS`; `predicate`: значение (положительное) |
-| `REPEATING` | на N-м подряд проходе, где условие выполнено | `predicate`: целое ≥ 1 |
+| `SIMPLE` | on the first pass where the condition holds | — |
+| `DURATION` | when the condition has held continuously for at least the given time | `unit`: `SECONDS` / `MINUTES` / `HOURS` / `DAYS`; `predicate`: the value (positive) |
+| `REPEATING` | on the N-th consecutive pass where the condition holds | `predicate`: integer ≥ 1 |
 
 ```json
 {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 10}}
 {"type": "REPEATING", "predicate": {"defaultValue": 3}}
 ```
 
-`predicate` спецификации — такое же значение предиката, как в 4.6, поэтому длительность и число
-повторов можно брать из атрибута (`dynamicValue`).
+The spec's `predicate` is the same kind of predicate value as in 4.6, so the duration and the number
+of repeats can be taken from an attribute (`dynamicValue`).
 
-**Непрерывность.** Один проход, где условие не выполнено, сбрасывает и часы `DURATION`, и
-счётчик `REPEATING`.
+**Continuity.** A single pass where the condition does not hold resets both the `DURATION` clock and
+the `REPEATING` counter.
 
-**`DURATION` на шкале времени** (интервал вычислителя 30 с, правило «`active == false` 10 минут»):
+**`DURATION` on a timeline** (evaluator interval 30 s, rule "`active == false` for 10 minutes"):
 
-| Время | `active` | Что происходит |
+| Time | `active` | What happens |
 |---|---|---|
-| 10:00:00 | `false` | Первое совпадение: `AlarmRuleState = {"MAJOR": {"since": "10:00:00"}}`, аварии нет |
-| 10:05:00 | `false` | Прошло 5 мин < 10 — ждём |
-| 10:07:30 | `true` | Условие не выполнено — состояние удалено |
-| 10:08:00 | `false` | Отсчёт заново с 10:08:00 |
-| 10:18:00 | `false` | Прошло 10 мин — **авария создана**, `start_ts = 10:18:00` |
-| 10:18:30 | `false` | Авария есть — сдвигается `end_ts` |
+| 10:00:00 | `false` | First match: `AlarmRuleState = {"MAJOR": {"since": "10:00:00"}}`, no alarm |
+| 10:05:00 | `false` | 5 min elapsed < 10 — waiting |
+| 10:07:30 | `true` | The condition does not hold — state deleted |
+| 10:08:00 | `false` | Counting starts over from 10:08:00 |
+| 10:18:00 | `false` | 10 min elapsed — **alarm created**, `start_ts = 10:18:00` |
+| 10:18:30 | `false` | The alarm exists — `end_ts` moves |
 
-**Отличие от TB: `REPEATING` считает проходы вычислителя, а не входящие сообщения.** Вычислитель
-читает последнее значение из `TsKvLatest`; если устройство молчит, то же самое значение будет
-засчитано на каждом проходе. `REPEATING 3` при интервале 30 с — это «условие видно на трёх
-проходах подряд», то есть примерно минута. По смыслу это короткий `DURATION`, защищающий от
-одиночных выбросов между проходами.
+**Difference from TB: `REPEATING` counts evaluator passes, not incoming messages.** The evaluator
+reads the latest value from `TsKvLatest`; if the device is silent, the same value is
+counted on every pass. `REPEATING 3` with a 30 s interval means "the condition is seen on three
+passes in a row", i.e. about a minute. In practice it is a short `DURATION` that protects against
+single outliers between passes.
 
-### 4.8. Расписание
+### 4.8. Schedule
 
-Вне расписания правило **не существует**: не срабатывает и теряет накопленный отсчёт
-`DURATION`/`REPEATING`. Расписание задаётся отдельно для каждого правила создания и для правила
-снятия.
+Outside its schedule a rule **does not exist**: it does not fire and loses the accumulated
+`DURATION`/`REPEATING` count. A schedule is set separately for each create rule and for the
+clear rule.
 
-**`ANY_TIME`** — всегда (то же, что отсутствие `schedule`).
+**`ANY_TIME`** — always (same as no `schedule`).
 
-**`SPECIFIC_TIME`** — одно окно для выбранных дней недели:
+**`SPECIFIC_TIME`** — one window for the selected days of the week:
 
 ```json
 {
@@ -547,7 +547,7 @@ TB не выражается — нужны два разных правила.
 }
 ```
 
-**`CUSTOM`** — своё окно для каждого дня:
+**`CUSTOM`** — a separate window for each day:
 
 ```json
 {
@@ -561,22 +561,22 @@ TB не выражается — нужны два разных правила.
 }
 ```
 
-Правила интерпретации:
+Interpretation rules:
 
-- `daysOfWeek` / `dayOfWeek` — ISO: понедельник `1`, воскресенье `7`;
-- `startsOn` / `endsOn` — миллисекунды от полуночи **в `timezone`** расписания (IANA-имя, по
-  умолчанию `UTC`; неизвестная зона отклоняется валидатором);
-- окно полуоткрытое: `startsOn ≤ t < endsOn`;
-- `startsOn == endsOn` — весь день;
-- `startsOn > endsOn` — окно через полночь (`22:00 → 06:00`): активно `t ≥ startsOn` **или**
-  `t < endsOn`. День недели проверяется по **текущему** локальному дню, поэтому для
-  `daysOfWeek: [1]` активны пн 00:00–06:00 и пн 22:00–24:00, а вт 00:00–06:00 — только если в
-  списке есть и `2`. Для ночей «пн→вт … пт→сб» перечисляйте дни `1–6`;
-- в `CUSTOM` день без элемента в `items` или с `enabled: false` — правило неактивно весь день.
+- `daysOfWeek` / `dayOfWeek` — ISO: Monday is `1`, Sunday is `7`;
+- `startsOn` / `endsOn` — milliseconds from midnight **in the schedule's `timezone`** (an IANA name,
+  `UTC` by default; an unknown zone is rejected by the validator);
+- the window is half-open: `startsOn ≤ t < endsOn`;
+- `startsOn == endsOn` — the whole day;
+- `startsOn > endsOn` — a window across midnight (`22:00 → 06:00`): active when `t ≥ startsOn` **or**
+  `t < endsOn`. The day of the week is checked against the **current** local day, so for
+  `daysOfWeek: [1]` Mon 00:00–06:00 and Mon 22:00–24:00 are active, and Tue 00:00–06:00 only if the
+  list also contains `2`. For the nights "Mon→Tue … Fri→Sat" list days `1–6`;
+- in `CUSTOM`, a day without an element in `items` or with `enabled: false` means the rule is inactive all day.
 
-Шпаргалка по времени:
+Time cheat sheet:
 
-| Время | мс | Время | мс |
+| Time | ms | Time | ms |
 |---|---|---|---|
 | 00:00 | `0` | 13:00 | `46800000` |
 | 06:00 | `21600000` | 18:00 | `64800000` |
@@ -585,75 +585,75 @@ TB не выражается — нужны два разных правила.
 | 09:00 | `32400000` | 23:00 | `82800000` |
 | 10:00 | `36000000` | 24:00 | `86400000` |
 
-Формула: `(часы × 60 + минуты) × 60 000`.
+Formula: `(hours × 60 + minutes) × 60 000`.
 
-### 4.9. `alarmDetails` — шаблон сообщения
+### 4.9. `alarmDetails` — message template
 
-Строка с подстановками `${…}`. Результат попадает в `Alarm.details["message"]`, в карточку аварии
-и в Telegram. Шаблон перерисовывается на **каждом** проходе, где правило создания срабатывает, —
-сообщение показывает свежее значение.
+A string with `${…}` placeholders. The result goes into `Alarm.details["message"]`, the alarm card
+and Telegram. The template is re-rendered on **every** pass where the create rule fires,
+so the message shows the fresh value.
 
-| Подстановка | Значение |
+| Placeholder | Value |
 |---|---|
-| `${originatorName}` | Имя устройства |
-| `${room}` | Номер комнаты устройства или пустая строка |
-| `${alarmType}` | `alarmType` правила |
-| `${alarmSeverity}` | Severity сработавшего правила |
-| `${<ключ телеметрии>}` | Последнее значение, например `${Room Temperature}` — пробелы в имени допустимы |
-| `${<ключ атрибута>}` | Значение серверного атрибута |
+| `${originatorName}` | Device name |
+| `${room}` | The device's room number or an empty string |
+| `${alarmType}` | The rule's `alarmType` |
+| `${alarmSeverity}` | Severity of the rule that fired |
+| `${<telemetry key>}` | Latest value, e.g. `${Room Temperature}` — spaces in the name are allowed |
+| `${<attribute key>}` | Server attribute value |
 | `${<ENTITY_FIELD>}` | `${name}`, `${room.floor}`, `${is_gateway}` … |
 
-Порядок поиска для произвольного имени: телеметрия → атрибут → поле устройства.
+Lookup order for an arbitrary name: telemetry → attribute → device field.
 
-- Нераспознанная подстановка остаётся текстом как есть (`${Humidity}`), задача не падает.
-- Гарантированно доступны только ключи, которые **используются в условиях правил** этого
-  профиля: вычислитель не загружает ключи, на которые никто не ссылается.
-- Пустой или отсутствующий шаблон даёт `"<alarmType> — <имя устройства>"`.
+- An unrecognized placeholder stays as literal text (`${Humidity}`); the task does not fail.
+- Only keys that **are used in the rule conditions** of this profile are guaranteed to be
+  available: the evaluator does not load keys nobody refers to.
+- An empty or missing template produces `"<alarmType> — <device name>"`.
 
-Пример: `"Температура ${Room Temperature}° в номере ${room}, этаж ${room.floor} (${alarmSeverity})"`
-→ `"Температура 31.5° в номере 305, этаж 3 (MAJOR)"`.
+Example: `"Temperature ${Room Temperature}° in room ${room}, floor ${room.floor} (${alarmSeverity})"`
+→ `"Temperature 31.5° in room 305, floor 3 (MAJOR)"`.
 
-`details["values"]` — снимок значений ключей из фильтров сработавшего правила (кроме
-`CONSTANT`), например `{"Room Temperature": 31.5}`.
+`details["values"]` is a snapshot of the values of the keys from the filters of the rule that fired (except
+`CONSTANT`), e.g. `{"Room Temperature": 31.5}`.
 
-### 4.10. Распространение
+### 4.10. Propagation
 
-По умолчанию авария видна только на устройстве-источнике. С распространением идентификаторы
-целевых сущностей записываются в `Alarm.propagate_entity_ids` **один раз при создании**:
+By default an alarm is visible only on the originating device. With propagation, the identifiers
+of the target entities are written to `Alarm.propagate_entity_ids` **once, on creation**:
 
-| Поле правила | Что добавляется |
+| Rule field | What is added |
 |---|---|
-| `propagate: true` | Устройства на **любом** конце связи `shuttle.Relation` с источником (и `from`, и `to`); `propagateRelationTypes` сужает по `relation_type` |
-| `propagateToOwner: true` | id номера устройства |
-| `propagateToTenant: true` | id тенанта |
+| `propagate: true` | Devices on **either** end of a `shuttle.Relation` with the originator (both `from` and `to`); `propagateRelationTypes` narrows by `relation_type` |
+| `propagateToOwner: true` | The id of the device's room |
+| `propagateToTenant: true` | The tenant id |
 
-Фильтр `device=<id>` в API и WS возвращает аварии, где устройство — источник **или** есть в
-`propagate_entity_ids`. Так авария шлюза видна в карточке каждого устройства за ним.
+The `device=<id>` filter in the API and WS returns alarms where the device is the originator **or** is in
+`propagate_entity_ids`. That is how a gateway alarm is visible in the card of every device behind it.
 
-Связи, появившиеся после создания аварии, на неё не влияют (как в TB).
+Relations created after the alarm was created do not affect it (as in TB).
 
-### 4.11. Валидация
+### 4.11. Validation
 
-Правила проверяются при создании и изменении (`POST`/`PUT /api/v1/alarms/rules/…`), при массовой
-замене (`rules/bulk/`) и в [`preview`](#preview) — одним и тем же валидатором. Проверяется:
+Rules are checked on create and update (`POST`/`PUT /api/v1/alarms/rules/…`), on bulk
+replacement (`rules/bulk/`) and in [`preview`](#preview) — by one and the same validator. It checks that:
 
-- `alarmType` уникален внутри профиля;
-- `createRules` непустой, ключи — только `CRITICAL`/`MAJOR`/`MINOR`/`WARNING`/`INDETERMINATE`;
-- в каждом условии минимум один фильтр;
-- `CONSTANT` требует `value`, остальные типы ключа — непустой `key.key`;
-- `ENTITY_FIELD` — только из белого списка;
-- `valueType` совместим с типом предиката, включая все листья `COMPLEX`;
-- операция допустима для типа предиката; `COMPLEX` — непустой `predicates`, глубина ≤ 5;
-- у значения предиката есть `defaultValue` или `dynamicValue`;
-- `dynamicValue.sourceType` — `CURRENT_DEVICE` / `CURRENT_ROOM` / `CURRENT_TENANT`;
-- `DURATION` — известный `unit` и положительное `defaultValue`; `REPEATING` — целое ≥ 1;
-- расписание: дни 1–7, время 0…86 400 000, известная `timezone`, `CUSTOM` — непустой `items`.
+- `alarmType` is unique within the profile;
+- `createRules` is non-empty and its keys are only `CRITICAL`/`MAJOR`/`MINOR`/`WARNING`/`INDETERMINATE`;
+- every condition has at least one filter;
+- `CONSTANT` has a `value`, and the other key types have a non-empty `key.key`;
+- `ENTITY_FIELD` is from the whitelist only;
+- `valueType` is compatible with the predicate type, including all `COMPLEX` leaves;
+- the operation is valid for the predicate type; `COMPLEX` has a non-empty `predicates` and depth ≤ 5;
+- the predicate value has a `defaultValue` or a `dynamicValue`;
+- `dynamicValue.sourceType` is `CURRENT_DEVICE` / `CURRENT_ROOM` / `CURRENT_TENANT`;
+- `DURATION` has a known `unit` and a positive `defaultValue`; `REPEATING` is an integer ≥ 1;
+- schedule: days 1–7, time 0…86 400 000, a known `timezone`, `CUSTOM` has a non-empty `items`.
 
-Валидатор дописывает значения по умолчанию: `spec: {"type": "SIMPLE"}`, `ignoreCase: false`,
+The validator fills in defaults: `spec: {"type": "SIMPLE"}`, `ignoreCase: false`,
 `inherit: false`, `timezone: "UTC"`, `propagate*`.
 
-Пример ответа `400` на `POST`/`PUT` одного правила (в `valueType` указан `NUMERIC` для булева
-предиката, длительность `0`):
+Example of a `400` response to a `POST`/`PUT` of a single rule (`valueType` is `NUMERIC` for a boolean
+predicate, the duration is `0`):
 
 ```json
 {
@@ -670,138 +670,142 @@ TB не выражается — нужны два разных правила.
 }
 ```
 
-Путь к ошибке повторяет путь в JSON правила; элементы массивов — по индексу. В `rules/bulk/` и
-`rules/preview/` то же самое завёрнуто в `alarms` с индексом правила:
+The path to an error mirrors the path in the rule JSON; array elements are addressed by index. In `rules/bulk/` and
+`rules/preview/` the same thing is wrapped in `alarms` with the rule index:
 
 ```json
 {"alarms": [{}, {"createRules": ["This dictionary may not be empty."]}]}
 ```
 
-Пустой объект на месте первого правила означает, что с ним всё в порядке, — индексы сохраняются.
+An empty object in place of the first rule means it is fine — the indexes are preserved.
 
-### Отличия от ThingsBoard
+### Differences from ThingsBoard
 
 | ThingsBoard | GRMS |
 |---|---|
-| Правила вычисляются на каждом входящем сообщении в rule chain | Периодически, раз в `ALARMS_EVAL_INTERVAL_SEC`, по последним значениям |
-| `REPEATING` считает сообщения | Считает проходы вычислителя |
-| Атрибуты есть у любой сущности | `AttributeKv` — только у устройств; у номера и тенанта — `additional_info["attributes"]` |
-| `CURRENT_USER`, `CURRENT_CUSTOMER` | Не поддерживаются; добавлен `CURRENT_ROOM` |
-| `ENTITY_FIELD` — любое поле | Белый список, включая `is_gateway` и `room.*` |
-| Связь «авария ↔ сущность» в таблице `relation` | Массив `Alarm.propagate_entity_ids` |
-| Notification Center | Упрощённый диспетчер с каналами Telegram, WhatsApp и email |
+| Rules are evaluated on every incoming message in the rule chain | Periodically, every `ALARMS_EVAL_INTERVAL_SEC`, on the latest values |
+| `REPEATING` counts messages | Counts evaluator passes |
+| Any entity can have attributes | `AttributeKv` exists for devices only; rooms and tenants use `additional_info["attributes"]` |
+| `CURRENT_USER`, `CURRENT_CUSTOMER` | Not supported; `CURRENT_ROOM` added |
+| `ENTITY_FIELD` — any field | A whitelist, including `is_gateway` and `room.*` |
+| A rule fires on any device of the profile | Behind a dead gateway (`gatewayActive == false`) create rules never fire, see [6.3](#63-suppression-behind-a-dead-gateway) |
+| The "alarm ↔ entity" link in the `relation` table | The `Alarm.propagate_entity_ids` array |
+| Notification Center | A simplified dispatcher with Telegram, WhatsApp and email channels |
 
-В коде такие места помечены комментарием `GRMS deviation:`.
+In the code these places are marked with a `GRMS deviation:` comment.
 
 ---
 
-## 5. Как вычисляются правила
+## 5. How rules are evaluated
 
-### 5.1. Проход
+### 5.1. The pass
 
-Задача `alarms.tasks.evaluate_alarm_rules` (очередь `default`, beat каждые
-`ALARMS_EVAL_INTERVAL_SEC`, по умолчанию 30 с). При `ALARMS_ENABLED=false` сразу выходит.
+The `alarms.tasks.evaluate_alarm_rules` task (`default` queue, beat every
+`ALARMS_EVAL_INTERVAL_SEC`, 30 s by default). With `ALARMS_ENABLED=false` it returns immediately.
 
-1. Одним запросом берутся включённые правила активных профилей (`AlarmRule.objects.active()`,
-   то есть `enabled = true` и `device_profile.active = true`), сгруппированные по профилю.
-2. Берутся их активные устройства (`Device.is_active = true`), пачками по 500.
-3. Для пачки собираются все ключи, на которые ссылаются правила: имена `TIME_SERIES`, имена
-   `ATTRIBUTE`, атрибуты устройства из `dynamicValue` с `CURRENT_DEVICE`.
-4. По одному запросу читаются `TsKvLatest` и `AttributeKv` (`SERVER_SCOPE`) по этим ключам, плюс
-   `additional_info["attributes"]` номеров и тенантов. Из этого строится `DataSnapshot` на
-   каждое устройство.
-5. Каждое правило профиля прогоняется на снимке каждого устройства (5.2).
-6. Изменения счётчиков пишутся пачкой в `AlarmRuleState`.
-7. Если что-то создано, эскалировано или снято — в WS-группы затронутых тенантов уходит
-   `alarm.update` (после коммита транзакции).
+1. A single query fetches the enabled rules of active profiles (`AlarmRule.objects.active()`,
+   i.e. `enabled = true` and `device_profile.active = true`), grouped by profile.
+2. Their active devices are fetched (`Device.is_active = true`), in batches of 500.
+3. For a batch, all keys the rules refer to are collected: `TIME_SERIES` names,
+   `ATTRIBUTE` names, device attributes from a `dynamicValue` with `CURRENT_DEVICE`.
+4. `TsKvLatest` and `AttributeKv` (`SERVER_SCOPE`) are read for these keys with one query each, plus
+   the `additional_info["attributes"]` of rooms and tenants. A `DataSnapshot` is built from this for
+   every device.
+5. Every rule of the profile is run on the snapshot of every device (5.2).
+6. Counter changes are written to `AlarmRuleState` in bulk.
+7. If anything was created, escalated or cleared, `alarm.update` is sent to the WS groups of the
+   affected tenants (after the transaction commits).
 
-Ошибка в одном правиле логируется (`Alarm rule '<type>' failed on device <id>`) и не
-останавливает проход по остальным правилам и устройствам.
+An error in one rule is logged (`Alarm rule '<type>' failed on device <id>`) and does not
+stop the pass over the other rules and devices.
 
-### 5.2. Одно правило на одном устройстве
+### 5.2. One rule on one device
 
-Порт `AlarmState.process` из TB (`services/state.py`):
+A port of TB's `AlarmState.process` (`services/state.py`):
 
 ```text
-для severity в порядке CRITICAL, MAJOR, MINOR, WARNING, INDETERMINATE:
-    нет правила этой severity            → дальше
-    правило вне своего расписания        → дальше (его отсчёт забывается)
-    совпало = все фильтры условия истинны
-    сработало, отсчёт = spec(совпало, прежний отсчёт)
-    если сработало:
-        нет активной аварии этого типа   → СОЗДАТЬ (severity, start_ts = end_ts = now, details)
-        есть активная                    → end_ts = now, details обновить;
-                                           если эта severity выше текущей → ЭСКАЛИРОВАТЬ + SYSTEM-комментарий
-        КОНЕЦ (нижние severity и clearRule на этом проходе не смотрятся)
+for severity in the order CRITICAL, MAJOR, MINOR, WARNING, INDETERMINATE:
+    no rule of this severity             → next
+    rule outside its schedule            → next (its count is forgotten)
+    matched = all condition filters are true
+    fired, count = spec(matched, previous count)
+    if fired:
+        no active alarm of this type     → CREATE (severity, start_ts = end_ts = now, details)
+        there is an active one           → end_ts = now, update details;
+                                           if this severity is higher than the current one → ESCALATE + SYSTEM comment
+        END (lower severities and clearRule are not looked at on this pass)
 
-ни одно правило создания не сработало:
-    есть активная авария и clearRule, clearRule в расписании:
-        совпало = фильтры clearRule; сработало = spec(…)
-        если сработало                   → СНЯТЬ (cleared, clear_ts = now, SYSTEM-комментарий)
+no create rule fired:
+    there is an active alarm and a clearRule, and the clearRule is within its schedule:
+        matched = clearRule filters; fired = spec(…)
+        if fired                         → CLEAR (cleared, clear_ts = now, SYSTEM comment)
 ```
 
-### 5.3. Следствия, которые важно помнить
+### 5.3. Consequences worth remembering
 
-- **Побеждает первое *сработавшее* правило, а не первое совпавшее.** Пока `CRITICAL` с
-  `DURATION` отсчитывает время, `MAJOR` с `SIMPLE` уже может создать аварию; когда `CRITICAL`
-  досчитает — случится эскалация. На этом строятся многоуровневые правила (рецепт 7.2).
-- **Сработавшее правило сбрасывает отсчёты нижних severity.** Правила ниже сработавшего на этом
-  проходе не вычисляются, и их `since`/`count` не сохраняются. Если температура упала из зоны
-  `CRITICAL` в зону `MAJOR` с `DURATION`, отсчёт `MAJOR` начнётся с нуля.
-- **Severity только растёт.** Если позже срабатывает правило ниже текущей severity, у аварии
-  обновляется `end_ts`, но severity не понижается.
-- **`clearRule` проверяется, только если на этом проходе не сработало ни одно правило создания.**
-  Если условия создания и снятия пересекаются, авария не закроется никогда. Между порогами
-  должен быть зазор: создание `> 30`, снятие `< 29`.
-- **Зона между порогами «замораживает» аварию.** При температуре 29.5 правило создания `> 30` не
-  срабатывает, снятие `< 29` тоже: авария остаётся активной, `end_ts` не двигается.
-- **Без `clearRule` авария живёт до ручного закрытия.**
-- **Ручное закрытие или удаление при всё ещё выполненном условии** приводит к созданию новой
-  аварии на следующем проходе. Это верно и для `DURATION`: пока авария была активна, отсчёт
-  сохранялся, и длительность уже набрана.
-- **Отсутствующее значение не совпадает ни с чем** (4.5). Нет ключа — нет аварии, и нет снятия.
-- **Возраст значения не учитывается.** Вычислитель видит последнее значение в `TsKvLatest`,
-  даже если устройство молчит сутки. Если это важно, добавьте в условие фильтр
-  `ATTRIBUTE active == true` (рецепт 7.1).
-- **`end_ts` сдвигается без пуша в WS.** Клиенту приходит обновление только при создании,
-  эскалации и снятии (и при действиях через API).
-- **Задержка.** Авария появляется не раньше чем через `длительность spec` после первого прохода,
-  увидевшего условие, и не позже чем ещё через один интервал вычислителя.
+- **The first rule that *fires* wins, not the first one that matches.** While `CRITICAL` with
+  `DURATION` is counting, `MAJOR` with `SIMPLE` can already create the alarm; when `CRITICAL`
+  finishes counting, an escalation happens. Multi-level rules are built on this (recipe 7.2).
+- **A rule that fires resets the counts of lower severities.** Rules below the one that fired are
+  not evaluated on this pass, and their `since`/`count` are not saved. If the temperature drops from the
+  `CRITICAL` zone into the `MAJOR` zone with `DURATION`, the `MAJOR` count starts from zero.
+- **Severity only goes up.** If a rule below the current severity fires later, the alarm's
+  `end_ts` is updated, but the severity is not lowered.
+- **`clearRule` is checked only if no create rule fired on this pass.**
+  If the create and clear conditions overlap, the alarm will never be cleared. There must be a
+  gap between the thresholds: create `> 30`, clear `< 29`.
+- **The zone between the thresholds "freezes" the alarm.** At 29.5 the create rule `> 30` does not
+  fire and neither does the clear `< 29`: the alarm stays active and `end_ts` does not move.
+- **Without a `clearRule` the alarm lives until it is cleared manually.**
+- **Clearing or deleting manually while the condition still holds** leads to a new
+  alarm being created on the next pass. This is true for `DURATION` as well: while the alarm was active, the count
+  was kept, and the duration has already been reached.
+- **A missing value matches nothing** (4.5). No key — no alarm, and no clear.
+- **The age of a value is not taken into account.** The evaluator sees the latest value in `TsKvLatest`,
+  even if the device has been silent for a day. If this matters, add the filter
+  `ATTRIBUTE active == true` to the condition (recipe 7.1). The case "silent because the gateway is down" is handled
+  in code: create rules skip such devices ([6.3](#63-suppression-behind-a-dead-gateway)).
+- **`end_ts` moves without a WS push.** The client receives an update only on creation,
+  escalation and clear (and on actions via the API).
+- **Delay.** An alarm appears no earlier than the `spec duration` after the first pass that
+  saw the condition, and no later than one more evaluator interval after that.
 
-### 5.4. Производительность
+### 5.4. Performance
 
-На проход — два запроса к `TsKvLatest`/`AttributeKv` на каждые 500 устройств плюс запросы
-активных аварий и `AlarmRuleState` для той же пачки. Для выборки по ключам добавлен индекс
-(`shuttle/0028_alter_tskvlatest_entity_and_more`). Вычисление в Python — микросекунды на сравнение. Интервал регулируется
+Per pass: two queries to `TsKvLatest`/`AttributeKv` for every 500 devices, plus queries for
+active alarms and `AlarmRuleState` for the same batch. An index was added for lookups by key
+(`shuttle/0028_alter_tskvlatest_entity_and_more`). Evaluation in Python takes microseconds per comparison. The interval is controlled by
 `ALARMS_EVAL_INTERVAL_SEC`.
 
-В логе celery-default после каждого прохода:
+The celery-default log after each pass:
 
 ```text
 Alarm evaluation: 1480 devices × 12 rules → 2 created, 0 escalated, 1 cleared
 ```
 
-`rules` — сумма правил по всем профилям с правилами (три профиля по четыре правила — `12`), а не
-число пар «устройство × правило».
+`rules` is the total number of rules across all profiles that have rules (three profiles with four rules each gives `12`), not
+the number of "device × rule" pairs.
 
 ---
 
-## 6. Правила связи: устройства и шлюзы
+## 6. Connectivity rules: devices and gateways
 
-**Готовых правил в системе нет.** Профили нового тенанта создаются без правил, и каждый тенант
-заводит свои сам — через [CRUD правил](#82-правила). Эти два правила отдаются как шаблоны
-(`GET /api/v1/alarms/rule-templates/`, см. [8.2](#82-правила)), поэтому в панели они добавляются
-кнопкой, а не копипастой. Ниже — та же пара целиком:
-она закрывает журнал отключений устройств и шлюзов и снимает каскад шлюза. Температурные пороги —
-в [рецепте 7.1](#71-порог-температуры-на-номер-и-тенант-только-для-устройств-на-связи).
+**There are no built-in rules in the system.** A new tenant's profiles are created without rules, and each tenant
+sets up its own — through the [rule CRUD](#82-rules). These two rules are served as templates
+(`GET /api/v1/alarms/rule-templates/`, see [8.2](#82-rules)), so in the panel they are added with a
+button rather than by copy-paste. Below is the same pair in full:
+it covers the journal of device and gateway outages and takes care of the gateway cascade. Temperature thresholds are
+in [recipe 7.1](#71-temperature-threshold-per-room-and-tenant-online-devices-only).
 
-| `alarmType` | Severity | Создание | Снятие |
+| `alarmType` | Severity | Create | Clear |
 |---|---|---|---|
-| `Device Offline` | `MAJOR` | `active == false` И `notifyOnOffline == true` И `gatewayActive == true` И `is_gateway == false`, `DURATION` 10 мин | `active == true` |
-| `Gateway Offline` | `CRITICAL` | `active == false` И `is_gateway == true`, `DURATION` 5 мин, `propagate: true` | `active == true` |
+| `Device Offline` | `MAJOR` | `active == false` AND `notifyOnOffline == true` AND `gatewayActive == true` AND `is_gateway == false`, `DURATION` 10 min | `active == true` |
+| `Gateway Offline` | `CRITICAL` | `active == false` AND `is_gateway == true`, `DURATION` 5 min, `propagate: true` | `active == true` |
 
-Оба правила живут на одном профиле: фильтр `is_gateway` разводит их по устройствам, поэтому
-отдельный профиль для шлюзов не нужен.
+Both rules live on the same profile: the `is_gateway` filter splits them between devices, so
+a separate profile for gateways is not needed.
+
+The message texts below are quoted verbatim as the templates in `apps/alarms/templates.py` produce them.
 
 ```json
 [
@@ -869,23 +873,23 @@ Alarm evaluation: 1480 devices × 12 rules → 2 created, 0 escalated, 1 cleared
 ]
 ```
 
-Ту же пару собирают хелперы `guarded_offline_rule()` и `gateway_offline_rule()` в
-`apps/alarms/tests/base.py`, а `test_propagate.py::GatewayCascadeTest` прогоняет на них каскад —
-так что пример выше проверен тестами, а не только написан.
+The same pair is built by the `device_offline_rule()` and `gateway_offline_rule()` builders in
+`apps/alarms/templates.py`, and `test_propagate.py::GatewayCascadeTest` runs the cascade on them,
+so the example above is verified by tests, not just written down.
 
-### 6.1. Атрибуты, от которых зависят offline-правила
+### 6.1. Attributes the offline rules depend on
 
-| Атрибут (`SERVER_SCOPE`) | Кто пишет | Зачем |
+| Attribute (`SERVER_SCOPE`) | Written by | Purpose |
 |---|---|---|
-| `active` | Существующие механизмы связи: обработчик MQ и watchdog `active_attribute_server_scope` | Сам факт связи |
-| `notifyOnOffline` | Тумблер устройства (`notify_on_offline` в API); при создании устройства — `true` | Отключить аварии связи для конкретного устройства |
-| `gatewayActive` | Watchdog — при каждом тике для устройств за живыми (`true`) и упавшими (`false`) шлюзами; при создании устройства — `true` | Не плодить аварии устройств, когда упал их шлюз |
+| `active` | The existing connectivity mechanisms: the MQ handler and the `active_attribute_server_scope` watchdog | Connectivity itself |
+| `notifyOnOffline` | The device toggle (`notify_on_offline` in the API); `true` on device creation | Turn off connectivity alarms for a specific device |
+| `gatewayActive` | The watchdog — for devices behind gateways that go live (`true`) or down (`false`); `true` on device creation | Avoid flooding with device alarms when their gateway goes down. The evaluator reads it for all rules ([6.3](#63-suppression-behind-a-dead-gateway)) |
 
-Если у устройства нет строки `notifyOnOffline` или `gatewayActive`, фильтр ложен и `Device
-Offline` на нём **не сработает никогда** (4.5). Атрибуты пишутся только при создании устройства
-через API, поэтому на парке, который был заведён раньше, правило молчит, пока атрибуты не
-появятся. Watchdog сам проставит `gatewayActive` устройствам за шлюзами, которые он видит, —
-остальным (и `notifyOnOffline` всем) нужен разовый прогон:
+If a device has no `notifyOnOffline` or `gatewayActive` row, the filter is false and `Device
+Offline` **will never fire** on it (4.5). The attributes are written only when a device is created
+through the API, so on a fleet that was set up earlier the rule stays silent until the attributes
+appear. The watchdog sets `gatewayActive` itself for devices behind the gateways it sees;
+the others (and `notifyOnOffline` for all) need a one-off run:
 
 ```python
 from alarms.constants import ATTR_GATEWAY_ACTIVE, ATTR_NOTIFY_ON_OFFLINE
@@ -897,45 +901,75 @@ for device_id in Device.objects.filter(tenant_id="<tenant_id>", is_active=True).
     set_server_attribute(device_id, ATTR_GATEWAY_ACTIVE, True)
 ```
 
-Устройствам за шлюзом, который сейчас не на связи, `gatewayActive` поправит watchdog на
-следующем тике.
+Skip devices behind a gateway that is offline right now (or set `gatewayActive = false` for them): the
+watchdog only goes over gateways with `active == true` and writes `false` once, at the moment a gateway
+goes down. A `true` written by this script to a device behind an already dead gateway stays until the
+gateway comes back, and suppression ([6.3](#63-suppression-behind-a-dead-gateway)) does not work for it
+until then.
 
-### 6.2. Каскад шлюза
+### 6.2. Gateway cascade
 
 ```mermaid
 sequenceDiagram
-    participant GW as Шлюз GW-3
-    participant WD as watchdog (каждые 10 с)
+    participant GW as Gateway GW-3
+    participant WD as watchdog (every 10 s)
     participant ATTR as AttributeKv
-    participant EV as вычислитель (30 с)
+    participant EV as evaluator (30 s)
     participant AL as Alarm
-    GW--xWD: нет активности дольше порога
+    GW--xWD: no activity for longer than the threshold
     WD->>ATTR: GW-3.active = false
-    WD->>ATTR: устройства за GW-3: active = false, gatewayActive = false
-    EV->>ATTR: читает снимки
-    Note over EV: Device Offline: gatewayActive == true ложно → не совпало
-    Note over EV: Gateway Offline: active == false, is_gateway → отсчёт 5 мин
-    EV->>AL: через 5 мин: Gateway Offline (CRITICAL),<br/>propagate_entity_ids = устройства GW-3
-    GW->>WD: снова на связи
-    WD->>ATTR: GW-3.active = true, устройствам gatewayActive = true
-    EV->>AL: clearRule active == true → авария снята
+    WD->>ATTR: devices behind GW-3: active = false, gatewayActive = false
+    EV->>ATTR: reads snapshots
+    Note over EV: GW-3 devices: gatewayActive == false → create rules suppressed
+    Note over EV: Gateway Offline: active == false, is_gateway → 5 min count
+    EV->>AL: after 5 min: Gateway Offline (CRITICAL),<br/>propagate_entity_ids = GW-3 devices
+    GW->>WD: back online
+    WD->>ATTR: GW-3.active = true, devices get gatewayActive = true
+    EV->>AL: clearRule active == true → alarm cleared
 ```
 
-Итог: одна авария `CRITICAL` на шлюзе, видимая в карточке каждого его устройства, вместо сотни
-аварий `MAJOR`. Устройство, упавшее само по себе при живом шлюзе, по-прежнему получает свою
+Result: one `CRITICAL` alarm on the gateway, visible in the card of each of its devices, instead of a hundred
+`MAJOR` alarms. A device that goes down on its own while the gateway is alive still gets its own
 `Device Offline`.
 
-Связи «шлюз → устройство» берутся из `shuttle.Relation` (`from_id` — шлюз, `to_id` — устройство).
+"Gateway → device" relations are taken from `shuttle.Relation` (`from_id` is the gateway, `to_id` is the device).
+
+### 6.3. Suppression behind a dead gateway
+
+The `gatewayActive == true` filter in `Device Offline` protects only that rule. The others —
+temperature, leaks, any user-defined ones — see the device's "frozen" telemetry and
+would raise an alarm on every device behind the gateway. That is why the check is built into the evaluator
+(`DataSnapshot.behind_dead_gateway`, `services/state.py`) and applies to **all** rules without
+exception; there is no need to write it into a rule:
+
+| Device | Create rules | Clear rule |
+|---|---|---|
+| Not a gateway, `gatewayActive == false` | Do not fire: treated as not matched, `DURATION`/`REPEATING` counts are reset | Works as usual |
+| Not a gateway, `gatewayActive == true` or no attribute | As usual | As usual |
+| Gateway (`is_gateway`) | As usual — `Gateway Offline` must fire | As usual |
+
+Consequences:
+
+- **No new alarms are created behind a dead gateway**; only `Gateway Offline` remains.
+- **An already active alarm stays** until its `clearRule`: a clear on frozen data usually
+  does not fire, and suppression does not clear the alarm.
+- **After the gateway comes back, counting starts over.** Duration accumulated before the outage does not
+  count, so a `DURATION` alarm does not appear right after connectivity is restored.
+- **No attribute — no suppression.** Only an explicit `false` counts; the watchdog sets it for
+  devices related to the gateway through `Relation`. A device without a relation to a gateway is not suppressed.
+- **Suppression cannot be turned off for an individual rule.**
+- **`preview` (Check) takes suppression into account**: devices behind a dead gateway are not counted
+  as matches of create rules.
 
 ---
 
-## 7. Рецепты
+## 7. Recipes
 
-Каждый рецепт — тело одного правила: `POST /api/v1/alarms/rules/` вместе с полем
-`device_profile`, либо элемент массива в `rules/bulk/` (см. [8.2](#82-правила)). Перед сохранением
-прогоняйте правила через [`preview`](#preview).
+Each recipe is the body of one rule: `POST /api/v1/alarms/rules/` together with the
+`device_profile` field, or an array element in `rules/bulk/` (see [8.2](#82-rules)). Before saving,
+run the rules through [`preview`](#preview).
 
-### 7.1. Порог температуры на номер и тенант, только для устройств на связи
+### 7.1. Temperature threshold per room and tenant, online devices only
 
 ```json
 {
@@ -964,7 +998,7 @@ sequenceDiagram
         ],
         "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
       },
-      "alarmDetails": "Температура ${Room Temperature}° в номере ${room} (порог превышен)"
+      "alarmDetails": "Temperature ${Room Temperature}° in room ${room} (threshold exceeded)"
     }
   },
   "clearRule": {
@@ -988,10 +1022,10 @@ sequenceDiagram
 }
 ```
 
-Фильтр `active == true` отсекает устаревшее значение от устройства, которое уже не на связи.
+The `active == true` filter discards a stale value from a device that is no longer online.
 
-**Порог на номер.** API: `PUT /api/v1/main/room/<pk>/` полным телом номера — `additional_info`
-заменяется целиком, остальные его ключи надо передать как есть. Из shell:
+**Per-room threshold.** API: `PUT /api/v1/main/room/<pk>/` with the full room body — `additional_info`
+is replaced as a whole, so its other keys must be passed as they are. From the shell:
 
 ```python
 from main.models import Room
@@ -1003,7 +1037,7 @@ room.additional_info = info
 room.save(update_fields=["additional_info"])
 ```
 
-**Порог на тенант** (API для атрибутов тенанта нет, только shell):
+**Per-tenant threshold** (there is no API for tenant attributes, shell only):
 
 ```python
 from main.models import Tenant
@@ -1015,15 +1049,16 @@ tenant.additional_info = info
 tenant.save(update_fields=["additional_info"])
 ```
 
-Итог: в номере 305 порог 26/25, в остальных номерах тенанта — 28/27; если атрибута нет ни у
-номера, ни у тенанта — 30/29 из `defaultValue`.
+Result: room 305 has a 26/25 threshold, the tenant's other rooms 28/27; if neither the room
+nor the tenant has the attribute, 30/29 from `defaultValue`.
 
-> Масштаб значений: часть контроллеров шлёт температуру целым числом (`235` вместо `23.5`).
-> Множителя в формате правил нет — порог задаётся в тех же единицах, что и телеметрия. Проверьте
-> колонку значения, как в [7.11](#711-булево-значение-пришедшее-числом).
-Изменение подхватывается на следующем проходе вычислителя.
+> Value scale: some controllers send the temperature as an integer (`235` instead of `23.5`).
+> The rule format has no multiplier — the threshold is set in the same units as the telemetry. Check
+> the value column, as in [7.11](#711-boolean-value-sent-as-a-number).
 
-### 7.2. Многоуровневая эскалация
+The change is picked up on the next evaluator pass.
+
+### 7.2. Multi-level escalation
 
 ```json
 {
@@ -1037,7 +1072,7 @@ tenant.save(update_fields=["additional_info"])
         ],
         "spec": {"type": "SIMPLE"}
       },
-      "alarmDetails": "КРИТИЧНО: ${Room Temperature}° в номере ${room}"
+      "alarmDetails": "CRITICAL: ${Room Temperature}° in room ${room}"
     },
     "MAJOR": {
       "condition": {
@@ -1047,7 +1082,7 @@ tenant.save(update_fields=["additional_info"])
         ],
         "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 15}}
       },
-      "alarmDetails": "Жарко 15+ минут: ${Room Temperature}° в номере ${room}"
+      "alarmDetails": "Hot for 15+ minutes: ${Room Temperature}° in room ${room}"
     },
     "MINOR": {
       "condition": {
@@ -1057,7 +1092,7 @@ tenant.save(update_fields=["additional_info"])
         ],
         "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
       },
-      "alarmDetails": "Тепло: ${Room Temperature}° в номере ${room}"
+      "alarmDetails": "Warm: ${Room Temperature}° in room ${room}"
     }
   },
   "clearRule": {
@@ -1071,20 +1106,20 @@ tenant.save(update_fields=["additional_info"])
 }
 ```
 
-| Время | Температура | Результат |
+| Time | Temperature | Result |
 |---|---|---|
-| 10:00 | 31 | `MAJOR` и `MINOR` начинают отсчёт; аварии нет |
-| 10:05 | 31 | `MINOR` досчитал — **создана** `Overheat MINOR` |
-| 10:15 | 31 | `MAJOR` досчитал — **эскалация** `MINOR → MAJOR`, `SYSTEM`-комментарий |
-| 10:16 | 36 | `CRITICAL` (`SIMPLE`) — **эскалация** `MAJOR → CRITICAL` |
-| 10:20 | 29 | `MINOR` начинает отсчёт **заново**: в 10:16 сработал `CRITICAL`, и отсчёты нижних severity сбросились. `end_ts` стоит, severity остаётся `CRITICAL` |
-| 10:25 | 29 | `MINOR` досчитал — `end_ts` сдвигается, severity по-прежнему `CRITICAL` |
-| 10:30 | 27.5 | Ни создание, ни снятие не выполнены — авария активна, `end_ts` стоит |
-| 10:31 | 26 | `clearRule` — **снята** |
+| 10:00 | 31 | `MAJOR` and `MINOR` start counting; no alarm |
+| 10:05 | 31 | `MINOR` has finished counting — `Overheat MINOR` **created** |
+| 10:15 | 31 | `MAJOR` has finished counting — **escalation** `MINOR → MAJOR`, `SYSTEM` comment |
+| 10:16 | 36 | `CRITICAL` (`SIMPLE`) — **escalation** `MAJOR → CRITICAL` |
+| 10:20 | 29 | `MINOR` starts counting **again**: `CRITICAL` fired at 10:16 and the counts of lower severities were reset. `end_ts` stays, severity remains `CRITICAL` |
+| 10:25 | 29 | `MINOR` has finished counting — `end_ts` moves, severity is still `CRITICAL` |
+| 10:30 | 27.5 | Neither create nor clear holds — the alarm is active, `end_ts` stays |
+| 10:31 | 26 | `clearRule` — **cleared** |
 
-Порядок severity в JSON значения не имеет: они всегда перебираются от `CRITICAL` к `INDETERMINATE`.
+The order of severities in the JSON does not matter: they are always iterated from `CRITICAL` to `INDETERMINATE`.
 
-### 7.3. Защита от выбросов датчика: `REPEATING` и отложенное снятие
+### 7.3. Protection against sensor outliers: `REPEATING` and a delayed clear
 
 ```json
 {
@@ -1104,7 +1139,7 @@ tenant.save(update_fields=["additional_info"])
         ],
         "spec": {"type": "REPEATING", "predicate": {"defaultValue": 3}}
       },
-      "alarmDetails": "Датчик в номере ${room} показывает ${Room Temperature}°"
+      "alarmDetails": "The sensor in room ${room} reads ${Room Temperature}°"
     }
   },
   "clearRule": {
@@ -1125,14 +1160,14 @@ tenant.save(update_fields=["additional_info"])
 }
 ```
 
-Авария появится, если значение вне диапазона на трёх проходах подряд (около минуты при
-интервале 30 с), и снимется, только когда значение продержится в норме две минуты. `spec` у
-`clearRule` работает так же, как у правил создания, — отсчёт хранится под ключом `CLEAR`.
+The alarm appears if the value is out of range on three passes in a row (about a minute with a
+30 s interval), and is cleared only when the value has stayed normal for two minutes. The `clearRule`'s
+`spec` works the same way as the create rules' — the count is stored under the `CLEAR` key.
 
-### 7.4. Длительность из атрибута
+### 7.4. Duration from an attribute
 
-Задержка `Device Offline` на устройство, с откатом на номер, тенант и 10 минут по умолчанию —
-заменить `spec` в правиле создания:
+A per-device `Device Offline` delay, falling back to the room, the tenant and a default of 10 minutes —
+replace the `spec` in the create rule:
 
 ```json
 {
@@ -1145,7 +1180,7 @@ tenant.save(update_fields=["additional_info"])
 }
 ```
 
-Атрибут устройства пишется в `AttributeKv` (`SERVER_SCOPE`):
+The device attribute is written to `AttributeKv` (`SERVER_SCOPE`):
 
 ```python
 from alarms.services.attributes import set_server_attribute
@@ -1153,12 +1188,12 @@ from alarms.services.attributes import set_server_attribute
 set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
 ```
 
-Для номера и тенанта — `additional_info["attributes"]["offlineAlarmMinutes"]`, как в 7.1.
+For a room and a tenant — `additional_info["attributes"]["offlineAlarmMinutes"]`, as in 7.1.
 
-### 7.5. Ночное окно через полночь
+### 7.5. A night window across midnight
 
-Дверь открыта дольше 10 минут ночью. Снятие без расписания — закрытие двери снимает аварию в
-любое время суток.
+A door left open for more than 10 minutes at night. The clear has no schedule — closing the door clears the alarm at
+any time of day.
 
 ```json
 {
@@ -1179,7 +1214,7 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
         "startsOn": 82800000,
         "endsOn": 25200000
       },
-      "alarmDetails": "Дверь номера ${room} открыта ночью"
+      "alarmDetails": "The door of room ${room} is open at night"
     }
   },
   "clearRule": {
@@ -1193,13 +1228,13 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
 }
 ```
 
-Окно 23:00 → 07:00 по Ташкенту, все дни недели. Дверь, открытая в 22:55, начнёт отсчёт только
-в 23:00: до начала окна правила не существует. В 07:00 правило создания пропадает, но уже
-созданная авария остаётся активной до закрытия двери.
+The window is 23:00 → 07:00 Tashkent time, every day of the week. A door opened at 22:55 starts counting only
+at 23:00: before the window starts, the rule does not exist. At 07:00 the create rule disappears, but an alarm
+already created stays active until the door is closed.
 
-### 7.6. Severity по рабочим часам (`CUSTOM`)
+### 7.6. Severity by working hours (`CUSTOM`)
 
-В рабочие часы техслужбы протечка — `CRITICAL`, в остальное время — `MAJOR`:
+During the maintenance team's working hours a leak is `CRITICAL`, the rest of the time it is `MAJOR`:
 
 ```json
 {
@@ -1225,7 +1260,7 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
           {"enabled": false, "dayOfWeek": 7}
         ]
       },
-      "alarmDetails": "Протечка в номере ${room} — техслужба на смене"
+      "alarmDetails": "Leak in room ${room} — maintenance is on shift"
     },
     "MAJOR": {
       "condition": {
@@ -1234,21 +1269,21 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
            "predicate": {"type": "BOOLEAN", "operation": "EQUAL", "value": {"defaultValue": true}}}
         ]
       },
-      "alarmDetails": "Протечка в номере ${room} — вне рабочих часов"
+      "alarmDetails": "Leak in room ${room} — outside working hours"
     }
   },
   "propagateToOwner": true
 }
 ```
 
-Пн–пт 09:00–18:00, сб 10:00–16:00, вс выключено. Протечка в 20:00 создаёт `MAJOR`; если она
-продолжается в 09:00 следующего дня, правило `CRITICAL` входит в расписание и эскалирует
-аварию. После 18:00 severity остаётся `CRITICAL` — понижения нет.
+Mon–Fri 09:00–18:00, Sat 10:00–16:00, Sun off. A leak at 20:00 creates `MAJOR`; if it
+continues at 09:00 the next day, the `CRITICAL` rule enters its schedule and escalates the
+alarm. After 18:00 the severity stays `CRITICAL` — there is no downgrade.
 
-`clearRule` здесь нет намеренно: протечку закрывает человек после осмотра (7.10).
-`propagateToOwner` добавляет номер в `propagate_entity_ids`.
+There is intentionally no `clearRule` here: a leak is cleared by a person after an inspection (7.10).
+`propagateToOwner` adds the room to `propagate_entity_ids`.
 
-### 7.7. Диапазон значений (`COMPLEX`)
+### 7.7. Value range (`COMPLEX`)
 
 ```json
 {
@@ -1268,7 +1303,7 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
         ],
         "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 30}}
       },
-      "alarmDetails": "Влажность ${Humidity}% в номере ${room}"
+      "alarmDetails": "Humidity ${Humidity}% in room ${room}"
     }
   },
   "clearRule": {
@@ -1288,9 +1323,9 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
 }
 ```
 
-Создание — вне 30…70, снятие — внутри 35…65: гистерезис 5% с обеих сторон.
+Create — outside 30…70, clear — inside 35…65: a 5% hysteresis on both sides.
 
-### 7.8. Строковый атрибут
+### 7.8. String attribute
 
 ```json
 {
@@ -1303,7 +1338,7 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
            "predicate": {"type": "STRING", "operation": "NOT_IN", "value": {"defaultValue": "2.4.1, 2.4.2"}}}
         ]
       },
-      "alarmDetails": "${originatorName}: прошивка ${firmwareVersion}"
+      "alarmDetails": "${originatorName}: firmware ${firmwareVersion}"
     }
   },
   "clearRule": {
@@ -1317,12 +1352,12 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
 }
 ```
 
-Устройства без атрибута `firmwareVersion` аварию не получат: `NOT_IN` на отсутствующем значении
-ложен.
+Devices without the `firmwareVersion` attribute do not get an alarm: `NOT_IN` on a missing value
+is false.
 
-### 7.9. Выбор устройств полями (`ENTITY_FIELD`)
+### 7.9. Selecting devices by fields (`ENTITY_FIELD`)
 
-Фильтры, которые можно добавить к любому условию:
+Filters that can be added to any condition:
 
 ```json
 [
@@ -1335,24 +1370,24 @@ set_server_attribute("<device_id>", "offlineAlarmMinutes", 30)
 ]
 ```
 
-Этажи 3 и 4, имя начинается с `KNX` в любом регистре, не шлюз. `room.floor` — строка.
+Floors 3 and 4, the name starts with `KNX` in any case, not a gateway. `room.floor` is a string.
 
-### 7.10. Авария без автоматического снятия
+### 7.10. An alarm without an automatic clear
 
-Правило без `clearRule` (как 7.6): авария закрывается только через `POST /api/v1/alarms/<id>/clear/`
-или `bulk/clear/`. Если на момент закрытия условие всё ещё выполнено, на следующем проходе
-появится новая авария — закрывать нужно после устранения причины.
+A rule without a `clearRule` (like 7.6): the alarm is cleared only via `POST /api/v1/alarms/<id>/clear/`
+or `bulk/clear/`. If the condition still holds at the moment of clearing, a new alarm appears on the next pass,
+so clear it after the cause has been fixed.
 
-### 7.11. Булево значение, пришедшее числом
+### 7.11. Boolean value sent as a number
 
-Если ключ хранится в `long_v` как `0`/`1`:
+If the key is stored in `long_v` as `0`/`1`:
 
 ```json
 {"key": {"type": "TIME_SERIES", "key": "AC ON OFF"}, "valueType": "NUMERIC",
  "predicate": {"type": "NUMERIC", "operation": "EQUAL", "value": {"defaultValue": 1}}}
 ```
 
-Проверить, в какой колонке лежит значение:
+To check which column holds the value:
 
 ```sql
 SELECT l.bool_v, l.long_v, l.dbl_v, l.str_v
@@ -1362,98 +1397,98 @@ WHERE d.key = 'AC ON OFF'
 LIMIT 10;
 ```
 
-### 7.12. Как выключить правило
+### 7.12. How to turn a rule off
 
-| Способ | Что будет с уже активными авариями |
+| Method | What happens to already active alarms |
 |---|---|
-| `PUT /api/v1/alarms/rules/<id>/` с `{"enabled": false}` | Новые не создаются; активные остаются и снимаются только вручную — `clearRule` выключенного правила тоже не работает |
-| `DELETE /api/v1/alarms/rules/<id>/` | Остаются активными навсегда: вычислитель этот тип больше не обрабатывает. Закройте их `bulk/clear/` |
-| Расписание правил создания, которое никогда не активно, например `{"type": "CUSTOM", "timezone": "UTC", "items": [{"enabled": false, "dayOfWeek": 1}]}` | Новые не создаются, а активные снимутся по `clearRule` как обычно |
-| `notify_on_offline: false` на устройстве | Только для `Device Offline` и только для этого устройства |
-| `ALARMS_ENABLED=false` | Выключает вычислитель и уведомления целиком на всей инсталляции |
+| `PUT /api/v1/alarms/rules/<id>/` with `{"enabled": false}` | No new ones are created; active ones stay and can only be cleared manually — the `clearRule` of a disabled rule does not work either |
+| `DELETE /api/v1/alarms/rules/<id>/` | They stay active forever: the evaluator no longer processes this type. Clear them with `bulk/clear/` |
+| A create-rule schedule that is never active, e.g. `{"type": "CUSTOM", "timezone": "UTC", "items": [{"enabled": false, "dayOfWeek": 1}]}` | No new ones are created, and active ones are cleared by the `clearRule` as usual |
+| `notify_on_offline: false` on a device | Only for `Device Offline` and only for that device |
+| `ALARMS_ENABLED=false` | Turns off the evaluator and notifications entirely, for the whole installation |
 
 ---
 
 ## 8. REST API
 
-### 8.1. Общее
+### 8.1. General
 
-- База — `/api/v1/`. Аутентификация — `Authorization: Bearer <access JWT>`; без токена `401`.
-- Аварии видны только своему тенанту; чужая авария — `404`. Суперпользователь видит аварии всех
-  тенантов (в `list`, `summary`, `types`, карточке и действиях). `available-keys`, `preview` и
-  профили всегда работают в тенанте пользователя.
-- Пагинация списков: `page` (с 1) и `size` (по умолчанию 15), ответ `{"count": N, "results": […]}`.
-- Даты в ответах — ISO 8601 в UTC: `2026-09-14T10:18:00.412305Z`. Фильтры принимают ISO 8601 с
-  зоной: `2026-09-14T00:00:00+05:00`. `created_at` — Unix-время в миллисекундах.
-- Параметры-списки в query повторяются: `?severity=CRITICAL&severity=MAJOR`.
+- Base — `/api/v1/`. Authentication — `Authorization: Bearer <access JWT>`; without a token, `401`.
+- Alarms are visible only to their own tenant; another tenant's alarm returns `404`. A superuser sees the alarms of all
+  tenants (in `list`, `summary`, `types`, the card and actions). `available-keys`, `preview` and
+  profiles always work within the user's tenant.
+- List pagination: `page` (from 1) and `size` (15 by default), response `{"count": N, "results": […]}`.
+- Dates in responses are ISO 8601 in UTC: `2026-09-14T10:18:00.412305Z`. Filters accept ISO 8601 with a
+  zone: `2026-09-14T00:00:00+05:00`. `created_at` is Unix time in milliseconds.
+- List parameters in the query are repeated: `?severity=CRITICAL&severity=MAJOR`.
 
-**Права** — Django-права, проверяются на сервере. В фикстуре `users/fixtures/roles_permissions.yaml`
-выданы роли `TENANT_ADMIN`. UI-права `s-gen-alarms*` сервер не проверяет.
+**Permissions** are Django permissions, checked on the server. The `users/fixtures/roles_permissions.yaml` fixture
+grants them to the `TENANT_ADMIN` role. The server does not check the `s-gen-alarms*` UI permissions.
 
-| Право | Что открывает |
+| Permission | What it grants |
 |---|---|
-| `alarms.view_alarm` | Список, карточка, комментарии (чтение), `summary`, `types` |
-| `alarms.change_alarm` | Создание, правка и удаление своих комментариев |
-| `alarms.delete_alarm` | Удаление аварии |
+| `alarms.view_alarm` | List, card, comments (read), `summary`, `types` |
+| `alarms.change_alarm` | Creating, editing and deleting one's own comments |
+| `alarms.delete_alarm` | Deleting an alarm |
 | `alarms.ack_alarm` | `ack`, `bulk/ack` |
 | `alarms.clear_alarm` | `clear`, `bulk/clear` |
 | `alarms.assign_alarm` | `assign` |
-| `alarms.view_alarmrule` | Список и карточка правил, `rules/preview/` |
-| `alarms.add_alarmrule` | Создание правила |
-| `alarms.change_alarmrule` | Изменение правила и массовая замена (`rules/bulk/`) |
-| `alarms.delete_alarmrule` | Удаление правила |
+| `alarms.view_alarmrule` | Rule list and card, `rules/preview/` |
+| `alarms.add_alarmrule` | Creating a rule |
+| `alarms.change_alarmrule` | Changing a rule and bulk replacement (`rules/bulk/`) |
+| `alarms.delete_alarmrule` | Deleting a rule |
 | `main.view_deviceprofile` | `available-keys` |
-| `main.view_notificationsettings` / `main.change_notificationsettings` | Настройки уведомлений |
+| `main.view_notificationsettings` / `main.change_notificationsettings` | Notification settings |
 
-Нет права — `403 {"detail": "You do not have permission to perform this action."}`.
+No permission — `403 {"detail": "You do not have permission to perform this action."}`.
 
-| Метод и путь | Назначение |
+| Method and path | Purpose |
 |---|---|
-| `GET /api/v1/alarms/` | Журнал и активные аварии с фильтрами |
-| `GET /api/v1/alarms/<id>/` | Карточка |
-| `DELETE /api/v1/alarms/<id>/` | Удалить аварию с комментариями |
-| `POST /api/v1/alarms/<id>/ack/` | Квитировать |
-| `POST /api/v1/alarms/<id>/clear/` | Закрыть вручную |
-| `POST /api/v1/alarms/<id>/assign/` | Назначить / снять назначение |
-| `GET`, `POST /api/v1/alarms/<id>/comments/` | Комментарии |
-| `PUT`, `DELETE /api/v1/alarms/<id>/comments/<comment_id>/` | Правка и удаление своего комментария |
-| `POST /api/v1/alarms/bulk/ack/` | Квитировать списком |
-| `POST /api/v1/alarms/bulk/clear/` | Закрыть списком |
-| `GET /api/v1/alarms/summary/` | Счётчики для дашборда |
-| `GET /api/v1/alarms/types/` | Типы аварий, встречающиеся у тенанта |
-| `GET /api/v1/alarms/available-keys/` | Ключи для конструктора правил |
-| `GET`, `POST /api/v1/alarms/rules/` | Список правил и создание правила |
-| `GET`, `PUT`, `DELETE /api/v1/alarms/rules/<id>/` | Карточка правила, частичное изменение, удаление |
-| `POST /api/v1/alarms/rules/bulk/` | Заменить все правила профиля разом |
-| `POST /api/v1/alarms/rules/preview/` | Сухой прогон правил |
-| `GET /api/v1/alarms/rule-templates/` | Каталог шаблонов для конструктора |
-| `GET`, `PUT /api/v1/main/notification-settings/` | Настройки уведомлений тенанта (Telegram, WhatsApp, email) |
+| `GET /api/v1/alarms/` | Journal and active alarms with filters |
+| `GET /api/v1/alarms/<id>/` | Card |
+| `DELETE /api/v1/alarms/<id>/` | Delete an alarm with its comments |
+| `POST /api/v1/alarms/<id>/ack/` | Acknowledge |
+| `POST /api/v1/alarms/<id>/clear/` | Clear manually |
+| `POST /api/v1/alarms/<id>/assign/` | Assign / unassign |
+| `GET`, `POST /api/v1/alarms/<id>/comments/` | Comments |
+| `PUT`, `DELETE /api/v1/alarms/<id>/comments/<comment_id>/` | Edit and delete one's own comment |
+| `POST /api/v1/alarms/bulk/ack/` | Acknowledge a list |
+| `POST /api/v1/alarms/bulk/clear/` | Clear a list |
+| `GET /api/v1/alarms/summary/` | Counters for the dashboard |
+| `GET /api/v1/alarms/types/` | Alarm types that occur for the tenant |
+| `GET /api/v1/alarms/available-keys/` | Keys for the rule builder |
+| `GET`, `POST /api/v1/alarms/rules/` | Rule list and creating a rule |
+| `GET`, `PUT`, `DELETE /api/v1/alarms/rules/<id>/` | Rule card, partial update, delete |
+| `POST /api/v1/alarms/rules/bulk/` | Replace all of a profile's rules at once |
+| `POST /api/v1/alarms/rules/preview/` | Dry run of rules |
+| `GET /api/v1/alarms/rule-templates/` | Template catalog for the builder |
+| `GET`, `PUT /api/v1/main/notification-settings/` | Tenant notification settings (Telegram, WhatsApp, email) |
 
-Swagger: теги `Alarms` и `Alarm Rules`.
+Swagger: the `Alarms` and `Alarm Rules` tags.
 
-### 8.2. Правила
+### 8.2. Rules
 
-У правил свой CRUD: правило — строка, менять его можно по одному, не пересохраняя профиль.
-Рабочий цикл конструктора:
+Rules have their own CRUD: a rule is a row and can be changed one at a time without re-saving the profile.
+The builder's workflow:
 
-1. `GET /api/v1/alarms/available-keys/` — что можно выбрать в качестве ключа;
-2. `GET /api/v1/alarms/rules/?device_profile=<id>` — текущие правила профиля;
-3. `POST /api/v1/alarms/rules/preview/` — сколько устройств совпадёт прямо сейчас;
-4. `POST` или `PUT /api/v1/alarms/rules/…` — сохранить.
+1. `GET /api/v1/alarms/available-keys/` — what can be chosen as a key;
+2. `GET /api/v1/alarms/rules/?device_profile=<id>` — the profile's current rules;
+3. `POST /api/v1/alarms/rules/preview/` — how many devices would match right now;
+4. `POST` or `PUT /api/v1/alarms/rules/…` — save.
 
-**Список.** `GET /api/v1/alarms/rules/`
+**List.** `GET /api/v1/alarms/rules/`
 
-| Параметр | Значения |
+| Parameter | Values |
 |---|---|
-| `device_profile` | UUID профиля |
-| `alarm_type` | строка, повторяемый |
+| `device_profile` | Profile UUID |
+| `alarm_type` | string, repeatable |
 | `enabled` | `true` / `false` |
-| `search_value` | подстрока в типе аварии или имени профиля |
-| `sort_by` | `alarm_type`, `created_at`, с `-` для убывания. По умолчанию `alarm_type` |
-| `page`, `size` | `size` по умолчанию 50 |
+| `search_value` | substring of the alarm type or profile name |
+| `sort_by` | `alarm_type`, `created_at`, with `-` for descending. Defaults to `alarm_type` |
+| `page`, `size` | `size` defaults to 50 |
 
-**Создание.** `POST /api/v1/alarms/rules/` — тело это объект `DeviceProfileAlarm` из
-[§4](#4-формат-правил) плюс `device_profile` и необязательный `enabled`:
+**Create.** `POST /api/v1/alarms/rules/` — the body is a `DeviceProfileAlarm` object from
+[§4](#4-rule-format) plus `device_profile` and an optional `enabled`:
 
 ```json
 {
@@ -1469,7 +1504,7 @@ Swagger: теги `Alarms` и `Alarm Rules`.
         ],
         "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}
       },
-      "alarmDetails": "Температура ${Room Temperature}° в номере ${room}"
+      "alarmDetails": "Temperature ${Room Temperature}° in room ${room}"
     }
   },
   "clearRule": {
@@ -1483,7 +1518,7 @@ Swagger: теги `Alarms` и `Alarm Rules`.
 }
 ```
 
-Ответ `201` — правило с дописанными значениями по умолчанию:
+Response `201` — the rule with defaults filled in:
 
 ```json
 {
@@ -1492,7 +1527,7 @@ Swagger: теги `Alarms` и `Alarm Rules`.
   "device_profile_name": "Thermostats",
   "enabled": true,
   "alarmType": "High Temperature",
-  "createRules": {"MINOR": {"condition": {"condition": ["…"], "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}}, "alarmDetails": "Температура ${Room Temperature}° в номере ${room}"}},
+  "createRules": {"MINOR": {"condition": {"condition": ["…"], "spec": {"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5}}}, "alarmDetails": "Temperature ${Room Temperature}° in room ${room}"}},
   "clearRule": {"condition": {"condition": ["…"], "spec": {"type": "SIMPLE"}}},
   "propagate": false,
   "propagateRelationTypes": [],
@@ -1503,24 +1538,24 @@ Swagger: теги `Alarms` и `Alarm Rules`.
 }
 ```
 
-`tenant` правила берётся из профиля и в теле не принимается. Профиль другого тенанта — `400`.
-Второе правило того же `alarm_type` на том же профиле — `400` (на разных профилях можно).
+The rule's `tenant` is taken from the profile and is not accepted in the body. Another tenant's profile — `400`.
+A second rule with the same `alarm_type` on the same profile — `400` (on different profiles it is allowed).
 
-**Изменение.** `PUT /api/v1/alarms/rules/<id>/` — **частичное**: отправляйте только то, что
-меняется. Выключить правило, не пересылая условия:
+**Update.** `PUT /api/v1/alarms/rules/<id>/` is **partial**: send only what
+changes. Turning a rule off without resending its conditions:
 
 ```json
 {"enabled": false}
 ```
 
-Если в теле есть `createRules` или `clearRule`, они проверяются целиком — валидатор не умеет
-проверять «половину дерева».
+If the body contains `createRules` or `clearRule`, they are validated in full — the validator cannot
+check "half a tree".
 
-**Удаление.** `DELETE /api/v1/alarms/rules/<id>/` → `204`. Уже поднятые этим правилом аварии
-остаются в журнале и больше никем не снимаются — закройте их `bulk/clear/`, если они не нужны.
+**Delete.** `DELETE /api/v1/alarms/rules/<id>/` → `204`. Alarms already raised by this rule
+stay in the journal and are no longer cleared by anyone — clear them with `bulk/clear/` if they are not needed.
 
-**Массовая замена.** `POST /api/v1/alarms/rules/bulk/` — тело это тот самый массив, который раньше
-лежал в `profile_data["alarms"]`, поэтому это же путь импорта профиля из ThingsBoard:
+**Bulk replacement.** `POST /api/v1/alarms/rules/bulk/` — the body is the very array that used to
+live in `profile_data["alarms"]`, so this is also the way to import a profile from ThingsBoard:
 
 ```json
 {
@@ -1529,26 +1564,26 @@ Swagger: теги `Alarms` и `Alarm Rules`.
 }
 ```
 
-Сопоставление идёт по `alarmType`: правило из массива обновляет существующую строку того же типа
-(id и аудит сохраняются), новые типы создаются, отсутствующие в массиве — удаляются. Пустой
-массив очищает правила профиля. Ответ `200` — итоговый список правил профиля.
+Matching is by `alarmType`: a rule from the array updates the existing row of the same type
+(the id and audit are kept), new types are created, and those missing from the array are deleted. An empty
+array clears the profile's rules. Response `200` — the resulting list of the profile's rules.
 
-Ошибка валидации — `400`, формат в [4.11](#411-валидация): для одного правила пути начинаются
-сразу с `createRules`, для `bulk` — с `alarms` и индекса.
+A validation error returns `400`, in the format from [4.11](#411-validation): for a single rule the paths start
+directly with `createRules`, for `bulk` with `alarms` and an index.
 
-Изменения подхватываются вычислителем на следующем проходе, не позже
-`ALARMS_EVAL_INTERVAL_SEC` секунд.
+Changes are picked up by the evaluator on the next pass, no later than
+`ALARMS_EVAL_INTERVAL_SEC` seconds.
 
 <a id="preview"></a>
 
-**Сухой прогон.** `POST /api/v1/alarms/rules/preview/`
+**Dry run.** `POST /api/v1/alarms/rules/preview/`
 
 ```json
 {"device_profile": "7c1e2a8e-3b0f-4a8e-9f0d-51b7e0c7a4d2", "alarms": [{"alarmType": "High Temperature", "createRules": {"…": "…"}}]}
 ```
 
-Без `alarms` прогоняются **включённые** правила профиля, то есть «что сработает сейчас».
-Ничего не пишет.
+Without `alarms`, the profile's **enabled** rules are run, i.e. "what would fire now".
+Writes nothing.
 
 ```json
 {
@@ -1562,7 +1597,7 @@ Swagger: теги `Alarms` и `Alarm Rules`.
           "spec": "DURATION",
           "matched_count": 2,
           "sample": [
-            {"id": "9a4d7c2e-1f3b-4c5d-8e6f-7a8b9c0d1e2f", "name": "Thermostat 305", "room": "305", "message": "Температура 27.6° в номере 305"}
+            {"id": "9a4d7c2e-1f3b-4c5d-8e6f-7a8b9c0d1e2f", "name": "Thermostat 305", "room": "305", "message": "Temperature 27.6° in room 305"}
           ]
         }
       ],
@@ -1572,15 +1607,15 @@ Swagger: теги `Alarms` и `Alarm Rules`.
 }
 ```
 
-- `matched_count` — у скольких из `device_count` устройств **все фильтры** условия истинны сейчас;
-  `sample` — до пяти примеров с отрендеренным сообщением;
-- `spec` и `schedule` **игнорируются**: превью знает только «сейчас», а не «сколько держится»;
-- `matched_count` близко к `device_count` — почти наверняка ошибка в пороге или операции.
+- `matched_count` — how many of the `device_count` devices have **all filters** of the condition true right now;
+  `sample` — up to five examples with the rendered message;
+- `spec` and `schedule` **are ignored**: the preview only knows "now", not "how long it has held";
+- a `matched_count` close to `device_count` is almost certainly a mistake in the threshold or the operation.
 
 <a id="rule-templates"></a>
 
-**Шаблоны.** `GET /api/v1/alarms/rule-templates/` — готовые правила для кнопки «добавить типовое
-правило». Право — `alarms.view_alarmrule`.
+**Templates.** `GET /api/v1/alarms/rule-templates/` — ready-made rules for the "add a typical
+rule" button. Permission — `alarms.view_alarmrule`.
 
 ```json
 {
@@ -1596,20 +1631,21 @@ Swagger: теги `Alarms` и `Alarm Rules`.
 }
 ```
 
-- `rule` — готовый `DeviceProfileAlarm`: его можно отправить в `POST /alarms/rules/` как есть,
-  добавив `device_profile`;
-- `requires` — ключи, на которые опирается шаблон. Сверьте их с
-  [`available-keys`](#available-keys): правило на ключ, который тенант не присылает, не сработает
-  никогда, и узнать об этом иначе нельзя;
-- каталог живёт в `apps/alarms/templates.py`, тот же модуль используют тесты — кривой шаблон не
-  доедет до панели;
-- сейчас их четыре: два правила связи и два температурных.
+- `rule` is a ready `DeviceProfileAlarm`: it can be sent to `POST /alarms/rules/` as is,
+  with `device_profile` added;
+- `requires` lists the keys the template relies on. Check them against
+  [`available-keys`](#available-keys): a rule on a key the tenant does not send will never fire,
+  and there is no other way to find out;
+- the catalog lives in `apps/alarms/templates.py`, and the tests use the same module, so a broken template
+  never reaches the panel;
+- there are four of them now: two connectivity rules and two temperature rules;
+- `name` and `description` are returned as they are in the catalog (currently in Russian).
 
-Ничего не засеивается автоматически: шаблон попадает к тенанту только когда его выбрали.
+Nothing is seeded automatically: a template reaches a tenant only when it is chosen.
 
 <a id="available-keys"></a>
 
-**Каталог ключей.** `GET /api/v1/alarms/available-keys/`
+**Key catalog.** `GET /api/v1/alarms/available-keys/`
 
 ```json
 {
@@ -1619,54 +1655,54 @@ Swagger: теги `Alarms` и `Alarm Rules`.
 }
 ```
 
-- `timeseries` — ключи, которые реально есть в `TsKvLatest` активных устройств тенанта;
-- `attributes` — ключи `SERVER_SCOPE`-атрибутов этих устройств;
-- `entity_fields` — белый список, всегда целиком;
-- `search_value` — подстрока без учёта регистра, фильтрует `timeseries` и `attributes`;
-- кеш 5 минут на тенант: новый ключ появится в каталоге с задержкой.
+- `timeseries` — keys that actually exist in the `TsKvLatest` of the tenant's active devices;
+- `attributes` — the keys of these devices' `SERVER_SCOPE` attributes;
+- `entity_fields` — the whitelist, always in full;
+- `search_value` — a case-insensitive substring, filters `timeseries` and `attributes`;
+- a 5-minute cache per tenant: a new key appears in the catalog with a delay.
 
-### 8.3. Журнал и активные аварии
+### 8.3. Journal and active alarms
 
 `GET /api/v1/alarms/`
 
-| Параметр | Значения | Смысл |
+| Parameter | Values | Meaning |
 |---|---|---|
-| `alarm_type` | строка, повторяемый | Тип аварии |
-| `severity` | severity, повторяемый | |
-| `status` | `ACTIVE`, `CLEARED`, `UNACK`, `ACK`, `ACTIVE_UNACK`, `ACTIVE_ACK`, `CLEARED_UNACK`, `CLEARED_ACK` | `ACTIVE`/`CLEARED` — только по `cleared`, `UNACK`/`ACK` — только по `acknowledged` |
-| `device` | UUID | Устройство — источник **или** цель распространения |
-| `room` | UUID | `Alarm.room` — номер устройства на момент создания аварии |
-| `assignee` | UUID или `none` | `none` — неназначенные |
-| `date_from`, `date_to` | ISO 8601 | По `start_ts`, границы включительно |
-| `search_value` | строка | Подстрока в типе, имени устройства или номере комнаты |
-| `sort_by` | `start_ts`, `end_ts`, `severity`, `alarm_type`, с `-` для убывания; повторяемый | По умолчанию `-start_ts` |
-| `page`, `size` | целые | |
+| `alarm_type` | string, repeatable | Alarm type |
+| `severity` | severity, repeatable | |
+| `status` | `ACTIVE`, `CLEARED`, `UNACK`, `ACK`, `ACTIVE_UNACK`, `ACTIVE_ACK`, `CLEARED_UNACK`, `CLEARED_ACK` | `ACTIVE`/`CLEARED` — by `cleared` only, `UNACK`/`ACK` — by `acknowledged` only |
+| `device` | UUID | The device is the originator **or** a propagation target |
+| `room` | UUID | `Alarm.room` — the device's room at the time the alarm was created |
+| `assignee` | UUID or `none` | `none` — unassigned |
+| `date_from`, `date_to` | ISO 8601 | By `start_ts`, bounds inclusive |
+| `search_value` | string | Substring of the type, device name or room number |
+| `sort_by` | `start_ts`, `end_ts`, `severity`, `alarm_type`, with `-` for descending; repeatable | Defaults to `-start_ts` |
+| `page`, `size` | integers | |
 
-> `sort_by=severity` сортирует **по алфавиту** (`CRITICAL`, `INDETERMINATE`, `MAJOR`, `MINOR`,
-> `WARNING`), а не по важности. Порядок по важности делайте на клиенте.
+> `sort_by=severity` sorts **alphabetically** (`CRITICAL`, `INDETERMINATE`, `MAJOR`, `MINOR`,
+> `WARNING`), not by importance. Do ordering by importance on the client.
 
-Примеры:
+Examples:
 
 ```http
-# Активные неквитированные CRITICAL и MAJOR
+# Active unacknowledged CRITICAL and MAJOR
 GET /api/v1/alarms/?status=ACTIVE_UNACK&severity=CRITICAL&severity=MAJOR
 
-# Журнал отключений шлюзов за сентябрь (границы по Ташкенту)
+# Journal of gateway outages for September (bounds in Tashkent time)
 GET /api/v1/alarms/?alarm_type=Gateway%20Offline&date_from=2026-09-01T00:00:00%2B05:00&date_to=2026-09-30T23:59:59%2B05:00&size=100
 
-# Вкладка «Аварии» в карточке устройства (включая аварии его шлюза)
+# The "Alarms" tab in a device card (including the alarms of its gateway)
 GET /api/v1/alarms/?device=9a4d7c2e-1f3b-4c5d-8e6f-7a8b9c0d1e2f&status=ACTIVE
 
-# Активные без исполнителя
+# Active alarms without an assignee
 GET /api/v1/alarms/?status=ACTIVE&assignee=none
 
-# Поиск по номеру 305
+# Search by room 305
 GET /api/v1/alarms/?search_value=305
 ```
 
-`+` в зоне времени в query кодируется как `%2B`, иначе он превратится в пробел.
+A `+` in a time zone in the query is encoded as `%2B`, otherwise it turns into a space.
 
-Ответ:
+Response:
 
 ```json
 {
@@ -1709,33 +1745,33 @@ GET /api/v1/alarms/?search_value=305
 }
 ```
 
-`duration_ms` = `clear_ts − start_ts` для закрытых и `end_ts − start_ts` для активных.
+`duration_ms` = `clear_ts − start_ts` for cleared alarms and `end_ts − start_ts` for active ones.
 
-**Карточка** — `GET /api/v1/alarms/<id>/`, тот же объект.
+**Card** — `GET /api/v1/alarms/<id>/`, the same object.
 
-**Удаление** — `DELETE /api/v1/alarms/<id>/` → `204`. Удаляет аварию вместе с комментариями,
-журнал теряет инцидент. Для истории лучше закрывать, а не удалять. Если условие правила ещё
-выполнено, на следующем проходе появится новая авария.
+**Delete** — `DELETE /api/v1/alarms/<id>/` → `204`. Deletes the alarm together with its comments;
+the journal loses the incident. For the sake of history, clearing is better than deleting. If the rule's condition still
+holds, a new alarm appears on the next pass.
 
-### 8.4. Действия над аварией
+### 8.4. Actions on an alarm
 
-**Квитировать** — `POST /api/v1/alarms/<id>/ack/`, без тела → `200` и объект аварии.
-Идемпотентно: повторный вызов ничего не меняет и комментарий не пишет.
+**Acknowledge** — `POST /api/v1/alarms/<id>/ack/`, no body → `200` and the alarm object.
+Idempotent: a repeated call changes nothing and writes no comment.
 
-**Закрыть** — `POST /api/v1/alarms/<id>/clear/`, без тела → `200`. Пишет `SYSTEM`-комментарий
-`Cleared manually`. Уже закрытая — возвращается без изменений.
+**Clear** — `POST /api/v1/alarms/<id>/clear/`, no body → `200`. Writes the `SYSTEM` comment
+`Cleared manually`. An already cleared alarm is returned unchanged.
 
-**Назначить** — `POST /api/v1/alarms/<id>/assign/`:
+**Assign** — `POST /api/v1/alarms/<id>/assign/`:
 
 ```json
 {"assignee": "5b8f0c0e-7d8f-4a55-9d4e-0f2f6d1f7a10"}
 ```
 
-Снять назначение — `{"assignee": null}` (или пустое тело). Исполнитель должен быть активным
-пользователем того же тенанта, что и авария, иначе `404`. Каждый вызов пишет `SYSTEM`-комментарий
-`ASSIGNED`/`UNASSIGNED`.
+Unassign — `{"assignee": null}` (or an empty body). The assignee must be an active
+user of the same tenant as the alarm, otherwise `404`. Every call writes an `ASSIGNED`/`UNASSIGNED`
+`SYSTEM` comment.
 
-**Массово** — `POST /api/v1/alarms/bulk/ack/` и `POST /api/v1/alarms/bulk/clear/`:
+**In bulk** — `POST /api/v1/alarms/bulk/ack/` and `POST /api/v1/alarms/bulk/clear/`:
 
 ```json
 {"ids": ["0b3e6a52-4d7e-4f0e-9a51-2d5b8a0f3c11", "7d9e0f1a-2b3c-4d5e-8f60-718293a4b5c6"]}
@@ -1745,19 +1781,19 @@ GET /api/v1/alarms/?search_value=305
 {"updated": 1, "requested": 2}
 ```
 
-От 1 до 500 id. `updated` — сколько строк реально изменилось: уже квитированные (закрытые),
-несуществующие и чужие id молча пропускаются.
+From 1 to 500 ids. `updated` is how many rows actually changed: already acknowledged (cleared),
+non-existent and other tenants' ids are silently skipped.
 
-### 8.5. Комментарии
+### 8.5. Comments
 
-`GET /api/v1/alarms/<id>/comments/` — массив без пагинации, новые сверху:
+`GET /api/v1/alarms/<id>/comments/` — an array without pagination, newest first:
 
 ```json
 [
   {
     "id": "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f",
     "alarm_comment_type": "OTHER",
-    "comment": {"text": "Техник выехал, ETA 15 минут"},
+    "comment": {"text": "Technician on the way, ETA 15 minutes"},
     "user": {"id": "5b8f0c0e-7d8f-4a55-9d4e-0f2f6d1f7a10", "email": "engineer@hotel.uz"},
     "created_at": 1789381332000
   },
@@ -1771,18 +1807,18 @@ GET /api/v1/alarms/?search_value=305
 ]
 ```
 
-`POST /api/v1/alarms/<id>/comments/` с `{"text": "…"}` (до 4000 символов) → `201` и комментарий.
+`POST /api/v1/alarms/<id>/comments/` with `{"text": "…"}` (up to 4000 characters) → `201` and the comment.
 
-`PUT /api/v1/alarms/<id>/comments/<comment_id>/` с тем же телом → `200`, в `comment` появляются
-`edited: true` и `edited_at`. `DELETE` → `204`. Оба — только для **своего** комментария типа
+`PUT /api/v1/alarms/<id>/comments/<comment_id>/` with the same body → `200`; `edited: true` and `edited_at`
+appear in `comment`. `DELETE` → `204`. Both only for **one's own** comment of type
 `OTHER`:
 
-| Ситуация | Ответ |
+| Situation | Response |
 |---|---|
-| Комментарий `SYSTEM` | `403 {"detail": "System comments are read-only."}` |
-| Чужой комментарий | `403 {"detail": "You can only edit your own comments."}` |
+| A `SYSTEM` comment | `403 {"detail": "System comments are read-only."}` |
+| Someone else's comment | `403 {"detail": "You can only edit your own comments."}` |
 
-### 8.6. Сводка и типы
+### 8.6. Summary and types
 
 `GET /api/v1/alarms/summary/?date_from=2026-09-01T00:00:00Z&date_to=2026-09-14T23:59:59Z`
 
@@ -1796,14 +1832,14 @@ GET /api/v1/alarms/?search_value=305
 }
 ```
 
-Параметры — `date_from`, `date_to` (по `start_ts`) и `status`. `active` и `unacknowledged`
-считаются внутри той же выборки: `active` — незакрытые, `unacknowledged` — незакрытые и
-неквитированные. `by_*` отсортированы по убыванию количества.
+Parameters — `date_from`, `date_to` (by `start_ts`) and `status`. `active` and `unacknowledged`
+are counted within the same selection: `active` — uncleared, `unacknowledged` — uncleared and
+unacknowledged. `by_*` are sorted by descending count.
 
-`GET /api/v1/alarms/types/` → `{"results": ["Device Offline", "Gateway Offline"]}` — типы, которые
-**уже встречались** в аварийной таблице тенанта (не типы из правил профилей).
+`GET /api/v1/alarms/types/` → `{"results": ["Device Offline", "Gateway Offline"]}` — the types that
+**have already occurred** in the tenant's alarm table (not the types from the profiles' rules).
 
-### 8.7. Настройки уведомлений тенанта
+### 8.7. Tenant notification settings
 
 `GET /api/v1/main/notification-settings/`:
 
@@ -1820,62 +1856,62 @@ GET /api/v1/alarms/?search_value=305
 }
 ```
 
-`PUT` — **частичный**: можно отправить только меняющиеся поля, в том числе внутри блока канала —
-блоки сливаются по ключам, соседние каналы и поля не затрагиваются.
+`PUT` is **partial**: you can send only the fields that change, including inside a channel block —
+blocks are merged by key, and neighbouring channels and fields are left untouched.
 
 ```json
 {"min_severity": "MAJOR", "channels": {"telegram": {"enabled": true, "chat_id": "-1002345678901"}}}
 ```
 
-| Поле | Тип | По умолчанию | Смысл |
+| Field | Type | Default | Meaning |
 |---|---|---|---|
-| `notify_delay_sec` | 0…86400 | `300` | Задержка перед уведомлением о новой аварии (защита от флаппинга), общая для каналов |
-| `min_severity` | severity | `MINOR` | Нижняя граница: уведомлять об этой severity и выше, общая для каналов |
-| `channels.<канал>.enabled` | bool | `false` | Выключатель канала |
-| `channels.<канал>.last_error` | строка, только чтение | `null` | Последняя постоянная ошибка канала. Сбрасывается при любом `PUT`, затрагивающем блок этого канала |
-| `channels.telegram.chat_id` | строка до 64 | `""` | Id чата или группы |
-| `channels.whatsapp.recipients` | список телефонов, до 20 | `[]` | Номера в международном формате. Хранятся цифрами E.164 без `+` (`998901234567`), пробелы, дефисы и скобки убираются, дубли тоже |
-| `channels.whatsapp.phone_number_id` | цифры | `""` | Phone number ID номера отеля (не сам номер). Обязателен для `enabled: true` |
-| `channels.whatsapp.access_token` | строка, только запись | — | Постоянный токен System User отеля. Обязателен для `enabled: true`. Хранится зашифрованным, в ответе не возвращается; `""` удаляет |
-| `channels.whatsapp.has_access_token` | bool, только чтение | `false` | Задан ли токен |
-| `channels.email.recipients` | список email, до 20 | `[]` | Получатели. Приводятся к нижнему регистру, дубли убираются |
+| `notify_delay_sec` | 0…86400 | `300` | Delay before notifying about a new alarm (flapping protection), shared by the channels |
+| `min_severity` | severity | `MINOR` | Lower bound: notify about this severity and above, shared by the channels |
+| `channels.<channel>.enabled` | bool | `false` | Channel switch |
+| `channels.<channel>.last_error` | string, read-only | `null` | The channel's last permanent error. Reset by any `PUT` that touches this channel's block |
+| `channels.telegram.chat_id` | string up to 64 | `""` | Chat or group id |
+| `channels.whatsapp.recipients` | list of phone numbers, up to 20 | `[]` | Numbers in international format. Stored as E.164 digits without `+` (`998901234567`); spaces, dashes and parentheses are removed, and so are duplicates |
+| `channels.whatsapp.phone_number_id` | digits | `""` | The Phone number ID of the hotel's number (not the number itself). Required for `enabled: true` |
+| `channels.whatsapp.access_token` | string, write-only | — | The hotel's permanent System User token. Required for `enabled: true`. Stored encrypted, not returned in responses; `""` deletes it |
+| `channels.whatsapp.has_access_token` | bool, read-only | `false` | Whether a token is set |
+| `channels.email.recipients` | list of emails, up to 20 | `[]` | Recipients. Lower-cased, duplicates removed |
 
-В ответе всегда есть все каналы, которые знает сервер (`alarms/channels/registry.py`), с
-умолчаниями для ненастроенных.
+The response always contains every channel the server knows about (`alarms/channels/registry.py`), with
+defaults for those not configured.
 
-Хранится в `Tenant.additional_info["notification_settings"]`, другие блоки `additional_info` не
-затрагиваются.
+Stored in `Tenant.additional_info["notification_settings"]`; other `additional_info` blocks are not
+touched.
 
-### 8.8. Тумблер «уведомлять о потере связи» на устройстве
+### 8.8. The "notify about connectivity loss" toggle on a device
 
-Сериализатор устройства (`/api/v1/main/device/…`) содержит булево поле `notify_on_offline` —
-обёртку над серверным атрибутом `notifyOnOffline`:
+The device serializer (`/api/v1/main/device/…`) has a boolean `notify_on_offline` field —
+a wrapper around the `notifyOnOffline` server attribute:
 
-- в ответах — значение атрибута; нет атрибута — `true`;
-- при создании устройства — значение из тела, по умолчанию `true`; заодно пишется
-  `gatewayActive = true`;
-- в `PUT` устройства поле необязательно: не передали — атрибут не меняется.
+- in responses — the attribute value; no attribute means `true`;
+- on device creation — the value from the body, `true` by default; `gatewayActive = true` is written
+  along with it;
+- in a device `PUT` the field is optional: if it is not passed, the attribute does not change.
 
 ```json
 {"notify_on_offline": false}
 ```
 
-(в составе обычного тела `PUT /api/v1/main/device/<id>/`).
+(as part of the regular `PUT /api/v1/main/device/<id>/` body).
 
-`false` выключает для устройства правило `Device Offline` целиком — не только уведомления, но и
-сами аварии в журнале. На пользовательские правила тумблер влияет, только если они сами
-фильтруют по `notifyOnOffline`.
+`false` turns off the `Device Offline` rule for the device entirely — not only notifications, but also
+the alarms themselves in the journal. The toggle affects user-defined rules only if they themselves
+filter by `notifyOnOffline`.
 
 ---
 
-## 9. WebSocket: стрим `alarms`
+## 9. WebSocket: the `alarms` stream
 
-Живой список аварий через v2-демультиплексор.
+A live list of alarms through the v2 demultiplexer.
 
-**Подключение:** `wss://<api-host>/api/ws/v2/?token=<access JWT>`. Неверный или просроченный
-токен — соединение закрывается с кодом `4001`.
+**Connection:** `wss://<api-host>/api/ws/v2/?token=<access JWT>`. An invalid or expired
+token closes the connection with code `4001`.
 
-**Подписка:**
+**Subscription:**
 
 ```json
 {
@@ -1893,11 +1929,11 @@ GET /api/v1/alarms/?search_value=305
 }
 ```
 
-`query_params` — те же фильтры, что у [`GET /api/v1/alarms/`](#83-журнал-и-активные-аварии), но
-списки передаются массивами (`"severity": ["MAJOR"]`, а не строкой). Если `status` не указан,
-стрим отдаёт **только активные** (`ACTIVE`); чтобы получить журнал, передайте `status` явно.
+`query_params` are the same filters as in [`GET /api/v1/alarms/`](#83-journal-and-active-alarms), but
+lists are passed as arrays (`"severity": ["MAJOR"]`, not a string). If `status` is not given,
+the stream returns **only active** alarms (`ACTIVE`); to get the journal, pass `status` explicitly.
 
-**Ответ** — сразу после подписки и затем при каждом изменении:
+**Response** — right after subscribing and then on every change:
 
 ```json
 {
@@ -1940,66 +1976,66 @@ GET /api/v1/alarms/?search_value=305
 }
 ```
 
-Объект аварии — тот же, что в REST, с одной особенностью всех v2-стримов: UUID внешних ключей
-(`tenant`, `originator`, `room`) приходят **без дефисов** (кодирует `UUIDEncoder`), а `id`,
-`propagate_entity_ids` и `assignee.id` — с дефисами. Сравнивайте идентификаторы в
-нормализованном виде.
+The alarm object is the same as in REST, with one quirk shared by all v2 streams: the UUIDs of foreign keys
+(`tenant`, `originator`, `room`) arrive **without dashes** (encoded by `UUIDEncoder`), while `id`,
+`propagate_entity_ids` and `assignee.id` have dashes. Compare identifiers in
+normalized form.
 
-**Когда приходит обновление.** В группу `alarms_<tenant_id>` публикуется событие, и сервер заново
-отправляет **всю страницу** для каждой подписки соединения с её `request_id` и фильтрами.
-Триггеры:
+**When an update arrives.** An event is published to the `alarms_<tenant_id>` group, and the server re-sends
+**the whole page** for each subscription of the connection, with its `request_id` and filters.
+Triggers:
 
-| Источник | Событие |
+| Source | Event |
 |---|---|
-| Вычислитель | Авария создана, эскалирована или снята |
+| Evaluator | An alarm was created, escalated or cleared |
 | API | `ack`, `clear`, `assign`, `DELETE`, `bulk/ack`, `bulk/clear` |
 
-Не триггерят: сдвиг `end_ts` и обновление `details` на очередном проходе, комментарии. Если
-в UI нужно «последнее значение» — перезапрашивайте карточку по REST.
+Not triggers: `end_ts` moving and `details` being updated on a regular pass, comments. If
+the UI needs "the latest value", re-fetch the card via REST.
 
-**Разовый список без подписки** — `"action": "list"` с теми же `query_params`.
+**A one-off list without a subscription** — `"action": "list"` with the same `query_params`.
 
-**Отписка:**
+**Unsubscribe:**
 
 ```json
 {"stream": "alarms", "payload": {"action": "list_unsubscribe", "request_id": 42}}
 ```
 
-> Отписка выводит соединение из группы тенанта целиком, и обновления перестанут приходить
-> **всем** подпискам `alarms` этого соединения. Держите одну подписку на соединение, а при смене
-> фильтров делайте `list_unsubscribe` → `list_subscribe` с новыми `query_params`.
+> Unsubscribing removes the connection from the tenant group entirely, and updates stop arriving
+> for **all** `alarms` subscriptions of that connection. Keep one subscription per connection, and when the
+> filters change, do `list_unsubscribe` → `list_subscribe` with the new `query_params`.
 
-Ошибка валидации `query_params` приходит в `payload.errors` с `response_status: 400`.
+A `query_params` validation error arrives in `payload.errors` with `response_status: 400`.
 
-**Старый стрим `current_alarms`** (`InactiveDeviceAttributeConsumer`) отдаёт атрибуты
-`active == false` без истории и остаётся до перевода фронтенда на `alarms`.
+**The old `current_alarms` stream** (`InactiveDeviceAttributeConsumer`) returns `active == false`
+attributes without history and stays until the frontend is moved to `alarms`.
 
 ---
 
-## 10. Уведомления в Telegram
+## 10. Telegram notifications
 
-Один бот на всю инсталляцию (токен в env), у каждого тенанта — свой чат.
+One bot for the whole installation (token in env), each tenant has its own chat.
 
-### 10.1. Настройка
+### 10.1. Setup
 
-1. Создайте бота у [@BotFather](https://t.me/BotFather) и получите токен. Можно переиспользовать
-   бота Alertmanager из `deploy/monitoring/` — env-файлы у стеков разные, коллизии нет.
-2. Пропишите токен в `deploy/.env` и пересоздайте сервисы, в которых работает Celery (диспетчер
-   выполняется в `celery-low`):
+1. Create a bot with [@BotFather](https://t.me/BotFather) and get a token. You can reuse
+   the Alertmanager bot from `deploy/monitoring/` — the stacks have different env files, there is no collision.
+2. Put the token in `deploy/.env` and recreate the services that run Celery (the dispatcher
+   runs in `celery-low`):
 
    ```bash
    TELEGRAM_BOT_TOKEN=1234567890:AAH...
    ```
 
-3. Добавьте бота в группу (или администратором в канал) и отправьте в группу любое сообщение.
-4. Узнайте id чата:
+3. Add the bot to a group (or as an administrator to a channel) and send any message to the group.
+4. Find the chat id:
 
    ```bash
    curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates" | jq '.result[].message.chat | {id, title}'
    ```
 
-   У групп id отрицательный, у супергрупп начинается с `-100`.
-5. Включите уведомления тенанта:
+   Group ids are negative; supergroup ids start with `-100`.
+5. Enable notifications for the tenant:
 
    ```http
    PUT /api/v1/main/notification-settings/
@@ -2008,7 +2044,7 @@ GET /api/v1/alarms/?search_value=305
    {"channels": {"telegram": {"enabled": true, "chat_id": "-1002345678901"}}}
    ```
 
-6. Проверьте доставку вручную (сообщение уйдёт, только если есть аварии к отправке):
+6. Check delivery manually (a message is sent only if there are alarms to send):
 
    ```bash
    docker exec -it celery-low python manage.py shell -c \
@@ -2016,44 +2052,45 @@ GET /api/v1/alarms/?search_value=305
    # {'tenants': 1, 'raised': 2, 'cleared': 0, 'failed': 0}
    ```
 
-   Если после этого `GET /api/v1/main/notification-settings/` показывает `channels.telegram.last_error` —
-   Telegram отверг чат (см. 10.5).
+   If after that `GET /api/v1/main/notification-settings/` shows `channels.telegram.last_error`,
+   Telegram rejected the chat (see 10.5).
 
-### 10.2. Как работает диспетчер
+### 10.2. How the dispatcher works
 
-Задача `alarms.tasks.dispatch_notifications` — beat раз в 60 с, очередь `low`. Состояние хранится
-в таблице `alarms_alarm_notification` (`AlarmNotification`): строка на пару (авария, канал) с
-`raised_at` — когда канал сообщил о срабатывании — и `cleared_at` — когда о снятии. Нет строки —
-канал об аварии не сообщал. Повторный запуск ничего не отправит повторно, а каналы доставляются
-независимо: ошибка почты не задерживает Telegram и наоборот, и
-канал, который восстановился, догоняет пропущенное, не дублируя другой.
+The `alarms.tasks.dispatch_notifications` task — beat every 60 s, `low` queue. State is stored
+in the `alarms_alarm_notification` table (`AlarmNotification`): a row per (alarm, channel) pair with
+`raised_at` — when the channel reported the alarm — and `cleared_at` — when it reported the clear. No row means
+the channel has not reported the alarm. A repeated run sends nothing twice, and the channels are delivered
+independently: an email error does not delay Telegram and vice versa, and
+a channel that has recovered catches up on what it missed without duplicating the other one.
 
-Для каждого тенанта и каждого включённого у него канала (Telegram — `enabled` и непустой
-`chat_id`; email и WhatsApp — `enabled` и непустой `recipients`) канал делится на **цели**:
-у Telegram и email одна цель (ключ `telegram` / `email`), у WhatsApp — по цели на номер
-(`whatsapp:<номер>`), потому что каждое сообщение — отдельный платный вызов. По строкам каждой
-цели:
+For each tenant and each of its enabled channels (Telegram — `enabled` and a non-empty
+`chat_id`; email and WhatsApp — `enabled` and a non-empty `recipients`), the channel is split into **targets**:
+Telegram and email have one target (key `telegram` / `email`), WhatsApp has a target per number
+(`whatsapp:<number>`), because every message is a separate paid call. Per target's rows:
 
-1. **Новые** — аварии, у которых `cleared = false`, нет строки `AlarmNotification` канала,
-   `start_ts ≤ now − notify_delay_sec` и severity не ниже `min_severity`.
-2. **Снятые** — аварии, у которых `cleared = true`, а строка канала есть и её `cleared_at IS NULL`. Уведомление о снятии уходит только для аварий, о которых
-   сообщали.
-3. Нет ни тех, ни других — тенант пропускается.
-4. Одно сообщение на цель за тик: обе секции, до 20 строк в каждой, плюс «… и ещё N».
-5. Сразу после успешной отправки цели создаются её строки (новые) или проставляется
-   `cleared_at` (снятые). При ошибке ничего не пишется, и цель повторяется на следующем тике
-   **одна** — получатели, которым уже дошло, повторно сообщение не получат.
-6. Постоянные ошибки целей канала собираются вместе и пишутся в `last_error` канала.
-   `last_error` перед записью перечитывается из базы под блокировкой, так что настройки,
-   сохранённые во время тика (новый токен), не затираются.
-7. Проход ограничен `TIME_BUDGET_SEC` = 240 с (мягкий лимит Celery — 300 с). Исчерпав бюджет,
-   диспетчер останавливается **между** целями (`out_of_time` в статистике), остаток уходит на
-   следующем тике. Иначе Celery мог бы прервать задачу между отправкой и записью строки, и
-   сообщение ушло бы повторно.
+1. **New** — alarms with `cleared = false`, no `AlarmNotification` row for the channel,
+   `start_ts ≤ now − notify_delay_sec` and a severity not below `min_severity`.
+2. **Cleared** — alarms with `cleared = true` that have a channel row with `cleared_at IS NULL`. A clear notification is sent only for alarms that
+   were reported.
+3. Neither — the tenant is skipped.
+4. One message per target per tick: both sections, up to 20 lines each, plus "… and N more".
+5. Right after a target is sent successfully, its rows are created (new) or `cleared_at` is
+   set (cleared). On an error nothing is written, and on the next tick only **that target**
+   is retried — recipients who already got the message do not get it again.
+6. Permanent errors of a channel's targets are collected together and written to the channel's `last_error`.
+   `last_error` is re-read from the database under a lock before writing, so settings
+   saved during the tick (a new token) are not overwritten.
+7. A pass is limited by `TIME_BUDGET_SEC` = 240 s (the Celery soft limit is 300 s). Having used up the budget,
+   the dispatcher stops **between** targets (`out_of_time` in the stats), and the rest goes out on the
+   next tick. Otherwise Celery could interrupt the task between sending and writing the row, and the
+   message would be sent again.
 
-Лимит 10 сообщений в минуту считается на цель: у WhatsApp — на каждый номер.
+The limit of 10 messages per minute is counted per target: for WhatsApp, per number.
 
-### 10.3. Как выглядит сообщение
+### 10.3. What a message looks like
+
+The message texts are quoted verbatim as the dispatcher produces them:
 
 ```text
 Grand Hotel Tashkent
@@ -2066,61 +2103,61 @@ Grand Hotel Tashkent
 🟠 14.09 15:40 · 412 — Устройство Thermostat 412 не на связи
 ```
 
-- Заголовки жирные (`parse_mode=HTML`), название и тексты экранируются.
-- Иконка — severity: 🔴 `CRITICAL`, 🟠 `MAJOR`, 🟡 `MINOR`, 🔵 `WARNING`, ⚪ `INDETERMINATE`.
-- Время — `start_ts` для новых и `clear_ts` для снятых, со сдвигом на
-  `additional_info["general_settings"]["timezone"]` тенанта (целое число часов; в примере `+5`).
-- `· 305` — номер комнаты аварии, если он есть.
-- Текст — `details["message"]`, иначе `alarm_type`.
-- Сообщение длиннее 4096 символов обрезается.
+- Headings are bold (`parse_mode=HTML`); the name and the texts are escaped.
+- The icon is the severity: 🔴 `CRITICAL`, 🟠 `MAJOR`, 🟡 `MINOR`, 🔵 `WARNING`, ⚪ `INDETERMINATE`.
+- The time is `start_ts` for new alarms and `clear_ts` for cleared ones, shifted by the tenant's
+  `additional_info["general_settings"]["timezone"]` (a whole number of hours; `+5` in the example).
+- `· 305` is the alarm's room number, if there is one.
+- The text is `details["message"]`, otherwise `alarm_type`.
+- A message longer than 4096 characters is truncated.
 
-### 10.4. Задержки на примере `Device Offline`
+### 10.4. Delays, using `Device Offline` as an example
 
-| Момент | Что происходит |
+| Moment | What happens |
 |---|---|
-| T | `active` устройства стал `false` |
-| T + до 30 с | Первый проход видит условие, начинается отсчёт `DURATION` |
-| ≈ T + 10–10,5 мин | Авария создана (`start_ts`) — видна в журнале и WS |
-| ≈ `start_ts` + 5–6 мин | Сообщение «Новые аварии» (`notify_delay_sec = 300`, тик диспетчера 60 с) |
-| `active` стал `true` | До 30 с — авария снята; ещё до 60 с — «Снятые аварии» |
+| T | The device's `active` became `false` |
+| T + up to 30 s | The first pass sees the condition, the `DURATION` count starts |
+| ≈ T + 10–10.5 min | Alarm created (`start_ts`) — visible in the journal and WS |
+| ≈ `start_ts` + 5–6 min | The "new alarms" message (`notify_delay_sec = 300`, dispatcher tick 60 s) |
+| `active` became `true` | Up to 30 s — alarm cleared; up to 60 s more — the "cleared alarms" message |
 
-Отсюда:
+Hence:
 
-- обрыв связи короче ~10 минут не создаёт аварии вовсе;
-- авария, снятая быстрее `notify_delay_sec`, остаётся в журнале, но в Telegram не попадает —
-  ни о срабатывании, ни о снятии. Это и есть защита от флаппинга.
+- a connectivity loss shorter than ~10 minutes creates no alarm at all;
+- an alarm cleared faster than `notify_delay_sec` stays in the journal but does not reach Telegram —
+  neither the raise nor the clear. This is the flapping protection.
 
-### 10.5. Особые случаи
+### 10.5. Special cases
 
-- **Первое включение** уведомлений отправит все **активные** аварии тенанта старше задержки,
-  о которых ещё не сообщали, — одним сообщением.
-- **Эскалация не отправляется повторно.** Авария, о которой уже сообщили как о `MINOR`, после
-  эскалации до `CRITICAL` нового сообщения не даст. Но если `min_severity = MAJOR`, а авария
-  создалась как `MINOR`, она уйдёт в момент эскалации до `MAJOR`: фильтр смотрит на текущую
+- **Turning notifications on for the first time** sends all of the tenant's **active** alarms older than the delay
+  that have not been reported yet — in a single message.
+- **An escalation is not sent again.** An alarm already reported as `MINOR` produces no new message after
+  escalating to `CRITICAL`. But if `min_severity = MAJOR` and the alarm
+  was created as `MINOR`, it is sent at the moment it escalates to `MAJOR`: the filter looks at the current
   severity.
-- **Ручное закрытие** даёт «Снятые аварии», если о срабатывании сообщали.
-- **Удалённая авария** не даёт ничего.
-- **Аварии, снятые, пока Telegram был недоступен**, в чат не попадут: к отправке берутся только
-  незакрытые.
+- **A manual clear** produces a "cleared alarms" entry if the raise was reported.
+- **A deleted alarm** produces nothing.
+- **Alarms cleared while Telegram was unavailable** do not reach the chat: only
+  uncleared alarms are picked up for sending.
 
-| Ситуация | Реакция |
+| Situation | Reaction |
 |---|---|
-| Пустой `TELEGRAM_BOT_TOKEN` | Канал Telegram пропускается до конца тика (email продолжает работать), в логе `telegram notifications skipped: TELEGRAM_BOT_TOKEN must be set …`, ничего не отмечается |
-| `channels.telegram.enabled = false` или пустой `chat_id` | Канал тенанта молча пропускается |
-| `400` / `401` / `403` / `404` — неверный чат, бот удалён из группы, неверный токен | Текст ошибки пишется в `channels.telegram.last_error` тенанта, в логе `telegram rejected tenant … permanently`. Аварии не отмечаются, попытка повторяется каждую минуту, пока чат или токен не исправят |
-| Другой ответ с ошибкой (`5xx`, `ok: false`) | Предупреждение в логе, повтор на следующем тике |
-| `429 Too Many Requests` | Задача перезапускается через `retry_after` из ответа (до 5 раз); уже отправленное отмечено |
-| Сетевая ошибка или таймаут (`TELEGRAM_TIMEOUT`) | Предупреждение в логе, повтор на следующем тике; остальные тенанты и каналы тика отправляются |
-| Собственный лимит — больше 10 сообщений в минуту на тенант (счётчик в Redis) | Тенант пропускается до следующего тика |
+| Empty `TELEGRAM_BOT_TOKEN` | The Telegram channel is skipped for the rest of the tick (email keeps working), the log says `telegram notifications skipped: TELEGRAM_BOT_TOKEN must be set …`, nothing is marked |
+| `channels.telegram.enabled = false` or an empty `chat_id` | The tenant's channel is skipped silently |
+| `400` / `401` / `403` / `404` — wrong chat, bot removed from the group, wrong token | The error text is written to the tenant's `channels.telegram.last_error`, the log says `telegram rejected tenant … permanently`. Alarms are not marked, the attempt is repeated every minute until the chat or the token is fixed |
+| Any other error response (`5xx`, `ok: false`) | A warning in the log, retried on the next tick |
+| `429 Too Many Requests` | The task is retried after `retry_after` from the response (up to 5 times); what has already been sent is marked |
+| Network error or timeout (`TELEGRAM_TIMEOUT`) | A warning in the log, retried on the next tick; the tick's other tenants and channels are sent |
+| Our own limit — more than 10 messages per minute per tenant (counter in Redis) | The tenant is skipped until the next tick |
 
-Токен бота в логах и текстах исключений маскируется (`/bot***`).
+The bot token is masked in logs and exception texts (`/bot***`).
 
-### 10.6. Уведомления на почту
+### 10.6. Email notifications
 
-Второй канал, устроен так же, как Telegram: те же `notify_delay_sec` и `min_severity`, та же
-группировка, свой лимит 10 писем в минуту на тенант. Письма уходят через SMTP проекта — те же
-`EMAIL_*`, что и для сброса пароля, — так что на уровне инсталляции настраивать ничего нового не
-нужно; тенант указывает только получателей.
+The second channel, built the same way as Telegram: the same `notify_delay_sec` and `min_severity`, the same
+grouping, its own limit of 10 emails per minute per tenant. Emails go out through the project's SMTP — the same
+`EMAIL_*` as for password reset — so nothing new needs to be configured at the installation level;
+the tenant only specifies the recipients.
 
 ```http
 PUT /api/v1/main/notification-settings/
@@ -2129,42 +2166,42 @@ Content-Type: application/json
 {"channels": {"email": {"enabled": true, "recipients": ["ops@hotel.uz", "engineer@hotel.uz"]}}}
 ```
 
-Письмо — одно на тенант за тик, всем получателям в `To`:
+One email per tenant per tick, all recipients in `To`:
 
-- тема: `<название тенанта>: аварии — новых 2, снятых 1`;
-- тело — `text/plain` с теми же строками, что в Telegram, и `text/html`-версия таблицей
-  (severity цветом, время, номер, текст).
+- subject (produced verbatim by the code): `<tenant name>: аварии — новых 2, снятых 1`;
+- body — `text/plain` with the same lines as in Telegram, plus a `text/html` version as a table
+  (severity by colour, time, room, text).
 
-| Ситуация | Реакция |
+| Situation | Reaction |
 |---|---|
-| Пустые `EMAIL_HOST` или `DEFAULT_FROM_EMAIL` (и `EMAIL_HOST_USER`) | Канал email пропускается до конца тика, в логе `email notifications skipped: …`, ничего не отмечается |
-| SMTP отверг логин или отправителя | То же: проблема инсталляции, а не тенанта |
-| SMTP отверг **всех** получателей | Текст пишется в `channels.email.last_error` тенанта, аварии не отмечаются, попытка каждую минуту, пока список не исправят. Если отклонена только часть адресов, письмо считается отправленным |
-| Сетевая ошибка, таймаут (`EMAIL_TIMEOUT`), прочие ошибки SMTP | Предупреждение в логе, повтор на следующем тике |
+| Empty `EMAIL_HOST` or `DEFAULT_FROM_EMAIL` (and `EMAIL_HOST_USER`) | The email channel is skipped for the rest of the tick, the log says `email notifications skipped: …`, nothing is marked |
+| SMTP rejected the login or the sender | The same: a problem of the installation, not of the tenant |
+| SMTP rejected **all** recipients | The text is written to the tenant's `channels.email.last_error`, alarms are not marked, attempted every minute until the list is fixed. If only some addresses are rejected, the email counts as sent |
+| Network error, timeout (`EMAIL_TIMEOUT`), other SMTP errors | A warning in the log, retried on the next tick |
 
-Первое включение email отправит все активные аварии старше задержки, о которых **по почте** ещё
-не сообщали, — даже если в Telegram они уже ушли.
+Turning email on for the first time sends all active alarms older than the delay that have not yet been reported
+**by email** — even if they have already gone to Telegram.
 
-### 10.7. Уведомления в WhatsApp
+### 10.7. WhatsApp notifications
 
-Третий канал, устроен так же: те же `notify_delay_sec` и `min_severity`, та же группировка,
-свой лимит 10 отправок в минуту на тенант.
+The third channel, built the same way: the same `notify_delay_sec` and `min_severity`, the same grouping,
+its own limit of 10 sends per minute per tenant.
 
-**Общего номера нет.** Каждый отель отправляет со своего WhatsApp Business номера и сам платит
-Meta: она выставляет счёт аккаунту, с которого ушло сообщение. Отправить за счёт roomio отель не
-может — в коде нет номера инсталляции, на который можно было бы откатиться.
+**There is no shared number.** Each hotel sends from its own WhatsApp Business number and pays
+Meta itself: Meta bills the account the message was sent from. A hotel cannot send at roomio's
+expense — the code has no installation number to fall back to.
 
-#### Подключение отеля
+#### Connecting a hotel
 
-1. Отель создаёт WhatsApp Business Account в Meta Business Manager, добавляет и регистрирует
-   номер, указывает способ оплаты.
-2. Выпускает **постоянный** токен System User (Business Settings → System users, роль Admin,
-   доступ к приложению и WABA, права `whatsapp_business_messaging` и
-   `whatsapp_business_management`, срок Never). Временный 24-часовой токен из API Setup для
-   эксплуатации не годится.
-3. Проводит через модерацию шаблон **с тем же именем, языком и текстом**, что
-   `WA_ALARM_TEMPLATE` / `WA_TEMPLATE_LANGUAGE` (см. ниже). Шаблоны принадлежат аккаунту.
-4. Вводит в панели номер, токен и получателей:
+1. The hotel creates a WhatsApp Business Account in Meta Business Manager, adds and registers
+   a number, and sets a payment method.
+2. It issues a **permanent** System User token (Business Settings → System users, Admin role,
+   access to the app and the WABA, the `whatsapp_business_messaging` and
+   `whatsapp_business_management` permissions, expiry Never). The temporary 24-hour token from API Setup is
+   not suitable for production.
+3. It gets a template approved **with the same name, language and text** as
+   `WA_ALARM_TEMPLATE` / `WA_TEMPLATE_LANGUAGE` (see below). Templates belong to the account.
+4. It enters the number, the token and the recipients in the panel:
 
 ```http
 PUT /api/v1/main/notification-settings/
@@ -2178,27 +2215,27 @@ Content-Type: application/json
 }}}
 ```
 
-- `phone_number_id` — это **ID** из WhatsApp Manager → API Setup, а не номер телефона. С номером
-  вместо ID Graph API отвечает `100` «Object with ID … does not exist».
-- Включить канал (`enabled: true`) без `phone_number_id` и токена нельзя: `400` с ошибкой в
-  `channels.whatsapp.enabled`. Проверяется с учётом уже сохранённого, так что поля можно
-  отправлять разными запросами. Удалить токен (`""`) у включённого канала тоже нельзя.
-- Токен шифруется Fernet (`core/utils/secrets.py`) ключом `SECRETS_ENCRYPTION_KEY`, а если он
-  пуст — ключом, выведенным из `DJANGO_SECRET_KEY`. В ответе API токена нет, только
-  `has_access_token`. Смена ключа делает сохранённые токены нечитаемыми: канал пишет в
-  `last_error` «enter it again», токен нужно ввести заново.
+- `phone_number_id` is the **ID** from WhatsApp Manager → API Setup, not the phone number. With the number
+  instead of the ID, the Graph API responds with `100` "Object with ID … does not exist".
+- The channel cannot be enabled (`enabled: true`) without a `phone_number_id` and a token: `400` with an error in
+  `channels.whatsapp.enabled`. The check takes what is already saved into account, so the fields can be
+  sent in separate requests. Deleting the token (`""`) of an enabled channel is not allowed either.
+- The token is encrypted with Fernet (`core/utils/secrets.py`) using the `SECRETS_ENCRYPTION_KEY` key, or, if it
+  is empty, a key derived from `DJANGO_SECRET_KEY`. The API response does not contain the token, only
+  `has_access_token`. Changing the key makes saved tokens unreadable: the channel writes "enter it again"
+  to `last_error`, and the token has to be entered again.
 
-#### Сообщение
+#### The message
 
-- **Только шаблон.** Свободный текст WhatsApp пропускает лишь в течение 24 часов после
-  последнего сообщения получателя, на это авария рассчитывать не может. Поэтому уходит
-  одобренный Meta шаблон категории Utility (`WA_ALARM_TEMPLATE`, язык `WA_TEMPLATE_LANGUAGE`).
-- **Сводка, а не список.** Параметр шаблона не может содержать переводы строк, поэтому вместо
-  полного списка приходят счётчики и одна главная авария:
-  самая серьёзная из новых, а если новых нет, первая из снятых (с ✅).
-- **Сообщение на каждого получателя.** Broadcast в Cloud API нет, каждое сообщение платное.
+- **Template only.** WhatsApp lets free-form text through only within 24 hours of the recipient's
+  last message, and an alarm cannot rely on that. So a Meta-approved Utility template is sent
+  (`WA_ALARM_TEMPLATE`, language `WA_TEMPLATE_LANGUAGE`).
+- **A summary, not a list.** A template parameter cannot contain line breaks, so instead of the
+  full list the message carries the counters and one main alarm:
+  the most severe of the new ones, or, if there are no new ones, the first of the cleared ones (with ✅).
+- **A message per recipient.** The Cloud API has no broadcast, and every message is paid for.
 
-Текст шаблона для модерации (имя `alarm_summary`, категория Utility, язык `ru`):
+The template text for approval (name `alarm_summary`, category Utility, language `ru`), quoted verbatim:
 
 ```
 Объект «{{1}}»: обновление по авариям.
@@ -2207,148 +2244,148 @@ Content-Type: application/json
 Подробности в панели roomio.
 ```
 
-Примеры для модерации: `{{1}}` = `Grand Hotel`, `{{2}}` = `2`, `{{3}}` = `1`,
-`{{4}}` = `🔴 14.10 09:12 · 512 — Шлюз GW-3 не на связи`. Если число или порядок переменных
-в одобренном шаблоне другие, Meta отвергнет каждую отправку (ошибка `132000`).
+Examples for approval: `{{1}}` = `Grand Hotel`, `{{2}}` = `2`, `{{3}}` = `1`,
+`{{4}}` = `🔴 14.10 09:12 · 512 — Шлюз GW-3 не на связи`. If the number or order of variables
+in the approved template differs, Meta rejects every send (error `132000`).
 
-#### Ошибки
+#### Errors
 
-Все ошибки касаются одного отеля: остальные тенанты продолжают отправлять.
+All errors concern a single hotel: the other tenants keep sending.
 
-| Ситуация | Реакция |
+| Situation | Reaction |
 |---|---|
-| Нет `phone_number_id` или токена (данные записаны в обход API) | Ничего не отправляется, ошибка в `channels.whatsapp.last_error` |
-| Токен не расшифровывается (сменили ключ) | То же, текст «enter it again» |
-| Токен истёк или отозван (`190`, `401`), нет прав, неверный `phone_number_id` (`100`/33), шаблона нет или он приостановлен (`132xxx`) | Ошибка в `last_error`, остальные номера этого отеля в этом тике не пробуются, аварии не отмечаются, попытка каждую минуту |
-| Номер получателя не в WhatsApp (`131026`) или не в списке разрешённых тестового номера (`131030`) | Постоянная ошибка этого номера: текст с номером пишется в `last_error`, этот номер повторяется каждую минуту, пока его не исправят или не удалят |
-| Часть номеров получила сообщение, часть нет | Каждый номер — отдельная цель: дошедшим строки пишутся сразу, остальные повторяются на следующем тике поодиночке. Постоянные ошибки номеров пишутся в `last_error` вместе, временные остаются только в логе |
-| Rate limit (`130429`, `131056`), `5xx`, сетевая ошибка, таймаут (`WA_TIMEOUT`) | Предупреждение в логе, повтор на следующем тике |
+| No `phone_number_id` or token (data written bypassing the API) | Nothing is sent, the error goes to `channels.whatsapp.last_error` |
+| The token cannot be decrypted (the key was changed) | The same, with the text "enter it again" |
+| Token expired or revoked (`190`, `401`), missing permissions, wrong `phone_number_id` (`100`/33), template missing or paused (`132xxx`) | The error goes to `last_error`, the hotel's other numbers are not tried in this tick, alarms are not marked, attempted every minute |
+| The recipient's number is not on WhatsApp (`131026`) or not on the test number's allow list (`131030`) | A permanent error for that number: the text with the number is written to `last_error`, and that number is retried every minute until it is fixed or removed |
+| Some numbers got the message, some did not | Each number is a separate target: rows are written immediately for those reached, the rest are retried individually on the next tick. Permanent number errors are written to `last_error` together, temporary ones stay only in the log |
+| Rate limit (`130429`, `131056`), `5xx`, network error, timeout (`WA_TIMEOUT`) | A warning in the log, retried on the next tick |
 
-Ответ `200` от Graph API значит только, что Meta приняла сообщение. Статусы доставки
-(`delivered`, `read`, `failed`) приходят на webhook **приложения отеля**. Наш
-`/api/v1/services/messengers/` получает их, только если отель укажет его в настройках webhook
-своего приложения; пока они только пишутся в лог — без номеров целиком (`***4567`) и без
-текста входящих сообщений.
+A `200` response from the Graph API only means that Meta accepted the message. Delivery statuses
+(`delivered`, `read`, `failed`) arrive at the webhook **of the hotel's app**. Our
+`/api/v1/services/messengers/` receives them only if the hotel sets it in the webhook settings of
+its app; for now they are only logged — without full numbers (`***4567`) and without the
+text of incoming messages.
 
-Проверка без ожидания аварии — `./manage.py playground <номер> [--alarm] [--tenant <uuid>]`:
-отправляет `hello_world` (или сводку по фейковым авариям) с номера тенанта.
+To test without waiting for an alarm — `./manage.py playground <number> [--alarm] [--tenant <uuid>]`:
+it sends `hello_world` (or a summary of fake alarms) from the tenant's number.
 
 ---
 
-## 11. Настройка и эксплуатация
+## 11. Configuration and operations
 
-### 11.1. Переменные окружения
+### 11.1. Environment variables
 
-Задаются в `deploy/.env` (шаблон — `deploy/env.example`), читаются при старте процесса.
+Set in `deploy/.env` (template — `deploy/env.example`), read when a process starts.
 
-| Переменная | По умолчанию | Смысл | После изменения перезапустить |
+| Variable | Default | Meaning | Restart after changing |
 |---|---|---|---|
-| `ALARMS_ENABLED` | `true` | Рубильник: `false` выключает вычислитель и диспетчер уведомлений. API и чистка продолжают работать | `celery-default`, `celery-low` |
-| `ALARMS_EVAL_INTERVAL_SEC` | `30` | Период вычислителя = максимальная добавочная задержка появления аварии | `celery-beat` |
-| `ALARMS_TTL_DAYS` | `365` | Закрытые аварии старше этого удаляются | `celery-low` |
-| `TELEGRAM_BOT_TOKEN` | `""` | Токен бота; пусто — уведомления не отправляются | `celery-low` |
-| `TELEGRAM_API_URL` | `https://api.telegram.org` | Адрес Bot API (для прокси или локального Bot API server) | `celery-low` |
-| `TELEGRAM_TIMEOUT` | `10` | Таймаут HTTP-запроса к Telegram, секунды | `celery-low` |
-| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | см. `env.example` | SMTP проекта, через него уходят и письма об авариях | `celery-low`, `backend` |
-| `EMAIL_TIMEOUT` | `30` | Таймаут SMTP-соединения, секунды | `celery-low`, `backend` |
-| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `ru` | Имя и язык шаблона для аварий; такой шаблон должен быть одобрен в аккаунте каждого отеля. Номер и токен отправителя — не здесь, а в настройках тенанта | `celery-low` |
-| `WA_GRAPH_VERSION`, `WA_TIMEOUT` | `v21.0`, `10` | Версия Graph API и таймаут запроса, секунды | `celery-low` |
-| `SECRETS_ENCRYPTION_KEY` | `""` (выводится из `DJANGO_SECRET_KEY`) | Ключ Fernet для секретов, которые тенанты вводят в панели (токен WhatsApp отеля). Сменили — токены вводятся заново | `celery-low`, `backend` |
-| `WA_VERIFY_TOKEN`, `WA_APP_SECRET` | `""` | Webhook `/api/v1/services/messengers/`: строка подтверждения и секрет подписи. Пустые значения означают, что webhook отвечает `403` | `backend` |
+| `ALARMS_ENABLED` | `true` | Kill switch: `false` turns off the evaluator and the notification dispatcher. The API and the purge keep working | `celery-default`, `celery-low` |
+| `ALARMS_EVAL_INTERVAL_SEC` | `30` | Evaluator period = the maximum extra delay before an alarm appears | `celery-beat` |
+| `ALARMS_TTL_DAYS` | `365` | Cleared alarms older than this are deleted | `celery-low` |
+| `TELEGRAM_BOT_TOKEN` | `""` | Bot token; empty means notifications are not sent | `celery-low` |
+| `TELEGRAM_API_URL` | `https://api.telegram.org` | Bot API address (for a proxy or a local Bot API server) | `celery-low` |
+| `TELEGRAM_TIMEOUT` | `10` | HTTP request timeout to Telegram, seconds | `celery-low` |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | see `env.example` | The project's SMTP; alarm emails go out through it too | `celery-low`, `backend` |
+| `EMAIL_TIMEOUT` | `30` | SMTP connection timeout, seconds | `celery-low`, `backend` |
+| `WA_ALARM_TEMPLATE`, `WA_TEMPLATE_LANGUAGE` | `alarm_summary`, `ru` | Name and language of the alarm template; such a template must be approved in every hotel's account. The sender's number and token are not here but in the tenant settings | `celery-low` |
+| `WA_GRAPH_VERSION`, `WA_TIMEOUT` | `v21.0`, `10` | Graph API version and request timeout, seconds | `celery-low` |
+| `SECRETS_ENCRYPTION_KEY` | `""` (derived from `DJANGO_SECRET_KEY`) | Fernet key for the secrets tenants enter in the panel (the hotel's WhatsApp token). If it changes, the tokens have to be entered again | `celery-low`, `backend` |
+| `WA_VERIFY_TOKEN`, `WA_APP_SECRET` | `""` | The `/api/v1/services/messengers/` webhook: verification string and signature secret. Empty values mean the webhook responds with `403` | `backend` |
 
 ```bash
 cd deploy
-make up-app              # пересоздаёт backend и Celery-воркеры с новым .env
+make up-app              # recreates backend and the Celery workers with the new .env
 make logs s=celery-beat
 ```
 
 ### 11.2. Celery
 
-| Задача | Очередь / сервис | Расписание (`CELERY_BEAT_SCHEDULE`) |
+| Task | Queue / service | Schedule (`CELERY_BEAT_SCHEDULE`) |
 |---|---|---|
-| `alarms.tasks.evaluate_alarm_rules` | `default` / `celery-default` | `evaluate-alarm-rules`, каждые `ALARMS_EVAL_INTERVAL_SEC` |
-| `alarms.tasks.dispatch_notifications` | `low` / `celery-low` | `dispatch-alarm-notifications`, каждые 60 с |
-| `alarms.tasks.purge_alarms` | `low` / `celery-low` | `purge-alarms`, ежедневно в 04:30 по `TIME_ZONE` (UTC по умолчанию) |
+| `alarms.tasks.evaluate_alarm_rules` | `default` / `celery-default` | `evaluate-alarm-rules`, every `ALARMS_EVAL_INTERVAL_SEC` |
+| `alarms.tasks.dispatch_notifications` | `low` / `celery-low` | `dispatch-alarm-notifications`, every 60 s |
+| `alarms.tasks.purge_alarms` | `low` / `celery-low` | `purge-alarms`, daily at 04:30 in `TIME_ZONE` (UTC by default) |
 
-Смежная задача `core.tasks.active_attribute_server_scope_task` (watchdog, каждые 10 с)
-поддерживает `active` шлюзов и `gatewayActive` устройств.
+The related task `core.tasks.active_attribute_server_scope_task` (watchdog, every 10 s)
+maintains the gateways' `active` and the devices' `gatewayActive`.
 
-### 11.3. Хранение
+### 11.3. Retention
 
-`purge_alarms` удаляет только **закрытые** аварии с `clear_ts` старше `ALARMS_TTL_DAYS`, пачками
-по 5000, вместе с комментариями. Незакрытые аварии не удаляются никогда, сколько бы им ни было.
-`AlarmRuleState` не чистится — строки сами удаляются вычислителем, когда отсчёт не нужен.
+`purge_alarms` deletes only **cleared** alarms whose `clear_ts` is older than `ALARMS_TTL_DAYS`, in batches
+of 5000, together with their comments. Uncleared alarms are never deleted, no matter how old.
+`AlarmRuleState` is not purged — the evaluator deletes its rows itself when a count is no longer needed.
 
-### 11.4. Миграции
+### 11.4. Migrations
 
-| Миграция | Что делает |
+| Migration | What it does |
 |---|---|
-| `alarms/0001_initial` | Таблицы `alarms_alarm`, `alarms_alarm_comment`, `alarms_rule_state`, индексы, права |
-| `alarms/0002_alarmrule_…` | Таблица `alarms_alarm_rule`, уникальность `(device_profile, alarm_type)`, индексы, права `*_alarmrule` |
-| `alarms/0003_move_rules_out_of_device_profile` | Переносит правила из `DeviceProfile.profile_data["alarms"]` в строки и убирает ключ `alarms` из `profile_data`. Обратная операция возвращает их в профиль |
-| `alarms/0004_alarm_notification` | Таблица `alarms_alarm_notification` с уникальностью `(alarm, channel)`; переносит `Alarm.notified_at` / `notified_clear_at` в строки канала `telegram` и плоские ключи `telegram_*` настроек тенанта в `channels.telegram`, затем удаляет эти две колонки из `alarms_alarm`. Обратимая |
-| `shuttle/0028_alter_tskvlatest_entity_and_more` | Индекс `ix_ts_kv_latest_key` по ключу в `shuttle_ts_kv_latest` для выборок вычислителя |
-| `main/0066_alter_tenant_options` | Права `view/change_notificationsettings` |
+| `alarms/0001_initial` | The `alarms_alarm`, `alarms_alarm_comment`, `alarms_rule_state` tables, indexes, permissions |
+| `alarms/0002_alarmrule_…` | The `alarms_alarm_rule` table, uniqueness of `(device_profile, alarm_type)`, indexes, the `*_alarmrule` permissions |
+| `alarms/0003_move_rules_out_of_device_profile` | Moves the rules from `DeviceProfile.profile_data["alarms"]` into rows and removes the `alarms` key from `profile_data`. The reverse operation puts them back into the profile |
+| `alarms/0004_alarm_notification` | The `alarms_alarm_notification` table with uniqueness of `(alarm, channel)`; moves `Alarm.notified_at` / `notified_clear_at` into `telegram` channel rows and the tenant settings' flat `telegram_*` keys into `channels.telegram`, then drops these two columns from `alarms_alarm`. Reversible |
+| `shuttle/0028_alter_tskvlatest_entity_and_more` | The `ix_ts_kv_latest_key` index on the key in `shuttle_ts_kv_latest` for the evaluator's lookups |
+| `main/0066_alter_tenant_options` | The `view/change_notificationsettings` permissions |
 
-`0003` идемпотентна по смыслу: после неё в `profile_data` ключа `alarms` нет, и повторный прогон
-переносить уже нечего. Правила и серверные атрибуты `notifyOnOffline` / `gatewayActive` никому
-не засеваются — это разовые действия при внедрении, см.
-[6](#6-правила-связи-устройства-и-шлюзы) и
-[6.1](#61-атрибуты-от-которых-зависят-offline-правила).
+`0003` is idempotent in effect: after it there is no `alarms` key in `profile_data`, and a repeated run
+has nothing left to move. Rules and the `notifyOnOffline` / `gatewayActive` server attributes are not seeded
+for anyone — these are one-off actions during rollout, see
+[6](#6-connectivity-rules-devices-and-gateways) and
+[6.1](#61-attributes-the-offline-rules-depend-on).
 
-### 11.5. Ручные запуски
+### 11.5. Manual runs
 
 ```bash
-# Один проход вычислителя (создаёт и снимает НАСТОЯЩИЕ аварии)
+# One evaluator pass (creates and clears REAL alarms)
 docker exec -it django python manage.py shell -c \
   "from alarms.services.engine import evaluate; print(evaluate())"
 
-# Только по одному профилю или устройствам
+# Only for one profile or specific devices
 docker exec -it django python manage.py shell -c \
   "from alarms.services.engine import evaluate; print(evaluate(profile_ids=['<profile_id>'], device_ids=['<device_id>']))"
 
-# Диспетчер уведомлений (отправляет НАСТОЯЩИЕ сообщения)
+# Notification dispatcher (sends REAL messages)
 docker exec -it celery-low python manage.py shell -c \
   "from alarms.notifications.dispatcher import dispatch; print(dispatch())"
 
-# Чистка
+# Purge
 docker exec -it celery-low python manage.py shell -c \
   "from alarms.tasks import purge_alarms; purge_alarms()"
 ```
 
-Локально — то же через `./manage.py shell -c "…"` из `backend/`.
+Locally — the same via `./manage.py shell -c "…"` from `backend/`.
 
-### 11.6. Логи
+### 11.6. Logs
 
-Логгер `alarms` (уровень — общий `_LOG_LEVEL`).
+The `alarms` logger (level — the shared `_LOG_LEVEL`).
 
-| Сообщение | Сервис | Значит |
+| Message | Service | Means |
 |---|---|---|
-| `Alarm evaluation: N devices × M rules → a created, b escalated, c cleared` | `celery-default` | Нормальный проход |
-| `Alarm evaluation skipped: ALARMS_ENABLED is off` | `celery-default` | Рубильник выключен |
-| `Alarm rule '<type>' failed on device <id>` + traceback | `celery-default` | Правило падает на этом устройстве, остальные работают |
-| `Alarm notifications: {...}` | `celery-low` | Что-то отправлено |
-| `<канал> rejected tenant <id> permanently: <описание>` | `celery-low` | Постоянная ошибка, см. `channels.<канал>.last_error` |
-| `<канал> delivery to tenant <id> failed: <описание>` | `celery-low` | Временная ошибка, повтор через минуту |
-| `<канал> notifications skipped: <причина>` | `celery-low` | Канал не настроен на уровне инсталляции (токен, SMTP) |
-| `<канал> rate limit reached for tenant <id>` | `celery-low` | Собственный лимит 10/мин на канал |
-| `Purged N alarm row(s) cleared before <дата>` | `celery-low` | Ночная чистка |
-| `gatewayActive=<bool> applied to N device(s)` | `celery-default` (watchdog) | Шлюз упал или поднялся |
+| `Alarm evaluation: N devices × M rules → a created, b escalated, c cleared` | `celery-default` | A normal pass |
+| `Alarm evaluation skipped: ALARMS_ENABLED is off` | `celery-default` | The kill switch is off |
+| `Alarm rule '<type>' failed on device <id>` + traceback | `celery-default` | The rule fails on this device; the others work |
+| `Alarm notifications: {...}` | `celery-low` | Something was sent |
+| `<channel> rejected tenant <id> permanently: <description>` | `celery-low` | A permanent error, see `channels.<channel>.last_error` |
+| `<channel> delivery to tenant <id> failed: <description>` | `celery-low` | A temporary error, retried in a minute |
+| `<channel> notifications skipped: <reason>` | `celery-low` | The channel is not configured at the installation level (token, SMTP) |
+| `<channel> rate limit reached for tenant <id>` | `celery-low` | Our own limit of 10/min per channel |
+| `Purged N alarm row(s) cleared before <date>` | `celery-low` | The nightly purge |
+| `gatewayActive=<bool> applied to N device(s)` | `celery-default` (watchdog) | A gateway went down or came back |
 
 ---
 
-## 12. Диагностика
+## 12. Troubleshooting
 
-### 12.1. Авария не создаётся
+### 12.1. An alarm is not created
 
-Идите по списку сверху вниз.
+Go through the list from top to bottom.
 
-1. **Вычислитель работает?** В логе `celery-default` раз в интервал есть `Alarm evaluation: …`,
-   `ALARMS_ENABLED` не `false`, `celery-beat` запущен.
-2. **Правило на нужном профиле и включено?** `GET /api/v1/alarms/rules/?device_profile=<id>` —
-   `enabled: true`, профиль активен, устройство активно и привязано к этому профилю.
-3. **Условие выполняется прямо сейчас?** Прогоните [`preview`](#preview). Если `matched_count = 0`,
-   разберите фильтры по одному на конкретном устройстве (только чтение, ничего не пишет):
+1. **Is the evaluator running?** The `celery-default` log has `Alarm evaluation: …` once per interval,
+   `ALARMS_ENABLED` is not `false`, `celery-beat` is running.
+2. **Is the rule on the right profile and enabled?** `GET /api/v1/alarms/rules/?device_profile=<id>` —
+   `enabled: true`, the profile is active, the device is active and attached to this profile.
+3. **Does the condition hold right now?** Run [`preview`](#preview). If `matched_count = 0`,
+   go through the filters one by one on a specific device (read-only, writes nothing):
 
    ```python
    from alarms.services.engine import build_snapshots, collect_keys, load_rules
@@ -2356,11 +2393,12 @@ docker exec -it celery-low python manage.py shell -c \
    from main.models import Device
 
    device = Device.objects.select_related("room", "device_profile").get(id="<device_id>")
-   # только включённые правила профиля — ровно то, что видит вычислитель
+   # only the profile's enabled rules — exactly what the evaluator sees
    rules = load_rules([device.device_profile_id]).get(device.device_profile_id, [])
    ts_keys, attr_keys = collect_keys(rules)
    snapshot = build_snapshots([device], ts_keys, attr_keys)[device.id]
 
+   print("behind a dead gateway:", snapshot.behind_dead_gateway)
    for rule in rules:
        for severity, create_rule in rule["createRules"].items():
            for condition_filter in create_rule["condition"]["condition"]:
@@ -2372,44 +2410,48 @@ docker exec -it celery-low python manage.py shell -c \
    ```
 
    ```text
+   behind a dead gateway: False
    Device Offline       MAJOR     ATTRIBUTE:active               value=False      → True
    Device Offline       MAJOR     ATTRIBUTE:notifyOnOffline      value=None       → False
    ```
 
-   Типичные причины `value=None`:
-   - опечатка или другой регистр в имени ключа — сверьте с `available-keys`;
-   - атрибута нет (`notifyOnOffline`, `gatewayActive` у устройства, созданного в обход API) —
-     выставьте `set_server_attribute(device_id, "notifyOnOffline", True)`;
-   - атрибут не `SERVER_SCOPE`;
-   - `BOOLEAN`-фильтр по значению в `long_v` (7.11).
-4. **Спецификация ещё отсчитывает?** Посмотрите `AlarmRuleState`:
+   `behind a dead gateway: True` means no create rule can fire on this device until its gateway is back
+   ([6.3](#63-suppression-behind-a-dead-gateway)).
+
+   Typical causes of `value=None`:
+   - a typo or different case in the key name — compare with `available-keys`;
+   - the attribute is missing (`notifyOnOffline`, `gatewayActive` on a device created bypassing the API) —
+     set it with `set_server_attribute(device_id, "notifyOnOffline", True)`;
+   - the attribute is not `SERVER_SCOPE`;
+   - a `BOOLEAN` filter on a value stored in `long_v` (7.11).
+4. **Is the spec still counting?** Look at `AlarmRuleState`:
 
    ```python
    from alarms.models import AlarmRuleState
    AlarmRuleState.objects.filter(device_id="<device_id>").values("alarm_rule_type", "state", "updated_at")
    ```
 
-   `{"MAJOR": {"since": …}}` — `DURATION` идёт с этого момента. Строки нет, хотя условие вроде бы
-   выполнено, — значит, на каком-то проходе оно прерывалось и отсчёт сбросился.
-5. **Расписание.** Правило вне окна не существует; проверьте `timezone` и дни недели (ISO,
-   понедельник — `1`).
-6. **Уже есть активная авария этого типа?** Тогда новая не создаётся, а сдвигается `end_ts`
-   существующей: `GET /api/v1/alarms/?device=<id>&status=ACTIVE`.
+   `{"MAJOR": {"since": …}}` — `DURATION` has been running since that moment. No row although the condition seems
+   to hold means it was interrupted on some pass and the count was reset.
+5. **Schedule.** Outside its window the rule does not exist; check the `timezone` and the days of the week (ISO,
+   Monday is `1`).
+6. **Is there already an active alarm of this type?** Then no new one is created; the `end_ts` of the existing one
+   moves instead: `GET /api/v1/alarms/?device=<id>&status=ACTIVE`.
 
-### 12.2. Авария не снимается
+### 12.2. An alarm is not cleared
 
-- Нет `clearRule` — только ручное закрытие.
-- Условие создания всё ещё срабатывает — снятие на таком проходе не проверяется (5.3).
-- Значение в зазоре между порогами создания и снятия.
-- Нет значения ключа снятия (устройство перестало присылать телеметрию) — предикат ложен.
-- У `clearRule` своё расписание или `DURATION`, которые ещё не выполнены.
-- Правило удалили или выключили (`enabled: false`) — вычислитель этот тип больше не видит,
-  в том числе его `clearRule`; закройте аварию вручную.
+- No `clearRule` — manual clear only.
+- The create condition still fires — the clear is not checked on such a pass (5.3).
+- The value is in the gap between the create and clear thresholds.
+- There is no value for the clear key (the device stopped sending telemetry) — the predicate is false.
+- The `clearRule` has its own schedule or `DURATION` that has not been met yet.
+- The rule was deleted or disabled (`enabled: false`) — the evaluator no longer sees this type,
+  including its `clearRule`; clear the alarm manually.
 
-### 12.3. Слишком много аварий
+### 12.3. Too many alarms
 
-- Сразу выключить: `ALARMS_ENABLED=false` и перезапуск `celery-default`/`celery-low`.
-- Найти источник:
+- To turn everything off at once: `ALARMS_ENABLED=false` and restart `celery-default`/`celery-low`.
+- Find the source:
 
   ```sql
   SELECT tenant_id, alarm_type, severity, count(*)
@@ -2419,23 +2461,23 @@ docker exec -it celery-low python manage.py shell -c \
   ORDER BY 4 DESC;
   ```
 
-- Проверить правило через `preview`: `matched_count` близко к `device_count` — ошибка в пороге,
-  операции или масштабе значений (`235` против `23.5`).
-- Массовые офлайн-аварии устройств за одним шлюзом — не обновился `gatewayActive`: проверьте, что
-  связи шлюз → устройство есть в `shuttle.Relation` и watchdog выполняется.
-- Закрыть лишнее: `POST /api/v1/alarms/bulk/clear/` (до 500 id за вызов).
+- Check the rule with `preview`: a `matched_count` close to `device_count` means a mistake in the threshold,
+  the operation or the value scale (`235` vs `23.5`).
+- Mass alarms on devices behind one gateway mean `gatewayActive` was not updated: check that the
+  gateway → device relations exist in `shuttle.Relation` and that the watchdog is running.
+- Clear the excess: `POST /api/v1/alarms/bulk/clear/` (up to 500 ids per call).
 
-### 12.4. Не приходят сообщения в Telegram
+### 12.4. Telegram messages do not arrive
 
-| Проверка | Как |
+| Check | How |
 |---|---|
-| Токен задан в контейнере диспетчера | `docker exec celery-low env \| grep TELEGRAM_BOT_TOKEN` |
-| Уведомления тенанта включены, чат указан | `GET /api/v1/main/notification-settings/` |
-| Нет постоянной ошибки | `channels.telegram.last_error` пусто; иначе исправьте чат и сохраните его заново |
-| Авария старше `notify_delay_sec` и ещё не снята | `start_ts`, `cleared` у аварии |
-| Severity не ниже `min_severity` | |
-| О ней уже не сообщали | нет строки `AlarmNotification` с `channel = 'telegram'` |
-| Бот в группе и может писать | Отправьте тестовое сообщение через `sendMessage` тем же токеном |
+| The token is set in the dispatcher's container | `docker exec celery-low env \| grep TELEGRAM_BOT_TOKEN` |
+| The tenant's notifications are enabled and the chat is set | `GET /api/v1/main/notification-settings/` |
+| No permanent error | `channels.telegram.last_error` is empty; otherwise fix the chat and save it again |
+| The alarm is older than `notify_delay_sec` and not cleared yet | The alarm's `start_ts`, `cleared` |
+| Severity is not below `min_severity` | |
+| It has not been reported already | no `AlarmNotification` row with `channel = 'telegram'` |
+| The bot is in the group and can post | Send a test message via `sendMessage` with the same token |
 
 ```bash
 curl -s -X POST "https://api.telegram.org/bot<TOKEN>/sendMessage" \
@@ -2445,95 +2487,95 @@ curl -s -X POST "https://api.telegram.org/bot<TOKEN>/sendMessage" \
 
 ---
 
-## 13. Тесты
+## 13. Tests
 
 ```bash
-# из backend/
+# from backend/
 ./manage.py test apps/alarms
-pytest apps/alarms/tests/test_rule_state.py::SeverityEscalationTest   # отдельный класс
+pytest apps/alarms/tests/test_rule_state.py::SeverityEscalationTest   # a single class
 pytest apps/main/tests/test_notification_settings.py
 
-# в контейнере
+# in the container
 docker exec -it django python manage.py test apps/alarms
 ```
 
-| Файл | Что проверяет |
+| File | What it checks |
 |---|---|
-| `test_validation.py` | Отклонение кривых правил; документированная пара правил связи проходит валидатор |
-| `test_rules_api.py` | CRUD правил: создание и нормализация, уникальность типа в профиле, частичное изменение, `bulk`, изоляция тенантов, выключенное правило не срабатывает, каталог шаблонов |
-| `test_predicates.py` | Все операции, приведение типов, `COMPLEX`, отсутствующие значения |
-| `test_dynamic_value.py` | `defaultValue` / `dynamicValue`, `inherit` вверх по цепочке |
-| `test_spec.py` | `SIMPLE`, `DURATION` (единицы, сброс, длительность из атрибута), `REPEATING` |
-| `test_schedule.py` | `SPECIFIC_TIME` (окно через полночь, таймзона), `CUSTOM` |
-| `test_rule_state.py` | Создание, `end_ts`, эскалация, снятие, порог номера, расписание, изоляция сломанного правила |
-| `test_dedup.py` | Одна активная авария на (устройство, тип) |
-| `test_propagate.py` | `propagate_entity_ids`, каскад шлюза, тумблер устройства |
-| `test_details_template.py` | Подстановки `${…}` |
-| `test_dispatch.py` | Задержка, флаппинг, `min_severity`, группировка, ошибки, независимость каналов |
-| `test_email_channel.py` | Письмо, получатели, экранирование, ошибки SMTP |
-| `test_telegram_client.py` | HTTP-клиент, `429`, маскирование токена |
-| `test_api.py` | Фильтры, изоляция тенантов, действия, комментарии, `bulk`, `summary`, ключи, `preview` |
-| `main/tests/test_notification_settings.py` | Настройки уведомлений тенанта |
+| `test_validation.py` | Rejection of broken rules; the documented pair of connectivity rules passes the validator |
+| `test_rules_api.py` | Rule CRUD: creation and normalization, type uniqueness within a profile, partial update, `bulk`, tenant isolation, a disabled rule does not fire, the template catalog |
+| `test_predicates.py` | All operations, type coercion, `COMPLEX`, missing values |
+| `test_dynamic_value.py` | `defaultValue` / `dynamicValue`, `inherit` up the chain |
+| `test_spec.py` | `SIMPLE`, `DURATION` (units, reset, duration from an attribute), `REPEATING` |
+| `test_schedule.py` | `SPECIFIC_TIME` (window across midnight, time zone), `CUSTOM` |
+| `test_rule_state.py` | Creation, `end_ts`, escalation, clear, room threshold, schedule, isolation of a broken rule |
+| `test_dedup.py` | One active alarm per (device, type) |
+| `test_propagate.py` | `propagate_entity_ids`, gateway cascade, the device toggle, suppression behind a dead gateway |
+| `test_details_template.py` | `${…}` placeholders |
+| `test_dispatch.py` | Delay, flapping, `min_severity`, grouping, errors, channel independence |
+| `test_email_channel.py` | The email, recipients, escaping, SMTP errors |
+| `test_telegram_client.py` | HTTP client, `429`, token masking |
+| `test_api.py` | Filters, tenant isolation, actions, comments, `bulk`, `summary`, keys, `preview` |
+| `main/tests/test_notification_settings.py` | Tenant notification settings |
 
-Ядро (`predicates`, `dynamic`, `spec`, `schedule`, `details`) — чистые функции над
-`DataSnapshot`; для новых случаев удобно писать тесты без БД, собирая `DataSnapshot` вручную.
+The core (`predicates`, `dynamic`, `spec`, `schedule`, `details`) consists of pure functions over
+`DataSnapshot`; for new cases it is convenient to write tests without the DB, building a `DataSnapshot` by hand.
 
 ---
 
-## 14. Расширение
+## 14. Extending
 
-### 14.1. Новое поле `ENTITY_FIELD`
+### 14.1. A new `ENTITY_FIELD`
 
-1. Добавить имя в `ENTITY_FIELD_WHITELIST` (`constants.py`) — иначе валидатор его отклонит.
-2. Добавить значение в `entity_fields()` (`services/engine.py`); для связанных моделей — учесть
-   `select_related` в `evaluate()` и `preview()`.
-3. Тест в `test_predicates.py` / `test_validation.py`.
+1. Add the name to `ENTITY_FIELD_WHITELIST` (`constants.py`) — otherwise the validator rejects it.
+2. Add the value to `entity_fields()` (`services/engine.py`); for related models, take care of
+   `select_related` in `evaluate()` and `preview()`.
+3. A test in `test_predicates.py` / `test_validation.py`.
 
-### 14.2. Новый источник `dynamicValue`
+### 14.2. A new `dynamicValue` source
 
-1. Константа в `DYNAMIC_SOURCE_TYPES` и её место в `INHERIT_CHAIN`.
-2. Чтение в `source_value()` (`services/dynamic.py`) и загрузка данных в `DataSnapshot`
+1. A constant in `DYNAMIC_SOURCE_TYPES` and its place in `INHERIT_CHAIN`.
+2. Reading it in `source_value()` (`services/dynamic.py`) and loading the data into `DataSnapshot`
    (`build_snapshots` / `attach_hierarchy`).
-3. Пометить `GRMS deviation:` — в TB такого источника нет.
+3. Mark it `GRMS deviation:` — TB has no such source.
 
-### 14.3. Новый канал уведомлений
+### 14.3. A new notification channel
 
-Канал реализует протокол `alarms/channels/base.py`; образец — `channels/email.py`:
+A channel implements the protocol from `alarms/channels/base.py`; the reference is `channels/email.py`:
 
-- `name` — ключ канала: имя блока в `notification_settings["channels"]`, значение
-  `AlarmNotification.channel`, ключ лимита в Redis, префикс в логах;
-- `defaults` — блок настроек ненастроенного тенанта; обязательно `enabled` и `last_error`;
-- `is_configured(config)` и `send(tenant, config, raised, cleared)`, где `config` — блок этого
-  канала. Текст канал строит сам из строк `notifications/message.py`. Ошибки —
-  `ChannelNotConfigured` (проблема инсталляции, канал пропускается до конца тика) или
-  `DeliveryError(description, permanent=…)`; постоянная пишется в `channels.<name>.last_error`.
+- `name` — the channel key: the block name in `notification_settings["channels"]`, the value of
+  `AlarmNotification.channel`, the rate-limit key in Redis, the prefix in logs;
+- `defaults` — the settings block of a tenant that has not configured it; `enabled` and `last_error` are mandatory;
+- `is_configured(config)` and `send(tenant, config, raised, cleared)`, where `config` is this
+  channel's block. The channel builds the text itself from the lines in `notifications/message.py`. Errors are
+  `ChannelNotConfigured` (a problem of the installation, the channel is skipped for the rest of the tick) or
+  `DeliveryError(description, permanent=…)`; a permanent one is written to `channels.<name>.last_error`.
 
-Дальше:
+Then:
 
-1. Класс — в `CHANNELS` (`alarms/channels/registry.py`).
-2. Сериализатор блока — по образцу `EmailSettingsSerializer` и поле в `ChannelsSerializer`
+1. The class goes into `CHANNELS` (`alarms/channels/registry.py`).
+2. A block serializer modelled on `EmailSettingsSerializer` and a field in `ChannelsSerializer`
    (`main/serializers/notification_settings.py`).
-3. Тесты — по образцу `test_email_channel.py` и `MultiChannelDispatchTest`.
+3. Tests modelled on `test_email_channel.py` and `MultiChannelDispatchTest`.
 
-Миграции не нужны: отметки доставки — строки `AlarmNotification`, настройки — JSON тенанта.
+No migrations are needed: delivery marks are `AlarmNotification` rows, settings are the tenant's JSON.
 
-### 14.4. Новый шаблон и набор «из коробки»
+### 14.4. A new template and an out-of-the-box set
 
-**Добавить шаблон** в кнопку «типовое правило» — функция-строитель и запись в `TEMPLATES`
-(`apps/alarms/templates.py`): `id` (строковый ключ), `name`, `description`, `requires` и
-`rule`-строитель. Тест `test_every_shipped_template_passes_the_validator` прогонит его через
-валидатор автоматически.
+**To add a template** to the "typical rule" button — a builder function and an entry in `TEMPLATES`
+(`apps/alarms/templates.py`): `id` (string key), `name`, `description`, `requires` and the
+`rule` builder. The `test_every_shipped_template_passes_the_validator` test runs it through the
+validator automatically.
 
-**Засеивать правила всем** по умолчанию сознательно не делается: набор, навязанный всем профилям,
-приходится потом вычищать у каждого тенанта — для этого и есть шаблоны. Если засев всё же нужен,
-например для типовых объектов одной сети:
+**Seeding rules for everyone** by default is deliberately not done: a set imposed on all profiles
+then has to be cleaned up for every tenant — that is what templates are for. If seeding is still needed,
+for example for the standard sites of one chain:
 
-1. Набор правил — те же строители из `templates.py`.
-2. Новым тенантам — создавать строки `AlarmRule` для профилей внутри `provision_tenant`
-   (`apps/main/services/tenant_provisioning.py`), по одной на правило из набора.
-3. Существующим профилям — скрипт или data-миграция
-   (`./manage.py makemigrations --empty alarms`, затем `RunPython` с обратной операцией);
-   создавайте правило только там, где его `alarm_type` ещё не занят, иначе упрётесь в
-   уникальное ограничение и перезатрёте правки тенанта.
-4. Прогоните набор через `validate_profile_alarms` в тесте — иначе кривое правило из набора
-   разъедется с валидатором незаметно.
+1. The rule set — the same builders from `templates.py`.
+2. For new tenants — create `AlarmRule` rows for the profiles inside `provision_tenant`
+   (`apps/main/services/tenant_provisioning.py`), one per rule in the set.
+3. For existing profiles — a script or a data migration
+   (`./manage.py makemigrations --empty alarms`, then `RunPython` with a reverse operation);
+   create a rule only where its `alarm_type` is not taken yet, otherwise you hit the
+   unique constraint and overwrite the tenant's edits.
+4. Run the set through `validate_profile_alarms` in a test — otherwise a broken rule in the set
+   drifts away from the validator unnoticed.
