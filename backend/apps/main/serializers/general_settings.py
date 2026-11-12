@@ -57,6 +57,7 @@ class GeneralSettingsSerializer(serializers.Serializer):
     auto_checkout = serializers.BooleanField(default=False)
     auto_checkout_time = serializers.TimeField(default=time(hour=12))
     aggregate_db = serializers.BooleanField(default=False)
+    work_offline = serializers.BooleanField(default=False)
     check_in_trigger_value = serializers.IntegerField(default=2, min_value=0)
     check_out_trigger_value = serializers.IntegerField(default=1, min_value=0)
     main_dashboard = serializers.PrimaryKeyRelatedField(
