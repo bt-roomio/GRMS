@@ -33,7 +33,7 @@ class TsKvListView(APIView):
             return Response({"detail": "Not found device."}, 404)
 
         params = TsKvFilterParams.check(request.GET)
-        queryset, _ = TsKv.objects.by_device(device).get_history(**params)  # pyright: ignore
+        queryset, _ = TsKv.objects.by_device(device).get_history(**params)
         return Response(queryset)
 
 
@@ -53,7 +53,7 @@ class ExportTsKvExcelView(APIView):
         if not queryset.exists():
             return Response({"detail": "Not found."}, 404)
 
-        device = params.get("device")
+        device: Device = params.get("device")  # ty: ignore
         spaces_row = get_space(device.id)
         spaces = ", ".join(spaces_row) if spaces_row else "None"
 

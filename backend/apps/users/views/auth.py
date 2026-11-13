@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
+from users.auth.errors import SocialLoginError, social_login_error_redirect
 from users.serializers.jwt_token import build_tokens_for
 
 FRONTEND_DOMAIN = settings.FRONTEND_DOMAIN
@@ -16,7 +17,7 @@ def callback_provider(request):
     social_account = social_accounts.first()
 
     if not social_account:
-        return redirect(f"{FRONTEND_DOMAIN}/auth/login/?error=NoSocialAccount")
+        return social_login_error_redirect(SocialLoginError.NO_SOCIAL_ACCOUNT)
 
     tokens = build_tokens_for(user)
     response = redirect(f"{FRONTEND_DOMAIN}/auth/login/?access={tokens['access']}&refresh={tokens['refresh']}")

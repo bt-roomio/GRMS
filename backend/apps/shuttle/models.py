@@ -29,7 +29,7 @@ class TsKv(models.Model):
     dbl_v = models.FloatField(blank=True, null=True)
     json_v = models.JSONField(blank=True, null=True)
 
-    objects = TsKvQuerySet.as_manager()
+    objects: TsKvQuerySet = cast(TsKvQuerySet, TsKvQuerySet.as_manager())
 
     def save(self, *args, **kwargs):
         if self.ts is None:

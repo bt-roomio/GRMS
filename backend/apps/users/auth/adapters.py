@@ -3,9 +3,11 @@ import logging
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.socialaccount.providers.base import AuthError
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.shortcuts import redirect
+
+from users.auth.errors import SocialLoginError, social_login_error_redirect
 
 User = get_user_model()
 
@@ -21,7 +23,7 @@ class NoSignupAccountAdapter(DefaultAccountAdapter):
         Called when an inactive user tries to log in.
         Redirect to frontend instead of showing the default template.
         """
-        return redirect(f"{FRONTEND_DOMAIN}/auth/login/?error=UserInactive")
+        return social_login_error_redirect(SocialLoginError.USER_INACTIVE)
 
     def is_open_for_signup(self, request):  # pyright: ignore
         return False
@@ -36,12 +38,12 @@ class NoNewSocialSignupAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):  # pyright: ignore
         email = (sociallogin.user and sociallogin.user.email) or None
         if not email:
-            raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=no_email"))
+            raise ImmediateHttpResponse(social_login_error_redirect(SocialLoginError.NO_EMAIL))
 
         try:
             user = User.objects.get(email__iexact=email, is_active=True)
         except User.DoesNotExist:
-            raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=no_user"))
+            raise ImmediateHttpResponse(social_login_error_redirect(SocialLoginError.NO_USER))
 
         if sociallogin.is_existing:
             if sociallogin.user and sociallogin.user.is_active:
@@ -67,8 +69,11 @@ class NoNewSocialSignupAdapter(DefaultSocialAccountAdapter):
             request.GET.get("error_description"),
             exc_info=exception if isinstance(exception, BaseException) else None,
         )
-        raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/login?error=authentication_error"))
+        code = (
+            SocialLoginError.LOGIN_CANCELLED if error == AuthError.CANCELLED else SocialLoginError.AUTHENTICATION_ERROR
+        )
+        raise ImmediateHttpResponse(social_login_error_redirect(code))
 
     def pre_social_token(self, request, socialtoken):
         if not socialtoken or not socialtoken.token:
-            raise ImmediateHttpResponse(redirect(f"{FRONTEND_DOMAIN}/auth/error?error=token_error"))
+            raise ImmediateHttpResponse(social_login_error_redirect(SocialLoginError.TOKEN_ERROR))
