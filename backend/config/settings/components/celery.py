@@ -63,4 +63,9 @@ CELERY_BEAT_SCHEDULE = {
         "task": "alarms.tasks.purge_alarms",
         "schedule": crontab(hour=4, minute=30),
     },
+    # After the nightly pg_dump and the TimescaleDB compression policy (03:00 UTC)
+    "purge-ts-kv-keys": {
+        "task": "shuttle.tasks.purge_ts_kv_keys_task",
+        "schedule": crontab(hour=5, minute=0),
+    },
 }
