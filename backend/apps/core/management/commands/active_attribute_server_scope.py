@@ -32,6 +32,10 @@ class Command(BaseCommand):
 
     # Inactivity threshold in milliseconds (60 seconds)
     INACTIVITY_THRESHOLD_MS = 60000
+    # How long a gateway's ``active`` must stay false before its devices get
+    # gatewayActive=false. Rides out a disconnect/connect flap, which would
+    # otherwise reset every duration rule on the devices behind it.
+    GATEWAY_DOWN_HOLD_MS = 60000
 
     def handle(self, **_):
         """
@@ -53,22 +57,25 @@ class Command(BaseCommand):
                 )
             )
 
-            if not gateway_active_attrs:
-                logger.debug("No active gateway devices found")
-                return
+            if gateway_active_attrs:
+                logger.debug("Found %s active gateway devices to check", len(gateway_active_attrs))
 
-            logger.debug("Found %s active gateway devices to check", len(gateway_active_attrs))
+                # Process inactive devices
+                deactivated, related_deactivated = self.check_activity_time(gateway_active_attrs)
 
-            # Process inactive devices
-            deactivated, related_deactivated = self.check_activity_time(gateway_active_attrs)
-
-            # Log summary
-            if deactivated > 0:
-                logger.info(
-                    "Deactivated %s gateway device(s) and %s related device(s)", deactivated, related_deactivated
-                )
+                # Log summary
+                if deactivated > 0:
+                    logger.info(
+                        "Deactivated %s gateway device(s) and %s related device(s)", deactivated, related_deactivated
+                    )
+                else:
+                    logger.debug("No inactive gateway devices found")
             else:
-                logger.debug("No inactive gateway devices found")
+                logger.debug("No active gateway devices found")
+
+            # After the timeout pass, so a gateway it just deactivated is
+            # already seen as down.
+            self.sync_gateway_active()
 
             logger.info("Completed active_attribute_server_scope command")
 
@@ -118,7 +125,6 @@ class Command(BaseCommand):
         attrs_to_update = []
         entities_to_update = []
         inactive_gateway_ids = []
-        live_gateway_ids = []
 
         # Identify inactive gateways
         for attr_active in gateway_active_attrs:
@@ -129,9 +135,7 @@ class Command(BaseCommand):
                 continue
 
             # Check if device is inactive
-            if last_activity_attr.long_v >= threshold_time:
-                live_gateway_ids.append(attr_active.entity_id)
-            else:
+            if last_activity_attr.long_v < threshold_time:
                 logger.warning(
                     "Deactivated gateway device: %s (last activity: %.0fs ago)",
                     attr_active.entity_id,
@@ -162,33 +166,86 @@ class Command(BaseCommand):
         if inactive_gateway_ids:
             related_deactivated = self._deactivate_related_devices(inactive_gateway_ids)
 
-        self._sync_gateway_active(inactive_gateway_ids, live_gateway_ids)
-
         return len(attrs_to_update), related_deactivated
 
-    def _sync_gateway_active(self, inactive_gateway_ids, live_gateway_ids):
+    def sync_gateway_active(self):
         """
-        Publish each gateway's state onto its devices as ``gatewayActive``.
+        Publish every gateway's state onto its devices as ``gatewayActive``.
 
-        The alarm rules read it as an ordinary condition filter, which is what
-        keeps a gateway outage to one alarm on the gateway instead of one per
-        device behind it. Only changed rows are written, so a healthy
-        installation costs two SELECTs every tick and no writes.
+        The evaluator suppresses all create rules on a device whose
+        ``gatewayActive`` is false, which is what keeps a gateway outage to one
+        alarm on the gateway instead of one per device behind it.
+
+        Level-triggered: every tick recomputes the state of all gateways rather
+        than reacting to the moment this watchdog deactivates one. A gateway
+        mq-async marked down on a ``disconnect`` topic, a write that failed on
+        an earlier tick, or a relation added after the outage are all picked up
+        on the next tick. set_gateway_active only writes rows that differ and
+        the device ids stay a subquery, so a steady installation costs a few
+        SELECTs and no writes.
         """
-        for gateway_ids, value in ((inactive_gateway_ids, False), (live_gateway_ids, True)):
+        down_ids, live_ids = self.classify_gateways(get_mil_sec())
+
+        # A device reachable through any live gateway is not behind a dead one,
+        # and keeping it out of the dead set stops it from flipping every tick.
+        live_targets = Relation.objects.filter(from_id__in=live_ids).values("to_id")
+        dead_targets = Relation.objects.filter(from_id__in=down_ids).exclude(to_id__in=live_targets).values("to_id")
+
+        for gateway_ids, targets, value in ((down_ids, dead_targets, False), (live_ids, live_targets, True)):
             if not gateway_ids:
                 continue
-
-            device_ids = list(Relation.objects.filter(from_id__in=gateway_ids).values_list("to_id_id", flat=True))
             try:
-                changed = set_gateway_active(device_ids, value)
+                changed = set_gateway_active(targets, value)
             except Exception:
                 # Never let alarm bookkeeping break the watchdog itself.
-                logger.exception("Failed to sync gatewayActive for %s device(s)", len(device_ids))
+                logger.exception("Failed to sync gatewayActive=%s behind %s gateway(s)", value, len(gateway_ids))
                 continue
 
             if changed:
                 logger.info("gatewayActive=%s applied to %s device(s)", value, changed)
+
+    def classify_gateways(self, now):
+        """
+        Split the gateways into (down, live) ids; one that never reported either
+        attribute is left out of both, so its devices are not touched.
+        """
+        attrs = defaultdict(dict)
+        rows = AttributeKv.objects.filter(
+            entity__additional_info__gateway=True,
+            attribute_type=AttributeKv.SERVER_SCOPE,
+            attribute_key__in=("active", "lastActivityTime"),
+        ).values_list("entity_id", "attribute_key", "bool_v", "long_v", "last_update_ts")
+        for entity_id, key, bool_v, long_v, last_update_ts in rows:
+            attrs[entity_id][key] = (bool_v, long_v, last_update_ts)
+
+        down_ids, live_ids = [], []
+        for gateway_id, gateway_attrs in attrs.items():
+            target = down_ids if self.gateway_is_down(gateway_attrs, now) else live_ids
+            target.append(gateway_id)
+        return down_ids, live_ids
+
+    def gateway_is_down(self, attrs, now) -> bool:
+        """
+        Down when the gateway has been silent past the inactivity threshold, or
+        its ``active`` has stayed false for GATEWAY_DOWN_HOLD_MS, whoever set it.
+
+        A fresh ``active=false`` from a disconnect topic alone is not enough:
+        lastActivityTime moves with every state message, so a gateway that
+        drops and reconnects within the hold never suppresses its devices.
+        """
+        last_activity = attrs.get("lastActivityTime")
+        if last_activity is not None:
+            _, last_activity_ts, _ = last_activity
+            if last_activity_ts is not None and last_activity_ts < now - self.INACTIVITY_THRESHOLD_MS:
+                return True
+
+        active = attrs.get("active")
+        if active is not None:
+            is_active, _, changed_at = active
+            if is_active is False and (changed_at or 0) < now - self.GATEWAY_DOWN_HOLD_MS:
+                return True
+
+        return False
 
     def _publish_deactivation_updates(self, attrs_to_update, current_time):
         """

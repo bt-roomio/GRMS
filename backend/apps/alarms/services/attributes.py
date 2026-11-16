@@ -8,10 +8,11 @@ and no schema changes are needed to add the next toggle.
 
 from typing import Any
 
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 
 from alarms.constants import ATTR_GATEWAY_ACTIVE
 from core.utils.get_time import get_mil_sec
+from main.models import Device
 from shuttle.models import AttributeKv
 
 ENTITY_TYPE = "DEVICE"
@@ -51,10 +52,14 @@ def set_gateway_active(device_ids, value: bool) -> int:
     evaluator reads it for every device (``DataSnapshot.behind_dead_gateway``)
     and suppresses all create rules while it is false, so tenants need not
     repeat the guard in each rule.
+
+    ``device_ids`` is an iterable of ids or a single-column queryset; a
+    queryset stays a subquery, so the ids never travel through Python.
     """
-    device_ids = list(device_ids)
-    if not device_ids:
-        return 0
+    if not isinstance(device_ids, QuerySet):
+        device_ids = list(device_ids)
+        if not device_ids:
+            return 0
 
     now = get_mil_sec()
     scope = {
@@ -63,7 +68,8 @@ def set_gateway_active(device_ids, value: bool) -> int:
         "attribute_key": ATTR_GATEWAY_ACTIVE,
     }
 
-    known = set(AttributeKv.objects.filter(**scope).values_list("entity_id", flat=True))
+    known = AttributeKv.objects.filter(**scope).values("entity_id")
+    missing_ids = Device.objects.filter(id__in=device_ids).exclude(id__in=known).values_list("id", flat=True)
     missing = [
         AttributeKv(
             entity_type=ENTITY_TYPE,
@@ -73,8 +79,7 @@ def set_gateway_active(device_ids, value: bool) -> int:
             bool_v=value,
             last_update_ts=now,
         )
-        for device_id in device_ids
-        if device_id not in known
+        for device_id in missing_ids
     ]
     if missing:
         AttributeKv.objects.bulk_create(missing, ignore_conflicts=True)
