@@ -28,6 +28,7 @@ def build_tokens_for(user):
     Claims are stamped on the refresh token so `TokenRefreshView` copies them onto
     every derived access token instead of quietly dropping them on rotation.
     """
+    grant_admin_permissions(user)
     refresh = cast(RefreshToken, RefreshToken.for_user(user))
     apply_claims(refresh, user)
 
@@ -42,6 +43,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         if user.is_superuser:
             set_perms_superuser(user)
+        grant_admin_permissions(user)
 
         return token
 
@@ -50,6 +52,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if email:
             attrs["email"] = email.lower()
         return super().validate(attrs)
+
+
+def grant_admin_permissions(user):
+    """
+    Keep the user's admin roles holding every permission and UI section, so ones added
+    since show up on the next login.
+    """
+    roles = user.roles.admins()
+    roles.grant_all_permissions()
+    roles.grant_all_ui_permissions()
 
 
 def set_perms_superuser(user):

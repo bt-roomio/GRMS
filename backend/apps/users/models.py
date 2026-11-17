@@ -1,5 +1,5 @@
 import uuid
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from django.contrib.auth.models import AbstractUser, Permission
 from django.db import models
@@ -155,7 +155,7 @@ class Role(BaseModel):
         help_text=_("Additional role configuration stored as JSON"),
     )
 
-    objects = RoleQuerySet.as_manager()
+    objects: RoleQuerySet = cast(RoleQuerySet, RoleQuerySet.as_manager())
 
     def __str__(self):
         return self.name
