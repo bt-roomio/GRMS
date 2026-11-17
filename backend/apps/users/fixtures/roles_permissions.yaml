@@ -296,6 +296,19 @@
         - main
         - widgettype
 
+      - - view_globalsettingstemplate
+        - main
+        - globalsettingstemplate
+      - - add_globalsettingstemplate
+        - main
+        - globalsettingstemplate
+      - - change_globalsettingstemplate
+        - main
+        - globalsettingstemplate
+      - - delete_globalsettingstemplate
+        - main
+        - globalsettingstemplate
+
       - - add_devicefromconf
         - main
         - device

@@ -5,6 +5,7 @@ from datetime import time as time_cls
 
 from celery import shared_task
 from django.db.models import Count, Q
+from pika.exceptions import AMQPError
 
 from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from core.utils.cloudflare import CloudflareUnavailable
@@ -109,3 +110,16 @@ def provision_nodered_task(tenant_id):
 )
 def deprovision_nodered_task(slug, dns_record_id=None):
     deprovision_nodered(slug, dns_record_id)
+
+
+@shared_task(
+    name="main.tasks.push_shared_attributes_task",
+    autoretry_for=(AMQPError,),
+    retry_kwargs={"max_retries": 3, "countdown": 30},
+    ignore_result=True,
+)
+def push_shared_attributes_task(device_ids: list[str], attributes: dict):
+    """Fire-and-forget push of shared attributes (e.g. an applied global settings template) to devices."""
+    from main.services.global_settings import push_shared_attributes
+
+    push_shared_attributes(device_ids, attributes)

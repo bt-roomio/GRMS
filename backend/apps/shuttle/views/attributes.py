@@ -10,6 +10,7 @@ from shuttle.serializers.attributes import AttributeKvPath, AttributesChangeFilt
 from shuttle.serializers.tag import TagFilterParams, TagFilterPath
 from shuttle.swagger.attributes_change import swagger_attributes_change
 from shuttle.swagger.tag import tag_swagger
+from shuttle.utils.attributes_message import build_attributes_message
 from shuttle.utils.dynamic_model_query import dynamic_query
 from shuttle.utils.find_compatible_field import find_compatible_field
 from shuttle.utils.get_non_null_field import get_non_null_field
@@ -79,18 +80,12 @@ def send_rabbit_mq_attributes(path_device_id, available_fields):
 
     if device:
         attributes = dict((k, v[1]) for k, v in available_fields.items())
-        message = {
-            "targetDeviceUUID": str(device_id),
-            "topic": "v1/gateway/attributes",
-            "data": {"device": device.name, "data": attributes},
-        }
-        if device.additional_info and device.additional_info.get("gateway"):
-            message["targetDeviceUUID"] = str(device.id)
-            message["topic"] = "v1/devices/me/attributes"
-            message["data"] = attributes
-
+        message = build_attributes_message(device, device_id, attributes)
         channel = connect_to_rabbitmq()
-        send_to_rabbitmq(channel, message)
+        try:
+            send_to_rabbitmq(channel, message)
+        finally:
+            channel.connection.close()
 
 
 class AttributesChangeRPCView(APIView):

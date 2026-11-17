@@ -9,6 +9,12 @@ from main.views.device_credentials import DeviceCredentialsDetailView
 from main.views.device_from_conf import DeviceFromConfListView
 from main.views.device_profile import DeviceProfileDetailView, DeviceProfileListView
 from main.views.general_settings import GeneralSettingsDetailView
+from main.views.global_settings_template import (
+    ApplyGlobalSettingsTemplateView,
+    GlobalSettingsRoomListView,
+    GlobalSettingsTemplateDetailView,
+    GlobalSettingsTemplateListView,
+)
 from main.views.guest import GuestCheckoutView, GuestDetailView, GuestListView
 from main.views.guest_move_room import GuestMoveRoomListView
 from main.views.integration_settings import IntegrationSettingsDetailView
@@ -26,6 +32,22 @@ from main.views.widget_type import WidgetTypeDetailView, WidgetTypeListView
 
 urlpatterns = [
     path("general-settings/", GeneralSettingsDetailView.as_view(), name="general-settings-detail"),
+    path(
+        "global-settings/apply-preset/",
+        ApplyGlobalSettingsTemplateView.as_view(),
+        name="global-settings-apply-preset",
+    ),
+    path("global-settings/rooms/", GlobalSettingsRoomListView.as_view(), name="global-settings-room-list"),
+    path(
+        "global-settings/templates/",
+        GlobalSettingsTemplateListView.as_view(),
+        name="global-settings-template-list",
+    ),
+    path(
+        "global-settings/templates/<uuid:pk>/",
+        GlobalSettingsTemplateDetailView.as_view(),
+        name="global-settings-template-detail",
+    ),
     path("integration-settings/", IntegrationSettingsDetailView.as_view(), name="integration-settings-detail"),
     path("alarm-settings/", AlarmSettingsDetailView.as_view(), name="alarm-settings"),
     path("notification-settings/", NotificationSettingsDetailView.as_view(), name="notification-settings"),

@@ -6,6 +6,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import CASCADE, SET_NULL, Manager, Q, UniqueConstraint
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 
@@ -16,6 +17,7 @@ from main.querysets.dashboard import DashboardQuerySet
 from main.querysets.device import DeviceQuerySet
 from main.querysets.device_credentials import DeviceCredentialsQuerySet
 from main.querysets.device_profile import DeviceProfileQuerySet
+from main.querysets.global_settings_template import GlobalSettingsTemplateQuerySet
 from main.querysets.guest import GuestQuerySet
 from main.querysets.public_space import DevicePublicSpacesQuerySet, PublicSpaceQuerySet, RoomTypePublicSpacesQuerySet
 from main.querysets.room import RoomQuerySet
@@ -46,6 +48,37 @@ class TenantGroup(ServiceBaseModel):
         db_table = "main_tenant_group"
         ordering = ("-created_at",)
         constraints: ClassVar = [UniqueConstraint(Lower("title"), name="unique_tenant_group_title")]
+
+
+class GlobalSettingsTemplate(ServiceBaseModel):
+    """A reusable preset of settings, owned by a tenant."""
+
+    # Status of a template applied to a room, see GlobalSettingsRoomSerializer.
+    UP_TO_DATE = "up_to_date"  # applied after the last config change
+    OUTDATED = "outdated"  # the config changed after it was applied
+    DELETED = "deleted"  # the applied template no longer exists
+    STATUSES = (UP_TO_DATE, OUTDATED, DELETED)
+
+    tenant = models.ForeignKey("main.Tenant", CASCADE, "global_settings_templates")
+    name = models.CharField(max_length=255)
+    config = models.JSONField(default=dict, blank=True)
+    # Unlike updated_at it ignores renames: rooms applied before this moment are outdated.
+    config_updated_at = models.DateTimeField(default=timezone.now)
+    used = models.PositiveIntegerField(default=0)
+
+    objects: GlobalSettingsTemplateQuerySet = cast(
+        GlobalSettingsTemplateQuerySet, GlobalSettingsTemplateQuerySet.as_manager()
+    )
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta(ServiceBaseModel.Meta):
+        db_table = "main_global_settings_template"
+        ordering = ("-created_at",)
+        constraints: ClassVar = [
+            UniqueConstraint("tenant", Lower("name"), name="unique_global_settings_template_tenant_name")
+        ]
 
 
 class Tenant(ServiceBaseModel):
