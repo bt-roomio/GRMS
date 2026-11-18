@@ -1,7 +1,11 @@
+from unittest.mock import patch
+
 from django.urls import reverse
 
 from core.tests.base import BaseTestCase
-from services.models import Integration, MappingProfile
+from main.models import Device, RoomType
+from services.models import Integration, MappingProfile, MappingProfileDevice
+from services.serializers.mapping import MappingProfileWriteSerializer
 
 TENANT_ID = "28c81921-f78e-4864-87d2-cec674f19d1c"  # admin@gmail.com's tenant
 OTHER_TENANT_ID = "ac73203f-e25f-4baa-a5c7-a4c9585f5bbc"
@@ -170,7 +174,7 @@ class ProfileAutoAttachTest(MappingTestCase):
         self.assertEqual(second["integrations"], [])
 
     def test_scoped_profile_is_not_attached(self):
-        self.create_profile(profile_body(name="room-101", scope="device", device=DEVICE_ID))
+        self.create_profile(profile_body(name="room-101", scope="device", devices=[DEVICE_ID]))
         self.assertIsNone(self.integration_profile_id())
 
     def test_profile_of_another_integrator_is_not_attached(self):
@@ -189,23 +193,41 @@ class ScopedMappingProfileAPITest(MappingTestCase):
 
     def test_create_room_type_and_device_profiles(self):
         room_type = self.create_profile(
-            profile_body(FAN_SPEED, name="suite", scope="room_type", room_type=ROOM_TYPE_ID)
+            profile_body(FAN_SPEED, name="suite", scope="room_type", room_types=[ROOM_TYPE_ID])
         )
         self.assertEqual(
-            (room_type["scope"], str(room_type["room_type"]), room_type["device"]), ("room_type", ROOM_TYPE_ID, None)
+            (room_type["scope"], [str(pk) for pk in room_type["room_types"]], room_type["devices"]),
+            ("room_type", [ROOM_TYPE_ID], []),
         )
-        device = self.create_profile(profile_body(DIMMER, name="room-101", scope="device", device=DEVICE_ID))
-        self.assertEqual(str(device["device"]), DEVICE_ID)
+        device = self.create_profile(profile_body(DIMMER, name="room-101", scope="device", devices=[DEVICE_ID]))
+        self.assertEqual([str(pk) for pk in device["devices"]], [DEVICE_ID])
 
         response = self.get(reverse("services:mapping-profile-list"), {"scope": "device"})
         assert response.data is not None
         self.assertEqual([row["name"] for row in response.data["results"]], ["room-101"])
 
+    def test_several_targets(self):
+        deluxe = RoomType.objects.create(title="Deluxe", tenant_id=TENANT_ID)
+        body = profile_body(name="suites", scope="room_type", room_types=[ROOM_TYPE_ID, str(deluxe.pk), ROOM_TYPE_ID])
+        profile = self.create_profile(body)
+        self.assertEqual({str(pk) for pk in profile["room_types"]}, {ROOM_TYPE_ID, str(deluxe.pk)})
+
+        for room_type in (ROOM_TYPE_ID, deluxe.pk):
+            response = self.get(reverse("services:mapping-profile-list"), {"room_type": room_type})
+            assert response.data is not None
+            self.assertEqual([row["name"] for row in response.data["results"]], ["suites"])
+
+        url = reverse("services:mapping-profile-detail", args=[profile["id"]])
+        response = self.put(url, {**body, "room_types": [str(deluxe.pk)]}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual([str(pk) for pk in response.data["room_types"]], [str(deluxe.pk)])
+
     def test_target_must_match_scope(self):
         cases = (
-            ({"scope": "room_type"}, "room_type"),
-            ({"scope": "device", "room_type": ROOM_TYPE_ID, "device": DEVICE_ID}, "room_type"),
-            ({"scope": "tenant", "device": DEVICE_ID}, "device"),
+            ({"scope": "room_type"}, "room_types"),
+            ({"scope": "room_type", "room_types": []}, "room_types"),
+            ({"scope": "device", "room_types": [ROOM_TYPE_ID], "devices": [DEVICE_ID]}, "room_types"),
+            ({"scope": "tenant", "devices": [DEVICE_ID]}, "devices"),
         )
         for scope, field in cases:
             with self.subTest(scope=scope):
@@ -213,29 +235,93 @@ class ScopedMappingProfileAPITest(MappingTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertIn(field, response.data)
 
-    def test_one_profile_per_target_and_integrator(self):
-        body = profile_body(name="room-101", scope="device", device=DEVICE_ID)
-        self.create_profile(body)
-        response = self.post_profile({**body, "name": "room-101-bis"})
+    def test_other_tenants_target(self):
+        other = Device.objects.exclude(tenant_id=TENANT_ID).first()
+        assert other is not None
+        response = self.post_profile(profile_body(name="x", scope="device", devices=[str(other.pk)]))
         self.assertEqual(response.status_code, 400)
-        self.assertIn("device", response.data)
+        self.assertIn("devices", response.data)
+
+    def test_one_profile_per_target_and_integrator(self):
+        other = Device.objects.exclude(pk=DEVICE_ID).filter(tenant_id=TENANT_ID).first()
+        assert other is not None
+        body = profile_body(name="room-101", scope="device", devices=[DEVICE_ID])
+        self.create_profile(body)
+        response = self.post_profile({**body, "name": "room-101-bis", "devices": [str(other.pk), DEVICE_ID]})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data["devices"], [f"Device {DEVICE_ID} already belongs to the integrator's profile 'room-101'."]
+        )
         # Another integrator has its own profiles for the same device.
         self.create_profile({**body, "name": "test-101", "integrator": "Test"})
+
+    def test_integrator_change_moves_targets(self):
+        profile = self.create_profile(profile_body(name="room-101", scope="device", devices=[DEVICE_ID]))
+        url = reverse("services:mapping-profile-detail", args=[profile["id"]])
+        response = self.put(url, profile_body(name="room-101", integrator="Test"), format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        # The device is free for hoteza again.
+        self.create_profile(profile_body(name="hoteza-101", scope="device", devices=[DEVICE_ID]))
 
     def test_attached_profile_stays_tenant(self):
         profile = self.create_profile()
         self.attach_profile(profile["id"])
         url = reverse("services:mapping-profile-detail", args=[profile["id"]])
-        response = self.put(url, profile_body(scope="device", device=DEVICE_ID), format="json")
+        response = self.put(url, profile_body(scope="device", devices=[DEVICE_ID]), format="json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("scope", response.data)
 
     def test_put_keeps_scope_when_left_out(self):
-        profile = self.create_profile(profile_body(name="room-101", scope="device", device=DEVICE_ID))
+        profile = self.create_profile(profile_body(name="room-101", scope="device", devices=[DEVICE_ID]))
         url = reverse("services:mapping-profile-detail", args=[profile["id"]])
         response = self.put(url, profile_body(DIMMER, name="room-101"), format="json")
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual((response.data["scope"], str(response.data["device"])), ("device", DEVICE_ID))
+        self.assertEqual(
+            (response.data["scope"], [str(pk) for pk in response.data["devices"]]), ("device", [DEVICE_ID])
+        )
+
+    def test_put_keeps_unchanged_links(self):
+        other = Device.objects.exclude(pk=DEVICE_ID).filter(tenant_id=TENANT_ID).first()
+        assert other is not None
+        body = profile_body(name="rooms", scope="device", devices=[DEVICE_ID])
+        profile = self.create_profile(body)
+        link = MappingProfileDevice.objects.get(profile_id=profile["id"])
+        url = reverse("services:mapping-profile-detail", args=[profile["id"]])
+        response = self.put(url, {**body, "devices": [DEVICE_ID, str(other.pk)]}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertTrue(MappingProfileDevice.objects.filter(pk=link.pk).exists())
+        response = self.put(url, {**body, "devices": [str(other.pk)]}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(
+            list(MappingProfileDevice.objects.filter(profile_id=profile["id"]).values_list("device_id", flat=True)),
+            [other.pk],
+        )
+
+    def test_scope_change_drops_old_targets(self):
+        profile = self.create_profile(profile_body(name="room-101", scope="device", devices=[DEVICE_ID]))
+        url = reverse("services:mapping-profile-detail", args=[profile["id"]])
+        body = profile_body(name="room-101", scope="room_type", room_types=[ROOM_TYPE_ID])
+        response = self.put(url, body, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["devices"], [])
+        self.assertFalse(MappingProfileDevice.objects.filter(profile_id=profile["id"]).exists())
+
+    def test_concurrent_claim_is_400(self):
+        self.create_profile(profile_body(name="room-101", scope="device", devices=[DEVICE_ID]))
+        # Another save took the device after this one checked it.
+        with patch.object(MappingProfileWriteSerializer, "_taken_targets", return_value=[]):
+            response = self.post_profile(profile_body(name="room-101-bis", scope="device", devices=[DEVICE_ID]))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("devices", response.data)
+        self.assertFalse(MappingProfile.objects.filter(name="room-101-bis").exists())
+
+    def test_deleted_target_leaves_profile(self):
+        deluxe = RoomType.objects.create(title="Deluxe", tenant_id=TENANT_ID)
+        profile = self.create_profile(profile_body(name="deluxe", scope="room_type", room_types=[str(deluxe.pk)]))
+        deluxe.delete()
+        response = self.get(reverse("services:mapping-profile-detail", args=[profile["id"]]))
+        assert response.data is not None
+        self.assertEqual((response.data["scope"], response.data["room_types"]), ("room_type", []))
 
 
 class IntegrationMappingProfileTest(MappingTestCase):
@@ -260,7 +346,7 @@ class IntegrationMappingProfileTest(MappingTestCase):
         self.assertIn("mapping_profile", response.data)
 
     def test_scoped_profile_cannot_be_attached(self):
-        profile = self.create_profile(profile_body(name="room-101", scope="device", device=DEVICE_ID))
+        profile = self.create_profile(profile_body(name="room-101", scope="device", devices=[DEVICE_ID]))
         response = self.put_integration(profile["id"])
         self.assertEqual(response.status_code, 400)
         self.assertIn("mapping_profile", response.data)

@@ -84,18 +84,36 @@ class MappingTestView(APIView):
             rule = params["composite_rule"]
             return rule, device.pk if device else None, {"source": "inline"}
         if "profile" in params:
-            return self.get_profile_rule(tenant_id, params)
+            return self.get_profile_rule(tenant_id, params, room, device)
         return self.get_integration_rule(tenant_id, params, room, device)
 
     @staticmethod
-    def get_profile_rule(tenant_id, params):
+    def profile_device_id(profile, room, device):
+        """The device a device profile's composite rule reads its inputs from: the context device,
+        or the profile's device in the context room; ``None`` without a context."""
+        if profile.scope != MappingProfile.Scope.DEVICE:
+            return None
+        if device is not None:
+            if not profile.devices.filter(pk=device.pk).exists():
+                raise ValidationError({"device": ["The profile does not apply to this device."]})
+            return device.pk
+        if room is None:
+            return None
+        device_ids = list(profile.devices.filter(room=room).values_list("id", flat=True))
+        if not device_ids:
+            raise ValidationError({"room": ["The profile applies to no device of the room."]})
+        if len(device_ids) > 1:
+            raise ValidationError({"device": ["The profile applies to several devices of the room: give one."]})
+        return device_ids[0]
+
+    def get_profile_rule(self, tenant_id, params, room, device):
         profile = get_object_or_404(MappingProfile.objects.by_tenant(tenant_id), pk=params["profile"])
         origin = {"source": "profile", "profile": str(profile.pk), "scope": profile.scope}
         if params["composite"]:
             rule = next((r for r in profile.composite_rules if r.get("id") == params["composite_id"]), None)
             if rule is None:
                 raise ValidationError({"composite_id": ["The profile has no composite rule with this id."]})
-            return rule, profile.device_id, origin
+            return rule, self.profile_device_id(profile, room, device), origin
         row = MappingRule.objects.filter(profile=profile, tag_names__contains=[params["tag_name"]]).first()
         if row is None:
             raise ValidationError({"tag_name": ["The profile has no rule for this tag name."]})

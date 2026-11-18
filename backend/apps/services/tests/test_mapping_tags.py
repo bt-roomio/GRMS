@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 
-from main.models import Device, Room
+from main.models import Device, Room, RoomType
 from services.consumers.tags import RoomTagsConsumer, TagDetailConsumer
 from services.models import Integration, Integrator, MappingRule
 from services.tests.test_mapping_api import (
@@ -168,14 +168,14 @@ class ScopedProfileMappingTest(TagMappingTestCase):
 
     def test_most_specific_profile_wins(self):
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 2)
-        self.scoped_profile("suite", fan_speed_with_medium(20), scope="room_type", room_type=ROOM_TYPE_ID)
+        self.scoped_profile("suite", fan_speed_with_medium(20), scope="room_type", room_types=[ROOM_TYPE_ID])
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 20)
-        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", devices=[DEVICE_ID])
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 40)
         self.assertEqual(self.tag(self.fan)["value"], 40)
 
     def test_tag_without_rule_in_scoped_profile_falls_back(self):
-        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", devices=[DEVICE_ID])
         tags = self.room_tags()
         self.assertEqual(tags["fanSpeed"]["value"], 40)
         self.assertEqual(tags["dimmer"]["value"], 50)  # from the integration's profile
@@ -183,21 +183,34 @@ class ScopedProfileMappingTest(TagMappingTestCase):
     def test_profiles_of_other_targets_do_not_apply(self):
         other_device = Device.objects.exclude(pk=DEVICE_ID).filter(tenant_id=TENANT_ID).first()
         assert other_device is not None
-        self.scoped_profile("other", fan_speed_with_medium(99), scope="device", device=other_device.pk)
+        self.scoped_profile("other", fan_speed_with_medium(99), scope="device", devices=[other_device.pk])
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 2)
 
+    def test_profile_of_several_targets(self):
+        other_device = Device.objects.exclude(pk=DEVICE_ID).filter(tenant_id=TENANT_ID).first()
+        assert other_device is not None
+        deluxe = RoomType.objects.create(title="Deluxe", tenant_id=TENANT_ID)
+        self.scoped_profile(
+            "suites", fan_speed_with_medium(20), scope="room_type", room_types=[deluxe.pk, ROOM_TYPE_ID]
+        )
+        self.assertEqual(self.room_tags()["fanSpeed"]["value"], 20)
+        self.scoped_profile("rooms", fan_speed_with_medium(40), scope="device", devices=[other_device.pk, DEVICE_ID])
+        self.assertEqual(self.room_tags()["fanSpeed"]["value"], 40)
+
     def test_profiles_of_another_integrator_do_not_apply(self):
-        self.scoped_profile("test-101", fan_speed_with_medium(99), integrator="Test", scope="device", device=DEVICE_ID)
+        self.scoped_profile(
+            "test-101", fan_speed_with_medium(99), integrator="Test", scope="device", devices=[DEVICE_ID]
+        )
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], 2)
 
     def test_scoped_profiles_need_the_integration_profile(self):
-        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", devices=[DEVICE_ID])
         Integration.objects.filter(pk=HOTEZA_INTEGRATION_ID).update(mapping_profile=None)
         self.assertEqual(self.room_tags()["fanSpeed"]["value"], "Medium")
 
     @patch("services.utils.tag_write.prepare_mqtt_request", return_value=RPC_OK)
     def test_write_uses_scoped_rule(self, rpc):
-        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", device=DEVICE_ID)
+        self.scoped_profile("room-101", fan_speed_with_medium(40), scope="device", devices=[DEVICE_ID])
         response = self.put_tag(self.fan, 40)
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(rpc.call_args.args[2], {"fanSpeed": "Medium"})

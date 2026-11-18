@@ -159,7 +159,7 @@ class SavedRuleTest(MappingTestAPITestCase):
                 "name": "room-101",
                 "integrator": "hoteza",
                 "scope": "device",
-                "device": DEVICE_ID,
+                "devices": [DEVICE_ID],
                 "rules": [{**FAN_SPEED, "transform": {"type": "enum", "map": [{"grms": "Low", "external": 10}]}}],
             }
         )
@@ -223,7 +223,7 @@ class DeviceContextTest(CompositeTagTestCase):
         for name, device, value in (("a", DEVICE_ID, 10), ("b", self.other.pk, 20)):
             rule = {**FCU_MODE, "direction": "to_external", "actions": None}
             rule["conditions"] = [{"when": {"power": 1}, "value": value}, {"when": {"power": 0}, "value": 0}]
-            profile = self.scoped_profile(name, scope="device", device=str(device))
+            profile = self.scoped_profile(name, scope="device", devices=[str(device)])
             MappingProfile.objects.filter(pk=profile["id"]).update(composite_rules=[rule])
         self.client.credentials(HTTP_AUTHORIZATION=self.bearer_token)
 
@@ -246,3 +246,18 @@ class DeviceContextTest(CompositeTagTestCase):
     def test_device_without_room(self):
         Device.objects.filter(pk=self.other.pk).update(room_id=None)
         self.assertEqual(self.run_rule(self.other.pk)["result"], 20)
+
+    def test_profile_rule_reads_the_context_device(self):
+        profile = MappingProfile.objects.get(name="a")
+        body = {
+            "profile": str(profile.pk),
+            "composite_id": "fcumode",
+            "direction": "to_external",
+            "inputs": {"power": 1},
+        }
+        response = self.post(URL, {**body, "device": str(DEVICE_ID)}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["result"], 10)
+        response = self.post(URL, {**body, "device": str(self.other.pk)}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("device", response.data)

@@ -1,5 +1,5 @@
 import uuid
-from typing import ClassVar, cast
+from typing import ClassVar, NamedTuple, cast
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -134,20 +134,15 @@ class MappingProfile(BaseModel):
 
     An integration uses a ``tenant`` profile through ``Integration.mapping_profile``. The
     ``room_type`` and ``device`` profiles of the same integrator in the tenant hold the rules that
-    differ for their target; a tag takes its rule from the device profile, then the room type
-    profile, then the integration's profile."""
+    differ for their targets (``room_types`` or ``devices``, one or more); a tag takes its rule
+    from the device profile, then the room type profile, then the integration's profile. A target
+    belongs to one profile of the integrator in the tenant (``MappingProfileTarget``, see
+    ``SCOPE_TARGETS``)."""
 
     class Scope(models.TextChoices):
         TENANT = "tenant", "Tenant"
         ROOM_TYPE = "room_type", "Room type"
         DEVICE = "device", "Device"
-
-    # The target field of each scope; None for the tenant scope.
-    TARGET_FIELDS: ClassVar[dict] = {
-        Scope.TENANT: None,
-        Scope.ROOM_TYPE: "room_type",
-        Scope.DEVICE: "device",
-    }
 
     name = models.CharField(max_length=255)
     integrator = models.ForeignKey(
@@ -155,8 +150,12 @@ class MappingProfile(BaseModel):
     )
     tenant = models.ForeignKey("main.Tenant", models.CASCADE, "mapping_profiles")
     scope = models.CharField(max_length=20, choices=Scope.choices, default=Scope.TENANT)
-    room_type = models.ForeignKey("main.RoomType", models.CASCADE, "mapping_profiles", null=True, blank=True)
-    device = models.ForeignKey("main.Device", models.CASCADE, "mapping_profiles", null=True, blank=True)
+    room_types = models.ManyToManyField(
+        "main.RoomType", "mapping_profiles", through="services.MappingProfileRoomType", blank=True
+    )
+    devices = models.ManyToManyField(
+        "main.Device", "mapping_profiles", through="services.MappingProfileDevice", blank=True
+    )
     composite_rules = models.JSONField(
         default=list,
         blank=True,
@@ -172,26 +171,65 @@ class MappingProfile(BaseModel):
         db_table = "services_mapping_profile"
         constraints: ClassVar[list] = [
             UniqueConstraint(fields=("name", "tenant"), name="unique_mapping_profile_name_tenant"),
-            # Exactly the scope's own target is set; a tenant profile has none.
-            models.CheckConstraint(
-                check=(
-                    Q(scope="tenant", room_type__isnull=True, device__isnull=True)
-                    | Q(scope="room_type", room_type__isnull=False, device__isnull=True)
-                    | Q(scope="device", room_type__isnull=True, device__isnull=False)
-                ),
-                name="mapping_profile_target_matches_scope",
-            ),
+        ]
+
+
+class MappingProfileTarget(BaseModel):
+    """A target of a ``room_type`` or ``device`` profile. ``tenant`` and ``integrator`` repeat the
+    profile's only for the database to keep one profile per target and integrator in a tenant:
+    the profile serializer keeps them in step, and readers go by the profile's own fields."""
+
+    profile = models.ForeignKey("services.MappingProfile", models.CASCADE, "+")
+    tenant = models.ForeignKey("main.Tenant", models.CASCADE, "+")
+    integrator = models.ForeignKey("services.Integrator", models.CASCADE, "+", to_field="name", db_column="integrator")
+
+    class Meta(BaseModel.Meta):
+        abstract = True
+
+
+class MappingProfileRoomType(MappingProfileTarget):
+    room_type = models.ForeignKey("main.RoomType", models.CASCADE, "+")
+
+    class Meta(MappingProfileTarget.Meta):
+        db_table = "services_mapping_profile_room_type"
+        constraints: ClassVar[list] = [
             UniqueConstraint(
-                fields=("tenant", "integrator", "room_type"),
-                condition=Q(scope="room_type"),
-                name="unique_mapping_profile_integrator_room_type",
-            ),
-            UniqueConstraint(
-                fields=("tenant", "integrator", "device"),
-                condition=Q(scope="device"),
-                name="unique_mapping_profile_integrator_device",
+                fields=("tenant", "integrator", "room_type"), name="unique_mapping_profile_integrator_room_type"
             ),
         ]
+
+
+class MappingProfileDevice(MappingProfileTarget):
+    device = models.ForeignKey("main.Device", models.CASCADE, "+")
+
+    class Meta(MappingProfileTarget.Meta):
+        db_table = "services_mapping_profile_device"
+        constraints: ClassVar[list] = [
+            UniqueConstraint(
+                fields=("tenant", "integrator", "device"), name="unique_mapping_profile_integrator_device"
+            ),
+        ]
+
+
+class ScopeTarget(NamedTuple):
+    """How a scoped profile holds its targets."""
+
+    field: str  # the profile's targets field
+    link: type[MappingProfileTarget]
+    key: str  # the link's target field
+    label: str
+
+    @property
+    def constraint(self) -> str:
+        """The name of the link's uniqueness constraint."""
+        return f"unique_mapping_profile_integrator_{self.key}"
+
+
+# The targets of each scoped profile; a tenant profile has none.
+SCOPE_TARGETS: dict[str, ScopeTarget] = {
+    MappingProfile.Scope.ROOM_TYPE: ScopeTarget("room_types", MappingProfileRoomType, "room_type", "Room type"),
+    MappingProfile.Scope.DEVICE: ScopeTarget("devices", MappingProfileDevice, "device", "Device"),
+}
 
 
 class MappingRule(BaseModel):

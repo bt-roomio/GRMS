@@ -1,5 +1,8 @@
 from collections import Counter
 from dataclasses import dataclass
+from uuid import UUID
+
+from django.db import IntegrityError
 
 from rest_framework import serializers
 
@@ -8,7 +11,26 @@ from main.models import Device, RoomType
 from services.mapping.composite import composite_rules_issues
 from services.mapping.constants import TAG_NAME_MAX_LENGTH
 from services.mapping.validation import Issue, rule_errors
-from services.models import Integration, Integrator, MappingProfile, MappingRule
+from services.models import SCOPE_TARGETS, Integration, Integrator, MappingProfile, MappingRule, ScopeTarget
+
+# The constraints a concurrent save may break past the checks: constraint name -> (field, message).
+RACE_ERRORS = {
+    "unique_mapping_profile_name_tenant": ("name", "A mapping profile with this name already exists."),
+    **{
+        target.constraint: (target.field, "Another profile of the integrator has just taken one of these targets.")
+        for target in SCOPE_TARGETS.values()
+    },
+}
+
+
+def race_error(exc: IntegrityError) -> serializers.ValidationError:
+    """The 400 for a uniqueness constraint another save broke between the checks and the write;
+    re-raises any other integrity error."""
+    constraint = getattr(getattr(exc.__cause__, "diag", None), "constraint_name", None)
+    if constraint not in RACE_ERRORS:
+        raise exc
+    field, message = RACE_ERRORS[constraint]
+    return serializers.ValidationError({field: [message]})
 
 
 class MappingRuleSerializer(serializers.ModelSerializer):
@@ -44,6 +66,12 @@ class MappingProfileSerializer(serializers.ModelSerializer):
     integrations = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, help_text="Integrations using the profile as their mapping_profile."
     )
+    room_types = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, help_text="The room types of a room_type profile."
+    )
+    devices = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, help_text="The devices of a device profile."
+    )
 
     class Meta:
         model = MappingProfile
@@ -52,8 +80,8 @@ class MappingProfileSerializer(serializers.ModelSerializer):
             "name",
             "integrator",
             "scope",
-            "room_type",
-            "device",
+            "room_types",
+            "devices",
             "integrations",
             "rules",
             "composite_rules",
@@ -64,10 +92,22 @@ class MappingProfileSerializer(serializers.ModelSerializer):
 
 class MappingProfileWriteSerializer(serializers.ModelSerializer):
     """The profile JSON. ``rules`` replaces all rules of the profile on save. A ``room_type`` or
-    ``device`` profile names its target and applies to the integration of its integrator; a
-    ``tenant`` profile has no target."""
+    ``device`` profile names its targets (``room_types`` or ``devices``) and applies to the
+    integration of its integrator; a ``tenant`` profile has none."""
 
     integrator = serializers.SlugRelatedField(slug_field="name", queryset=Integrator.objects.all())
+    room_types = serializers.PrimaryKeyRelatedField(
+        many=True,
+        required=False,
+        queryset=RoomType.objects.none(),
+        help_text="The room types of a room_type profile; left out of a PUT, the saved ones stay.",
+    )
+    devices = serializers.PrimaryKeyRelatedField(
+        many=True,
+        required=False,
+        queryset=Device.objects.none(),
+        help_text="The devices of a device profile; left out of a PUT, the saved ones stay.",
+    )
     rules = MappingRuleSerializer(many=True)
     composite_rules = serializers.JSONField(
         required=False,
@@ -76,19 +116,22 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MappingProfile
-        fields = ("name", "integrator", "scope", "room_type", "device", "rules", "composite_rules")
+        fields = ("name", "integrator", "scope", "room_types", "devices", "rules", "composite_rules")
 
     def get_fields(self):
         fields = super().get_fields()
         if "tenant_id" in self.context:  # absent when drf-yasg builds the schema
             tenant_id = self.context["tenant_id"]
-            fields["room_type"].queryset = RoomType.objects.filter(tenant_id=tenant_id)
-            fields["device"].queryset = Device.objects.filter(tenant_id=tenant_id)
+            fields["room_types"].child_relation.queryset = RoomType.objects.filter(tenant_id=tenant_id)
+            fields["devices"].child_relation.queryset = Device.objects.filter(tenant_id=tenant_id)
         return fields
 
+    @property
+    def tenant_id(self):
+        return self.instance.tenant_id if self.instance else self.context["tenant_id"]
+
     def validate_name(self, value):
-        tenant_id = self.instance.tenant_id if self.instance else self.context["tenant_id"]
-        duplicates = MappingProfile.objects.filter(name=value, tenant_id=tenant_id)
+        duplicates = MappingProfile.objects.filter(name=value, tenant_id=self.tenant_id)
         if self.instance:
             duplicates = duplicates.exclude(pk=self.instance.pk)
         if duplicates.exists():
@@ -115,27 +158,29 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
         self._validate_composite_rules(attrs)
         # A field left out of the body keeps the saved value (none for a new profile).
         scope = attrs.get("scope", getattr(self.instance, "scope", MappingProfile.Scope.TENANT))
-        target_field = MappingProfile.TARGET_FIELDS[scope]
-        values = {field: attrs.get(field, getattr(self.instance, field, None)) for field in ("room_type", "device")}
+        own = SCOPE_TARGETS.get(scope)
         errors = {}
-        for field in ("room_type", "device"):
-            if field == target_field and values[field] is None:
-                errors[field] = [f"Required for the {scope} scope."]
-            elif field != target_field and values[field] is not None:
-                errors[field] = [f"Must be empty for the {scope} scope."]
+        for target in SCOPE_TARGETS.values():
+            given = attrs.pop(target.field, None)
+            if target is not own:
+                if given:  # the targets of the scope the profile leaves go with the save
+                    errors[target.field] = [f"Must be empty for the {scope} scope."]
+                continue
+            if given is not None:
+                target_ids = list(dict.fromkeys(item.pk for item in given))  # a target named twice is one
+            elif self.instance is not None and self.instance.scope == scope:
+                target_ids = list(target.link.objects.filter(profile=self.instance).values_list(target.key, flat=True))
+            else:
+                target_ids = []
+            if not target_ids:
+                errors[target.field] = [f"Required for the {scope} scope."]
+            attrs["target_ids"] = target_ids
         if errors:
             raise serializers.ValidationError(errors)
 
         integrator = attrs["integrator"]
-        if target_field is not None:
-            tenant_id = self.instance.tenant_id if self.instance else self.context["tenant_id"]
-            twins = MappingProfile.objects.filter(
-                tenant_id=tenant_id, integrator=integrator, scope=scope, **{target_field: values[target_field]}
-            )
-            if self.instance:
-                twins = twins.exclude(pk=self.instance.pk)
-            if twins.exists():
-                raise serializers.ValidationError({target_field: ["The integrator already has a profile for it."]})
+        if own is not None and (taken := self._taken_targets(own, attrs["target_ids"], integrator)):
+            raise serializers.ValidationError({own.field: taken})
 
         if self.instance is None:
             return attrs
@@ -145,10 +190,25 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"scope": ["The profile is used by integrations: it stays tenant."]})
         return attrs
 
+    def _taken_targets(self, target: ScopeTarget, target_ids, integrator) -> list[str]:
+        """Errors for the targets another profile of the integrator in the tenant already has."""
+        taken = target.link.objects.filter(
+            profile__tenant_id=self.tenant_id, profile__integrator=integrator, **{f"{target.key}__in": target_ids}
+        ).select_related("profile")
+        if self.instance:
+            taken = taken.exclude(profile=self.instance)
+        return [
+            f"{target.label} {getattr(link, f'{target.key}_id')} already belongs to the integrator's profile "
+            f"{link.profile.name!r}."
+            for link in taken.order_by(target.key)
+        ]
+
     def create(self, validated_data):
         rules = validated_data.pop("rules")
+        target_ids = validated_data.pop("target_ids", [])
         instance = super().create(validated_data)
         self._set_rules(instance, rules, validated_data.get("created_by"))
+        self._set_targets(instance, target_ids, validated_data.get("created_by"), None)
         if instance.scope == MappingProfile.Scope.TENANT:
             # The first profile goes live on the integration; switching to another one stays explicit.
             Integration.objects.filter(
@@ -161,14 +221,45 @@ class MappingProfileWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         rules = validated_data.pop("rules")
+        target_ids = validated_data.pop("target_ids", [])
+        previous = MappingProfile(scope=instance.scope, integrator_id=instance.integrator_id)
         instance = super().update(instance, validated_data)
         instance.rules.all().delete()
         self._set_rules(instance, rules, validated_data.get("updated_by"))
+        self._set_targets(instance, target_ids, validated_data.get("updated_by"), previous)
         return instance
 
     @staticmethod
     def _set_rules(instance, rules, user):
         MappingRule.objects.bulk_create(MappingRule(profile=instance, created_by=user, **rule) for rule in rules)
+
+    @staticmethod
+    def _set_targets(instance, target_ids, user, previous):
+        """Brings the links of the profile to ``target_ids``, touching only the ones that change;
+        ``previous`` holds the scope and integrator before the save (``None`` for a new profile)."""
+        if previous is not None and previous.scope != instance.scope and (left := SCOPE_TARGETS.get(previous.scope)):
+            left.link.objects.filter(profile=instance).delete()
+        own = SCOPE_TARGETS.get(instance.scope)
+        if own is None:
+            return
+        links = own.link.objects.filter(profile=instance)
+        kept = set()
+        if previous is not None and previous.scope == instance.scope:
+            links.exclude(**{f"{own.key}__in": target_ids}).delete()
+            if previous.integrator_id != instance.integrator_id:
+                links.update(integrator_id=instance.integrator_id)
+            kept = set(links.values_list(own.key, flat=True))
+        own.link.objects.bulk_create(
+            own.link(
+                profile=instance,
+                tenant_id=instance.tenant_id,
+                integrator_id=instance.integrator_id,
+                created_by=user,
+                **{f"{own.key}_id": target_id},
+            )
+            for target_id in target_ids
+            if target_id not in kept
+        )
 
 
 @dataclass
@@ -176,6 +267,8 @@ class MappingProfileFilterParams(PaginationParams):
     search: str | None
     integrator: str | None
     scope: str | None
+    room_type: UUID | None
+    device: UUID | None
     sort_by: str
 
 
@@ -188,4 +281,6 @@ class MappingProfileFilterSerializer(PaginationSerializer[MappingProfileFilterPa
     )
     integrator = serializers.CharField(default=None, help_text="Filter by integrator name.")
     scope = serializers.ChoiceField(choices=MappingProfile.Scope.choices, default=None, help_text="Filter by scope.")
+    room_type = serializers.UUIDField(default=None, help_text="Only the room_type profile of this room type.")
+    device = serializers.UUIDField(default=None, help_text="Only the device profile of this device.")
     sort_by = serializers.ChoiceField(choices=SORT_CHOICES, default="name")

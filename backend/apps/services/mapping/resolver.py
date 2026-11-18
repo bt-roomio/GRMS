@@ -14,10 +14,8 @@ from collections.abc import Iterable
 from typing import NamedTuple
 from uuid import UUID
 
-from django.db.models import Q
-
 from services.mapping.engine import MappingError, ranges_to_external, to_external, to_grms
-from services.models import Integration, MappingProfile, MappingRule
+from services.models import SCOPE_TARGETS, Integration, MappingProfile, MappingRule
 
 logger = logging.getLogger(__name__)
 
@@ -50,35 +48,37 @@ class TagMapper:
             )
         if profile_id is None or integration is None:
             return
-        # The scoped profiles apply only together with the integration's own profile.
-        scoped = Q(
-            profile__tenant_id=integration.tenant_id,
-            profile__integrator_id=integration.integrator_id,
-            profile__scope__in=(MappingProfile.Scope.ROOM_TYPE, MappingProfile.Scope.DEVICE),
-        )
-        rules = MappingRule.objects.filter(Q(profile_id=profile_id) | scoped).select_related("profile")
-        profiles = MappingProfile.objects.filter(
-            Q(pk=profile_id)
-            | Q(
-                tenant_id=integration.tenant_id,
-                integrator_id=integration.integrator_id,
-                scope__in=(MappingProfile.Scope.ROOM_TYPE, MappingProfile.Scope.DEVICE),
+        # profile id -> the (scope, target id) keys it holds the rules of. The scoped profiles apply
+        # only together with the integration's own profile.
+        keys: dict[UUID, list[tuple]] = defaultdict(list)
+        keys[profile_id].append((MappingProfile.Scope.TENANT, None))
+        for scope, target in SCOPE_TARGETS.items():
+            # By the profile's own fields: the copies on the link only serve its uniqueness.
+            links = target.link.objects.filter(
+                profile__tenant_id=integration.tenant_id,
+                profile__integrator_id=integration.integrator_id,
+                profile__scope=scope,
             )
-        ).exclude(composite_rules=[])
-        for scope, room_type_id, device_id, composite_rules in profiles.values_list(
-            "scope", "room_type_id", "device_id", "composite_rules"
-        ):
-            self.composites[(scope, room_type_id or device_id)] = {rule["id"]: rule for rule in composite_rules}
-        for rule in rules:
-            profile = rule.profile
-            by_name = self.rules[(profile.scope, profile.room_type_id or profile.device_id)]
+            for scoped_id, target_id in links.values_list("profile_id", target.key):
+                keys[scoped_id].append((scope, target_id))
+
+        profiles = MappingProfile.objects.filter(pk__in=keys).exclude(composite_rules=[])
+        for scoped_id, composite_rules in profiles.values_list("pk", "composite_rules"):
+            by_id = {rule["id"]: rule for rule in composite_rules}
+            for key in keys[scoped_id]:
+                self.composites[key] = by_id
+        for rule in MappingRule.objects.filter(profile_id__in=keys):
             as_rule = rule.as_rule()
-            for tag_name in rule.tag_names:
-                if tag_name in by_name:  # the serializer forbids it; rows written past it may still have it
-                    logger.warning(
-                        "Mapping profile %s has several rules for tag %r: the last one applies.", profile.pk, tag_name
-                    )
-                by_name[tag_name] = as_rule
+            for key in keys[rule.profile_id]:
+                by_name = self.rules[key]
+                for tag_name in rule.tag_names:
+                    if tag_name in by_name:  # the serializer forbids it; rows written past it may still have it
+                        logger.warning(
+                            "Mapping profile %s has several rules for tag %r: the last one applies.",
+                            rule.profile_id,
+                            tag_name,
+                        )
+                    by_name[tag_name] = as_rule
 
     def rule(self, tag_name, target: Target) -> dict | None:
         """The rule of the tag name from the most specific profile that has one; ``None`` when
