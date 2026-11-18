@@ -19,6 +19,7 @@ from uuid import UUID
 from django.utils import timezone
 
 from alarms.constants import (
+    ATTR_GATEWAY_ACTIVE,
     ATTRIBUTES_KEY,
     KEY_ATTRIBUTE,
     KEY_TIME_SERIES,
@@ -188,6 +189,9 @@ def attributes_of(instance) -> dict[str, Any]:
 
 def build_snapshots(devices: list[Device], ts_keys: set[str], attr_keys: set[str]) -> dict[UUID, DataSnapshot]:
     device_ids = [device.id for device in devices]
+    # Read whether the rules mention it or not: DataSnapshot.behind_dead_gateway
+    # suppresses every rule on a device behind a dead gateway.
+    attr_keys = attr_keys | {ATTR_GATEWAY_ACTIVE}
 
     key_names = {}
     if ts_keys:
@@ -214,16 +218,15 @@ def build_snapshots(devices: list[Device], ts_keys: set[str], attr_keys: set[str
             if snapshot is not None:
                 snapshot.ts[key_names[row["key_id"]]] = row
 
-    if attr_keys:
-        rows = AttributeKv.objects.filter(
-            entity_id__in=device_ids,
-            attribute_type=AttributeKv.SERVER_SCOPE,
-            attribute_key__in=attr_keys,
-        ).values("entity_id", "attribute_key", "last_update_ts", *VALUE_FIELDS)
-        for row in rows:
-            snapshot = snapshots.get(row["entity_id"])
-            if snapshot is not None:
-                snapshot.attrs[row["attribute_key"]] = row
+    rows = AttributeKv.objects.filter(
+        entity_id__in=device_ids,
+        attribute_type=AttributeKv.SERVER_SCOPE,
+        attribute_key__in=attr_keys,
+    ).values("entity_id", "attribute_key", "last_update_ts", *VALUE_FIELDS)
+    for row in rows:
+        snapshot = snapshots.get(row["entity_id"])
+        if snapshot is not None:
+            snapshot.attrs[row["attribute_key"]] = row
 
     attach_hierarchy(snapshots.values())
     return snapshots

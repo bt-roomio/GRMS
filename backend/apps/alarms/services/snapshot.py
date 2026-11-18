@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from alarms.constants import (
+    ATTR_GATEWAY_ACTIVE,
     KEY_ATTRIBUTE,
     KEY_CONSTANT,
     KEY_ENTITY_FIELD,
@@ -115,6 +116,21 @@ class DataSnapshot:
     # devices have an attribute_kv row (see "GRMS vs ThingsBoard differences").
     room_attrs: dict[str, Any] = field(default_factory=dict)
     tenant_attrs: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def behind_dead_gateway(self) -> bool:
+        """
+        The device sits behind a gateway the watchdog has marked as down.
+
+        Its telemetry is frozen and its ``active`` is false only because the
+        gateway is, so no rule may raise an alarm on it: the gateway's own
+        alarm covers the incident. Only an explicit ``false`` counts — a device
+        without the attribute (no relation to a gateway, or never touched by the
+        watchdog) is evaluated as usual.
+        """
+        if self.fields.get("is_gateway"):
+            return False
+        return as_boolean(self.attrs.get(ATTR_GATEWAY_ACTIVE)) is False
 
     def row(self, key_type: str, key: str) -> dict | None:
         if key_type == KEY_TIME_SERIES:

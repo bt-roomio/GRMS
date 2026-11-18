@@ -42,7 +42,7 @@ class TsKvFilterPath(ValidatorSerializer):
     tenant_id = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
     room_id = serializers.PrimaryKeyRelatedField(queryset=Room.objects.all(), required=False)
 
-    def validate(self, data):  # pyright: ignore
+    def validate(self, data):  # ty: ignore
         has_entity_id = data.get("entity_id") is not None
         has_tenant = data.get("tenant_id") is not None
         has_room = data.get("room_id") is not None

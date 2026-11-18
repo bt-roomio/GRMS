@@ -111,6 +111,9 @@ services:
     logging: *default-logging
     expose:
       - "9115"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       - BLACKBOX_LOGIN_EMAIL=${BLACKBOX_LOGIN_EMAIL}
       - BLACKBOX_LOGIN_PASSWORD=${BLACKBOX_LOGIN_PASSWORD}

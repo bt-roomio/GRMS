@@ -18,7 +18,6 @@ def _ip_list(env_name: str) -> list[str]:
 BRUTE_FORCE_CONFIG: dict[str, Any] = {
     "protected_endpoints": [
         "/api/v1/users/access-token/",
-        "/api/v1/users/refresh-token/",
     ],
     "max_attempts": 5,
     "lockout_duration": 900,  # 15 minutes of lockout

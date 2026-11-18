@@ -39,6 +39,11 @@ class RuleOutcome:
 def process(rule: dict, snapshot: DataSnapshot, now: datetime, active_alarm: Alarm | None, state: dict) -> RuleOutcome:
     outcome = RuleOutcome()
     create_rules = rule.get("createRules") or {}
+    # GRMS deviation: behind a dead gateway every create rule reads as "not
+    # matched", whatever the tenant wrote in it. The streaks reset as with any
+    # broken condition, so a recovered gateway cannot fire a duration that was
+    # counted on frozen data; the clear rule still runs as usual.
+    suppressed = snapshot.behind_dead_gateway
 
     for severity in SEVERITY_ORDER:
         create_rule = create_rules.get(severity)
@@ -52,7 +57,7 @@ def process(rule: dict, snapshot: DataSnapshot, now: datetime, active_alarm: Ala
 
         condition = create_rule.get("condition") or {}
         filters = condition.get("condition") or []
-        matched = eval_condition(filters, snapshot)
+        matched = not suppressed and eval_condition(filters, snapshot)
         fired, sub_state = eval_spec(condition.get("spec"), state.get(severity), matched, now, snapshot)
 
         if sub_state:

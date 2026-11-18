@@ -17,7 +17,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Cast, Coalesce
+from django.db.models.functions import Cast, Coalesce, JSONObject
 
 from access_manager.utilits.dispatch_card_rpc import dispatch_card_rpc
 from core.querysets.base_queryset import BaseQuerySet
@@ -73,6 +73,57 @@ class RoomQuerySet(BaseQuerySet):
         elif status == "OFF":
             query = query.exclude(count_online_devices=F("count_devices"), count_devices__gt=0)
         return query.order_by(*(sort_by or ["block", "floor", "number"]) + ["id"])
+
+    def global_settings(self, tenant, room_types=None, blocks=None, search_field=None, search_value=None):
+        """
+        Rows for the global settings page in a single query: plain dicts with the room type
+        and the room's first active device (primary first, then oldest) as a JSON object.
+        Rooms without an active device are skipped: there is nothing to apply a template to.
+        """
+        from main.models import Device
+
+        query = self.filter(active=True, tenant=tenant)
+        if room_types:
+            query = query.filter(type_id__in=room_types)
+        if blocks:
+            blocks_filter = Q()
+            for block, floors in blocks.items():
+                rule = Q(block=block) if block is not None else Q()
+                if floors:
+                    rule &= Q(floor__in=floors)
+                blocks_filter |= rule
+            query = query.filter(blocks_filter)
+
+        from main.services.global_settings import TEMPLATE_ID_KEY
+        from shuttle.models import AttributeKv
+
+        first_device = (
+            Device.objects.filter(room_id=OuterRef("pk"), is_active=True)
+            .annotate(
+                priority=Case(
+                    When(additional_info__primary=True, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("priority", "created_at")
+        )
+        applied_template = AttributeKv.objects.filter(
+            entity_id=OuterRef("device_id"),
+            attribute_type=AttributeKv.SERVER_SCOPE,
+            attribute_key=TEMPLATE_ID_KEY,
+        ).values(data=JSONObject(id="str_v", ts="last_update_ts"))[:1]
+        query = query.annotate(
+            device_id=Subquery(first_device.values("id")[:1]),
+            device_name=Subquery(first_device.values("name")[:1]),
+            device=Subquery(first_device.values(data=JSONObject(id="id", name="name"))[:1], output_field=JSONField()),
+            applied_template=Subquery(applied_template, output_field=JSONField()),
+        ).filter(device_id__isnull=False)  # a template can only be applied to a room with a device
+        if search_field and search_value:
+            query = query.filter(**{f"{search_field}__icontains": search_value})
+        return query.order_by("block", "floor", "number", "id").values(
+            "id", "number", "floor", "block", "type_id", "type__title", "device", "applied_template"
+        )
 
     def quick_list(self, tenant, search_value=None):
         query = self.filter(active=True, tenant=tenant)

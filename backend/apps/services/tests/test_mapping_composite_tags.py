@@ -117,12 +117,12 @@ class CompositeScopeTest(CompositeTagTestCase):
         inverted["conditions"][2]["value"] = 1
         inverted["conditions"][1]["value"] = 2
         inverted["actions"][1]["value"], inverted["actions"][2]["value"] = 2, 1
-        profile = self.scoped_profile("room-101", scope="device", device=DEVICE_ID)
+        profile = self.scoped_profile("room-101", scope="device", devices=[DEVICE_ID])
         self.set_composites(profile["id"], inverted)
         self.assertEqual(self.fcumode()["value"], 1)
 
     def test_room_type_profile_overrides_tenant_rule(self):
-        profile = self.scoped_profile("suite", scope="room_type", room_type=ROOM_TYPE_ID)
+        profile = self.scoped_profile("suite", scope="room_type", room_types=[ROOM_TYPE_ID])
         self.set_composites(
             profile["id"],
             {
@@ -323,7 +323,7 @@ class CompositeReviewFixesTest(CompositeTagTestCase):
             "actions": None,
             "conditions": [{"when": {"power": 1}, "value": 7}, {"when": {"power": 0}, "value": 0}],
         }
-        profile = self.scoped_profile("suite", scope="room_type", room_type=ROOM_TYPE_ID)
+        profile = self.scoped_profile("suite", scope="room_type", room_types=[ROOM_TYPE_ID])
         self.set_composites(profile["id"], heat_only)
         named = [tag for tag in self.room_tags_list() if tag["tag_name"] == "fcumode"]
         self.assertEqual(len(named), 1)
@@ -332,7 +332,7 @@ class CompositeReviewFixesTest(CompositeTagTestCase):
     def test_device_rule_does_not_repeat_a_name_of_another_device(self):
         other = other_device_in_room()
         client_attribute(other.pk, "fcumode", long_v=5)
-        profile = self.scoped_profile("room-101", scope="device", device=DEVICE_ID)
+        profile = self.scoped_profile("room-101", scope="device", devices=[DEVICE_ID])
         self.set_composites(profile["id"], FCU_MODE)
         self.set_composites(self.profile["id"])
         named = [tag for tag in self.room_tags_list() if tag["tag_name"] == "fcumode"]

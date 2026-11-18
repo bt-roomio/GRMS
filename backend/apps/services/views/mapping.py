@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
@@ -12,6 +12,7 @@ from services.serializers.mapping import (
     MappingProfileFilterSerializer,
     MappingProfileSerializer,
     MappingProfileWriteSerializer,
+    race_error,
 )
 from services.swagger.mapping import (
     mapping_profile_swagger_create,
@@ -28,7 +29,13 @@ class MappingProfileListView(APIView):
     def get(self, request):
         params = MappingProfileFilterSerializer.parse(request.query_params)
         queryset = MappingProfile.objects.list(
-            request.user.tenant_id, params.search, params.integrator, params.scope, params.sort_by
+            request.user.tenant_id,
+            params.search,
+            params.integrator,
+            params.scope,
+            params.room_type,
+            params.device,
+            params.sort_by,
         )
         serializer = MappingProfileSerializer(queryset, many=True)
         data = pagination(queryset, serializer, params.page, params.size)
@@ -40,8 +47,11 @@ class MappingProfileListView(APIView):
         tenant_id = request.user.tenant_id
         serializer = MappingProfileWriteSerializer(data=request.data, context={"tenant_id": tenant_id})
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
-            instance = serializer.save(tenant_id=tenant_id, created_by=request.user)
+        try:
+            with transaction.atomic():
+                instance = serializer.save(tenant_id=tenant_id, created_by=request.user)
+        except IntegrityError as exc:
+            raise race_error(exc) from exc
         return Response(MappingProfileSerializer(instance).data, status=status.HTTP_201_CREATED)
 
 
@@ -60,13 +70,16 @@ class MappingProfileDetailView(APIView):
     @check_perms(["services.change_mappingprofile"])
     def put(self, request, pk):
         tenant_id = request.user.tenant_id
-        with transaction.atomic():
-            # Saves of one profile run one after another: two at once would each keep their rules.
-            profiles = MappingProfile.objects.by_tenant(tenant_id).select_for_update()
-            instance = get_object_or_404(profiles, pk=pk)
-            serializer = MappingProfileWriteSerializer(instance, request.data, context={"tenant_id": tenant_id})
-            serializer.is_valid(raise_exception=True)
-            instance = serializer.save(updated_by=request.user)
+        try:
+            with transaction.atomic():
+                # Saves of one profile run one after another: two at once would each keep their rules.
+                profiles = MappingProfile.objects.by_tenant(tenant_id).select_for_update()
+                instance = get_object_or_404(profiles, pk=pk)
+                serializer = MappingProfileWriteSerializer(instance, request.data, context={"tenant_id": tenant_id})
+                serializer.is_valid(raise_exception=True)
+                instance = serializer.save(updated_by=request.user)
+        except IntegrityError as exc:
+            raise race_error(exc) from exc
         return Response(MappingProfileSerializer(self.get_own_object(request, instance.pk)).data)
 
     @mapping_profile_swagger_delete()

@@ -192,21 +192,20 @@ Key model patterns defined in `backend/apps/core/models.py`:
 
 ### Celery Tasks
 
-Queues are defined in `config/celery.py`: `critical`, `default` (default queue), `low`. Task-to-queue routing lives in `app.conf.task_routes` (e.g. `sync_devices_task`, `auto_check_out`, `auto_block` → `critical`; `aggregate_table_ts_kv`, `delete_old_logs`, `flush_expired_tokens` → `low`). Global settings: `task_soft_time_limit=300`, `task_time_limit=360`, `task_acks_late=True`, `worker_prefetch_multiplier=1`.
+Queues are defined in `config/celery.py`: `critical`, `default` (default queue), `low`. Task-to-queue routing lives in `app.conf.task_routes` (e.g. `sync_devices_task`, `auto_check_out`, `auto_block` → `critical`; `purge_ts_kv_keys_task`, `flush_expired_tokens` → `low`). Global settings: `task_soft_time_limit=300`, `task_time_limit=360`, `task_acks_late=True`, `worker_prefetch_multiplier=1`.
 
 Scheduled tasks in `config/settings/components/celery.py` (`CELERY_BEAT_SCHEDULE`):
 - `auto-checkout` - every 5 minutes (main.tasks.auto_check_out)
 - `auto-block-guest` - 1800s interval (main.tasks.auto_block)
 - `sync_device` - 300s interval (access_manager.tasks.sync_device.sync_devices_task)
-- `clean_logs` - Daily at midnight (shuttle.tasks.delete_old_logs)
 - `update_db_metrics` - 60s interval (core.tasks.update_db_metrics)
 - `mews-sync` - 60s interval (mews.tasks.sync_reservations)
 - `active-attribute-server-scope` - 10s interval (core.tasks.active_attribute_server_scope_task)
-- `aggregate-ts-kv` - Daily at 03:00 (shuttle.tasks.aggregate_table_ts_kv)
 - `flush-expired-tokens` - Daily at 03:00 (users.tasks.flush_expired_tokens)
 - `evaluate-alarm-rules` - `ALARMS_EVAL_INTERVAL_SEC` interval, default 30s (alarms.tasks.evaluate_alarm_rules)
 - `dispatch-alarm-notifications` - 60s interval (alarms.tasks.dispatch_notifications)
 - `purge-alarms` - Daily at 04:30 (alarms.tasks.purge_alarms)
+- `purge-ts-kv-keys` - Daily at 05:00 (shuttle.tasks.purge_ts_kv_keys_task): deletes `TSKV_PURGE_KEYS` rows older than `TSKV_PURGE_AFTER_DAYS` from `shuttle_ts_kv`; full pass via `purge_ts_kv_keys --all`
 
 Note: `mews-access-tokens` is currently commented out in the schedule.
 

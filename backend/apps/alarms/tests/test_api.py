@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from alarms.models import Alarm, AlarmComment
+from alarms.services.attributes import set_server_attribute
 from alarms.tests.base import (
     DEVICE_ID,
     FOREIGN_DEVICE_ID,
@@ -16,6 +17,7 @@ from alarms.tests.base import (
     temperature_rule,
 )
 from core.tests.base import BaseTestCase
+from main.models import Device
 
 
 class AlarmAPITestCase(BaseTestCase):
@@ -352,6 +354,16 @@ class PreviewTest(AlarmAPITestCase):
         self.assertEqual(alarm["alarmType"], "High Temperature")
         self.assertEqual(alarm["create_rules"][0]["matched_count"], 1)
         self.assertFalse(Alarm.objects.exists())
+
+    def test_devices_behind_a_dead_gateway_never_match_a_create_rule(self):
+        rule = temperature_rule(threshold=0, attribute=None)
+        rule["createRules"]["MINOR"]["condition"]["condition"][0]["key"]["key"] = "humidity"
+        for device_id in Device.objects.filter(device_profile_id=PROFILE_ID).values_list("id", flat=True):
+            set_server_attribute(device_id, "gatewayActive", False)
+
+        response = self.post(self.url(), data={"device_profile": PROFILE_ID, "alarms": [rule]}, format="json")
+
+        self.assertEqual(response.data["alarms"][0]["create_rules"][0]["matched_count"], 0)
 
     def test_a_malformed_rule_is_rejected_before_it_is_ever_stored(self):
         broken = offline_rule(minutes=0)

@@ -57,7 +57,7 @@ def _clear_metrics():
     excluded_gateways = settings.DJANGO_MONITORING_EXCLUDED_GATEWAYS
 
     if excluded_gateways:
-        logger.warning("Excluded gateways: %s (%s)", len(excluded_gateways), excluded_gateways)
+        logger.debug("Excluded gateways: %s (%s)", len(excluded_gateways), excluded_gateways)
 
     # Get all active gateway devices (including excluded ones, to reset stale data)
     all_combinations = list(
