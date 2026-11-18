@@ -30,6 +30,9 @@ class GlobalSettingsRoomTest(BaseTestCase):
         self.room_b101 = Room.objects.create(number="B101", floor="1", block="2", tenant_id=TENANT_ID)
         Room.objects.create(number="301", floor="3", block="1", tenant_id=TENANT_ID, active=False)
         Room.objects.create(number="101", floor="1", block="1", tenant_id=TENANT_2_ID)
+        # Rooms without devices are hidden, so every room gets a device that is never shown first.
+        for room in (self.room_101, self.room_201, self.room_b101):
+            self.create_device(f"Base-{room.number}", room, created_at=100)
 
     def create_device(self, name, room, created_at, **kwargs):
         return Device.objects.create(
@@ -89,12 +92,20 @@ class GlobalSettingsRoomTest(BaseTestCase):
         assert response.data is not None
         self.assertEqual(response.data[0]["device"], {"id": str(primary.id), "name": "Primary"})
 
-    def test_room_without_device_and_type(self):
+    def test_room_without_type(self):
         response = self.fetch(blocks=["2:1"])
         assert response.data is not None
-        result = response.data[0]
-        self.assertIsNone(result["device"])
-        self.assertIsNone(result["room_type"])
+        self.assertIsNone(response.data[0]["room_type"])
+
+    def test_rooms_without_active_devices_are_hidden(self):
+        empty = Room.objects.create(number="102", floor="1", block="1", tenant_id=TENANT_ID)
+        only_inactive = Room.objects.create(number="103", floor="1", block="1", tenant_id=TENANT_ID)
+        self.create_device("Old-103", only_inactive, created_at=1, is_active=False)
+
+        response = self.fetch()
+        self.assertNotIn(empty.number, self.numbers(response))
+        self.assertNotIn(only_inactive.number, self.numbers(response))
+        self.assertEqual(self.numbers(response), ["101", "201", "B101"])
 
     def test_filter_by_room_types(self):
         response = self.fetch(room_types=[self.standard, self.lux])

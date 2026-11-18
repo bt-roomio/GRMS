@@ -78,6 +78,7 @@ class RoomQuerySet(BaseQuerySet):
         """
         Rows for the global settings page in a single query: plain dicts with the room type
         and the room's first active device (primary first, then oldest) as a JSON object.
+        Rooms without an active device are skipped: there is nothing to apply a template to.
         """
         from main.models import Device
 
@@ -117,7 +118,7 @@ class RoomQuerySet(BaseQuerySet):
             device_name=Subquery(first_device.values("name")[:1]),
             device=Subquery(first_device.values(data=JSONObject(id="id", name="name"))[:1], output_field=JSONField()),
             applied_template=Subquery(applied_template, output_field=JSONField()),
-        )
+        ).filter(device_id__isnull=False)  # a template can only be applied to a room with a device
         if search_field and search_value:
             query = query.filter(**{f"{search_field}__icontains": search_value})
         return query.order_by("block", "floor", "number", "id").values(

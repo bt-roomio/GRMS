@@ -108,7 +108,7 @@ class GlobalSettingsRoomListView(APIView):
         responses=GlobalSettingsRoomListSwagger,
         security=[{"Bearer": []}],
         operation_description=(
-            "Returns all of the tenant's rooms with their first device and the template applied to it "
+            "Returns the tenant's active rooms that have an active device, with their first device and the template applied to it "
             "(SERVER_SCOPE `template_id`): `status` is `up_to_date`, `outdated` (the template config changed "
             "after it was applied) or `deleted` (the template no longer exists, `name` is null). "
             "Filters: `room_types=id1,id2` and `blocks=<block>:<floor>,<floor>`, repeated per rule "
