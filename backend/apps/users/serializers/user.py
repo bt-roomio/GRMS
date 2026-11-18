@@ -50,7 +50,6 @@ class UserSerializer(serializers.ModelSerializer):
         data["created_at"] = instance.date_joined
         # A chain admin administers hotels without living in one, so `tenant` may be null.
         data["tenant_name"] = instance.tenant.title if instance.tenant_id else None
-        data["tenant_has_access_ai"] = instance.tenant.has_access_ai if instance.tenant_id else False
         data["dashboards"] = SimpleDashboardSerializer(instance.dashboards.all(), many=True).data
         locked = self.context.get("locked_emails")
         if locked is None:
@@ -170,7 +169,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
         data["roles"] = RoleSimpleSerializer(instance.roles, many=True).data
         # A chain admin administers hotels without living in one, so `tenant` may be null.
         data["tenant_name"] = instance.tenant.title if instance.tenant_id else None
-        data["tenant_has_access_ai"] = instance.tenant.has_access_ai if instance.tenant_id else False
         data["dashboards"] = SimpleDashboardSerializer(instance.dashboards.all(), many=True).data
         data["is_blocked"] = get_lock_status(instance.email)["is_locked"]
         return data
