@@ -30,8 +30,10 @@ Real-time WebSocket integration for syncing reservations from Mews PMS to GRMS.
 - Creates/updates GRMS models (Customer, Guest, RoomHistory)
 
 ### 5. Management Command (`management/commands/mews_websocket.py`)
-- Long-running process managed by supervisord
-- Listens for all active tenant configurations
+- Long-running process, runs as the `mews-websocket` Docker service
+- Listens for all active tenant integrations (`enable=True`, `is_active=True`)
+- Re-reads integrations every 60s (`--reconcile-interval`): starts listeners for newly enabled tenants,
+  stops disabled ones and reconnects when tokens/environment change, no restart needed
 
 ## Setup
 

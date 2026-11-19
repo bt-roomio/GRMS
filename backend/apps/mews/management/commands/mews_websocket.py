@@ -1,15 +1,18 @@
 """
 Django Management Command: Mews WebSocket Listener
-Runs as a long-running process managed by supervisord
-Listens for real-time reservation events from Mews
+Runs as the long-running `mews-websocket` service.
+Listens for real-time reservation events from Mews and periodically re-reads the active
+integrations, so enabling/disabling Mews for a tenant or changing its tokens is picked up
+without a restart.
 """
 
 import logging
 import signal
-import sys
 import time
+from dataclasses import dataclass
 
 from django.core.management.base import BaseCommand
+from django.db import close_old_connections
 from mews.handlers import ReservationEventHandler
 from mews.websocket_client import MewsWebSocketClient
 
@@ -48,7 +51,25 @@ class MewsConfigAdapter:
         }.get(self.environment, "wss://ws.mews.com/ws/connector")
 
 
-RETRY_INTERVAL = 60
+RECONCILE_INTERVAL = 60
+
+
+def _fingerprint(config: MewsConfigAdapter) -> tuple[str, str, str, str, str]:
+    """Settings a running client depends on; any change means the client must be recreated."""
+    return (
+        config.client_token,
+        config.access_token,
+        config.ws_url,
+        config.api_base_url,
+        config.company_id,
+    )
+
+
+@dataclass
+class _Listener:
+    tenant_title: str
+    fingerprint: tuple[str, str, str, str, str]
+    client: MewsWebSocketClient
 
 
 class Command(BaseCommand):
@@ -57,123 +78,118 @@ class Command(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._shutdown = False
+        self._listeners: dict[str, _Listener] = {}
 
-    def handle(self, **_):
-        self.stdout.write(self.style.SUCCESS("Starting Mews WebSocket Listener..."))
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reconcile-interval",
+            type=int,
+            default=RECONCILE_INTERVAL,
+            help="Seconds between re-reading active Mews integrations (default: %(default)s)",
+        )
+
+    def handle(self, **options):
+        interval = max(options["reconcile_interval"], 1)
+        logger.info("Starting Mews WebSocket listener (reconcile every %ss)", interval)
 
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
 
-        active_integrations = self._wait_for_config()
-        if active_integrations is None:
-            return
-
-        clients = []
-        handlers = []
-
-        for integration in active_integrations:
-            tenant = integration.tenant
-            try:
-                self.stdout.write(self.style.SUCCESS(f"Initializing listener for tenant: {tenant.title}"))
-
-                config_adapter = MewsConfigAdapter(integration)
-
-                handler = ReservationEventHandler(config_adapter)
-                handlers.append(handler)
-
-                client = MewsWebSocketClient(
-                    client_token=config_adapter.client_token,
-                    access_token=config_adapter.access_token,
-                    ws_url=config_adapter.ws_url,
-                    on_event=handler.handle_event,
-                    on_connected=lambda t=tenant.title: self._on_connected(t),
-                    on_disconnected=lambda reason, t=tenant.title: self._on_disconnected(reason, t),
-                    auto_reconnect=True,
-                    max_reconnect_attempts=None,
-                )
-
-                clients.append(client)
-
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Failed to initialize for {tenant.title}: {e}"))
-
-        if not clients:
-            self.stdout.write(self.style.ERROR("No WebSocket clients initialized"))
-            return
-
-        # Override signal handlers to disconnect clients on shutdown
-        def shutdown_handler(sig, frame):
-            self.stdout.write(self.style.WARNING("\nShutting down Mews WebSocket listeners..."))
-            for client in clients:
-                try:
-                    client.disconnect()
-                except Exception:
-                    logger.exception("Error disconnecting client")
-            self.stdout.write(self.style.SUCCESS("Shutdown complete"))
-            sys.exit(0)
-
-        signal.signal(signal.SIGINT, shutdown_handler)
-        signal.signal(signal.SIGTERM, shutdown_handler)
-
-        for client in clients:
-            try:
-                client.connect()
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Failed to connect client: {e}"))
-
-        time.sleep(2)
-
-        connected_count = sum(1 for client in clients if client.is_connected())
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"\n{'=' * 60}\n"
-                f"Mews WebSocket Listener Running\n"
-                f"{'=' * 60}\n"
-                f"Active connections: {connected_count}/{len(clients)}\n"
-                f"Listening for reservation events...\n"
-                f"Press Ctrl+C to stop\n"
-                f"{'=' * 60}\n"
-            )
-        )
-
         try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            pass
+            while not self._shutdown:
+                try:
+                    self._reconcile()
+                except Exception:
+                    logger.exception("Failed to reconcile Mews listeners")
 
-    def _wait_for_config(self):
-        """Poll until active Mews integrations appear. Returns queryset or None on shutdown."""
-        while not self._shutdown:
-            integrations = list(
-                Integration.objects.filter(
-                    integrator__name__iexact=MEWS,
-                    integrator__client_id__isnull=False,
-                    enable=True,
-                    is_active=True,
-                ).select_related("tenant")
+                for _ in range(interval):
+                    if self._shutdown:
+                        break
+                    time.sleep(1)
+        finally:
+            self._stop_all()
+
+    def _load_integrations(self) -> dict[str, Integration]:
+        # Long-running process: drop connections PgBouncer/Postgres may have closed meanwhile
+        close_old_connections()
+        integrations = Integration.objects.filter(
+            integrator__name__iexact=MEWS,
+            integrator__client_id__isnull=False,
+            enable=True,
+            is_active=True,
+        ).select_related("tenant", "integrator")
+        return {str(integration.id): integration for integration in integrations}
+
+    def _reconcile(self) -> None:
+        """Bring running clients in line with the active integrations in the database."""
+        integrations = self._load_integrations()
+
+        for integration_id in list(self._listeners):
+            if integration_id not in integrations:
+                listener = self._listeners.pop(integration_id)
+                logger.info("Mews integration disabled for tenant %s, stopping listener", listener.tenant_title)
+                self._stop(listener)
+
+        for integration_id, integration in integrations.items():
+            config = MewsConfigAdapter(integration)
+            fingerprint = _fingerprint(config)
+            listener = self._listeners.get(integration_id)
+
+            if listener is not None:
+                if listener.fingerprint == fingerprint:
+                    continue
+                logger.info("Mews settings changed for tenant %s, restarting listener", listener.tenant_title)
+                self._stop(self._listeners.pop(integration_id))
+
+            new_listener = self._start(config, fingerprint)
+            if new_listener is not None:
+                self._listeners[integration_id] = new_listener
+
+        if not self._listeners:
+            logger.debug("No active Mews integrations")
+
+    def _start(self, config: MewsConfigAdapter, fingerprint: tuple[str, str, str, str, str]) -> _Listener | None:
+        tenant_title = config.tenant.title
+        try:
+            handler = ReservationEventHandler(config)
+            client = MewsWebSocketClient(
+                client_token=config.client_token,
+                access_token=config.access_token,
+                ws_url=config.ws_url,
+                on_event=handler.handle_event,
+                on_connected=lambda t=tenant_title: self._on_connected(t),
+                on_disconnected=lambda reason, t=tenant_title: self._on_disconnected(reason, t),
+                auto_reconnect=True,
+                max_reconnect_attempts=None,
             )
-            if integrations:
-                return integrations
+            client.connect()
+        except Exception:
+            logger.exception("Failed to start Mews listener for tenant %s", tenant_title)
+            return None
 
-            self.stdout.write(
-                self.style.WARNING(f"No active Mews configurations found. Retrying in {RETRY_INTERVAL}s...")
-            )
-            for _ in range(RETRY_INTERVAL):
-                if self._shutdown:
-                    return None
-                time.sleep(1)
+        logger.info("Started Mews listener for tenant %s", tenant_title)
+        return _Listener(tenant_title=tenant_title, fingerprint=fingerprint, client=client)
 
-        return None
+    def _stop(self, listener: _Listener) -> None:
+        try:
+            listener.client.disconnect()
+        except Exception:
+            logger.exception("Error disconnecting Mews listener for tenant %s", listener.tenant_title)
+
+    def _stop_all(self) -> None:
+        if not self._listeners:
+            return
+        logger.info("Shutting down %s Mews listener(s)", len(self._listeners))
+        for listener in self._listeners.values():
+            self._stop(listener)
+        self._listeners.clear()
 
     def _handle_signal(self, sig, frame):
-        self.stdout.write(self.style.WARNING("Shutdown requested, stopping..."))
+        logger.info("Shutdown requested, stopping Mews listeners")
         self._shutdown = True
 
     def _on_connected(self, tenant_name: str):
-        self.stdout.write(self.style.SUCCESS(f"✓ Connected to Mews for tenant: {tenant_name}"))
         logger.info("Connected to Mews for tenant: %s", tenant_name)
 
     def _on_disconnected(self, reason: str, tenant_name: str):
-        self.stdout.write(self.style.WARNING(f"✗ Disconnected from Mews for tenant {tenant_name}: {reason}"))
         logger.warning("Disconnected from Mews for tenant %s: %s", tenant_name, reason)
