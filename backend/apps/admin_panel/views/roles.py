@@ -21,6 +21,6 @@ class AdminTenantRolesView(APIView):
     )
     def get(self, request, tenant_id):
         get_scoped_tenant_or_404(request, tenant_id)
-        queryset = Role.objects.filter(tenant_id=tenant_id)
+        queryset = Role.objects.filter(tenant_id=tenant_id).prefetch_related("permissions", "dashboards")
         serializer = RoleSimpleSerializer(queryset, many=True)
         return Response(serializer.data)

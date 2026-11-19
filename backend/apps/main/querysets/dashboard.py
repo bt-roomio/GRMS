@@ -5,7 +5,7 @@ from core.querysets.base_queryset import BaseQuerySet
 
 class DashboardQuerySet(BaseQuerySet):
     def list(self, tenant_id, search_field=None, search_value=None, sort_by=None):
-        query = self.prefetch_related("room_types").filter(tenant_id=tenant_id)
+        query = self.prefetch_related("room_types", "users", "roles").filter(tenant_id=tenant_id)
         if search_field and search_value:
             query = query.filter(Q(**{f"{search_field}__istartswith": search_value}))
         elif search_value:
@@ -13,10 +13,6 @@ class DashboardQuerySet(BaseQuerySet):
         query = query.order_by(*sort_by) if sort_by else query
 
         return query
-
-    def assigned(self):
-        """Dashboards handed out to at least one user or role, rather than to a room type."""
-        return self.filter(Q(users__is_active=True) | Q(roles__isnull=False)).distinct()
 
     def quick_list(self, tenant_id, search_value=None):
         query = self.filter(tenant_id=tenant_id)

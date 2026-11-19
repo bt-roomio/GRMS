@@ -54,15 +54,17 @@ class DashboardDetailView(APIView):
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardDetailSwagger)
     @check_perms(["main.view_dashboard"])
     def get(self, request, pk):
-        instance = get_object_or_404(Dashboard, pk=pk, tenant=request.user.tenant)
+        queryset = Dashboard.objects.prefetch_related("users", "roles")
+        instance = get_object_or_404(queryset, pk=pk, tenant=request.user.tenant)
         serializer = DashboardSerializer(instance)
         return Response(serializer.data)
 
     @swagger_auto_schema(tags=["Main, Dashboard"], responses=DashboardDetailSwagger, request_body=DashboardSerializer)
     @check_perms(["main.change_dashboard"])
     def put(self, request, pk):
+        # No prefetch: holders change during save and the response must show the new set.
         instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
-        serializer = DashboardSerializer(instance, data=request.data)
+        serializer = DashboardSerializer(instance, data=request.data, context={"tenant_id": request.user.tenant_id})
         serializer.is_valid(raise_exception=True)
         serializer.save(tenant_id=request.user.tenant_id)
         return Response(serializer.data)
@@ -72,6 +74,7 @@ class DashboardDetailView(APIView):
     def delete(self, request, pk):
         instance = get_object_or_404(Dashboard, id=pk, tenant=request.user.tenant)
         ensure_not_linked_to_room_types(instance)
+        # Its user/role links and everyone's positions go with it.
         instance.delete()
         return Response({}, 204)
 

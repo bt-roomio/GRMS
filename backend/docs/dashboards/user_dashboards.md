@@ -10,11 +10,11 @@ Oct 29, 2026 · <https://room.io>
 | --- | --- | --- |
 | Модели | M2M `User.dashboards` и `Role.dashboards`, таблица порядка `DashboardPosition`, миграция `users/0015` | Готово |
 | Назначение | Поле `dashboards` в API пользователей и ролей, проверка, что дашборд из того же отеля | Готово |
-| Админский CRUD | `/users/dashboards/` — дашборды отеля, выданные пользователям или ролям, с управлением владельцами | Готово |
-| «Мои дашборды» | `/users/me/dashboards/` и сохранение порядка `/users/me/dashboards/order/` | Готово |
+| Админский CRUD | Общий `/main/dashboard/`: все дашборды отеля, при создании и редактировании можно выбрать пользователей и роли | Готово |
+| «Мои дашборды» | `/users/me/dashboards/`, сохранение порядка `/users/me/dashboards/order/`, открытие `/users/me/dashboard/<id>/` | Готово |
 | Ревью | Замечания code review исправлены: гонка при сохранении порядка, роли и пользователи без отеля, неактивные пользователи | Готово |
 
-Коммит: `26da4147` в `dev`.
+Коммит: `a84f9e39` в `dev`. Позже отдельный CRUD `/users/dashboards/` влит в `/main/dashboard/`.
 
 ## Как это работает
 
@@ -41,12 +41,13 @@ flowchart LR
 - Дашборд должен быть из того же отеля, что и пользователь или роль. Иначе 400 `Dashboard out of scope: <названия>.`
 - **Роль без отеля** (глобальная) не может держать дашборды: 400 `A role without a tenant cannot hold dashboards.`
 - **Пользователь без отеля** (админ сети) не может держать дашборды: 400 `A user without a tenant cannot hold dashboards.` Список «Мои дашборды» показывает только дашборды своего отеля, поэтому такое назначение ни на что бы не влияло.
-- **Деактивированные пользователи** не считаются владельцами: дашборд, выданный только им, пропадает из админского списка, а в поле `users` их нет. При этом их привязка сохраняется при PUT, и после повторной активации дашборды вернутся.
+- **Смена отеля пользователя** (`tenant` в `PUT users/user/<id>/`) — перевести можно только в отель, доступный вызывающему (обычный админ — только свой, админ сети — в пределах сети), иначе 400 `Tenant out of scope.`; оставить без отеля может только суперпользователь без сети. `roles` и `dashboards` проверяются по новому отелю. Если `dashboards` не передать, старые дашборды и порядок пользователя сбрасываются.
+- **Деактивированные пользователи** не показываются в поле `users`. При этом их привязка сохраняется при PUT, и после повторной активации дашборды вернутся.
 - Удалить дашборд, привязанный к типу номера, по-прежнему нельзя — сначала его нужно отвязать от `RoomType`. Это общее правило для `main` и `users` (`ensure_not_linked_to_room_types`).
 
 ## API для фронта
 
-Все пути — под `/api/v1/users/`.
+Пути без префикса — под `/api/v1/users/`.
 
 ### Поле `dashboards` у пользователей и ролей
 
@@ -69,21 +70,21 @@ flowchart LR
 ]
 ```
 
-### Админский CRUD: дашборды, выданные людям
+### Админский CRUD: `/api/v1/main/dashboard/`
 
-Показывает только дашборды отеля, у которых есть хотя бы один активный пользователь или роль. Дашборды, привязанные только к типам номеров или ни к чему, сюда не попадают — для них остаётся `/api/v1/main/dashboard/`.
+Отдельного CRUD в `users` больше нет. Список `GET /api/v1/main/dashboard/` возвращает все дашборды отеля, выданы они кому-то или нет. Владельцы задаются в том же запросе, которым создаётся или редактируется дашборд.
 
 | Метод | Путь | Право |
 | --- | --- | --- |
-| `GET` | `dashboards/` | `main.view_dashboard` |
-| `POST` | `dashboards/` | `main.add_dashboard` |
-| `GET` | `dashboard/<id>/` | `main.view_dashboard` |
-| `PUT` | `dashboard/<id>/` | `main.change_dashboard` |
-| `DELETE` | `dashboard/<id>/` | `main.delete_dashboard` |
+| `GET` | `/api/v1/main/dashboard/` | `main.view_dashboard` |
+| `POST` | `/api/v1/main/dashboard/` | `main.add_dashboard` |
+| `GET` | `/api/v1/main/dashboard/<id>/` | `main.view_dashboard` |
+| `PUT` | `/api/v1/main/dashboard/<id>/` | `main.change_dashboard` |
+| `DELETE` | `/api/v1/main/dashboard/<id>/` | `main.delete_dashboard` |
 
-Список принимает те же параметры, что и `main`: `page`, `size`, `search_field=title`, `search_value`, `sort_by` (`title`, `-title`, `created_at`, `-created_at`). Ответ — `{"count": ..., "results": [...]}`.
+Параметры списка не изменились: `page`, `size`, `search_field=title`, `search_value`, `sort_by` (`title`, `-title`, `created_at`, `-created_at`). Ответ — `{"count": ..., "results": [...]}`.
 
-Тело `POST`/`PUT` — поля обычного дашборда плюс владельцы:
+Тело `POST`/`PUT` — поля обычного дашборда плюс необязательные владельцы:
 
 ```json
 {
@@ -95,11 +96,11 @@ flowchart LR
 ```
 
 - `user_ids` и `role_ids` **заменяют** список владельцев целиком: кого нет в списке, у того дашборд снимается. Не передали поле — владельцы этого типа не меняются.
+- Владельцев может не быть: `[]` снимает дашборд со всех пользователей или ролей.
 - Пользователи и роли должны быть из отеля вызывающего, иначе 400 `User out of scope` / `Role out of scope`.
-- Нельзя создать дашборд без владельцев или убрать всех: 400 `Assign the dashboard to a user or a role.` Иначе он молча пропал бы из этого списка.
-- Повтор названия в отеле, как и в `main`, превращается в `<title> Copy N`.
+- Повтор названия в отеле превращается в `<title> Copy N`.
 
-В ответе владельцы приходят так:
+В ответе (список, детальный, `POST`, `PUT`) владельцы приходят так:
 
 ```json
 "users": [{"id": "b5c0a9db-...", "email": "test@gmail.com"}],
@@ -114,6 +115,7 @@ flowchart LR
 | --- | --- | --- |
 | `GET` | `me/dashboards/` | Видимые дашборды текущего пользователя в его порядке (краткий вид, без пагинации) |
 | `PUT` | `me/dashboards/order/` | Сохраняет новый порядок и возвращает список уже в нём |
+| `GET` | `me/dashboard/<id>/` | Полный дашборд (с `configuration`), без `users`/`roles`; 404, если он не выдан пользователю ни напрямую, ни через роль |
 
 Тело `PUT` — полный список id в нужном порядке, как после drag-and-drop:
 
@@ -131,8 +133,8 @@ flowchart LR
 
 - **Карточки пользователя и роли** — мультиселект «Дашборды» с дашбордами своего отеля; отправлять `dashboards` списком id. Для глобальной роли и для админа сети поле лучше скрывать: бэкенд всё равно вернёт 400.
 - **Экран «Мои дашборды»** — список из `GET me/dashboards/` с перетаскиванием; после отпускания отправлять весь список в `PUT me/dashboards/order/` и рисовать порядок из ответа.
-- **Админский экран** — таблица из `GET dashboards/` с колонками «Пользователи» и «Роли». При редактировании отправлять полные `user_ids`/`role_ids`, а не только изменения.
-- **Открытие дашборда** — список «Мои дашборды» краткий, без `configuration`. Полный дашборд сейчас берётся из `GET /api/v1/main/dashboard/<id>/`, а там нужно право `main.view_dashboard`. Если у обычных пользователей его нет, нужен отдельный эндпоинт `me/dashboard/<id>/` — пока не сделан.
+- **Экран дашбордов** (`/main/dashboard/`) — добавить колонки «Пользователи» и «Роли», а в форму создания и редактирования — два мультиселекта. При редактировании отправлять полные `user_ids`/`role_ids`, а не только изменения.
+- **Открытие дашборда** — с экрана «Мои дашборды» брать полный дашборд из `GET me/dashboard/<id>/`: право `main.view_dashboard` не нужно. Админские экраны по-прежнему ходят в `/api/v1/main/dashboard/<id>/`.
 
 ## Где код
 
@@ -140,9 +142,9 @@ flowchart LR
 | --- | --- |
 | Модели | `apps/users/models.py` (`User.dashboards`, `Role.dashboards`, `DashboardPosition`) |
 | Миграция | `apps/users/migrations/0015_role_dashboards_user_dashboards_dashboardposition_and_more.py` |
-| Админский сериализатор и порядок | `apps/users/serializers/dashboard.py` |
+| Сериализатор с владельцами | `apps/main/serializers/dashboard.py` (`DashboardSerializer`) |
+| Сериализатор порядка | `apps/users/serializers/dashboard.py` |
 | Поле `dashboards` | `apps/users/serializers/user.py`, `apps/users/serializers/role.py` |
-| Эндпоинты | `apps/users/views/dashboards.py`, `apps/users/urls.py` |
-| Фильтр «выдан людям» | `apps/main/querysets/dashboard.py` (`assigned()`) |
+| Эндпоинты | `apps/main/views/dashboard.py`; «Мои дашборды» — `apps/users/views/dashboards.py`, `apps/users/urls.py` |
 | Защита от удаления | `apps/main/views/dashboard.py` (`ensure_not_linked_to_room_types`) |
-| Тесты | `apps/users/tests/test_dashboards.py` |
+| Тесты | `apps/main/tests/test_dashboard.py`, `apps/users/tests/test_dashboards.py` |
