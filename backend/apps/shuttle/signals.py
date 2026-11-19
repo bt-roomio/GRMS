@@ -8,6 +8,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from shuttle.models import AttributeKv, TsKv, TsKvLatest
+from shuttle.services.ts_kv_history_cache import mark_devices_updated
 from shuttle.utils.has_changed_and_update import has_changed_and_update, has_changed_attrs
 
 _local = threading.local()
@@ -39,6 +40,9 @@ def _flush_attribute_kv_batch():
 
 @receiver(post_save, sender=TsKv)
 def tskv_signal_handler(sender, instance, **kwargs):
+    # After commit: a chart computed between this moment and the commit would miss the row.
+    entity_id = instance.entity_id
+    transaction.on_commit(lambda: mark_devices_updated([entity_id]))
     channel_layer = get_channel_layer()
     if channel_layer is not None:
         message = {

@@ -15,6 +15,7 @@ from core.utils.handle_card_event import handle_card_event
 from core.utils.redis_pool import sync_redis as redis_client
 from shuttle.models import TsKv, TsKvDictionary, TsKvLatest
 from shuttle.services.card_log_updates import publish_card_log_updates_batch
+from shuttle.services.ts_kv_history_cache import mark_devices_updated
 from shuttle.tasks import publish_updates_batch_task, update_activity_devices_batch_task
 from shuttle.utils.find_compatible_field import find_compatible_field
 
@@ -236,6 +237,7 @@ def sync_telemetry_batch(batch: list[tuple]):
     # Bulk database operations
     if historical_objs:
         TsKv.objects.bulk_create(historical_objs, batch_size=1000, ignore_conflicts=True)
+        mark_devices_updated({obj.entity_id for obj in historical_objs})
 
     if latest_objs:
         try:
