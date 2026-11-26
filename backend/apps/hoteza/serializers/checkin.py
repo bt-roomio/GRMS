@@ -7,9 +7,11 @@ from rest_framework import serializers
 from access_manager.tasks.send_rpc import send_rpc_request
 from access_manager.utilits.card_activate import activate_guest_card
 from access_manager.utilits.need_sync import need_sync
+from access_manager.utilits.pin_to_card import pin_to_card_number
 from main.models import Guest, Room, Tenant
 from main.serializers.guest import GuestSerializer
 from main.utils.access_context import get_guest_access_context
+from services.models import Integration
 from services.utils.const import HOTEZA
 
 logger = logging.getLogger(__name__)
@@ -84,6 +86,15 @@ class CheckInSerializer(serializers.Serializer):
 
         if not tenant:
             raise JsonValidationError({"result": 9, "message": f"Tenant not found! ({attrs.get('tenant_id')})"})
+        logger.warning("Attr before val of pin: %s", attrs)
+
+        if attrs.get("pin"):
+            integration = Integration.objects.filter(tenant=tenant, integrator=HOTEZA, is_active=True).first()
+            if integration and (integration.additional_info or {}).get("ignore_passcodes"):
+                logger.info("Ignoring Hoteza passcode for tenant %s", tenant.id)
+                attrs.pop("pin")
+
+        logger.warning("Attr afteeeeeeer val of pin: %s", attrs)
 
         room = Room.objects.filter(tenant=tenant, number=attrs["room_number"]).first()
         if not room:
@@ -188,7 +199,7 @@ class CheckInSerializer(serializers.Serializer):
                 logger.exception("Error creating guest")
                 raise JsonValidationError({"result": 9, "message": "Failed to create guest."})
 
-        logger.info("Guest check-in processed: %s", instance.name)  # pyright: ignore
+        logger.info("Guest check-in processed: %s", instance.name)
 
         pin = validated_data.get("pin") or None
         if pin:
@@ -198,7 +209,9 @@ class CheckInSerializer(serializers.Serializer):
                     device.id, [pin], 1, guest_id=str(instance.id), is_pwd=True, source=Guest.SOURCE.HOTEZA
                 )
                 if response and isinstance(response, dict) and not response.get("success"):
-                    activate_guest_card([pin], device, instance, is_pwd=True, source=Guest.SOURCE.HOTEZA)
+                    activate_guest_card(
+                        [pin_to_card_number(pin)], device, instance, is_pwd=True, source=Guest.SOURCE.HOTEZA
+                    )
                     need_sync(pin, device, 1, reason=response.get("message"), source=Guest.SOURCE.HOTEZA)
 
         return instance
